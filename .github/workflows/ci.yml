@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Parse JSON documents
         shell: bash
@@ -48,4 +48,3 @@ jobs:
           while IFS= read -r -d '' file; do
             jq empty "$file"
           done < <(find schemas examples -type f -name '*.json' -print0)
-

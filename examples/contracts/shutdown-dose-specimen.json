@@ -1,0 +1,111 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.1",
+  "contract_id": "specimen.shutdown-dose.001",
+  "title": "Shutdown dose assessment — specimen only",
+  "question": "Does the hypothetical component remain below the illustrative shutdown-dose limit across the stated uncertainty envelope?",
+  "status": "draft",
+  "assumptions": [
+    "This is a software specimen, not an engineering model.",
+    "The threshold and uncertainty ranges are invented for interface development.",
+    "No supplied capability is implemented or qualified."
+  ],
+  "inputs": [
+    {
+      "input_id": "geometry",
+      "role": "component_geometry",
+      "uri": "pending://geometry",
+      "media_type": "model/vnd.avila.geometry+json",
+      "required": true
+    },
+    {
+      "input_id": "materials",
+      "role": "material_definition",
+      "uri": "pending://materials",
+      "media_type": "application/json",
+      "required": true
+    },
+    {
+      "input_id": "exposure",
+      "role": "irradiation_scenario",
+      "uri": "pending://exposure",
+      "media_type": "application/json",
+      "required": true
+    }
+  ],
+  "workflow": [
+    {
+      "step_id": "transport",
+      "capability_type": "nuclear.transport.neutron",
+      "implementation": "specimen.openmc.transport",
+      "depends_on": [],
+      "parameters": {
+        "histories": "not_defined"
+      }
+    },
+    {
+      "step_id": "activation",
+      "capability_type": "nuclear.activation.inventory",
+      "implementation": "specimen.actinv.activation",
+      "depends_on": [
+        "transport"
+      ],
+      "parameters": {
+        "cooling_time": "not_defined"
+      }
+    },
+    {
+      "step_id": "dose",
+      "capability_type": "nuclear.dose.shutdown",
+      "implementation": "specimen.avila.shutdown-dose",
+      "depends_on": [
+        "activation"
+      ],
+      "parameters": {}
+    },
+    {
+      "step_id": "bound-uncertainty",
+      "capability_type": "verification.continuous-bounds",
+      "implementation": "specimen.avify.bounds",
+      "depends_on": [
+        "dose"
+      ],
+      "parameters": {
+        "uncertainty_set": "not_defined"
+      }
+    },
+    {
+      "step_id": "evaluate-requirement",
+      "capability_type": "core.requirement-evaluation",
+      "implementation": "specimen.core.requirement-evaluation",
+      "depends_on": [
+        "bound-uncertainty"
+      ],
+      "parameters": {}
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "SPECIMEN-R-001",
+      "statement": "The illustrative upper bound on shutdown dose rate must not exceed the invented limit.",
+      "metric": "shutdown_dose_rate_upper_bound",
+      "comparison": "less_than_or_equal",
+      "limit": 100.0,
+      "unit": "uSv/h",
+      "evaluation_step": "evaluate-requirement"
+    }
+  ],
+  "evidence_policy": {
+    "allow_unqualified_capabilities": true,
+    "require_complete_lineage": true,
+    "require_content_hashes": true,
+    "required_review_roles": [
+      "method_owner",
+      "independent_reviewer"
+    ]
+  },
+  "metadata": {
+    "classification": "software_specimen",
+    "decision_use": "prohibited"
+  }
+}
+

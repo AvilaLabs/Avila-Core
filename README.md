@@ -1,0 +1,96 @@
+# Avila Core
+
+> Internal codename: Project North Star
+
+Avila Core is an early research project exploring a neutral market and trust
+layer for computational engineering. An organization states what it needs to
+establish as an **evidence contract**; qualified capabilities resolve the
+contract; Core returns a portable, independently reviewable technical
+conclusion.
+
+The long-term aim is not to sell another solver, workflow canvas, or block of
+compute. It is to shorten the path from an important technical question to an
+admissible answer while preserving the authority of domain professionals.
+
+## Current status
+
+This repository is a **pre-alpha scaffold**. It currently provides:
+
+- authoritative Rust types for contracts, capability manifests, and verdicts;
+- a deterministic dependency planner that fails closed;
+- a draft portable evidence model and SHA-256 utility;
+- JSON Schemas and deliberately non-executable specimen documents;
+- a local CLI for structural validation and planning; and
+- an egui product shell showing the intended question-first experience.
+
+It does **not** run scientific software, calculate a physical quantity, verify a
+requirement, certify a design, or produce decision-grade evidence. The specimen
+campaign is blocked on purpose.
+
+## Core objects
+
+| Object | Meaning |
+| --- | --- |
+| Contract | The bounded question, requirements, assumptions, inputs, and evidence policy. |
+| Capability | A versioned method or adapter with an explicit provider, execution boundary, qualification scope, and limitations. |
+| Campaign | A planned or executed dependency graph resolving one contract. |
+| Evidence | Immutable records connecting inputs, capabilities, executions, outputs, reviews, and claims. |
+| Verdict | `PASS`, `FAIL`, `INCONCLUSIVE`, or `NOT_EVALUATED` for a specific requirement and boundary. |
+
+## Try the scaffold
+
+Requirements: Rust 1.95.0 and the native libraries required by `eframe`.
+
+```bash
+cargo test --workspace --all-targets
+
+cargo run -p avila-core-cli -- \
+  validate-contract examples/contracts/shutdown-dose-specimen.json
+
+cargo run -p avila-core-cli -- plan \
+  --contract examples/contracts/shutdown-dose-specimen.json \
+  --capability examples/capabilities/openmc-transport.specimen.json \
+  --capability examples/capabilities/actinv-activation.specimen.json \
+  --capability examples/capabilities/avila-dose.specimen.json \
+  --capability examples/capabilities/avify-bounds.specimen.json \
+  --capability examples/capabilities/core-requirement.specimen.json
+
+cargo run -p avila-core-app
+```
+
+The plan command should return `"status": "blocked"`. That is the expected and
+only honest state of the included specimen.
+
+## Repository map
+
+```text
+crates/
+  avila-core-model/       contract, capability, requirement, and verdict types
+  avila-core-runtime/     deterministic campaign planning; no execution yet
+  avila-core-evidence/    portable evidence records and hashing
+  avila-core-cli/         headless local interface
+  avila-core-app/         thin egui client
+docs/
+  strategy/               north star, economics, and counter-positioning
+  product/                product definition, evidence contracts, and UX
+  architecture/           boundaries, capability protocol, and evidence model
+  roadmap/                staged validation and 1.0 planning hypotheses
+  adr/                    durable architectural decisions
+schemas/                  machine-readable interchange drafts
+examples/                 unqualified, non-executable software specimens
+assets/branding/          provisional Avila Core mark
+```
+
+Start with the [project charter](PROJECT_CHARTER.md), then read the
+[north-star strategy](docs/strategy/NORTH_STAR.md),
+[product definition](docs/product/PRODUCT_DEFINITION.md), and
+[architecture](docs/architecture/ARCHITECTURE.md).
+
+## Licensing and claims
+
+No source-code license has been selected. Until Avila Labs adopts one, access to
+this repository does not grant permission to copy, modify, or redistribute its
+contents. The provisional logo is separately reserved. See
+[DISCLAIMER.md](DISCLAIMER.md) for the project’s scientific and regulatory
+limits.
+

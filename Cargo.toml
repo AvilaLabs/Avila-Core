@@ -1,0 +1,34 @@
+[workspace]
+members = [
+  "crates/avila-core-model",
+  "crates/avila-core-runtime",
+  "crates/avila-core-evidence",
+  "crates/avila-core-cli",
+  "crates/avila-core-app",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+authors = ["Avila Labs"]
+publish = false
+
+[workspace.dependencies]
+avila-core-evidence = { path = "crates/avila-core-evidence" }
+avila-core-model = { path = "crates/avila-core-model" }
+avila-core-runtime = { path = "crates/avila-core-runtime" }
+clap = { version = "4", features = ["derive"] }
+eframe = "0.36.1"
+image = { version = "0.25", default-features = false, features = ["png"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+sha2 = "0.10"
+thiserror = "2"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+overflow-checks = true
+

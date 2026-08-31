@@ -1,0 +1,215 @@
+# Architecture
+
+## Architectural goal
+
+Core must separate four kinds of authority:
+
+1. **Contract authority:** what question and policy were approved.
+2. **Method authority:** which professional-owned capability is admissible for
+   that context.
+3. **Execution authority:** what inputs, software, data, environment, and process
+   actually ran.
+4. **Verdict authority:** how admitted evidence maps to a requirement state.
+
+No single interface, provider, or process should be able to impersonate all four.
+
+## Target system context
+
+```text
+ Requester / Engineer          Method Owner / Provider          Reviewer
+          │                              │                         │
+          └───────────────┬──────────────┴──────────────┬──────────┘
+                          ▼                             ▼
+                 ┌────────────────┐           ┌────────────────┐
+                 │  Core clients  │           │Evidence viewer │
+                 │ GUI / CLI / API│           │  + verifier    │
+                 └───────┬────────┘           └───────┬────────┘
+                         │                            │
+                         ▼                            │ independent
+              ┌─────────────────────┐                 │ verification
+              │ Contract & policy   │                 │
+              │   control plane     │                 │
+              └──────────┬──────────┘                 │
+                         ▼                            │
+              ┌─────────────────────┐                 │
+              │ Deterministic plan  │                 │
+              │ + capability select │                 │
+              └──────────┬──────────┘                 │
+                         ▼                            │
+              ┌─────────────────────┐                 │
+              │ Controlled runner   │                 │
+              │ local / HPC / remote│                 │
+              └──────────┬──────────┘                 │
+                         ▼                            │
+           ┌─────────────────────────────┐             │
+           │ Versioned capability adapters│            │
+           │ solver / data / method / review│          │
+           └─────────────┬───────────────┘             │
+                         ▼                             │
+              ┌─────────────────────┐                  │
+              │ Evidence graph and  │──────────────────┘
+              │ requirement verdicts│
+              └─────────────────────┘
+```
+
+Core is both local software and, later, an optional organization/network control
+plane. A campaign must be able to remain inside a customer-controlled environment
+while exchanging signed metadata with a registry or settlement service when
+policy permits.
+
+## Current workspace
+
+The scaffold deliberately implements only the shaded foundation implied below:
+
+```text
+avila-core-model
+    ├── avila-core-runtime   (planning only)
+    ├── avila-core-evidence  (record model + hashing only)
+    ├── avila-core-cli       (validate and plan)
+    └── avila-core-app       (thin read-only specimen UI)
+```
+
+### `avila-core-model`
+
+Authoritative serializable types for evidence contracts, capability manifests,
+requirements, qualification, and verdicts. It performs structural validation but
+cannot assert scientific validity.
+
+### `avila-core-runtime`
+
+Validates the dependency graph, chooses a deterministic matching manifest, and
+marks unavailable or inadmissible steps as blocked. It contains no process
+runner, scheduler, cache, or remote backend.
+
+### `avila-core-evidence`
+
+Defines draft evidence records and SHA-256 content identities. It has no package
+writer, signature system, lineage validator, or independent verifier yet.
+
+### `avila-core-cli`
+
+Provides headless contract validation and plan rendering. All output explicitly
+distinguishes structural validity from scientific validity.
+
+### `avila-core-app`
+
+An egui client over the same model and planner. It does not perform calculations
+and must never grow a separate scientific state model.
+
+## Target components
+
+Future components should be added only behind acceptance gates:
+
+- `core-units`: canonical quantity, dimensional, precision, and conversion rules;
+- `core-contracts`: template lifecycle, instantiation, approval, and amendments;
+- `core-registry`: local and organization capability discovery and policy matching;
+- `core-runner`: isolated lifecycle execution with immutable receipts;
+- `core-artifacts`: content-addressed storage, packaging, and retention;
+- `core-policy`: admissibility and separation-of-duties evaluation;
+- `core-verdict`: requirement-specific evaluation over admitted evidence;
+- `core-invalidation`: dependency and semantic change-impact engine;
+- `core-signing`: identities, signatures, timestamps, and trust roots;
+- `core-verify`: independent evidence-package verification;
+- adapter SDKs and conformance fixtures for non-Rust providers; and
+- optional enterprise and network services for private registries, routing,
+  settlement, and organization governance.
+
+Names are provisional. Separate crates are appropriate only when they enforce a
+real dependency or trust boundary.
+
+## Data flow
+
+1. A client submits a contract document and input descriptors.
+2. Structural and semantic validators return typed issues; they do not modify the
+   contract.
+3. Policy resolves capability requirements against an allowed registry snapshot.
+4. The planner emits an immutable campaign plan with exact capability identities,
+   dependencies, expected artifacts, environment policy, and cost estimate.
+5. Required people approve and sign the plan.
+6. The runner stages each step into a fresh controlled workspace, verifies all
+   input hashes, invokes the adapter, and captures an execution receipt.
+7. Output validators reject artifacts that do not satisfy the capability contract.
+8. Evidence records connect outputs to inputs, process receipts, method and data
+   versions, validation evidence, and reviews.
+9. Verdict logic evaluates only admitted evidence and produces requirement-level
+   states and rationales.
+10. The packager writes a human-readable and machine-readable evidence package;
+    the independent verifier checks it from the package root.
+
+Any failure before step 9 yields no verdict. A completed method that cannot decide
+the requirement may yield `INCONCLUSIVE` when the contract permits it.
+
+## Execution neutrality
+
+Rust provides Core’s authoritative model, planner, verifier, and application
+shell because it supports explicit types, portable binaries, and controlled
+failure behavior. Scientific software remains in its suitable ecosystem.
+
+A capability may invoke:
+
+- a local Rust, C, C++, Fortran, Python, or Julia executable;
+- a container or batch job;
+- an HPC scheduler;
+- an organization service; or
+- a human review step.
+
+Core standardizes the boundary and evidence receipt. It does not rewrite a proven
+solver merely to make the implementation homogeneous.
+
+## Local-first deployment
+
+The first trustworthy runtime should work without an Avila service:
+
+- contract and policy files are local;
+- capability packages are installed from an explicit registry snapshot;
+- data stays in the configured environment;
+- package verification requires no network call; and
+- all external communication is policy-controlled and receipted.
+
+Enterprise services may add identity, private registries, collaboration, managed
+updates, and routing. They must not become necessary to inspect historical
+customer evidence.
+
+## Determinism and reproducibility
+
+Core must distinguish:
+
+- deterministic planning and document canonicalization;
+- bitwise-reproducible execution where attainable;
+- numerically reproducible results within declared tolerances; and
+- scientifically credible results within a context of use.
+
+These are not synonyms. A deterministic wrong method remains wrong. A stochastic
+method can be admissible when seeds, distributions, convergence, numerical error,
+and acceptance policy are recorded.
+
+## Trust boundaries
+
+Untrusted inputs include every contract, artifact, manifest, adapter, process
+output, archive, remote receipt, and signature until verified. Important
+boundaries are:
+
+- GUI/API → authoritative model;
+- manifest registry → policy engine;
+- planner → runner;
+- runner → external process or scheduler;
+- produced artifact → output validator;
+- evidence graph → verdict evaluator;
+- package → independent verifier; and
+- organization identity → provider or reviewer authority.
+
+Parsing success, process exit code zero, and a valid signature each establish
+only their narrow claim.
+
+## Non-negotiable failure behavior
+
+- Unknown schema fields are rejected at authoritative boundaries.
+- Missing capability, dependency, qualification, evidence, or review blocks the
+  affected claim.
+- No capability can directly set the final verdict badge.
+- A changed input or method cannot preserve a downstream conclusion without an
+  explicit reuse rule.
+- The UI cannot invent placeholder numbers.
+- Every external process is assumed hostile or faulty until isolated and checked.
+- A verifier reports what it checked and what it did not check.
+

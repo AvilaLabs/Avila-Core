@@ -1,0 +1,19 @@
+[package]
+name = "avila-core-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "avila-core"
+path = "src/main.rs"
+
+[dependencies]
+avila-core-model.workspace = true
+avila-core-runtime.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+

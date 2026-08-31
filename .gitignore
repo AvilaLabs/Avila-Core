@@ -1,0 +1,9 @@
+/target/
+*.log
+*.tmp
+.DS_Store
+
+# Local campaign data and exported evidence are intentionally untracked.
+/workspaces/
+/exports/
+

@@ -1,0 +1,28 @@
+# Decision index
+
+This file records accepted strategic decisions and links to architectural
+decision records (ADRs). “Proposed” items are intentionally reversible.
+
+| ID | Status | Decision |
+| --- | --- | --- |
+| S-001 | Accepted | Public product name is **Avila Core**; repository folder codename is **project-north-star**. |
+| S-002 | Accepted | Core begins with a technical question and evidence contract, not a solver catalog or blank workflow canvas. |
+| S-003 | Accepted | Core is infrastructure for professionals; it does not present Avila Labs as the domain authority for every supported method. |
+| S-004 | Accepted | Public positioning centers on rigorous computational evidence, not implementation trends. |
+| S-005 | Accepted | `PASS`, `FAIL`, `INCONCLUSIVE`, and `NOT_EVALUATED` are distinct first-class states. |
+| S-006 | Accepted | Avila should be paid for admissibly resolving a contract, not for returning `PASS`. |
+| S-007 | Accepted | Customer evidence must be portable and independently inspectable. |
+| S-008 | Accepted | Scientific adapters may wrap existing tools in any suitable language; Rust is the authority and orchestration boundary, not a mandate to rewrite solvers. |
+| S-009 | Accepted | The initial application is local-first and compatible with private or air-gapped deployment. |
+| S-010 | Accepted | Specimen and unavailable capabilities must fail closed and never create cosmetic success states. |
+| S-011 | Proposed | A free/open local runtime and verifier become the adoption surface; enterprise policy and provider routing are commercial layers. Final licensing remains unresolved. |
+| S-012 | Proposed | The first vertical proof composes transport, activation, shutdown dose, uncertainty treatment, and requirement evaluation. Domain professionals must confirm it before implementation. |
+
+Architecture records:
+
+- [ADR-0001: Evidence contract as unit of work](docs/adr/0001-evidence-contract-unit-of-work.md)
+- [ADR-0002: Solver-neutral capability boundary](docs/adr/0002-solver-neutral-capability-boundary.md)
+- [ADR-0003: Headless Rust authority and thin egui client](docs/adr/0003-headless-rust-authority.md)
+- [ADR-0004: Four-state verdict model](docs/adr/0004-four-state-verdict-model.md)
+- [ADR-0005: Portable evidence boundary](docs/adr/0005-portable-evidence-boundary.md)
+

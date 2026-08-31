@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/capability-manifest/v0.1.schema.json",
+  "title": "Avila Core Capability Manifest v0.1",
+  "description": "A provider-neutral declaration of a computational capability, its execution boundary, and qualification state.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "capability_id",
+    "capability_type",
+    "name",
+    "provider",
+    "version",
+    "maturity",
+    "execution",
+    "qualification"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/capability-manifest/v0.1"
+    },
+    "capability_id": {
+      "$ref": "#/$defs/nonemptyString"
+    },
+    "capability_type": {
+      "$ref": "#/$defs/nonemptyString"
+    },
+    "name": {
+      "$ref": "#/$defs/nonemptyString"
+    },
+    "provider": {
+      "$ref": "#/$defs/nonemptyString"
+    },
+    "version": {
+      "$ref": "#/$defs/nonemptyString"
+    },
+    "maturity": {
+      "enum": [
+        "specimen",
+        "experimental",
+        "qualified",
+        "retired"
+      ]
+    },
+    "execution": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "reason"
+          ],
+          "properties": {
+            "mode": {
+              "const": "unavailable"
+            },
+            "reason": {
+              "$ref": "#/$defs/nonemptyString"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "program"
+          ],
+          "properties": {
+            "mode": {
+              "const": "process"
+            },
+            "program": {
+              "$ref": "#/$defs/nonemptyString"
+            },
+            "arguments": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            }
+          }
+        }
+      ]
+    },
+    "accepts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "produces": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "scope"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "not_assessed",
+            "in_review",
+            "qualified",
+            "rejected"
+          ]
+        },
+        "scope": {
+          "type": "string"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "evidence_uri": {
+          "type": "string"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {}
+    }
+  },
+  "$defs": {
+    "nonemptyString": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
+

@@ -1,0 +1,175 @@
+# Roadmap to 1.0
+
+This is a sequence of evidence gates, not a promised release calendar. Calendar
+ranges assume a very small team and may expand materially as scientific,
+security, legal, and partner requirements become clear. Releases should occur
+along the way; version 1.0 is the long-term threshold described in the product
+definition.
+
+## Stage 0 — foundation and discovery
+
+**Planning range:** now through approximately month 3–4.
+
+Build:
+
+- authoritative contract, capability, plan, evidence, and verdict models;
+- schemas, fixtures, canonical issue reporting, and CLI validation;
+- question-first egui workbench;
+- deterministic planning and explicit blocked states;
+- capability protocol threat model and conformance design;
+- evidence-package spike mapped to provenance/package standards; and
+- interview materials and a concrete first-contract workflow map.
+
+Validate:
+
+- 15–25 interviews across requesters, method owners, reviewers, and buyers;
+- at least three detailed examples of an existing painful decision loop;
+- current cycle time, labor, compute, review, and defect/rework baseline; and
+- legal and license feasibility for candidate external tools.
+
+Exit gate:
+
+> One organization commits real people, representative non-sensitive data, a
+> method owner, and a reviewer to a bounded design-partner pilot.
+
+The current repository is at the beginning of this stage.
+
+## Stage 1 — vertical reference prototype
+
+**Planning range:** approximately months 2–6.
+
+Build only the chosen evidence chain:
+
+- contract editor and semantic preflight for the selected question;
+- controlled local runner with sandbox strategy;
+- two or more real adapters needed for the chain;
+- immutable artifact store and execution receipts;
+- requirement evaluator with four-state verdict semantics;
+- initial human and machine evidence export; and
+- reference cases, negative cases, and fault injection.
+
+Do not call the workflow qualified. Experimental adapters remain visibly
+experimental.
+
+Exit gate:
+
+> The reference campaign reproduces agreed reference results, rejects known bad
+> cases, preserves complete lineage, and can be reviewed end to end by the named
+> domain professional.
+
+## Stage 2 — useful design-partner alpha
+
+**Planning range:** approximately months 5–12.
+
+Build:
+
+- identity and roles for requester, method owner, and reviewer;
+- immutable plan approval and review records;
+- private capability registry snapshot;
+- resumable campaigns, resource controls, and honest estimates;
+- dependency-aware invalidation and selective reruns;
+- package viewer and first independent verifier;
+- on-premises deployment path; and
+- operational logging, backups, update policy, and incident basics.
+
+Commercial proof:
+
+- complete at least one paid pilot;
+- expose Avila labor and third-party cost explicitly;
+- measure the workflow against the customer’s baseline; and
+- obtain the reviewer’s written assessment of evidence usefulness.
+
+Exit gate:
+
+> A design partner uses Core on a real non-safety-critical decision and chooses
+> to repeat the contract because measured total cycle time or cost improved
+> without reducing required reviewability.
+
+## Stage 3 — repeatable platform beta
+
+**Planning range:** approximately months 10–24.
+
+Build:
+
+- stable capability SDK, compatibility rules, and conformance suite;
+- governed contract templates and migrations;
+- signed capability packages, receipts, reviews, and package roots;
+- organization policy engine and separation of duties;
+- private multi-organization registry and provider routing;
+- a second implementation for at least one capability type;
+- controlled remote/HPC backend in addition to local execution;
+- cost estimation, provider metering, and settlement pilot;
+- security assessment and adversarial package/runner tests; and
+- documentation sufficient for a provider to integrate without Avila writing
+  its adapter.
+
+Commercial proof:
+
+- sell the same contract class to a second organization;
+- sell enterprise governance separately from custom services;
+- pay one external provider through the contract economics; and
+- demonstrate declining Avila labor per repeat contract.
+
+Exit gate:
+
+> An external provider publishes a conforming capability, an organization admits
+> it through policy, and an independent reviewer verifies the resulting package
+> without founder intervention.
+
+## Stage 4 — narrow production 1.0
+
+**Planning range:** approximately months 18–36 or longer.
+
+Release only for a named domain, contract class, and deployment boundary.
+
+Required product gates:
+
+- every requirement in [Product definition](../product/PRODUCT_DEFINITION.md) is
+  satisfied for the supported scope;
+- the schemas and protocol have compatibility and migration commitments;
+- runner isolation and evidence integrity have independent security review;
+- qualification and validation packages have professional approval;
+- offline verification and disaster recovery are tested;
+- support, vulnerability, update, retention, and deprecation policies operate;
+- customer and provider terms define evidence ownership, responsibility, and
+  limits without implying certification; and
+- at least two organizations have repeated the supported contract.
+
+Required outcome gates:
+
+- material median reduction in question-to-reviewed-answer cycle time;
+- no loss of required evidence compared with the governing baseline;
+- selective reruns demonstrate correct reuse after representative changes;
+- reviewer clarification loops decline rather than move elsewhere;
+- economics work without unpriced founder labor or compute waste; and
+- users can exit Avila while retaining independently verifiable evidence.
+
+## Stage 5 — network expansion
+
+**Planning range:** several years; not part of 1.0.
+
+Possible work:
+
+- public or federated capability discovery;
+- standardized commercial terms and provider settlement;
+- cross-organization reputation grounded in reproducibility and service evidence;
+- independent countersignature markets;
+- additional contract domains; and
+- recognition by major evidence consumers.
+
+Expansion follows supply and demand in proven contract types. Core should not
+launch an empty marketplace or claim a universal engineering platform.
+
+## Release naming before 1.0
+
+- `0.1`: contract and planner scaffold;
+- `0.2`: controlled runner and artifact receipts;
+- `0.3`: first experimental end-to-end reference campaign;
+- `0.4`: evidence package and offline verifier;
+- `0.5`: design-partner alpha and review workflow;
+- later `0.x`: invalidation, SDK, qualification, security, enterprise policy,
+  remote execution, and provider routing as they pass gates.
+
+These labels are illustrative. Scientific maturity must be shown separately from
+software version.
+

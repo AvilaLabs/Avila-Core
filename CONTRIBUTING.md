@@ -18,6 +18,8 @@ security, and test boundaries without widening the claimed scope.
 - Add tests for every state transition and invalidation rule.
 - Compare authoritative quantities exactly; presentation rounding must never
   alter a verdict.
+- Give every new finding code a catalog entry with a bounded next action and a
+  fixture that emits it; consumers match codes, never wording.
 - Treat provider-reported facts as assertions with provenance, not as truth
   promoted by a runner signature.
 - Do not call a finite vector corpus the complete specification; update written

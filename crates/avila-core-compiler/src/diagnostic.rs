@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub const CORE_S1101: &str = "CORE-S1101";
 pub const CORE_S1102: &str = "CORE-S1102";
+pub const CORE_S1103: &str = "CORE-S1103";
 pub const CORE_S1301: &str = "CORE-S1301";
 pub const CORE_A4301: &str = "CORE-A4301";
 pub const CORE_R3101: &str = "CORE-R3101";
@@ -26,6 +27,15 @@ pub const CORE_T2401: &str = "CORE-T2401";
 pub const CORE_T2402: &str = "CORE-T2402";
 pub const CORE_T2501: &str = "CORE-T2501";
 pub const CORE_T2601: &str = "CORE-T2601";
+
+/// Every code a compile report can carry, including `CORE-S1103`, which the
+/// authoritative reader raises for a duplicate object key.
+pub const COMPILER_FINDING_CODES: &[&str] = &[
+    CORE_A4301, CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3401,
+    CORE_R3501, CORE_R3601, CORE_R3602, CORE_S1101, CORE_S1102, CORE_S1103, CORE_S1301, CORE_T2001,
+    CORE_T2101, CORE_T2102, CORE_T2103, CORE_T2104, CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2401,
+    CORE_T2402, CORE_T2501, CORE_T2601,
+];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

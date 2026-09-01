@@ -236,7 +236,9 @@ Every finding carries:
 - related locations when applicable; and
 - typed repair applicability and candidates when a bounded repair exists.
 
-Consumers match these fields, never explanatory wording. Findings are sorted
+Consumers match these fields, never explanatory wording. Every code is
+explained in the [diagnostic catalog](DIAGNOSTICS.md), which the CLI serves
+through `avila-core explain`. Findings are sorted
 deterministically and independent root causes are reported in one pass. The
 current slice suppresses checks whose premise could not be constructed, such
 as a unit check after the metric source itself is missing.

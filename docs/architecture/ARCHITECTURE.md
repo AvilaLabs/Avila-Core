@@ -134,9 +134,11 @@ writer, signature system, lineage validator, or independent verifier yet.
 ### `avila-core-cli`
 
 Provides authoritative JSON canonicalization, embedded semantic-profile and
-vector-set identities, `v0.2-draft` compilation, headless `v0.1` contract
-validation, and specimen plan rendering. All output explicitly distinguishes
-software conformance or structural validity from scientific validity.
+vector-set identities, `v0.2-draft` compilation with a nonzero exit status for
+a rejected contract, the diagnostic catalog through `explain`, headless `v0.1`
+contract validation, and specimen plan rendering. All output explicitly
+distinguishes software conformance or structural validity from scientific
+validity.
 
 ### `avila-core-app`
 

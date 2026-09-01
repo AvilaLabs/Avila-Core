@@ -79,6 +79,8 @@ cargo run -p avila-core-cli -- compile \
   --contract fixtures/semantic-core/types/types.R1.resolved.pass.contract.json \
   --registry fixtures/semantic-core/types/compiler.registry.v1.json
 
+cargo run -p avila-core-cli -- explain CORE-R3102
+
 cargo run -p avila-core-cli -- \
   validate-contract examples/contracts/shutdown-dose-specimen.json
 
@@ -96,6 +98,13 @@ cargo run -p avila-core-app
 The plan command should return `"status": "blocked"`. That is the expected and
 only honest state of the included specimen.
 
+The compile command prints a JSON report and exits 0 when the contract
+compiled, possibly with notices; 1 when it was rejected; and 2 when the tool
+could not run. Every finding carries a stable code, a class, an owner, a JSON
+Pointer location, and typed repair candidates where a bounded repair exists;
+`explain` prints the [catalog entry](docs/architecture/DIAGNOSTICS.md) for a
+code, or the whole catalog with `--all`.
+
 ## Repository map
 
 ```text
@@ -110,7 +119,8 @@ crates/
 docs/
   strategy/               north star, economics, and counter-positioning
   product/                product definition, evidence contracts, and UX
-  architecture/           boundaries, capability protocol, and evidence model
+  architecture/           boundaries, capability protocol, evidence model, and
+                          the diagnostic catalog
   roadmap/                staged validation and 1.0 planning hypotheses
   adr/                    durable architectural decisions
 schemas/                  machine-readable interchange drafts

@@ -4,8 +4,9 @@ use std::error::Error;
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::process::ExitCode;
 
-use avila_core_compiler::compile_documents;
+use avila_core_compiler::{CompilationStatus, DIAGNOSTIC_CATALOG, compile_documents, explain};
 use avila_core_evidence::sha256_hex;
 use avila_core_kernel::{SEMANTIC_PROFILE, canonicalize_json};
 use avila_core_model::{CapabilityManifest, EvidenceContract};
@@ -31,11 +32,23 @@ enum Command {
     /// Read authoritative JSON and emit its deterministic canonical bytes.
     Canonicalize { document: PathBuf },
     /// Compile a v0.2-draft contract against one immutable registry snapshot.
+    ///
+    /// Prints the compile report as JSON. Exits 0 when the contract compiled,
+    /// possibly with notices; 1 when it was rejected; and 2 when the tool
+    /// could not run at all.
     Compile {
         #[arg(long)]
         contract: PathBuf,
         #[arg(long)]
         registry: PathBuf,
+    },
+    /// Explain a stable finding code from the diagnostic catalog.
+    Explain {
+        /// A code such as `CORE-R3102`. Omit it and pass `--all` for the whole catalog.
+        code: Option<String>,
+        /// Print every catalog entry.
+        #[arg(long)]
+        all: bool,
     },
     /// Validate the structure of an evidence contract.
     ValidateContract { contract: PathBuf },
@@ -48,7 +61,17 @@ enum Command {
     },
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> ExitCode {
+    match run() {
+        Ok(code) => code,
+        Err(error) => {
+            eprintln!("error: {error}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn run() -> Result<ExitCode, Box<dyn Error>> {
     match Cli::parse().command {
         Command::SemanticProfile => {
             println!(
@@ -68,7 +91,23 @@ fn main() -> Result<(), Box<dyn Error>> {
             let registry = fs::read(registry)?;
             let report = compile_documents(&contract, &registry)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
+            if report.status == CompilationStatus::Rejected {
+                return Ok(ExitCode::from(1));
+            }
         }
+        Command::Explain { code, all } => match (code, all) {
+            (None, true) => println!("{}", serde_json::to_string_pretty(DIAGNOSTIC_CATALOG)?),
+            (Some(code), false) => match explain(&code) {
+                Some(entry) => println!("{}", serde_json::to_string_pretty(entry)?),
+                None => {
+                    return Err(format!(
+                        "`{code}` is not a finding code this compiler emits; run `avila-core explain --all` for the catalog"
+                    )
+                    .into());
+                }
+            },
+            _ => return Err("pass exactly one code, or `--all` for the whole catalog".into()),
+        },
         Command::ValidateContract { contract } => {
             let contract: EvidenceContract = read_json(&contract)?;
             contract.validate()?;
@@ -94,7 +133,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             println!("{}", serde_json::to_string_pretty(&plan)?);
         }
     }
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -245,6 +284,13 @@ mod tests {
                 .iter()
                 .all(|set| set.sha256.starts_with("sha256:") && set.sha256.len() == 71)
         );
+    }
+
+    #[test]
+    fn explain_serves_the_embedded_catalog() {
+        assert_eq!(explain("CORE-R3102").unwrap().code, "CORE-R3102");
+        assert!(explain("CORE-X9999").is_none());
+        assert!(!DIAGNOSTIC_CATALOG.is_empty());
     }
 
     #[test]

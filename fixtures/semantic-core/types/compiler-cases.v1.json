@@ -1,0 +1,349 @@
+{
+  "fixture_set": "compiler-types",
+  "version": 1,
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "registry": {
+    "path": "compiler.registry.v1.json",
+    "sha256": "sha256:e9dabf65930ce73055bc9b4e1163d64c99b92460b9548bfb6afaf6569e0621ef"
+  },
+  "fixtures": [
+    {
+      "fixture_id": "types.R1.resolved.pass",
+      "clause": "SC-6 R1",
+      "contract": "types.R1.resolved.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [],
+        "compiled": {
+          "snapshot_sha256": "sha256:5850e14e8bda8d719ca432beb2122b0480c3dd687077b74a2762071ad5dd9fa4",
+          "step_order": [
+            "calculate",
+            "bound"
+          ],
+          "bindings": [
+            {
+              "step_id": "calculate",
+              "input_slot": "source",
+              "source": "input:case"
+            },
+            {
+              "step_id": "bound",
+              "input_slot": "dose_rate",
+              "source": "step:calculate/dose_rate"
+            }
+          ],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.R1.unresolved.fail",
+      "clause": "SC-6 R1",
+      "contract": "types.R1.unresolved.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3101",
+            "class": "missing",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/inputs/source"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R1.ambiguous.fail",
+      "clause": "SC-6 R1",
+      "contract": "types.R1.ambiguous.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3102",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/inputs/source"
+            },
+            "repairs": [
+              "constrained_choice"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R1.explicit-binding.pass",
+      "clause": "SC-6 R1",
+      "contract": "types.R1.explicit-binding.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [],
+        "compiled": {
+          "snapshot_sha256": "sha256:e9bf0dbfb2096d0e0c2acdc47a0de8c5274ea2b358da1f2a090214e9365a3e70",
+          "step_order": [
+            "calculate",
+            "bound"
+          ],
+          "bindings": [
+            {
+              "step_id": "calculate",
+              "input_slot": "source",
+              "source": "input:case-a"
+            },
+            {
+              "step_id": "bound",
+              "input_slot": "dose_rate",
+              "source": "step:calculate/dose_rate"
+            }
+          ],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.R2.role-mismatch.fail",
+      "clause": "SC-6 R2",
+      "contract": "types.R2.role-mismatch.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2101",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/bindings/0/source"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R4.media.fail",
+      "clause": "SC-6 R4",
+      "contract": "types.R4.media.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2301",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/inputs/0/media_type"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R5.self-dependency.fail",
+      "clause": "SC-6 R5",
+      "contract": "types.R5.self-dependency.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3201",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/1/bindings/0/source"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R5.cycle.fail",
+      "clause": "SC-6 R5",
+      "contract": "types.R5.cycle.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3202",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/bindings"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R5.unknown-step.fail",
+      "clause": "SC-6 R5",
+      "contract": "types.R5.unknown-step.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3203",
+            "class": "missing",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/1/bindings/0/source"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R6.unbound-metric.fail",
+      "clause": "SC-6 R6",
+      "contract": "types.R6.unbound-metric.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3301",
+            "class": "missing",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/metric"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R6.limit-kind.fail",
+      "clause": "SC-6 R6",
+      "contract": "types.R6.limit-kind.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2102",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/limit/kind"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R6.limit-unit.fail",
+      "clause": "SC-6 R6",
+      "contract": "types.R6.limit-unit.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2103",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/limit/unit"
+            },
+            "repairs": [
+              "method_owner_judgment"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R6.unknown-unit.fail",
+      "clause": "SC-1 and SC-6 R6",
+      "contract": "types.R6.unknown-unit.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2001",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/limit/unit"
+            },
+            "repairs": [
+              "constrained_choice"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.independent-errors-one-pass.pass",
+      "clause": "SC-6 independent findings",
+      "contract": "types.independent-errors-one-pass.pass.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3301",
+            "class": "missing",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/metric"
+            },
+            "repairs": []
+          },
+          {
+            "code": "CORE-R3101",
+            "class": "missing",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/inputs/source"
+            },
+            "repairs": []
+          },
+          {
+            "code": "CORE-R3203",
+            "class": "missing",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/1/bindings/0/source"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -18,15 +18,9 @@ multiple historical profiles.
 - `verdict-calculus.v1.json`: 49 vectors: 41 requirement-evaluation vectors
   plus 8 aggregate-verdict vectors; and
 - `canon.v1.json`: 12 initial canonical-value and byte-reader vectors.
-
-The `types/` directory now also contains one shared draft registry snapshot and
-one positive, file-backed R1 compilation specimen. The compiler test suite
-derives adversarial unresolved, ambiguous, explicit-binding, role, media,
-dependency, metric, kind, unit, and independent-error cases from that specimen.
-Those generated unit cases exercise the implementation, but they do **not** yet
-satisfy the named, portable compiler-fixture inventory below. Each required
-case still needs a standalone snapshot and canonical expected record before
-ADR-0006 can be accepted.
+- `types/compiler-cases.v1.json`: 14 executable compiler fixtures: 2 compiled
+  cases and 12 rejected cases covering the current R1, R2, R4, R5, R6, exact
+  unit-lowering, cascade-suppression, and independent-finding slice.
 
 All other fixtures below are required before ADR acceptance and are currently
 planned unless files exist for them.
@@ -34,9 +28,12 @@ planned unless files exist for them.
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
 `scope-predicates.v1.json`, plus the 41 requirement and 8 aggregation vectors in
-`verdict-calculus.v1.json`. Passing all 90 current pure vectors does not accept
-ADR-0006: the compiler fixtures and other vector families in this coverage plan
-remain absent, and no result is scientifically qualified.
+`verdict-calculus.v1.json`. The compiler harness also executes all 14 cases in
+`types/compiler-cases.v1.json` and pins the shared registry digest plus both
+successful compiled-snapshot identities. Passing the 90 pure vectors and 14
+compiler fixtures does not accept ADR-0006: most compiler rules and other
+vector families in this coverage plan remain absent, and no result is
+scientifically qualified.
 
 The initial `le.bounded.one_sided` specimen retains its stable fixture id, but
 its expected rule was corrected to `bounded.le.upper_only` when the harness was
@@ -57,14 +54,20 @@ fixtures/semantic-core/
     (planned) uncertainty-reduction.v1.json,
               admission.v1.json, propagation.v1.json, execution-memo.v1.json
   <area>/<fixture_id>.json   compiler fixtures: a snapshot in, expected findings/records out
+  types/compiler-cases.v1.json
+                             executable manifest for the current compiler subset
+  types/*.contract.json     exact contract inputs named by that manifest
+  types/compiler.registry.v1.json
+                             exact shared registry input pinned by the manifest
   scenarios/                 planned end-to-end campaign fixtures
 ```
 
-During the draft bootstrap, `types/compiler.registry.v1.json` and
-`types/types.R1.resolved.pass.contract.json` are reusable compiler inputs rather
-than a complete conformance fixture. They are kept separate so the CLI can
-exercise the real two-document boundary. The eventual portable fixtures remain
-self-contained snapshots in the format below.
+The current compiler corpus is portable as a directory bundle. Its manifest
+pins the shared registry's canonical SHA-256 identity, names each exact contract
+file, and records the stable finding projection or compiled record projection.
+Keeping the inputs separate also exercises the real two-document CLI boundary.
+Future standalone snapshots may use the general format below when a case needs
+its own registry, policy, approvals, receipts, or artifacts.
 
 ### Vector format (`vectors/*.json`)
 

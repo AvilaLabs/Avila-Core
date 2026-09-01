@@ -146,7 +146,8 @@ pub fn compile_documents(
     validate_document_headers(&contract, &registry, &mut findings);
     validate_contract_shape(&contract, &mut findings);
     let registry_index = RegistryIndex::build(&registry, &mut findings);
-    validate_contract_registry_refs(&contract, &registry_index, &mut findings);
+    let invalid_sources =
+        validate_contract_registry_refs(&contract, &registry_index, &mut findings);
 
     if contract.workflow.len() > MAX_WORKFLOW_STEPS {
         findings.push(CoreDiagnostic::new(
@@ -162,10 +163,21 @@ pub fn compile_documents(
     }
 
     let candidates = collect_sources(&contract, &registry_index);
-    let resolution = resolve_workflow(&contract, &registry_index, &candidates, &mut findings);
+    let resolution = resolve_workflow(
+        &contract,
+        &registry_index,
+        &candidates,
+        &invalid_sources,
+        &mut findings,
+    );
     let order = validate_graph(&contract, &resolution.dependencies, &mut findings);
-    let compiled_requirements =
-        compile_requirements(&contract, &registry_index, &candidates, &mut findings);
+    let compiled_requirements = compile_requirements(
+        &contract,
+        &registry_index,
+        &candidates,
+        &invalid_sources,
+        &mut findings,
+    );
 
     sort_findings(&mut findings);
     if findings.iter().any(CoreDiagnostic::blocks_compilation) {
@@ -743,20 +755,29 @@ fn validate_contract_registry_refs(
     contract: &ContractSource,
     registry: &RegistryIndex<'_>,
     findings: &mut Vec<CoreDiagnostic>,
-) {
+) -> BTreeSet<SourceRef> {
+    let mut invalid_sources = BTreeSet::new();
     for (index, input) in contract.inputs.iter().enumerate() {
         match registry.roles.get(&input.role) {
-            None => findings.push(CoreDiagnostic::new(
-                CORE_R3101,
-                FindingClass::Unsatisfied,
-                "contract_author",
-                contract_location(format!("/inputs/{index}/role")),
-                format!(
-                    "input references role `{}@{}` absent from the supplied registry snapshot",
-                    input.role.id, input.role.major
-                ),
-            )),
+            None => {
+                invalid_sources.insert(SourceRef::ContractInput {
+                    input_id: input.input_id.clone(),
+                });
+                findings.push(CoreDiagnostic::new(
+                    CORE_R3101,
+                    FindingClass::Unsatisfied,
+                    "contract_author",
+                    contract_location(format!("/inputs/{index}/role")),
+                    format!(
+                        "input references role `{}@{}` absent from the supplied registry snapshot",
+                        input.role.id, input.role.major
+                    ),
+                ));
+            }
             Some(role) if !role.accepted_media_types.contains(&input.media_type) => {
+                invalid_sources.insert(SourceRef::ContractInput {
+                    input_id: input.input_id.clone(),
+                });
                 findings.push(CoreDiagnostic::new(
                     CORE_T2301,
                     FindingClass::Invalid,
@@ -771,6 +792,7 @@ fn validate_contract_registry_refs(
             Some(_) => {}
         }
     }
+    invalid_sources
 }
 
 #[derive(Clone)]
@@ -819,6 +841,7 @@ fn resolve_workflow(
     contract: &ContractSource,
     registry: &RegistryIndex<'_>,
     candidates: &[Candidate],
+    invalid_sources: &BTreeSet<SourceRef>,
     findings: &mut Vec<CoreDiagnostic>,
 ) -> WorkflowResolution {
     let mut result = WorkflowResolution::default();
@@ -901,6 +924,9 @@ fn resolve_workflow(
                     ));
                     continue;
                 };
+                if invalid_sources.contains(&candidate.source) {
+                    continue;
+                }
                 let role_matches = candidate.role == slot.role;
                 let media_matches = slot.accepted_media_types.contains(&candidate.media_type);
                 if !role_matches {
@@ -939,6 +965,7 @@ fn resolve_workflow(
 
             let matches: Vec<_> = candidates
                 .iter()
+                .filter(|candidate| !invalid_sources.contains(&candidate.source))
                 .filter(|candidate| {
                     !matches!(
                         &candidate.source,
@@ -948,6 +975,9 @@ fn resolve_workflow(
                 .filter(|candidate| candidate.role == slot.role)
                 .filter(|candidate| slot.accepted_media_types.contains(&candidate.media_type))
                 .collect();
+            let blocked_by_invalid_source = candidates.iter().any(|candidate| {
+                invalid_sources.contains(&candidate.source) && candidate.role == slot.role
+            });
             match matches.as_slice() {
                 [candidate] => {
                     add_dependency(&mut result, &step.step_id, &candidate.source);
@@ -956,16 +986,18 @@ fn resolve_workflow(
                         source: candidate.source.clone(),
                     });
                 }
-                [] if slot.required => findings.push(CoreDiagnostic::new(
-                    CORE_R3101,
-                    FindingClass::Missing,
-                    "contract_author",
-                    logical_input_location(step_index, &slot.slot_id),
-                    format!(
-                        "required input slot `{}` has no compatible source",
-                        slot.slot_id
-                    ),
-                )),
+                [] if slot.required && !blocked_by_invalid_source => {
+                    findings.push(CoreDiagnostic::new(
+                        CORE_R3101,
+                        FindingClass::Missing,
+                        "contract_author",
+                        logical_input_location(step_index, &slot.slot_id),
+                        format!(
+                            "required input slot `{}` has no compatible source",
+                            slot.slot_id
+                        ),
+                    ))
+                }
                 [_, _, ..] if slot.required => {
                     let candidate_labels = matches
                         .iter()
@@ -1121,6 +1153,7 @@ fn compile_requirements(
     contract: &ContractSource,
     registry: &RegistryIndex<'_>,
     candidates: &[Candidate],
+    invalid_sources: &BTreeSet<SourceRef>,
     findings: &mut Vec<CoreDiagnostic>,
 ) -> Vec<CompiledRequirement> {
     let mut compiled = Vec::new();
@@ -1148,6 +1181,9 @@ fn compile_requirements(
             ));
             continue;
         };
+        if invalid_sources.contains(&candidate.source) {
+            continue;
+        }
         let Some(role) = registry.roles.get(&candidate.role) else {
             continue;
         };
@@ -1609,6 +1645,13 @@ mod tests {
         let report = compile_contract(&media_mismatch);
         assert!(codes(&report).contains(CORE_T2301));
         assert!(!codes(&report).contains(CORE_T2101));
+        let media_findings: Vec<_> = report
+            .findings
+            .iter()
+            .filter(|finding| finding.code == CORE_T2301)
+            .collect();
+        assert_eq!(media_findings.len(), 1);
+        assert_eq!(media_findings[0].primary.pointer, "/inputs/0/media_type");
     }
 
     #[test]

@@ -1,0 +1,55 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "fixture.types.R6.limit-unit.fail",
+  "revision": 1,
+  "status": "draft",
+  "inputs": [
+    {
+      "input_id": "case",
+      "role": {
+        "id": "fixture.source_document",
+        "major": 1
+      },
+      "media_type": "application/vnd.fixture.source+json"
+    }
+  ],
+  "workflow": [
+    {
+      "step_id": "calculate",
+      "capability_type": {
+        "id": "fixture.calculate_dose",
+        "major": 1
+      },
+      "parameters": {}
+    },
+    {
+      "step_id": "bound",
+      "capability_type": {
+        "id": "fixture.bound_dose",
+        "major": 1
+      },
+      "parameters": {}
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "R-001",
+      "statement": "A unit from another nominal quantity kind is not accepted.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "bound",
+        "output_slot": "bounded_dose_rate"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "nuclear.dose_equivalent_rate",
+        "value": "100",
+        "unit": "Gy/s"
+      },
+      "basis": {
+        "kind": "bounded"
+      }
+    }
+  ]
+}

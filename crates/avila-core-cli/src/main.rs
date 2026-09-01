@@ -104,6 +104,8 @@ struct SemanticProfileReport {
     status: &'static str,
     implemented_vector_sets: Vec<VectorSetReport>,
     total_vectors: usize,
+    implemented_compiler_fixture_sets: Vec<CompilerFixtureSetReport>,
+    total_compiler_fixtures: usize,
     notice: &'static str,
 }
 
@@ -115,12 +117,24 @@ struct VectorSetReport {
     sha256: String,
 }
 
+#[derive(Debug, serde::Serialize)]
+struct CompilerFixtureSetReport {
+    fixture_set: String,
+    version: u64,
+    fixtures: usize,
+    sha256: String,
+}
+
 const EMBEDDED_VECTOR_SETS: [&[u8]; 4] = [
     include_bytes!("../../../fixtures/semantic-core/vectors/canon.v1.json"),
     include_bytes!("../../../fixtures/semantic-core/vectors/unit-scaling.v1.json"),
     include_bytes!("../../../fixtures/semantic-core/vectors/scope-predicates.v1.json"),
     include_bytes!("../../../fixtures/semantic-core/vectors/verdict-calculus.v1.json"),
 ];
+
+const EMBEDDED_COMPILER_FIXTURE_SETS: [&[u8]; 1] = [include_bytes!(
+    "../../../fixtures/semantic-core/types/compiler-cases.v1.json"
+)];
 
 fn semantic_profile_report() -> Result<SemanticProfileReport, Box<dyn Error>> {
     let mut implemented_vector_sets = Vec::with_capacity(EMBEDDED_VECTOR_SETS.len());
@@ -151,12 +165,38 @@ fn semantic_profile_report() -> Result<SemanticProfileReport, Box<dyn Error>> {
         });
     }
 
+    let mut implemented_compiler_fixture_sets =
+        Vec::with_capacity(EMBEDDED_COMPILER_FIXTURE_SETS.len());
+    let mut total_compiler_fixtures = 0;
+    for bytes in EMBEDDED_COMPILER_FIXTURE_SETS {
+        let document: serde_json::Value = serde_json::from_slice(bytes)?;
+        let fixture_set = required_string(&document, "fixture_set")?;
+        let version = document
+            .get("version")
+            .and_then(serde_json::Value::as_u64)
+            .ok_or("embedded compiler fixture set is missing an integer version")?;
+        let fixtures = document
+            .get("fixtures")
+            .and_then(serde_json::Value::as_array)
+            .ok_or("embedded compiler fixture set is missing fixtures")?
+            .len();
+        total_compiler_fixtures += fixtures;
+        implemented_compiler_fixture_sets.push(CompilerFixtureSetReport {
+            fixture_set: fixture_set.into(),
+            version,
+            fixtures,
+            sha256: format!("sha256:{}", sha256_hex(bytes)),
+        });
+    }
+
     Ok(SemanticProfileReport {
         semantic_profile: SEMANTIC_PROFILE,
         kernel_version: env!("CARGO_PKG_VERSION"),
         status: "draft",
         implemented_vector_sets,
         total_vectors,
+        implemented_compiler_fixture_sets,
+        total_compiler_fixtures,
         notice: "Conformance to these software vectors is not scientific qualification, evidence admission, or certification.",
     })
 }
@@ -187,9 +227,17 @@ mod tests {
         assert_eq!(report.status, "draft");
         assert_eq!(report.total_vectors, 90);
         assert_eq!(report.implemented_vector_sets.len(), 4);
+        assert_eq!(report.total_compiler_fixtures, 14);
+        assert_eq!(report.implemented_compiler_fixture_sets.len(), 1);
         assert!(
             report
                 .implemented_vector_sets
+                .iter()
+                .all(|set| set.sha256.starts_with("sha256:") && set.sha256.len() == 71)
+        );
+        assert!(
+            report
+                .implemented_compiler_fixture_sets
                 .iter()
                 .all(|set| set.sha256.starts_with("sha256:") && set.sha256.len() == 71)
         );

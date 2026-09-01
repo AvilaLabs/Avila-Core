@@ -1,0 +1,66 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "fixture.types.R5.cycle.fail",
+  "revision": 1,
+  "status": "draft",
+  "inputs": [],
+  "workflow": [
+    {
+      "step_id": "left",
+      "capability_type": {
+        "id": "fixture.bound_dose",
+        "major": 1
+      },
+      "bindings": [
+        {
+          "input_slot": "dose_rate",
+          "source": {
+            "source": "step_output",
+            "step_id": "right",
+            "output_slot": "bounded_dose_rate"
+          }
+        }
+      ],
+      "parameters": {}
+    },
+    {
+      "step_id": "right",
+      "capability_type": {
+        "id": "fixture.bound_dose",
+        "major": 1
+      },
+      "bindings": [
+        {
+          "input_slot": "dose_rate",
+          "source": {
+            "source": "step_output",
+            "step_id": "left",
+            "output_slot": "bounded_dose_rate"
+          }
+        }
+      ],
+      "parameters": {}
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "R-001",
+      "statement": "The cyclic specimen remains non-executable.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "right",
+        "output_slot": "bounded_dose_rate"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "nuclear.dose_equivalent_rate",
+        "value": "100",
+        "unit": "uSv/h"
+      },
+      "basis": {
+        "kind": "bounded"
+      }
+    }
+  ]
+}

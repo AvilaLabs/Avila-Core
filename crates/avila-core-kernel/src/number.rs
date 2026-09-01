@@ -98,6 +98,25 @@ impl ExactNumber {
         Self::new(numerator, denominator)
     }
 
+    pub fn checked_div(&self, other: &Self) -> Result<Self, KernelError> {
+        if other.is_zero() {
+            return Err(invalid_number("exact division by zero"));
+        }
+        let reciprocal_magnitude = i128::try_from(other.denominator)
+            .map_err(|_| resource_limit("exact division exceeds the work budget"))?;
+        let reciprocal_numerator = if other.numerator.is_negative() {
+            -reciprocal_magnitude
+        } else {
+            reciprocal_magnitude
+        };
+        let reciprocal = Self::new(reciprocal_numerator, other.numerator.unsigned_abs())?;
+        self.checked_mul(&reciprocal)
+    }
+
+    pub fn checked_mul_integer(&self, value: i128) -> Result<Self, KernelError> {
+        self.checked_mul(&Self::new(value, 1)?)
+    }
+
     pub fn checked_add(&self, other: &Self) -> Result<Self, KernelError> {
         self.checked_add_signed(other, false)
     }
@@ -153,6 +172,47 @@ impl ExactNumber {
         } else {
             ordering
         })
+    }
+
+    pub fn round_half_even_integer(&self) -> Result<i128, KernelError> {
+        let magnitude = self.numerator.unsigned_abs();
+        let quotient = magnitude / self.denominator;
+        let remainder = magnitude % self.denominator;
+        let complement = self.denominator - remainder;
+        let increment = remainder > complement || (remainder == complement && quotient % 2 == 1);
+        let rounded = quotient
+            .checked_add(u128::from(increment))
+            .ok_or_else(|| resource_limit("rounded integer exceeds the work budget"))?;
+        signed_from_magnitude(rounded, self.numerator.is_negative())
+    }
+
+    pub fn to_fixed_decimal(&self, scale: u32) -> Result<String, KernelError> {
+        let factor = 10u128
+            .checked_pow(scale)
+            .ok_or_else(|| resource_limit("decimal display scale exceeds the work budget"))?;
+        let factor = i128::try_from(factor)
+            .map_err(|_| resource_limit("decimal display scale exceeds the work budget"))?;
+        let scaled = self.checked_mul_integer(factor)?;
+        if scaled.denominator != 1 {
+            return Err(invalid_number(
+                "exact value cannot be represented at the requested decimal scale",
+            ));
+        }
+
+        let negative = scaled.numerator.is_negative();
+        let mut digits = scaled.numerator.unsigned_abs().to_string();
+        let scale = usize::try_from(scale)
+            .map_err(|_| resource_limit("decimal display scale exceeds the work budget"))?;
+        if scale > 0 {
+            if digits.len() <= scale {
+                digits.insert_str(0, &"0".repeat(scale + 1 - digits.len()));
+            }
+            digits.insert(digits.len() - scale, '.');
+        }
+        if negative {
+            digits.insert(0, '-');
+        }
+        Ok(digits)
     }
 
     #[must_use]
@@ -609,5 +669,39 @@ mod tests {
         ] {
             assert_eq!(lower_authored_decimal(authored).unwrap(), expected);
         }
+    }
+
+    #[test]
+    fn half_even_rounding_and_fixed_display_are_exact() {
+        for (value, rounded) in [
+            ("5/2", 2),
+            ("7/2", 4),
+            ("-5/2", -2),
+            ("-7/2", -4),
+            ("251/100", 3),
+            ("249/100", 2),
+        ] {
+            assert_eq!(
+                ExactNumber::from_canonical(value)
+                    .unwrap()
+                    .round_half_even_integer()
+                    .unwrap(),
+                rounded
+            );
+        }
+        assert_eq!(
+            ExactNumber::from_canonical("25")
+                .unwrap()
+                .to_fixed_decimal(1)
+                .unwrap(),
+            "25.0"
+        );
+        assert_eq!(
+            ExactNumber::from_canonical("1/200")
+                .unwrap()
+                .to_fixed_decimal(3)
+                .unwrap(),
+            "0.005"
+        );
     }
 }

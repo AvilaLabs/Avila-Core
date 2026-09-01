@@ -98,9 +98,11 @@ budget, authoritative JSON reading, duplicate-key rejection, NFC enforcement,
 deterministic JCS-derived key ordering, nominal quantity-kind registries, and
 exact within-kind unit scaling. It also evaluates the current bounded predicate
 language with strong Kleene `true`/`false`/`unknown` semantics over explicit
-contexts and source requirements. Its conformance tests execute every vector in
-`canon.v1.json`, `unit-scaling.v1.json`, and `scope-predicates.v1.json`. It does
-not yet compile contracts, admit evidence, or derive verdicts.
+contexts and source requirements, then derives four-state requirement verdicts
+from admitted exact, interval, coverage-interval, worst-case, and nominal claim
+specimens. Its conformance tests execute all 90 current vectors across the four
+pure vector sets. It does not yet compile whole contracts, admit evidence,
+invalidate dependencies, or verify packages.
 
 ### `avila-core-evidence`
 

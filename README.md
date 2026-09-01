@@ -20,6 +20,7 @@ This repository is a **pre-alpha scaffold**. It currently provides:
 - the first semantic-kernel slice for exact bounded rationals, canonical
   decimals, authoritative JSON, quantity kinds, exact unit scaling, and
   three-valued applicability predicates;
+- exact four-state verdict derivation over admitted claim specimens;
 - a deterministic dependency planner that fails closed;
 - a draft portable evidence model and SHA-256 utility;
 - JSON Schemas and deliberately non-executable specimen documents;
@@ -27,13 +28,15 @@ This repository is a **pre-alpha scaffold**. It currently provides:
 - an egui product shell showing the intended question-first experience.
 
 The repository also contains proposed `v0.2` semantic rules and an initial
-conformance-vector corpus. The Rust kernel executes all 12 canonical-value, 10
-unit-scaling, and 19 scope-predicate vectors. Verdict calculus and the wider
-compiler semantics remain proposed and unimplemented.
+conformance-vector corpus. The Rust kernel executes all 90 current pure vectors:
+12 canonical-value, 10 unit-scaling, 19 scope-predicate, 41 requirement-verdict,
+and 8 aggregate-verdict cases. The wider compiler, admission, invalidation, and
+package semantics remain proposed and unimplemented.
 
-It does **not** run scientific software, calculate a physical quantity, verify a
-requirement, certify a design, or produce decision-grade evidence. The specimen
-campaign is blocked on purpose.
+It does **not** run scientific software, calculate a physical quantity, admit
+real evidence, evaluate a scientifically qualified requirement, certify a
+design, or produce decision-grade evidence. The specimen campaign is blocked on
+purpose.
 
 ## Core objects
 
@@ -78,7 +81,7 @@ only honest state of the included specimen.
 ```text
 crates/
   avila-core-model/       contract, capability, requirement, and verdict types
-  avila-core-kernel/      exact values, kinds, unit scaling, and predicates
+  avila-core-kernel/      exact values, predicates, and verdict derivation
   avila-core-runtime/     deterministic campaign planning; no execution yet
   avila-core-evidence/    portable evidence records and hashing
   avila-core-cli/         headless local interface

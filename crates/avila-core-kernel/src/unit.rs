@@ -233,6 +233,24 @@ impl KindRegistry {
         self.scale_quantity(kind_id, &quantity.value, &quantity.unit)
     }
 
+    pub fn value_in_unit(
+        &self,
+        kind_id: &str,
+        canonical_value: &ExactNumber,
+        unit_symbol: &str,
+    ) -> Result<ExactNumber, KernelError> {
+        let kind = self.kind(kind_id).ok_or_else(|| {
+            KernelError::new(CORE_S1102, format!("unknown quantity kind `{kind_id}`"))
+        })?;
+        let unit = kind.unit(unit_symbol).ok_or_else(|| {
+            KernelError::new(
+                CORE_T2001,
+                format!("unit symbol `{unit_symbol}` is not admitted for kind `{kind_id}`"),
+            )
+        })?;
+        canonical_value.checked_div(unit.factor())
+    }
+
     #[must_use]
     pub fn kind(&self, id: &str) -> Option<&KindDefinition> {
         self.kind_indexes

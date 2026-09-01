@@ -309,7 +309,7 @@
    },
    "expected": {
     "status": "inconclusive",
-    "rule": "bounded.le.one_sided",
+    "rule": "bounded.le.upper_only",
     "canonical_unit": "Sv/s",
     "limit_canonical": "1/36000000",
     "upper_canonical": "59/1800000000"

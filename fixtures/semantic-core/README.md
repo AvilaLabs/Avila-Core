@@ -24,9 +24,15 @@ planned unless files exist for them.
 
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
-`scope-predicates.v1.json`. The verdict vector file remains a reviewable
-specification until its kernel operations and harness are implemented. Passing
-these vector sets does not accept ADR-0006 or imply scientific qualification.
+`scope-predicates.v1.json`, plus the 41 requirement and 8 aggregation vectors in
+`verdict-calculus.v1.json`. Passing all 90 current pure vectors does not accept
+ADR-0006: the compiler fixtures and other vector families in this coverage plan
+remain absent, and no result is scientifically qualified.
+
+The initial `le.bounded.one_sided` specimen retains its stable fixture id, but
+its expected rule was corrected to `bounded.le.upper_only` when the harness was
+implemented so it matches the SC-10 decision table and the other one-sided rule
+identifiers.
 
 ## Layout
 

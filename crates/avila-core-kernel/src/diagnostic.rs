@@ -5,6 +5,9 @@ pub const CORE_S1102: &str = "CORE-S1102";
 pub const CORE_S1103: &str = "CORE-S1103";
 pub const CORE_T2001: &str = "CORE-T2001";
 pub const CORE_T2102: &str = "CORE-T2102";
+pub const CORE_T2203: &str = "CORE-T2203";
+pub const CORE_R3301: &str = "CORE-R3301";
+pub const CORE_E7301: &str = "CORE-E7301";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]

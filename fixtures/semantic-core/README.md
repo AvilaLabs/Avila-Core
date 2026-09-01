@@ -18,10 +18,10 @@ multiple historical profiles.
 - `verdict-calculus.v1.json`: 49 vectors: 41 requirement-evaluation vectors
   plus 8 aggregate-verdict vectors; and
 - `canon.v1.json`: 12 initial canonical-value and byte-reader vectors;
-- `types/compiler-cases.v1.json`: 18 executable compiler fixtures: 3 compiled
-  cases and 15 rejected cases covering the current R1–R6 subset, claim-model
-  sufficiency, exact unit lowering, cascade suppression, and independent
-  findings; and
+- `types/compiler-cases.v1.json`: 22 executable compiler fixtures: 3 compiled
+  cases and 19 rejected cases covering the current R1–R6 subset, claim-model
+  sufficiency, exact unit lowering, cascade suppression, independent
+  findings, and source-layer refusals located by JSON Pointer; and
 - `types/compiler-parameter-cases.v1.json`: 9 executable R7 fixtures: 1
   compiled case and 8 rejected cases covering every parameter value family,
   exact canonical lowering, quantity kinds and domains, undeclared values, and
@@ -45,9 +45,9 @@ planned unless files exist for them.
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
 `scope-predicates.v1.json`, plus the 41 requirement and 8 aggregation vectors in
-`verdict-calculus.v1.json`. The compiler harness also executes all 51 cases in
+`verdict-calculus.v1.json`. The compiler harness also executes all 55 cases in
 the five compiler manifests and pins each registry digest plus all successful
-compiled-snapshot identities. Passing the 90 pure vectors and 51 compiler
+compiled-snapshot identities. Passing the 90 pure vectors and 55 compiler
 fixtures does not accept ADR-0006: package-level rule halves and other vector
 families in this coverage plan remain absent, and no result is scientifically
 qualified.
@@ -262,6 +262,10 @@ canonically.
 | `types.satisfiable.pass` | a path of roles reaches the basis |
 | `types.satisfiable.fail` | no capability-type path can emit a reducible bounded model → `CORE-T2201` at the requirement; package admissibility is tested separately |
 | `types.independent-errors-one-pass.pass` | three unrelated errors reported together |
+| `types.source.json-float.fail` | binary float refused at `/workflow/0/parameters/x` → `CORE-S1102` |
+| `types.source.unknown-field.fail` | undeclared key refused at its own pointer → `CORE-S1101` |
+| `types.source.noncanonical-decimal.fail` | `"100.0"` refused at `/requirements/0/limit/value` → `CORE-S1102`; repair `mechanically_safe` = `"100"` |
+| `types.source.duplicate-key.fail` | repeated object key refused at the key → `CORE-S1103` |
 | `types.cascade-suppressed.pass` | consequence of a root error summarized under it |
 | `types.cascade-preserves-independent.pass` | dependency-blocked step with its own `CORE-P5101` reports both |
 | `types.conversion-capability.pass` | Gy→Sv via `core.convert.absorbed_dose_to_dose_equivalent@1` type-checks with weighting role bound |

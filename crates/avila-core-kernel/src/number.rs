@@ -4,7 +4,12 @@ use std::fmt;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::{CORE_S1102, KernelError};
+use crate::{CORE_S1102, KernelError, Repair, RepairApplicability};
+
+/// Prefix of every refusal raised while decoding an [`ExactNumber`] from a
+/// typed document. A compiler that sees this prefix at a JSON Pointer may
+/// re-read the raw string there to recover the mechanically safe repair.
+pub const EXACT_NUMBER_DECODE_PREFIX: &str = "exact number: ";
 
 const MAX_AUTHORED_BYTES: usize = 16_384;
 const MAX_CANONICAL_DIGITS: usize = 16_384;
@@ -262,17 +267,32 @@ impl Visitor<'_> for ExactNumberVisitor {
     where
         E: de::Error,
     {
-        ExactNumber::from_canonical(value).map_err(E::custom)
+        ExactNumber::from_canonical(value)
+            .map_err(|error| E::custom(format!("{EXACT_NUMBER_DECODE_PREFIX}{}", error.detail())))
     }
 }
 
 /// Reads an already-canonical authoritative decimal.
+///
+/// A non-canonical but well-formed decimal is refused with a mechanically safe
+/// repair naming its unique canonical form; the reader never rewrites it.
 pub fn read_authoritative_decimal(input: &str) -> Result<ExactNumber, KernelError> {
     let lowered = lower_authored_decimal(input)?;
-    if lowered != input || input.contains(['e', 'E']) {
-        return Err(invalid_number("authoritative decimal is not canonical"));
+    if lowered != input {
+        return Err(KernelError::with_repair(
+            CORE_S1102,
+            "authoritative decimal is not canonical",
+            canonical_form_repair(lowered),
+        ));
     }
     decimal_to_ratio(input)
+}
+
+fn canonical_form_repair(canonical: String) -> Repair {
+    Repair {
+        applicability: RepairApplicability::MechanicallySafe,
+        candidates: vec![canonical],
+    }
 }
 
 /// Lowers an authored decimal, including exponent notation, to the canonical
@@ -374,19 +394,17 @@ pub fn read_authoritative_rational(input: &str) -> Result<ExactNumber, KernelErr
     let numerator = parse_signed_integer(numerator_text)?;
     let value = if let Some(denominator_text) = denominator_text {
         let denominator = parse_unsigned_integer(denominator_text)?;
-        if numerator == 0 || denominator <= 1 {
-            return Err(invalid_number(
-                "a fractional rational requires a nonzero numerator and denominator greater than one",
-            ));
-        }
         ExactNumber::new(numerator, denominator)?
     } else {
         ExactNumber::new(numerator, 1)?
     };
 
-    if value.canonical_rational() != input {
-        return Err(invalid_number(
+    let canonical = value.canonical_rational();
+    if canonical != input {
+        return Err(KernelError::with_repair(
+            CORE_S1102,
             "authoritative rational is not reduced and canonical",
+            canonical_form_repair(canonical),
         ));
     }
     Ok(value)
@@ -653,6 +671,36 @@ mod tests {
                 read_authoritative_rational(invalid).unwrap_err().code(),
                 CORE_S1102,
                 "{invalid}"
+            );
+        }
+    }
+
+    #[test]
+    fn noncanonical_numbers_carry_their_unique_canonical_form_as_a_safe_repair() {
+        for (authored, canonical) in [
+            ("100.0", "100"),
+            ("1e2", "100"),
+            ("0001.2300", "1.23"),
+            ("01", "1"),
+            ("-0.0", "0"),
+            ("2/4", "1/2"),
+            ("1/1", "1"),
+            ("0/2", "0"),
+        ] {
+            let error = ExactNumber::from_canonical(authored).unwrap_err();
+            assert_eq!(error.code(), CORE_S1102, "{authored}");
+            let repair = error
+                .repair()
+                .unwrap_or_else(|| panic!("{authored} has a repair"));
+            assert_eq!(repair.applicability, RepairApplicability::MechanicallySafe);
+            assert_eq!(repair.candidates, vec![canonical.to_owned()], "{authored}");
+        }
+        for malformed in ["+1", "abc", "1/-2", "1/0", "NaN", ""] {
+            let error = ExactNumber::from_canonical(malformed).unwrap_err();
+            assert_eq!(error.code(), CORE_S1102, "{malformed}");
+            assert!(
+                error.repair().is_none(),
+                "{malformed} must not offer a repair"
             );
         }
     }

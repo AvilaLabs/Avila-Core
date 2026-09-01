@@ -489,6 +489,88 @@
           }
         ]
       }
+    },
+    {
+      "fixture_id": "types.source.json-float.fail",
+      "clause": "SC-2 source layer",
+      "contract": "types.source.json-float.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-S1102",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/parameters/x"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.source.unknown-field.fail",
+      "clause": "SC-2 source layer",
+      "contract": "types.source.unknown-field.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-S1101",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/1/bogus_field"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.source.noncanonical-decimal.fail",
+      "clause": "SC-2 source layer",
+      "contract": "types.source.noncanonical-decimal.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-S1102",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/limit/value"
+            },
+            "repairs": [
+              "mechanically_safe"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.source.duplicate-key.fail",
+      "clause": "SC-2 source layer",
+      "contract": "types.source.duplicate-key.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-S1103",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/1/step_id"
+            },
+            "repairs": []
+          }
+        ]
+      }
     }
   ]
 }

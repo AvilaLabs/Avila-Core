@@ -219,6 +219,20 @@ deterministically and independent root causes are reported in one pass. The
 current slice suppresses checks whose premise could not be constructed, such
 as a unit check after the metric source itself is missing.
 
+Source-layer refusals are located too. The authoritative reader tracks the
+JSON Pointer of the value it is reading, so a binary float, `null`, duplicate
+key, non-NFC string, or unsafe integer is reported at that value rather than at
+the document root. Typed decoding reports an unknown field at the field itself
+and a wrong value family at the value. A number that is well formed but not
+canonical, such as `"100.0"` or `"2/4"`, carries a `mechanically_safe` repair
+naming its unique canonical form; the compiler still refuses it rather than
+rewriting authored bytes. Decoding inside an internally tagged object, such as
+a binding `source`, is buffered by the decoder, so a failure there points at
+the object rather than the field inside it. Unlike the semantic checks, the
+source layer stops at the first refusal because no typed document exists to
+continue with; a syntax error points at the container being read and keeps the
+line and column in its message.
+
 ## Compiled identity
 
 Successful output is `avila.core/compiled-contract/v0.2-draft`. It contains:

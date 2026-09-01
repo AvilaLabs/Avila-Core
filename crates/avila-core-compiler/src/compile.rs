@@ -2,7 +2,8 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use avila_core_kernel::{
-    ExactNumber, KindDefinition, KindRegistry, SEMANTIC_PROFILE, UnitDefinition, canonicalize_json,
+    CanonicalJsonValue, EXACT_NUMBER_DECODE_PREFIX, ExactNumber, KindDefinition, KindRegistry,
+    SEMANTIC_PROFILE, UnitDefinition, canonicalize_json, read_authoritative_json,
 };
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -313,15 +314,28 @@ fn read_document<T: serde::de::DeserializeOwned>(
         ));
         return None;
     }
-    let canonical = match canonicalize_json(bytes) {
-        Ok(canonical) => canonical,
+    let canonical_value = match read_authoritative_json(bytes) {
+        Ok(value) => value,
         Err(error) => {
             findings.push(CoreDiagnostic::new(
                 error.code(),
                 FindingClass::Invalid,
                 owner_for(document),
-                SourceLocation::new(document, ""),
+                SourceLocation::new(document, error.pointer().unwrap_or_default()),
                 error.detail(),
+            ));
+            return None;
+        }
+    };
+    let canonical = match serde_json::to_vec(&canonical_value) {
+        Ok(canonical) => canonical,
+        Err(error) => {
+            findings.push(CoreDiagnostic::new(
+                CORE_S1102,
+                FindingClass::Invalid,
+                owner_for(document),
+                SourceLocation::new(document, ""),
+                error.to_string(),
             ));
             return None;
         }
@@ -331,25 +345,90 @@ fn read_document<T: serde::de::DeserializeOwned>(
         sha256: prefixed_sha256(&canonical),
     });
 
-    match serde_json::from_slice(bytes) {
+    let mut deserializer = serde_json::Deserializer::from_slice(bytes);
+    match serde_path_to_error::deserialize::<_, T>(&mut deserializer) {
         Ok(value) => Some(value),
         Err(error) => {
-            let detail = error.to_string();
-            let code = if detail.contains("unknown field") {
+            let detail = error.inner().to_string();
+            let mut pointer = pointer_from_decode_path(error.path());
+            let code = if let Some(field) = unknown_field_name(&detail) {
+                let token = escape_pointer_token(field);
+                if pointer.rsplit('/').next() != Some(token.as_str()) {
+                    pointer.push('/');
+                    pointer.push_str(&token);
+                }
                 CORE_S1101
             } else {
                 CORE_S1102
             };
-            findings.push(CoreDiagnostic::new(
+            let repair = canonical_number_repair(&canonical_value, &pointer, &detail);
+            let mut diagnostic = CoreDiagnostic::new(
                 code,
                 FindingClass::Invalid,
                 owner_for(document),
-                SourceLocation::new(document, ""),
+                SourceLocation::new(document, pointer),
                 detail,
-            ));
+            );
+            if let Some(repair) = repair {
+                diagnostic = diagnostic.with_repair(repair);
+            }
+            findings.push(diagnostic);
             None
         }
     }
+}
+
+/// Lowers the path at which typed decoding stopped to a JSON Pointer.
+///
+/// Enum-variant segments are not JSON keys and are omitted. Decoding inside an
+/// internally tagged enum is buffered by serde, so a failure there points at
+/// the enum value rather than the field inside it.
+fn pointer_from_decode_path(path: &serde_path_to_error::Path) -> String {
+    use serde_path_to_error::Segment;
+
+    let mut pointer = String::new();
+    for segment in path.iter() {
+        match segment {
+            Segment::Seq { index } => {
+                pointer.push('/');
+                pointer.push_str(&index.to_string());
+            }
+            Segment::Map { key } => {
+                pointer.push('/');
+                pointer.push_str(&escape_pointer_token(key));
+            }
+            Segment::Enum { .. } | Segment::Unknown => {}
+        }
+    }
+    pointer
+}
+
+/// Extracts the field name from serde's stable `unknown field` message so the
+/// finding can point at the offending key even when the decode path stopped at
+/// the parent object.
+fn unknown_field_name(detail: &str) -> Option<&str> {
+    let rest = detail.strip_prefix("unknown field `")?;
+    let end = rest.find('`')?;
+    Some(&rest[..end])
+}
+
+/// Recovers the mechanically safe canonical form for a number that failed
+/// typed decoding, by re-reading the raw authored string at the pointer.
+fn canonical_number_repair(
+    document: &CanonicalJsonValue,
+    pointer: &str,
+    detail: &str,
+) -> Option<DiagnosticRepair> {
+    if !detail.starts_with(EXACT_NUMBER_DECODE_PREFIX) {
+        return None;
+    }
+    let CanonicalJsonValue::String(raw) = document.pointer(pointer)? else {
+        return None;
+    };
+    ExactNumber::from_canonical(raw)
+        .err()?
+        .repair()
+        .map(compiler_repair)
 }
 
 fn validate_document_headers(
@@ -3199,7 +3278,59 @@ mod tests {
         let report = compile_documents(br#"{"value":1.0}"#, REGISTRY).unwrap();
         assert_eq!(report.status, CompilationStatus::Rejected);
         assert_eq!(report.findings[0].code, CORE_S1102);
+        assert_eq!(report.findings[0].primary.pointer, "/value");
         assert!(report.compiled.is_none());
+    }
+
+    #[test]
+    fn source_layer_findings_name_the_offending_value() {
+        let mut float_parameter: serde_json::Value = serde_json::from_slice(CONTRACT).unwrap();
+        float_parameter["workflow"][0]["parameters"]["x"] = serde_json::json!(1.5);
+        let report =
+            compile_documents(&serde_json::to_vec(&float_parameter).unwrap(), REGISTRY).unwrap();
+        assert_eq!(report.findings[0].code, CORE_S1102);
+        assert_eq!(
+            report.findings[0].primary.pointer,
+            "/workflow/0/parameters/x"
+        );
+
+        let mut unknown_field: serde_json::Value = serde_json::from_slice(CONTRACT).unwrap();
+        unknown_field["workflow"][1]["bogus_field"] = serde_json::json!(1);
+        let report =
+            compile_documents(&serde_json::to_vec(&unknown_field).unwrap(), REGISTRY).unwrap();
+        assert_eq!(report.findings[0].code, CORE_S1101);
+        assert_eq!(
+            report.findings[0].primary.pointer,
+            "/workflow/1/bogus_field"
+        );
+
+        let mut wrong_variant: serde_json::Value = serde_json::from_slice(CONTRACT).unwrap();
+        wrong_variant["requirements"][0]["comparison"] = serde_json::json!("lessthan");
+        let report =
+            compile_documents(&serde_json::to_vec(&wrong_variant).unwrap(), REGISTRY).unwrap();
+        assert_eq!(report.findings[0].code, CORE_S1102);
+        assert_eq!(
+            report.findings[0].primary.pointer,
+            "/requirements/0/comparison"
+        );
+        assert!(report.findings[0].repairs.is_empty());
+
+        let mut noncanonical: serde_json::Value = serde_json::from_slice(CONTRACT).unwrap();
+        noncanonical["requirements"][0]["limit"]["value"] = serde_json::json!("100.0");
+        let report =
+            compile_documents(&serde_json::to_vec(&noncanonical).unwrap(), REGISTRY).unwrap();
+        assert_eq!(report.findings[0].code, CORE_S1102);
+        assert_eq!(
+            report.findings[0].primary.pointer,
+            "/requirements/0/limit/value"
+        );
+        assert_eq!(
+            report.findings[0].repairs,
+            vec![DiagnosticRepair {
+                applicability: RepairApplicability::MechanicallySafe,
+                candidates: vec!["100".into()],
+            }]
+        );
     }
 
     #[test]

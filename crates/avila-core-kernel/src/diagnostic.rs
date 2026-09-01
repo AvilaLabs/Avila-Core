@@ -25,14 +25,17 @@ pub struct Repair {
 
 /// A deterministic kernel refusal.
 ///
-/// Callers match `code`, never the explanatory wording. Source locations and
-/// ownership are compiler-layer concerns and will wrap this error later.
+/// Callers match `code`, never the explanatory wording. Ownership is a
+/// compiler-layer concern. A refusal raised while reading a document names the
+/// offending value by JSON Pointer so the compiler can report an exact source
+/// location; refusals raised over already-typed values carry no pointer.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[error("{code}: {detail}")]
 pub struct KernelError {
     code: &'static str,
     detail: String,
     repair: Option<Repair>,
+    pointer: Option<String>,
 }
 
 impl KernelError {
@@ -41,6 +44,7 @@ impl KernelError {
             code,
             detail: detail.into(),
             repair: None,
+            pointer: None,
         }
     }
 
@@ -53,7 +57,13 @@ impl KernelError {
             code,
             detail: detail.into(),
             repair: Some(repair),
+            pointer: None,
         }
+    }
+
+    pub(crate) fn at_pointer(mut self, pointer: impl Into<String>) -> Self {
+        self.pointer = Some(pointer.into());
+        self
     }
 
     #[must_use]
@@ -69,5 +79,12 @@ impl KernelError {
     #[must_use]
     pub fn repair(&self) -> Option<&Repair> {
         self.repair.as_ref()
+    }
+
+    /// JSON Pointer of the offending value when the refusal was raised while
+    /// reading a document; `None` for refusals over already-typed values.
+    #[must_use]
+    pub fn pointer(&self) -> Option<&str> {
+        self.pointer.as_deref()
     }
 }

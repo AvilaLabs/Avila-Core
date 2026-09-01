@@ -19,7 +19,8 @@ pub use diagnostic::{
     KernelError, Repair, RepairApplicability,
 };
 pub use number::{
-    ExactNumber, lower_authored_decimal, read_authoritative_decimal, read_authoritative_rational,
+    EXACT_NUMBER_DECODE_PREFIX, ExactNumber, lower_authored_decimal, read_authoritative_decimal,
+    read_authoritative_rational,
 };
 pub use predicate::{
     ApplicabilityContext, ApplicabilityEvaluator, AttributeSetPredicate, EnvironmentContext,

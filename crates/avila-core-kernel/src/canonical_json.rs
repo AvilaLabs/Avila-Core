@@ -9,7 +9,6 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use crate::{CORE_S1102, CORE_S1103, KernelError};
 
 const MAX_SAFE_INTEGER: i64 = 9_007_199_254_740_992;
-const DUPLICATE_SENTINEL: &str = "avila-core:duplicate-key";
 
 /// JSON restricted to Core's authoritative canonical profile.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -22,20 +21,54 @@ pub enum CanonicalJsonValue {
     Object(Vec<(String, Self)>),
 }
 
+impl CanonicalJsonValue {
+    /// Resolves an RFC 6901 JSON Pointer against this value.
+    ///
+    /// The empty pointer names the whole value. A pointer that does not
+    /// resolve returns `None`; it is never an error.
+    #[must_use]
+    pub fn pointer(&self, pointer: &str) -> Option<&Self> {
+        if pointer.is_empty() {
+            return Some(self);
+        }
+        let mut current = self;
+        for token in pointer.strip_prefix('/')?.split('/') {
+            let token = unescape_pointer_token(token);
+            current = match current {
+                Self::Object(entries) => entries
+                    .iter()
+                    .find(|(key, _)| key == &token)
+                    .map(|(_, value)| value)?,
+                Self::Array(values) => {
+                    if token != "0" && (token.starts_with('0') || token.is_empty()) {
+                        return None;
+                    }
+                    values.get(token.parse::<usize>().ok()?)?
+                }
+                _ => return None,
+            };
+        }
+        Some(current)
+    }
+}
+
+/// Reads authoritative JSON bytes into the canonical value profile.
+///
+/// A refusal names the JSON Pointer of the offending value so callers can
+/// report an exact source location. Syntax errors point at the container that
+/// was being read when the bytes stopped making sense.
 pub fn read_authoritative_json(input: &[u8]) -> Result<CanonicalJsonValue, KernelError> {
+    let mut state = ReaderState::default();
     let mut deserializer = serde_json::Deserializer::from_slice(input);
-    let value = CanonicalJsonValue::deserialize(&mut deserializer).map_err(|error| {
-        let detail = error.to_string();
-        let code = if detail.contains(DUPLICATE_SENTINEL) {
-            CORE_S1103
-        } else {
-            CORE_S1102
-        };
-        KernelError::new(code, detail)
-    })?;
+    let value = CanonicalSeed { state: &mut state }
+        .deserialize(&mut deserializer)
+        .map_err(|error| {
+            KernelError::new(state.code.unwrap_or(CORE_S1102), error.to_string())
+                .at_pointer(json_pointer(&state.path))
+        })?;
     deserializer
         .end()
-        .map_err(|error| KernelError::new(CORE_S1102, error.to_string()))?;
+        .map_err(|error| KernelError::new(CORE_S1102, error.to_string()).at_pointer(""))?;
     Ok(value)
 }
 
@@ -44,18 +77,58 @@ pub fn canonicalize_json(input: &[u8]) -> Result<Vec<u8>, KernelError> {
     serde_json::to_vec(&value).map_err(|error| KernelError::new(CORE_S1102, error.to_string()))
 }
 
+/// Formats a path from the document root as an RFC 6901 JSON Pointer.
+fn json_pointer(path: &[PathSegment]) -> String {
+    let mut pointer = String::new();
+    for segment in path {
+        pointer.push('/');
+        match segment {
+            PathSegment::Key(key) => pointer.push_str(&escape_pointer_token(key)),
+            PathSegment::Index(index) => pointer.push_str(&index.to_string()),
+        }
+    }
+    pointer
+}
+
+fn escape_pointer_token(token: &str) -> String {
+    token.replace('~', "~0").replace('/', "~1")
+}
+
+fn unescape_pointer_token(token: &str) -> String {
+    token.replace("~1", "/").replace("~0", "~")
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum PathSegment {
+    Key(String),
+    Index(usize),
+}
+
+/// Location and refusal code tracked while the reader descends the document.
+///
+/// Segments are popped only after a child value is accepted, so a refusal
+/// leaves the path pointing at the value that caused it.
+#[derive(Debug, Default)]
+struct ReaderState {
+    path: Vec<PathSegment>,
+    code: Option<&'static str>,
+}
+
 impl<'de> Deserialize<'de> for CanonicalJsonValue {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_any(CanonicalValueVisitor)
+        let mut state = ReaderState::default();
+        CanonicalSeed { state: &mut state }.deserialize(deserializer)
     }
 }
 
-struct CanonicalValueVisitor;
+struct CanonicalValueVisitor<'s> {
+    state: &'s mut ReaderState,
+}
 
-impl<'de> Visitor<'de> for CanonicalValueVisitor {
+impl<'de> Visitor<'de> for CanonicalValueVisitor<'_> {
     type Value = CanonicalJsonValue;
 
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -129,8 +202,19 @@ impl<'de> Visitor<'de> for CanonicalValueVisitor {
         A: SeqAccess<'de>,
     {
         let mut values = Vec::with_capacity(sequence.size_hint().unwrap_or(0).min(16_384));
-        while let Some(value) = sequence.next_element_seed(CanonicalSeed)? {
+        let mut index = 0usize;
+        loop {
+            self.state.path.push(PathSegment::Index(index));
+            let Some(value) = sequence.next_element_seed(CanonicalSeed {
+                state: &mut *self.state,
+            })?
+            else {
+                self.state.path.pop();
+                break;
+            };
+            self.state.path.pop();
             values.push(value);
+            index += 1;
         }
         Ok(CanonicalJsonValue::Array(values))
     }
@@ -142,13 +226,18 @@ impl<'de> Visitor<'de> for CanonicalValueVisitor {
         let mut seen = BTreeSet::new();
         let mut entries = Vec::with_capacity(map.size_hint().unwrap_or(0).min(16_384));
         while let Some(key) = map.next_key::<String>()? {
+            self.state.path.push(PathSegment::Key(key.clone()));
             validate_nfc::<A::Error>(&key)?;
             if !seen.insert(key.clone()) {
+                self.state.code = Some(CORE_S1103);
                 return Err(<A::Error as de::Error>::custom(format!(
-                    "{DUPLICATE_SENTINEL}: {key}"
+                    "duplicate object key `{key}`"
                 )));
             }
-            let value = map.next_value_seed(CanonicalSeed)?;
+            let value = map.next_value_seed(CanonicalSeed {
+                state: &mut *self.state,
+            })?;
+            self.state.path.pop();
             entries.push((key, value));
         }
         entries.sort_by(|left, right| utf16_cmp(&left.0, &right.0));
@@ -156,16 +245,18 @@ impl<'de> Visitor<'de> for CanonicalValueVisitor {
     }
 }
 
-struct CanonicalSeed;
+struct CanonicalSeed<'s> {
+    state: &'s mut ReaderState,
+}
 
-impl<'de> DeserializeSeed<'de> for CanonicalSeed {
+impl<'de> DeserializeSeed<'de> for CanonicalSeed<'_> {
     type Value = CanonicalJsonValue;
 
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,
     {
-        CanonicalJsonValue::deserialize(deserializer)
+        deserializer.deserialize_any(CanonicalValueVisitor { state: self.state })
     }
 }
 
@@ -208,4 +299,61 @@ fn validate_nfc<E: de::Error>(value: &str) -> Result<(), E> {
 
 fn utf16_cmp(left: &str, right: &str) -> std::cmp::Ordering {
     left.encode_utf16().cmp(right.encode_utf16())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn refusals_name_the_offending_value_by_json_pointer() {
+        for (input, pointer, code) in [
+            (
+                r#"{"workflow":[{"parameters":{"x":1.5}}]}"#,
+                "/workflow/0/parameters/x",
+                CORE_S1102,
+            ),
+            (r#"{"optional":null}"#, "/optional", CORE_S1102),
+            (
+                r#"{"outer":{"same":1,"same":2}}"#,
+                "/outer/same",
+                CORE_S1103,
+            ),
+            (r#"{"a/b":[1,{"~":"é"}]}"#, "/a~1b/1/~0", CORE_S1102),
+            (r#"[1, 2, 99999999999999999999]"#, "/2", CORE_S1102),
+            (r"1.5", "", CORE_S1102),
+        ] {
+            let error = read_authoritative_json(input.as_bytes()).unwrap_err();
+            assert_eq!(error.code(), code, "{input}");
+            assert_eq!(error.pointer(), Some(pointer), "{input}");
+        }
+    }
+
+    #[test]
+    fn syntax_errors_point_at_the_enclosing_container() {
+        let error = read_authoritative_json(br#"{"workflow":[{"step_id":"a",}]}"#).unwrap_err();
+        assert_eq!(error.code(), CORE_S1102);
+        assert_eq!(error.pointer(), Some("/workflow/0"));
+
+        let trailing = read_authoritative_json(br#"{"a":1} x"#).unwrap_err();
+        assert_eq!(trailing.pointer(), Some(""));
+    }
+
+    #[test]
+    fn pointer_lookup_follows_rfc_6901() {
+        let value = read_authoritative_json(br#"{"a/b":[10,{"~":true}],"":0}"#).unwrap();
+        assert_eq!(value.pointer(""), Some(&value));
+        assert_eq!(value.pointer("/"), Some(&CanonicalJsonValue::Integer(0)));
+        assert_eq!(
+            value.pointer("/a~1b/0"),
+            Some(&CanonicalJsonValue::Integer(10))
+        );
+        assert_eq!(
+            value.pointer("/a~1b/1/~0"),
+            Some(&CanonicalJsonValue::Bool(true))
+        );
+        assert_eq!(value.pointer("/a~1b/01"), None);
+        assert_eq!(value.pointer("/missing"), None);
+        assert_eq!(value.pointer("a"), None);
+    }
 }

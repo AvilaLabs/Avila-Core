@@ -29,6 +29,7 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 icu_normalizer = { version = "2.3.0", default-features = false, features = ["compiled_data"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
+serde_path_to_error = "0.1"
 sha2 = "0.10"
 thiserror = "2"
 

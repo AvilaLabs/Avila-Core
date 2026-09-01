@@ -22,6 +22,7 @@ pub const CORE_T2301: &str = "CORE-T2301";
 pub const CORE_T2401: &str = "CORE-T2401";
 pub const CORE_T2402: &str = "CORE-T2402";
 pub const CORE_T2501: &str = "CORE-T2501";
+pub const CORE_T2601: &str = "CORE-T2601";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

@@ -120,7 +120,9 @@ leaving package-level reproducibility to future package binding. Accountable
 review types lower to pending obligations containing the exact dossier,
 governance dispositions, digest-pinned external eligibility policy, and
 explicit independence constraints. The compiler neither evaluates that policy
-nor fulfills the review. It performs no package selection, execution, evidence
+nor fulfills the review. Governed nominal requirement purposes are checked
+against output-level explicit exclusions without interpreting prose or inferring
+purpose hierarchies. It performs no package selection, execution, evidence
 admission, qualification decision, or verdict. See the
 [semantic compiler boundary](SEMANTIC_COMPILER.md).
 

@@ -4,7 +4,7 @@
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "registry": {
     "path": "compiler.review.registry.v1.json",
-    "sha256": "sha256:4c7b95d661dfb55e4895f7e59b29389a68ebfe5010de2647d3aa67842fe0e334"
+    "sha256": "sha256:cfba0ff829c8bcdbf976e0332bc495040f2d86be1660ec943534fd6df7f8696b"
   },
   "fixtures": [
     {
@@ -15,7 +15,7 @@
         "status": "compiled",
         "findings": [],
         "compiled": {
-          "snapshot_sha256": "sha256:97cf4e8dead235da4855e8d32d2de7632930349ff671be4e9e40ccfffeeebd7e",
+          "snapshot_sha256": "sha256:99a60b5323cf605fb27baf18377ef4e29bef99a8480a027d32a564b284b4451f",
           "execution_policy": {
             "permitted_nondeterministic_roles": [
               {
@@ -118,7 +118,8 @@
               "requirement_id": "R-001",
               "kind": "nuclear.dose_equivalent_rate",
               "value": "1/36000000",
-              "unit": "Sv/s"
+              "unit": "Sv/s",
+              "purpose": "fixture.requirement_evaluation@1"
             }
           ]
         }
@@ -132,7 +133,7 @@
         "status": "compiled",
         "findings": [],
         "compiled": {
-          "snapshot_sha256": "sha256:ebfd1f46cac51cccd0907b3a03f3f01f91aa9deed9c8862bacda3c2e2dcaeefb",
+          "snapshot_sha256": "sha256:ce153f8e3f42adb84a6a4b924dbf870cfa57d57495a80a3e2b2943ea1c7fa7df",
           "execution_policy": {
             "permitted_nondeterministic_roles": [
               {
@@ -225,7 +226,8 @@
               "requirement_id": "R-001",
               "kind": "nuclear.dose_equivalent_rate",
               "value": "1/36000000",
-              "unit": "Sv/s"
+              "unit": "Sv/s",
+              "purpose": "fixture.requirement_evaluation@1"
             }
           ]
         }

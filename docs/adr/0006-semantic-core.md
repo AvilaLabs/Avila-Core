@@ -155,13 +155,17 @@ or combines them; Core never silently combines them.
    explicitly standardized their narrow representation.
 5. A capability validator's acceptance is recorded as a method claim and is
    reported as not re-performed by a verifier that does not execute it.
+6. Intended-use purposes are governed nominal identities with owners and human
+   descriptions. Names, prefixes, or prose never imply compatibility or a
+   hierarchy.
 
 ### SC-5 Capability types are signatures; workflows are programs
 
 1. A capability type declares accepted slots, produced slots, permitted output
    claim models, typed parameters and domains, determinism class, any
-   type-level material execution factors, partial-output behavior, non-claims,
-   conformance fixtures, and owner.
+   type-level material execution factors, per-output governed-purpose
+   exclusions, partial-output behavior, non-claims, conformance fixtures, and
+   owner.
 2. A package manifest identifies the exact implementation and declares which
    permitted model it actually emits for each output, its environment and
    hardware requirements, ABI versions, validators, typed preflight facts,
@@ -199,7 +203,7 @@ or combines them; Core never silently combines them.
 | R7 Parameters | Values match kind, unit class, and domain; placeholders exist only in drafts. | `CORE-T2401`, `CORE-T2402`, `CORE-S1301` |
 | R8 Reproducibility | Seeds and every declared material execution factor are bound; policy governs nondeterminism. | `CORE-T2501`, `CORE-A4301` |
 | R9 Accountable review | The complete presented dossier, governance-only dispositions, digest-pinned external eligibility policy, and explicit independence constraints are compiled as a pending obligation. The compiler does not decide reviewer legitimacy or fulfill the review. | `CORE-R3401` |
-| R10 Non-claims | A requirement purpose cannot rely on a purpose explicitly excluded by the producing type. | `CORE-T2601` |
+| R10 Governed purpose exclusions | Every requirement names a resolved nominal purpose; an output cannot serve a purpose it explicitly excludes. Prose is never interpreted, and lack of an exclusion is not positive qualification. | `CORE-T2601` |
 
 The type checker reports independent findings in one pass. It suppresses only a
 finding that would not exist if an earlier root cause were repaired.
@@ -526,8 +530,9 @@ This ADR remains proposed until:
 6. a line-count and dependency budget is adopted for the trusted computing base;
 7. a second implementation can reproduce the normative vectors while also
    passing property and adversarial tests; and
-8. named domain professionals review kinds, uncertainty claims, applicability,
-   and calculus before any scientific verdict is shown to a design partner.
+8. named domain professionals review kinds, governed purposes, exclusions,
+   uncertainty claims, applicability, and calculus before any scientific
+   verdict is shown to a design partner.
 
 ## Consequences
 

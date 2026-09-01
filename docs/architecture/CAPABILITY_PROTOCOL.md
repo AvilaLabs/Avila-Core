@@ -50,13 +50,16 @@ A capability type is a semantic contract, not an executable name. It defines:
 - meaning and units of every produced output role;
 - names and cardinality of the slots in which those roles occur;
 - required uncertainty and numerical-error metadata;
+- governed intended-use purposes explicitly excluded by each output;
 - failure and partial-result semantics;
 - compatibility and conformance fixtures; and
 - what the type explicitly does not establish.
 
 Types should be narrow enough to test and stable enough for multiple
 implementations. A provider-specific option belongs in an implementation
-parameter namespace, not the shared type.
+parameter namespace, not the shared type. Free-text limitations remain visible
+to people but never substitute for typed purpose exclusions, and lack of a typed
+exclusion does not by itself establish qualification for that use.
 
 ## Proposed invocation lifecycle
 

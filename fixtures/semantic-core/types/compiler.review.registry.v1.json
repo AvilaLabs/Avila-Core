@@ -180,5 +180,15 @@
         "A reviewer does not recalculate or override the technical dose-rate claim."
       ]
     }
+  ],
+  "purposes": [
+    {
+      "purpose": {
+        "id": "fixture.requirement_evaluation",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "description": "Synthetic intended use for semantic compiler requirement fixtures."
+    }
   ]
 }

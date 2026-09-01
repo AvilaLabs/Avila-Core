@@ -19,11 +19,13 @@ The contract is the fundamental product and commercial unit because it aligns:
 A production contract must identify at least:
 
 1. **Question:** one bounded proposition capable of a defined verdict.
-2. **Context of use:** the decision the evidence supports and its consequence.
+2. **Context of use:** the decision the evidence supports and its consequence,
+   represented by governed nominal purpose identities where compiler rules use
+   it.
 3. **System boundary:** configurations, populations, geometries, time periods, or
    operating regimes included and excluded.
 4. **Requirements:** metrics, comparison semantics, limits, nominal quantity
-   kinds, exact unit scaling, aggregation rules, and any authority-required
+   kinds, exact unit scaling, aggregation rules, and any governance-required
    decision transformation. Display rounding is never requirement logic.
 5. **Inputs:** roles, immutable identities, allowed transformations, and owners.
 6. **Assumptions and facts:** conditions accepted without being established by
@@ -100,10 +102,10 @@ contractually accepted limit of resolution.
 No verdict was attempted or the prerequisites for evaluation were not met. This
 is the only result in the current scaffold.
 
-Every verdict names the semantic profile, requirement, policy, admitted evidence,
-authorities, assumptions, limitations, and exact comparison rule that produced
-it. It states a conditional result inside that boundary; it is not a standalone
-claim of scientific truth or certification.
+Every verdict names the semantic profile, requirement purpose, policy, admitted
+evidence, attestations, assumptions, limitations, and exact comparison rule
+that produced it. It states a conditional result inside that boundary; it is
+not a standalone claim of scientific truth or certification.
 
 ## Contract templates as product capital
 

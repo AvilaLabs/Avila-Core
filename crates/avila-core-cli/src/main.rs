@@ -132,11 +132,12 @@ const EMBEDDED_VECTOR_SETS: [&[u8]; 4] = [
     include_bytes!("../../../fixtures/semantic-core/vectors/verdict-calculus.v1.json"),
 ];
 
-const EMBEDDED_COMPILER_FIXTURE_SETS: [&[u8]; 4] = [
+const EMBEDDED_COMPILER_FIXTURE_SETS: [&[u8]; 5] = [
     include_bytes!("../../../fixtures/semantic-core/types/compiler-cases.v1.json"),
     include_bytes!("../../../fixtures/semantic-core/types/compiler-parameter-cases.v1.json"),
     include_bytes!("../../../fixtures/semantic-core/types/compiler-reproducibility-cases.v1.json"),
     include_bytes!("../../../fixtures/semantic-core/types/compiler-review-cases.v1.json"),
+    include_bytes!("../../../fixtures/semantic-core/types/compiler-purpose-cases.v1.json"),
 ];
 
 fn semantic_profile_report() -> Result<SemanticProfileReport, Box<dyn Error>> {
@@ -230,8 +231,8 @@ mod tests {
         assert_eq!(report.status, "draft");
         assert_eq!(report.total_vectors, 90);
         assert_eq!(report.implemented_vector_sets.len(), 4);
-        assert_eq!(report.total_compiler_fixtures, 45);
-        assert_eq!(report.implemented_compiler_fixture_sets.len(), 4);
+        assert_eq!(report.total_compiler_fixtures, 51);
+        assert_eq!(report.implemented_compiler_fixture_sets.len(), 5);
         assert!(
             report
                 .implemented_vector_sets

@@ -80,6 +80,7 @@ struct ExpectedBinding {
 #[serde(deny_unknown_fields)]
 struct ExpectedLimit {
     requirement_id: String,
+    purpose: String,
     kind: String,
     value: String,
     unit: String,
@@ -116,10 +117,11 @@ fn compiler_type_fixtures_are_executable() {
         "compiler-parameter-cases.v1.json",
         "compiler-reproducibility-cases.v1.json",
         "compiler-review-cases.v1.json",
+        "compiler-purpose-cases.v1.json",
     ] {
         fixture_count += execute_suite(&fixture_root, suite_name);
     }
-    assert_eq!(fixture_count, 45);
+    assert_eq!(fixture_count, 51);
 }
 
 fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
@@ -262,6 +264,10 @@ fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
                     .iter()
                     .map(|requirement| ExpectedLimit {
                         requirement_id: requirement.requirement_id.clone(),
+                        purpose: format!(
+                            "{}@{}",
+                            requirement.purpose.id, requirement.purpose.major
+                        ),
                         kind: requirement.limit.kind.clone(),
                         value: requirement.limit.value.clone(),
                         unit: requirement.limit.unit.clone(),

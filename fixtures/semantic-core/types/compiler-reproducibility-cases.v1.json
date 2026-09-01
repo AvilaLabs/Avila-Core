@@ -4,7 +4,7 @@
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "registry": {
     "path": "compiler.reproducibility.registry.v1.json",
-    "sha256": "sha256:c47285d9920fd52387b2711017d8d0ee12a5c26d1c31fa0e073bd38225850abf"
+    "sha256": "sha256:9ebee98e5564f83aef31e2533a5ca180bfc35dce0fe2ad54ff6c58ace8572648"
   },
   "fixtures": [
     {
@@ -15,7 +15,7 @@
         "status": "compiled",
         "findings": [],
         "compiled": {
-          "snapshot_sha256": "sha256:275c1cf6048c6c5cae04cd58018b8f19884a0e70b82b58d4919d624c3f091c77",
+          "snapshot_sha256": "sha256:28828f1735faf9a07ee763079ad344a6bdaf3760f01c69c7749d1b1d28b81062",
           "execution_policy": {
             "permitted_nondeterministic_roles": []
           },
@@ -47,7 +47,8 @@
               "requirement_id": "R-001",
               "kind": "nuclear.dose_equivalent_rate",
               "value": "1/36000000",
-              "unit": "Sv/s"
+              "unit": "Sv/s",
+              "purpose": "fixture.requirement_evaluation@1"
             }
           ]
         }
@@ -121,7 +122,7 @@
         "status": "compiled",
         "findings": [],
         "compiled": {
-          "snapshot_sha256": "sha256:e6729328e9a0cffce2ef711d6d7380daf5d346aee441f38202a4e8561236346f",
+          "snapshot_sha256": "sha256:3069ded8d643f95c50c7f788df717fd6458faac43acac608b36bfaf6549a6f7e",
           "execution_policy": {
             "permitted_nondeterministic_roles": []
           },
@@ -150,7 +151,8 @@
               "requirement_id": "R-001",
               "kind": "nuclear.dose_equivalent_rate",
               "value": "1/36000000",
-              "unit": "Sv/s"
+              "unit": "Sv/s",
+              "purpose": "fixture.requirement_evaluation@1"
             }
           ]
         }
@@ -204,7 +206,7 @@
         "status": "compiled",
         "findings": [],
         "compiled": {
-          "snapshot_sha256": "sha256:c523e6db57cfff8400ae233f3f54258495c6182186fdcb506131407097845d6b",
+          "snapshot_sha256": "sha256:06bc8a50484f1e85b3d7dfddb573da95e532af072e2728c5db44c827be345bef",
           "execution_policy": {
             "permitted_nondeterministic_roles": [
               {
@@ -232,7 +234,8 @@
               "requirement_id": "R-001",
               "kind": "nuclear.dose_equivalent_rate",
               "value": "1/36000000",
-              "unit": "Sv/s"
+              "unit": "Sv/s",
+              "purpose": "fixture.requirement_evaluation@1"
             }
           ]
         }

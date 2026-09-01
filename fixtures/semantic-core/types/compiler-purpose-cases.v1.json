@@ -1,0 +1,188 @@
+{
+  "fixture_set": "compiler-governed-purpose-types",
+  "version": 1,
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "registry": {
+    "path": "compiler.purpose.registry.v1.json",
+    "sha256": "sha256:c928e3767a727c00d2208840154ac9afba0c4dc3129d6f2c90a134cabea21529"
+  },
+  "fixtures": [
+    {
+      "fixture_id": "types.R10.allowed.pass",
+      "clause": "SC-5 and SC-6 R10",
+      "contract": "types.R10.allowed.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [],
+        "compiled": {
+          "snapshot_sha256": "sha256:5b383a75926d47f446ef9bea95bdf370ceae89489446fc14f5e6d56ef8ec21ce",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": []
+          },
+          "step_order": [
+            "evaluate"
+          ],
+          "bindings": [],
+          "parameters": [],
+          "reproducibility": [
+            {
+              "step_id": "evaluate",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            }
+          ],
+          "reviews": [],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "purpose": "fixture.design_compliance@1",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.R10.excluded.fail",
+      "clause": "SC-6 R10",
+      "contract": "types.R10.excluded.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2601",
+            "class": "unsatisfied",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/purpose"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R10.unrelated-purpose.pass",
+      "clause": "SC-6 R10",
+      "contract": "types.R10.unrelated-purpose.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [],
+        "compiled": {
+          "snapshot_sha256": "sha256:01d57c26f97e0490f57c6ac66e512fade967f8fd31737a0c72066ee7dfa93b56",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": []
+          },
+          "step_order": [
+            "evaluate"
+          ],
+          "bindings": [],
+          "parameters": [],
+          "reproducibility": [
+            {
+              "step_id": "evaluate",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            }
+          ],
+          "reviews": [],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "purpose": "fixture.maintenance_planning@1",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.R10.nominal-near-name.pass",
+      "clause": "SC-1 and SC-6 R10",
+      "contract": "types.R10.nominal-near-name.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [],
+        "compiled": {
+          "snapshot_sha256": "sha256:76ebf9d043d6a66793bde29fb9745a10ac9d32fb5fdffcb03d33c5a5b019186e",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": []
+          },
+          "step_order": [
+            "evaluate"
+          ],
+          "bindings": [],
+          "parameters": [],
+          "reproducibility": [
+            {
+              "step_id": "evaluate",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            }
+          ],
+          "reviews": [],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "purpose": "fixture.screening_research@1",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.R10.unknown-purpose.fail",
+      "clause": "SC-1 and SC-6 R10",
+      "contract": "types.R10.unknown-purpose.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2601",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/purpose"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R10.major-version.fail",
+      "clause": "SC-1 and SC-6 R10",
+      "contract": "types.R10.major-version.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2601",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/purpose"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -175,6 +175,34 @@ is a future admission refusal. Keeping those outcomes distinct prevents static
 composition, human action, and organizational trust from collapsing into one
 misleading status.
 
+## Governed purposes and typed exclusions
+
+Every requirement names one governed, versioned purpose representing its
+intended use. The supplied immutable registry snapshot defines those purpose
+identities, owners, and human descriptions. Purpose identity is nominal: the
+compiler performs no hierarchy traversal, prefix matching, synonym expansion,
+or language-model interpretation. `screening@1` and `screening_research@1` are
+different purposes even when their names look related.
+
+A capability type may place `excluded_purposes` on each output slot. When that
+output is selected as a requirement metric, an exact match between the
+requirement purpose and an exclusion emits `CORE-T2601`. Unknown purposes,
+unsupported major versions, duplicate registry definitions, unknown
+exclusions, and repeated exclusions also fail closed. Successful compiled
+requirements retain the exact purpose identity.
+
+Free-text `non_claims` remain important explanatory material, but they are not
+machine-enforced exclusions and the compiler never guesses a purpose from
+prose. Conversely, absence from `excluded_purposes` is not a positive
+qualification claim; R10 establishes only that the producing type did not make
+this exact explicit refusal. Package qualification, applicability, admission,
+and organization policy remain later checks.
+
+Contract inputs currently carry no trusted producer-type exclusion declaration.
+Their actual package or evidence-record limitations must be checked during
+binding and admission, and cross-contract reuse must preserve those limitations
+rather than laundering an output into an unrestricted input.
+
 ## Findings
 
 Every finding carries:
@@ -203,6 +231,8 @@ Successful output is `avila.core/compiled-contract/v0.2-draft`. It contains:
   contract nondeterminism policy;
 - pending accountable-review obligations, exact presented evidence, external
   eligibility-policy identities, and explicit independence constraints;
+- governed requirement-purpose identities and output-level explicit
+  purpose exclusions;
 - exact requirement limits lowered to canonical units; and
 - a `snapshot_sha256` over the canonical compiled body, excluding the digest
   field itself.
@@ -216,12 +246,12 @@ and semantic compatibility are related but not interchangeable claims.
 ## Implemented and deferred rules
 
 This initial slice implements the currently representable portions of SC-1,
-SC-2, SC-3, SC-4, and SC-6 R1–R9. In particular it covers canonical source
+SC-2, SC-3, SC-4, and SC-6 R1–R10. In particular it covers canonical source
 identity, exact within-kind unit scaling, unique slot resolution, nominal
 role-major compatibility, type-level claim-model/basis satisfiability, media
 compatibility, graph shape, metric binding, limit kind/unit compatibility,
-typed parameter/domain enforcement, type-level reproducibility bindings, and
-the structural half of accountable review.
+typed parameter/domain enforcement, type-level reproducibility bindings, the
+structural half of accountable review, and nominal purpose-exclusion checking.
 
 It does not yet represent or decide:
 
@@ -232,7 +262,6 @@ It does not yet represent or decide:
 - actual reviewer identities, credentials, signatures, eligibility-policy
   evaluation, independence evaluation, and signed decision admission (the
   fulfillment half of R9);
-- purpose/non-claim conflicts (R10);
 - capability packages, qualification, policy, admission, or selection; or
 - campaign execution and evidence lifecycle.
 

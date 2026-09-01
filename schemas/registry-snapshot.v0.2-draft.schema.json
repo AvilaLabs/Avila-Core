@@ -11,6 +11,7 @@
     "registry_id",
     "revision",
     "kinds",
+    "purposes",
     "roles",
     "capability_types"
   ],
@@ -32,6 +33,12 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/kind"
+      }
+    },
+    "purposes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/purpose"
       }
     },
     "roles": {
@@ -119,6 +126,27 @@
         },
         "factor": {
           "$ref": "#/$defs/exactNumber"
+        }
+      }
+    },
+    "purpose": {
+      "type": "object",
+      "description": "A nominal, governed context-of-use identity. The compiler never infers relationships between purposes from their names or descriptions.",
+      "additionalProperties": false,
+      "required": [
+        "purpose",
+        "owner",
+        "description"
+      ],
+      "properties": {
+        "purpose": {
+          "$ref": "#/$defs/versionedRef"
+        },
+        "owner": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "description": {
+          "$ref": "#/$defs/nonemptyString"
         }
       }
     },
@@ -531,6 +559,15 @@
           "items": {
             "$ref": "#/$defs/claimModel"
           }
+        },
+        "excluded_purposes": {
+          "type": "array",
+          "description": "Nominal governed purposes this output explicitly cannot support. Free-text non-claims are never interpreted as this field.",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/versionedRef"
+          },
+          "default": []
         }
       }
     },

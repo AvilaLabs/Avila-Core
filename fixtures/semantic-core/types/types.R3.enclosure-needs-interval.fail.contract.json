@@ -54,6 +54,10 @@
       },
       "basis": {
         "kind": "enclosure"
+      },
+      "purpose": {
+        "id": "fixture.requirement_evaluation",
+        "major": 1
       }
     }
   ]

@@ -1,32 +1,30 @@
 {
   "schema_version": "avila.core/evidence-contract/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
-  "contract_id": "fixture.types.R8.factor-domain.fail",
+  "contract_id": "fixture.types.R10.major-version.fail",
   "revision": 1,
   "status": "draft",
   "workflow": [
     {
       "step_id": "evaluate",
       "capability_type": {
-        "id": "fixture.deterministic_metric",
+        "id": "fixture.purpose_scoped_metric",
         "major": 1
-      },
-      "reproducibility": {
-        "material_factors": {
-          "environment_image": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-          "thread_count": 128
-        }
       }
     }
   ],
   "requirements": [
     {
       "requirement_id": "R-001",
-      "statement": "Bounded shutdown dose rate remains below the limit.",
+      "statement": "Attempt to use an unsupported purpose major version.",
+      "purpose": {
+        "id": "fixture.design_compliance",
+        "major": 2
+      },
       "metric": {
         "source": "step_output",
         "step_id": "evaluate",
-        "output_slot": "bounded_dose_rate"
+        "output_slot": "dose_rate"
       },
       "comparison": "less_than_or_equal",
       "limit": {
@@ -36,10 +34,6 @@
       },
       "basis": {
         "kind": "bounded"
-      },
-      "purpose": {
-        "id": "fixture.requirement_evaluation",
-        "major": 1
       }
     }
   ]

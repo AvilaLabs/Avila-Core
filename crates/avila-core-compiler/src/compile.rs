@@ -11,16 +11,16 @@ use thiserror::Error;
 use crate::diagnostic::{
     CORE_A4301, CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3401,
     CORE_R3501, CORE_S1101, CORE_S1102, CORE_S1301, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103,
-    CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2401, CORE_T2402, CORE_T2501, CoreDiagnostic,
-    DiagnosticRepair, FindingClass, RepairApplicability, SourceLocation,
+    CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2401, CORE_T2402, CORE_T2501, CORE_T2601,
+    CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability, SourceLocation,
 };
 use crate::document::{
     BasisKind, BoundSide, COMPILE_REPORT_SCHEMA_VERSION, COMPILED_CONTRACT_SCHEMA_VERSION,
     CONTRACT_SCHEMA_VERSION, CapabilityTypeDefinition, ClaimModelDeclaration, Comparison,
     ContractInput, ContractSource, ContractStatus, DeterminismClass, ExactBound, ExecutionPolicy,
-    ImmutablePolicyRef, IntegerBound, ParameterDefinition, ParameterType, QuantityBound,
-    QuantityValue, REGISTRY_SCHEMA_VERSION, RegistrySnapshot, RequirementBasis, ReviewDisposition,
-    ReviewIndependence, ReviewParty, RoleDefinition, SourceRef, VersionedRef,
+    ImmutablePolicyRef, IntegerBound, ParameterDefinition, ParameterType, PurposeDefinition,
+    QuantityBound, QuantityValue, REGISTRY_SCHEMA_VERSION, RegistrySnapshot, RequirementBasis,
+    ReviewDisposition, ReviewIndependence, ReviewParty, RoleDefinition, SourceRef, VersionedRef,
 };
 
 pub const COMPILE_NOTICE: &str = "Compilation establishes structural and semantic consistency under the named draft profile only. It performs no execution, review fulfillment, reviewer-eligibility or trust evaluation, evidence admission, scientific qualification, or requirement verdict.";
@@ -151,6 +151,7 @@ pub struct ResolvedBinding {
 pub struct CompiledRequirement {
     pub requirement_id: String,
     pub statement: String,
+    pub purpose: VersionedRef,
     pub metric: SourceRef,
     pub metric_role: VersionedRef,
     pub comparison: Comparison,
@@ -550,6 +551,12 @@ fn validate_contract_shape(contract: &ContractSource, findings: &mut Vec<CoreDia
             "contract_author",
             findings,
         );
+        validate_versioned_ref(
+            &requirement.purpose,
+            contract_location(format!("/requirements/{index}/purpose")),
+            "contract_author",
+            findings,
+        );
         require_nonempty(
             &requirement.limit.kind,
             contract_location(format!("/requirements/{index}/limit/kind")),
@@ -568,6 +575,7 @@ fn validate_contract_shape(contract: &ContractSource, findings: &mut Vec<CoreDia
 struct RegistryIndex<'a> {
     kinds: KindRegistry,
     kind_classes: BTreeMap<&'a str, &'a str>,
+    purposes: BTreeMap<VersionedRef, &'a PurposeDefinition>,
     roles: BTreeMap<VersionedRef, &'a RoleDefinition>,
     capability_types: BTreeMap<VersionedRef, &'a CapabilityTypeDefinition>,
 }
@@ -640,6 +648,39 @@ impl<'a> RegistryIndex<'a> {
                     registry_location(pointer),
                     error.detail(),
                 )),
+            }
+        }
+
+        let mut purposes = BTreeMap::new();
+        for (index, purpose) in registry.purposes.iter().enumerate() {
+            let pointer = format!("/purposes/{index}");
+            validate_versioned_ref(
+                &purpose.purpose,
+                registry_location(format!("{pointer}/purpose")),
+                "registry_owner",
+                findings,
+            );
+            require_nonempty(
+                &purpose.owner,
+                registry_location(format!("{pointer}/owner")),
+                "registry_owner",
+                findings,
+            );
+            require_nonempty(
+                &purpose.description,
+                registry_location(format!("{pointer}/description")),
+                "registry_owner",
+                findings,
+            );
+            if purposes.insert(purpose.purpose.clone(), purpose).is_some() {
+                registry_incomplete(
+                    registry_location(format!("{pointer}/purpose")),
+                    format!(
+                        "duplicate governed purpose `{}@{}`",
+                        purpose.purpose.id, purpose.purpose.major
+                    ),
+                    findings,
+                );
             }
         }
 
@@ -743,7 +784,7 @@ impl<'a> RegistryIndex<'a> {
                     findings,
                 );
             }
-            validate_slots(capability, index, &roles, findings);
+            validate_slots(capability, index, &roles, &purposes, findings);
             validate_parameter_definitions(capability, index, &kinds, &kind_classes, findings);
             validate_reproducibility_declaration(
                 capability,
@@ -758,6 +799,7 @@ impl<'a> RegistryIndex<'a> {
         Self {
             kinds,
             kind_classes,
+            purposes,
             roles,
             capability_types,
         }
@@ -1196,6 +1238,7 @@ fn validate_slots(
     capability: &CapabilityTypeDefinition,
     capability_index: usize,
     roles: &BTreeMap<VersionedRef, &RoleDefinition>,
+    purposes: &BTreeMap<VersionedRef, &PurposeDefinition>,
     findings: &mut Vec<CoreDiagnostic>,
 ) {
     let mut input_ids = BTreeSet::new();
@@ -1312,6 +1355,31 @@ fn validate_slots(
             "registry_owner",
             findings,
         );
+        let mut excluded = BTreeSet::new();
+        for (purpose_index, purpose) in slot.excluded_purposes.iter().enumerate() {
+            let location =
+                registry_location(format!("{pointer}/excluded_purposes/{purpose_index}"));
+            validate_versioned_ref(purpose, location.clone(), "registry_owner", findings);
+            if !excluded.insert(purpose) {
+                registry_incomplete(
+                    location,
+                    format!(
+                        "output slot repeats excluded purpose `{}@{}`",
+                        purpose.id, purpose.major
+                    ),
+                    findings,
+                );
+            } else if !purposes.contains_key(purpose) {
+                registry_incomplete(
+                    location,
+                    format!(
+                        "output slot excludes unknown governed purpose `{}@{}`",
+                        purpose.id, purpose.major
+                    ),
+                    findings,
+                );
+            }
+        }
     }
 }
 
@@ -1338,6 +1406,20 @@ fn validate_contract_registry_refs(
                 format!(
                     "nondeterminism policy references role `{}@{}` absent from the supplied registry snapshot",
                     role.id, role.major
+                ),
+            ));
+        }
+    }
+    for (index, requirement) in contract.requirements.iter().enumerate() {
+        if !registry.purposes.contains_key(&requirement.purpose) {
+            findings.push(CoreDiagnostic::new(
+                CORE_T2601,
+                FindingClass::Invalid,
+                "contract_author",
+                contract_location(format!("/requirements/{index}/purpose")),
+                format!(
+                    "requirement references governed purpose `{}@{}` absent from the supplied registry snapshot",
+                    requirement.purpose.id, requirement.purpose.major
                 ),
             ));
         }
@@ -1401,6 +1483,7 @@ struct Candidate {
     role: VersionedRef,
     media_type: String,
     claim_models: Vec<ClaimModelDeclaration>,
+    excluded_purposes: Vec<VersionedRef>,
 }
 
 fn collect_sources(contract: &ContractSource, registry: &RegistryIndex<'_>) -> Vec<Candidate> {
@@ -1414,6 +1497,7 @@ fn collect_sources(contract: &ContractSource, registry: &RegistryIndex<'_>) -> V
             role: input.role.clone(),
             media_type: input.media_type.clone(),
             claim_models: vec![input.claim_model.clone()],
+            excluded_purposes: Vec::new(),
         })
         .collect();
     for step in &contract.workflow {
@@ -1428,6 +1512,7 @@ fn collect_sources(contract: &ContractSource, registry: &RegistryIndex<'_>) -> V
             role: output.role.clone(),
             media_type: output.media_type.clone(),
             claim_models: output.permitted_claim_models.clone(),
+            excluded_purposes: output.excluded_purposes.clone(),
         }));
     }
     candidates.sort_by(|left, right| left.source.cmp(&right.source));
@@ -2563,6 +2648,22 @@ fn compile_requirements(
         if invalid_sources.contains(&candidate.source) {
             continue;
         }
+        if registry.purposes.contains_key(&requirement.purpose)
+            && candidate.excluded_purposes.contains(&requirement.purpose)
+        {
+            findings.push(CoreDiagnostic::new(
+                CORE_T2601,
+                FindingClass::Unsatisfied,
+                "contract_author",
+                contract_location(format!("/requirements/{index}/purpose")),
+                format!(
+                    "metric source `{}` explicitly excludes governed purpose `{}@{}`",
+                    candidate.source.label(),
+                    requirement.purpose.id,
+                    requirement.purpose.major
+                ),
+            ));
+        }
         if !candidate
             .claim_models
             .iter()
@@ -2654,6 +2755,7 @@ fn compile_requirements(
         compiled.push(CompiledRequirement {
             requirement_id: requirement.requirement_id.clone(),
             statement: requirement.statement.clone(),
+            purpose: requirement.purpose.clone(),
             metric: metric.clone(),
             metric_role: candidate.role.clone(),
             comparison: requirement.comparison,
@@ -3013,6 +3115,11 @@ mod tests {
     );
     const REVIEW_REGISTRY: &[u8] =
         include_bytes!("../../../fixtures/semantic-core/types/compiler.review.registry.v1.json");
+    const PURPOSE_CONTRACT: &[u8] = include_bytes!(
+        "../../../fixtures/semantic-core/types/types.R10.allowed.pass.contract.json"
+    );
+    const PURPOSE_REGISTRY: &[u8] =
+        include_bytes!("../../../fixtures/semantic-core/types/compiler.purpose.registry.v1.json");
 
     fn contract() -> ContractSource {
         serde_json::from_slice(CONTRACT).unwrap()
@@ -3036,6 +3143,14 @@ mod tests {
 
     fn review_registry() -> RegistrySnapshot {
         serde_json::from_slice(REVIEW_REGISTRY).unwrap()
+    }
+
+    fn purpose_contract() -> ContractSource {
+        serde_json::from_slice(PURPOSE_CONTRACT).unwrap()
+    }
+
+    fn purpose_registry() -> RegistrySnapshot {
+        serde_json::from_slice(PURPOSE_REGISTRY).unwrap()
     }
 
     fn compile_contract(contract: &ContractSource) -> CompileReport {
@@ -3075,7 +3190,7 @@ mod tests {
         assert_eq!(compiled.requirements[0].limit.unit, "Sv/s");
         assert_eq!(
             compiled.snapshot_sha256,
-            "sha256:981acc836e8250b8d10bd165b3676d507ac4b9bde536e67c268eb718173b8c54"
+            "sha256:7a6968cc0e3cf02ea2b7835a500418813175b17a383767481e2758376199b775"
         );
     }
 
@@ -3215,6 +3330,69 @@ mod tests {
         assert!(
             codes(&compile_with_registry(&source, &duplicate_disposition)).contains(CORE_R3401)
         );
+    }
+
+    #[test]
+    fn purpose_exclusions_are_nominal_and_fail_closed() {
+        let allowed = compile_documents(PURPOSE_CONTRACT, PURPOSE_REGISTRY).unwrap();
+        assert_eq!(allowed.status, CompilationStatus::Compiled);
+        assert_eq!(
+            allowed.compiled.unwrap().requirements[0].purpose,
+            VersionedRef {
+                id: "fixture.design_compliance".into(),
+                major: 1,
+            }
+        );
+
+        let mut excluded = purpose_contract();
+        excluded.requirements[0].purpose = VersionedRef {
+            id: "fixture.screening".into(),
+            major: 1,
+        };
+        assert!(codes(&compile_with_registry(&excluded, &purpose_registry())).contains(CORE_T2601));
+
+        let mut similar_name = purpose_contract();
+        similar_name.requirements[0].purpose = VersionedRef {
+            id: "fixture.screening_research".into(),
+            major: 1,
+        };
+        assert_eq!(
+            compile_with_registry(&similar_name, &purpose_registry()).status,
+            CompilationStatus::Compiled
+        );
+
+        let mut unknown = purpose_contract();
+        unknown.requirements[0].purpose = VersionedRef {
+            id: "fixture.unknown".into(),
+            major: 1,
+        };
+        assert!(codes(&compile_with_registry(&unknown, &purpose_registry())).contains(CORE_T2601));
+    }
+
+    #[test]
+    fn invalid_purpose_vocabularies_and_exclusions_are_registry_findings() {
+        let source = purpose_contract();
+
+        let mut duplicate_purpose = purpose_registry();
+        duplicate_purpose
+            .purposes
+            .push(duplicate_purpose.purposes[0].clone());
+        assert!(codes(&compile_with_registry(&source, &duplicate_purpose)).contains(CORE_R3501));
+
+        let mut duplicate_exclusion = purpose_registry();
+        let repeated =
+            duplicate_exclusion.capability_types[0].outputs[0].excluded_purposes[0].clone();
+        duplicate_exclusion.capability_types[0].outputs[0]
+            .excluded_purposes
+            .push(repeated);
+        assert!(codes(&compile_with_registry(&source, &duplicate_exclusion)).contains(CORE_R3501));
+
+        let mut unknown_exclusion = purpose_registry();
+        unknown_exclusion.capability_types[0].outputs[0].excluded_purposes[0] = VersionedRef {
+            id: "fixture.unknown".into(),
+            major: 1,
+        };
+        assert!(codes(&compile_with_registry(&source, &unknown_exclusion)).contains(CORE_R3501));
     }
 
     #[test]

@@ -118,6 +118,7 @@ impl SourceRef {
 pub struct RequirementSource {
     pub requirement_id: String,
     pub statement: String,
+    pub purpose: VersionedRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metric: Option<SourceRef>,
     pub comparison: Comparison,
@@ -167,8 +168,17 @@ pub struct RegistrySnapshot {
     pub registry_id: String,
     pub revision: u64,
     pub kinds: Vec<KindRecord>,
+    pub purposes: Vec<PurposeDefinition>,
     pub roles: Vec<RoleDefinition>,
     pub capability_types: Vec<CapabilityTypeDefinition>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PurposeDefinition {
+    pub purpose: VersionedRef,
+    pub owner: String,
+    pub description: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -391,6 +401,8 @@ pub struct OutputSlotDefinition {
     pub role: VersionedRef,
     pub media_type: String,
     pub permitted_claim_models: Vec<ClaimModelDeclaration>,
+    #[serde(default)]
+    pub excluded_purposes: Vec<VersionedRef>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -33,7 +33,11 @@ multiple historical profiles.
 - `types/compiler-review-cases.v1.json`: 9 executable structural R9 fixtures:
   2 compiled cases and 7 rejected cases covering exact review dossiers,
   governance-only dispositions, digest-pinned external eligibility policy,
-  explicit independence, and pending review obligations.
+  explicit independence, and pending review obligations; and
+- `types/compiler-purpose-cases.v1.json`: 6 executable R10 fixtures: 3 compiled
+  cases and 3 rejected cases covering governed purpose resolution, exact nominal
+  exclusions, unrelated and similarly named purposes, and major-version
+  mismatch.
 
 All other fixtures below are required before ADR acceptance and are currently
 planned unless files exist for them.
@@ -41,12 +45,12 @@ planned unless files exist for them.
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
 `scope-predicates.v1.json`, plus the 41 requirement and 8 aggregation vectors in
-`verdict-calculus.v1.json`. The compiler harness also executes all 45 cases in
-the four compiler manifests and pins each registry digest plus all successful
-compiled-snapshot identities. Passing the 90 pure vectors and 45
-compiler fixtures does not accept ADR-0006: remaining compiler rules and other
-vector families in this coverage plan remain absent, and no result is
-scientifically qualified.
+`verdict-calculus.v1.json`. The compiler harness also executes all 51 cases in
+the five compiler manifests and pins each registry digest plus all successful
+compiled-snapshot identities. Passing the 90 pure vectors and 51 compiler
+fixtures does not accept ADR-0006: package-level rule halves and other vector
+families in this coverage plan remain absent, and no result is scientifically
+qualified.
 
 The initial `le.bounded.one_sided` specimen retains its stable fixture id, but
 its expected rule was corrected to `bounded.le.upper_only` when the harness was
@@ -75,6 +79,8 @@ fixtures/semantic-core/
                              executable manifest for type-level SC-6 R8
   types/compiler-review-cases.v1.json
                              executable manifest for structural SC-6 R9
+  types/compiler-purpose-cases.v1.json
+                             executable manifest for nominal SC-6 R10
   types/*.contract.json     exact contract inputs named by that manifest
   types/compiler.registry.v1.json
                              exact shared registry input pinned by the manifest
@@ -84,6 +90,8 @@ fixtures/semantic-core/
                              exact determinism registry pinned by the R8 manifest
   types/compiler.review.registry.v1.json
                              exact accountable-review registry pinned by the R9 manifest
+  types/compiler.purpose.registry.v1.json
+                             exact governed-purpose registry pinned by the R10 manifest
   scenarios/                 planned end-to-end campaign fixtures
 ```
 
@@ -246,7 +254,11 @@ canonically.
 | `types.R9.empty-independence.fail` / `duplicate-independence.fail` | constraint mode is nonempty and unambiguous → `CORE-R3401` |
 | `types.R9.binding-on-non-review.fail` | a normal capability cannot acquire review semantics from contract syntax → `CORE-R3401` |
 | `types.R9.nondeterminism-refused.fail` | review remains nondeterministic and still requires explicit R8 role-scoped permission → `CORE-A4301` |
-| `types.R10.non-claim.fail` | flux used as dose → `CORE-T2601` |
+| `types.R10.allowed.pass` | a resolved purpose not excluded by the producing output is retained in compiled IR |
+| `types.R10.excluded.fail` | an exact output-purpose exclusion → `CORE-T2601` |
+| `types.R10.unrelated-purpose.pass` | excluding one purpose does not exclude unrelated governed identities |
+| `types.R10.nominal-near-name.pass` | `screening@1` exclusion does not match `screening_research@1`; no prefix or prose inference |
+| `types.R10.unknown-purpose.fail` / `major-version.fail` | purpose identity must resolve exactly in the pinned registry → `CORE-T2601` |
 | `types.satisfiable.pass` | a path of roles reaches the basis |
 | `types.satisfiable.fail` | no capability-type path can emit a reducible bounded model → `CORE-T2201` at the requirement; package admissibility is tested separately |
 | `types.independent-errors-one-pass.pass` | three unrelated errors reported together |

@@ -83,6 +83,10 @@
       },
       "basis": {
         "kind": "bounded"
+      },
+      "purpose": {
+        "id": "fixture.requirement_evaluation",
+        "major": 1
       }
     }
   ]

@@ -1,0 +1,114 @@
+{
+  "schema_version": "avila.core/registry-snapshot/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "registry_id": "fixtures.compiler.purpose.registry",
+  "revision": 1,
+  "kinds": [
+    {
+      "kind_id": "nuclear.dose_equivalent_rate",
+      "canonical_unit": "Sv/s",
+      "unit_class": "nuclear.dose_equivalent_rate.units@1",
+      "owner": "fixture.method_owner",
+      "units": [
+        {
+          "symbol": "Sv/s",
+          "factor": "1"
+        },
+        {
+          "symbol": "uSv/h",
+          "factor": "1/3600000000"
+        }
+      ]
+    }
+  ],
+  "purposes": [
+    {
+      "purpose": {
+        "id": "fixture.design_compliance",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "description": "Evaluate a bounded design requirement."
+    },
+    {
+      "purpose": {
+        "id": "fixture.screening",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "description": "Use an estimate for preliminary screening."
+    },
+    {
+      "purpose": {
+        "id": "fixture.screening_research",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "description": "Study screening methodology without making a screening decision."
+    },
+    {
+      "purpose": {
+        "id": "fixture.maintenance_planning",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "description": "Plan maintenance activities from bounded evidence."
+    }
+  ],
+  "roles": [
+    {
+      "role": {
+        "id": "nuclear.shutdown_dose_rate",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "validator": "fixture.validate.dose-rate@1",
+      "quantity_kind": "nuclear.dose_equivalent_rate",
+      "unit_class": "nuclear.dose_equivalent_rate.units@1",
+      "accepted_media_types": [
+        "application/vnd.fixture.quantity+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "interval"
+        }
+      ]
+    }
+  ],
+  "capability_types": [
+    {
+      "capability_type": {
+        "id": "fixture.purpose_scoped_metric",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "reproducibility": {
+        "determinism": "deterministic"
+      },
+      "outputs": [
+        {
+          "slot_id": "dose_rate",
+          "role": {
+            "id": "nuclear.shutdown_dose_rate",
+            "major": 1
+          },
+          "media_type": "application/vnd.fixture.quantity+json",
+          "permitted_claim_models": [
+            {
+              "model": "interval"
+            }
+          ],
+          "excluded_purposes": [
+            {
+              "id": "fixture.screening",
+              "major": 1
+            }
+          ]
+        }
+      ],
+      "non_claims": [
+        "The metric is not suitable for the governed preliminary-screening purpose."
+      ]
+    }
+  ]
+}

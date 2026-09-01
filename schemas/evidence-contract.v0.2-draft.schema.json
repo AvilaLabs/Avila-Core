@@ -335,6 +335,7 @@
       "required": [
         "requirement_id",
         "statement",
+        "purpose",
         "comparison",
         "limit",
         "basis"
@@ -345,6 +346,9 @@
         },
         "statement": {
           "$ref": "#/$defs/nonemptyString"
+        },
+        "purpose": {
+          "$ref": "#/$defs/versionedRef"
         },
         "metric": {
           "$ref": "#/$defs/sourceRef"

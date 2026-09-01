@@ -41,6 +41,9 @@ derived dependency graph + cycle check
 requirement metric + exact kind/unit lowering
               │
               ▼
+claim-model/basis satisfiability
+              │
+              ▼
 immutable compiled snapshot or REJECTED report
 ```
 
@@ -106,14 +109,15 @@ and semantic compatibility are related but not interchangeable claims.
 ## Implemented and deferred rules
 
 This initial slice implements the currently representable portions of SC-1,
-SC-2, SC-4, SC-6 R1, R2, R4, R5, and R6. In particular it covers canonical
-source identity, exact within-kind unit scaling, unique slot resolution,
-nominal role-major compatibility, media compatibility, graph shape, metric
-binding, and limit kind/unit compatibility.
+SC-2, SC-3, SC-4, and SC-6 R1–R6. In particular it covers canonical source
+identity, exact within-kind unit scaling, unique slot resolution, nominal
+role-major compatibility, type-level claim-model/basis satisfiability, media
+compatibility, graph shape, metric binding, and limit kind/unit compatibility.
 
 It does not yet represent or decide:
 
-- uncertainty-model and comparison-basis sufficiency (R3);
+- package-level actual claim-model, coverage, and bound-side sufficiency (the
+  binding half of R3);
 - typed parameter domains and placeholders (R7);
 - seed and execution-factor completeness (R8);
 - human-review signatures (R9);

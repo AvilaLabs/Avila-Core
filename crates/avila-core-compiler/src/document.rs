@@ -45,6 +45,7 @@ pub struct ContractInput {
     pub input_id: String,
     pub role: VersionedRef,
     pub media_type: String,
+    pub claim_model: ClaimModelDeclaration,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -176,6 +177,7 @@ pub struct RoleDefinition {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unit_class: Option<String>,
     pub accepted_media_types: Vec<String>,
+    pub permitted_claim_models: Vec<ClaimModelDeclaration>,
     #[serde(default)]
     pub non_claims: Vec<String>,
 }
@@ -209,6 +211,44 @@ pub struct OutputSlotDefinition {
     pub slot_id: String,
     pub role: VersionedRef,
     pub media_type: String,
+    pub permitted_claim_models: Vec<ClaimModelDeclaration>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "model", rename_all = "snake_case", deny_unknown_fields)]
+pub enum ClaimModelDeclaration {
+    Exact,
+    Interval {
+        #[serde(default)]
+        nominal: bool,
+    },
+    CoverageInterval,
+    WorstCase {
+        side: BoundSide,
+        #[serde(default)]
+        nominal: bool,
+    },
+    StandardUncertainty,
+    Samples,
+    Distribution,
+    Unquantified,
+}
+
+impl ClaimModelDeclaration {
+    #[must_use]
+    pub const fn is_kernel_irreducible(&self) -> bool {
+        matches!(
+            self,
+            Self::StandardUncertainty | Self::Samples | Self::Distribution
+        )
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BoundSide {
+    Lower,
+    Upper,
 }
 
 const fn default_true() -> bool {

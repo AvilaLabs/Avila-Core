@@ -18,9 +18,10 @@ multiple historical profiles.
 - `verdict-calculus.v1.json`: 49 vectors: 41 requirement-evaluation vectors
   plus 8 aggregate-verdict vectors; and
 - `canon.v1.json`: 12 initial canonical-value and byte-reader vectors.
-- `types/compiler-cases.v1.json`: 14 executable compiler fixtures: 2 compiled
-  cases and 12 rejected cases covering the current R1, R2, R4, R5, R6, exact
-  unit-lowering, cascade-suppression, and independent-finding slice.
+- `types/compiler-cases.v1.json`: 18 executable compiler fixtures: 3 compiled
+  cases and 15 rejected cases covering the current R1–R6 subset, claim-model
+  sufficiency, exact unit lowering, cascade suppression, and independent
+  findings.
 
 All other fixtures below are required before ADR acceptance and are currently
 planned unless files exist for them.
@@ -29,8 +30,8 @@ The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
 `scope-predicates.v1.json`, plus the 41 requirement and 8 aggregation vectors in
 `verdict-calculus.v1.json`. The compiler harness also executes all 14 cases in
-`types/compiler-cases.v1.json` and pins the shared registry digest plus both
-successful compiled-snapshot identities. Passing the 90 pure vectors and 14
+`types/compiler-cases.v1.json` and pins the shared registry digest plus all
+successful compiled-snapshot identities. Passing the 90 pure vectors and 18
 compiler fixtures does not accept ADR-0006: most compiler rules and other
 vector families in this coverage plan remain absent, and no result is
 scientifically qualified.

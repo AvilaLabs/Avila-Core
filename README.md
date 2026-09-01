@@ -33,7 +33,7 @@ This repository is a **pre-alpha scaffold**. It currently provides:
 The repository also contains proposed `v0.2` semantic rules and an initial
 conformance-vector corpus. The Rust kernel executes all 90 current pure vectors:
 12 canonical-value, 10 unit-scaling, 19 scope-predicate, 41 requirement-verdict,
-and 8 aggregate-verdict cases. A separate compiler harness executes 14 current
+and 8 aggregate-verdict cases. A separate compiler harness executes 18 current
 type fixtures. The first compiler slice is implemented, but its remaining type
 rules and normative fixture families, along with admission, invalidation, and
 package semantics, remain proposed and incomplete.

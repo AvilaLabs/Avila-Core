@@ -9,13 +9,14 @@ use thiserror::Error;
 
 use crate::diagnostic::{
     CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3501, CORE_S1101,
-    CORE_S1102, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103, CORE_T2301, CoreDiagnostic,
-    DiagnosticRepair, FindingClass, RepairApplicability, SourceLocation,
+    CORE_S1102, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103, CORE_T2201, CORE_T2203, CORE_T2301,
+    CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability, SourceLocation,
 };
 use crate::document::{
-    COMPILE_REPORT_SCHEMA_VERSION, COMPILED_CONTRACT_SCHEMA_VERSION, CONTRACT_SCHEMA_VERSION,
-    CapabilityTypeDefinition, Comparison, ContractInput, ContractSource, REGISTRY_SCHEMA_VERSION,
-    RegistrySnapshot, RequirementBasis, RoleDefinition, SourceRef, VersionedRef,
+    BasisKind, BoundSide, COMPILE_REPORT_SCHEMA_VERSION, COMPILED_CONTRACT_SCHEMA_VERSION,
+    CONTRACT_SCHEMA_VERSION, CapabilityTypeDefinition, ClaimModelDeclaration, Comparison,
+    ContractInput, ContractSource, REGISTRY_SCHEMA_VERSION, RegistrySnapshot, RequirementBasis,
+    RoleDefinition, SourceRef, VersionedRef,
 };
 
 pub const COMPILE_NOTICE: &str = "Compilation establishes structural and semantic consistency under the named draft profile only. It performs no execution, evidence admission, scientific qualification, or requirement verdict.";
@@ -571,6 +572,13 @@ impl<'a> RegistryIndex<'a> {
                     findings,
                 );
             }
+            if role.permitted_claim_models.is_empty() {
+                registry_incomplete(
+                    registry_location(format!("{pointer}/permitted_claim_models")),
+                    "evidence role must permit at least one explicit claim model",
+                    findings,
+                );
+            }
             if roles.insert(role.role.clone(), role).is_some() {
                 invalid_value(
                     registry_location(format!("{pointer}/role")),
@@ -740,7 +748,27 @@ fn validate_slots(
                     findings,
                 );
             }
-            Some(_) => {}
+            Some(role) => {
+                if slot.permitted_claim_models.is_empty() {
+                    registry_incomplete(
+                        registry_location(format!("{pointer}/permitted_claim_models")),
+                        "output slot must declare at least one permitted claim model",
+                        findings,
+                    );
+                }
+                for model in &slot.permitted_claim_models {
+                    if !role.permitted_claim_models.contains(model) {
+                        registry_incomplete(
+                            registry_location(format!("{pointer}/permitted_claim_models")),
+                            format!(
+                                "output claim model is outside role `{}@{}`",
+                                role.role.id, role.role.major
+                            ),
+                            findings,
+                        );
+                    }
+                }
+            }
         }
         require_nonempty(
             &slot.media_type,
@@ -789,6 +817,21 @@ fn validate_contract_registry_refs(
                     ),
                 ));
             }
+            Some(role) if !role.permitted_claim_models.contains(&input.claim_model) => {
+                invalid_sources.insert(SourceRef::ContractInput {
+                    input_id: input.input_id.clone(),
+                });
+                findings.push(CoreDiagnostic::new(
+                    CORE_T2201,
+                    FindingClass::Invalid,
+                    "contract_author",
+                    contract_location(format!("/inputs/{index}/claim_model")),
+                    format!(
+                        "claim model is not permitted by role `{}@{}`",
+                        input.role.id, input.role.major
+                    ),
+                ));
+            }
             Some(_) => {}
         }
     }
@@ -800,6 +843,7 @@ struct Candidate {
     source: SourceRef,
     role: VersionedRef,
     media_type: String,
+    claim_models: Vec<ClaimModelDeclaration>,
 }
 
 fn collect_sources(contract: &ContractSource, registry: &RegistryIndex<'_>) -> Vec<Candidate> {
@@ -812,6 +856,7 @@ fn collect_sources(contract: &ContractSource, registry: &RegistryIndex<'_>) -> V
             },
             role: input.role.clone(),
             media_type: input.media_type.clone(),
+            claim_models: vec![input.claim_model.clone()],
         })
         .collect();
     for step in &contract.workflow {
@@ -825,6 +870,7 @@ fn collect_sources(contract: &ContractSource, registry: &RegistryIndex<'_>) -> V
             },
             role: output.role.clone(),
             media_type: output.media_type.clone(),
+            claim_models: output.permitted_claim_models.clone(),
         }));
     }
     candidates.sort_by(|left, right| left.source.cmp(&right.source));
@@ -1184,6 +1230,35 @@ fn compile_requirements(
         if invalid_sources.contains(&candidate.source) {
             continue;
         }
+        if !candidate
+            .claim_models
+            .iter()
+            .any(|model| claim_model_satisfies(model, &requirement.basis, requirement.comparison))
+        {
+            let irreducible = !candidate.claim_models.is_empty()
+                && candidate
+                    .claim_models
+                    .iter()
+                    .all(ClaimModelDeclaration::is_kernel_irreducible);
+            let mut diagnostic = CoreDiagnostic::new(
+                if irreducible { CORE_T2203 } else { CORE_T2201 },
+                FindingClass::Unsatisfied,
+                "contract_author",
+                contract_location(format!("/requirements/{index}/basis")),
+                if irreducible {
+                    "metric source permits only claim models that the semantic kernel cannot reduce"
+                } else {
+                    "metric source cannot emit a claim model sufficient for this comparison basis"
+                },
+            );
+            if irreducible {
+                diagnostic = diagnostic.with_repair(DiagnosticRepair {
+                    applicability: RepairApplicability::MethodOwnerJudgment,
+                    candidates: vec!["core.uncertainty.expand@1".into()],
+                });
+            }
+            findings.push(diagnostic);
+        }
         let Some(role) = registry.roles.get(&candidate.role) else {
             continue;
         };
@@ -1271,6 +1346,45 @@ fn compile_requirements(
         });
     }
     compiled
+}
+
+fn claim_model_satisfies(
+    model: &ClaimModelDeclaration,
+    basis: &RequirementBasis,
+    comparison: Comparison,
+) -> bool {
+    match basis.kind {
+        BasisKind::Bounded => match model {
+            ClaimModelDeclaration::Exact
+            | ClaimModelDeclaration::Interval { .. }
+            | ClaimModelDeclaration::CoverageInterval => true,
+            ClaimModelDeclaration::WorstCase { side, .. } => match comparison {
+                Comparison::LessThan | Comparison::LessThanOrEqual => *side == BoundSide::Upper,
+                Comparison::GreaterThan | Comparison::GreaterThanOrEqual => {
+                    *side == BoundSide::Lower
+                }
+                Comparison::Equal => false,
+            },
+            ClaimModelDeclaration::StandardUncertainty
+            | ClaimModelDeclaration::Samples
+            | ClaimModelDeclaration::Distribution
+            | ClaimModelDeclaration::Unquantified => false,
+        },
+        BasisKind::Enclosure => matches!(
+            model,
+            ClaimModelDeclaration::Exact | ClaimModelDeclaration::Interval { .. }
+        ),
+        BasisKind::Nominal => match model {
+            ClaimModelDeclaration::Exact
+            | ClaimModelDeclaration::CoverageInterval
+            | ClaimModelDeclaration::Unquantified => true,
+            ClaimModelDeclaration::Interval { nominal }
+            | ClaimModelDeclaration::WorstCase { nominal, .. } => *nominal,
+            ClaimModelDeclaration::StandardUncertainty
+            | ClaimModelDeclaration::Samples
+            | ClaimModelDeclaration::Distribution => false,
+        },
+    }
 }
 
 fn find_exact_candidate<'a>(
@@ -1529,8 +1643,23 @@ mod tests {
         serde_json::from_slice(CONTRACT).unwrap()
     }
 
+    fn registry() -> RegistrySnapshot {
+        serde_json::from_slice(REGISTRY).unwrap()
+    }
+
     fn compile_contract(contract: &ContractSource) -> CompileReport {
         compile_documents(&serde_json::to_vec(contract).unwrap(), REGISTRY).unwrap()
+    }
+
+    fn compile_with_registry(
+        contract: &ContractSource,
+        registry: &RegistrySnapshot,
+    ) -> CompileReport {
+        compile_documents(
+            &serde_json::to_vec(contract).unwrap(),
+            &serde_json::to_vec(registry).unwrap(),
+        )
+        .unwrap()
     }
 
     fn codes(report: &CompileReport) -> BTreeSet<&str> {
@@ -1555,7 +1684,7 @@ mod tests {
         assert_eq!(compiled.requirements[0].limit.unit, "Sv/s");
         assert_eq!(
             compiled.snapshot_sha256,
-            "sha256:5850e14e8bda8d719ca432beb2122b0480c3dd687077b74a2762071ad5dd9fa4"
+            "sha256:87b8c9ec8abf99904a84abdd65716f0f88415331c53f17359de25cd1e1d9d0d8"
         );
     }
 
@@ -1719,6 +1848,58 @@ mod tests {
         let mut unknown_unit = contract();
         unknown_unit.requirements[0].limit.unit = "Mpa".into();
         assert!(codes(&compile_contract(&unknown_unit)).contains(CORE_T2001));
+    }
+
+    #[test]
+    fn type_level_claim_models_must_satisfy_the_comparison_basis() {
+        let source = contract();
+
+        let mut irreducible = registry();
+        irreducible.capability_types[1].outputs[0].permitted_claim_models =
+            vec![ClaimModelDeclaration::StandardUncertainty];
+        let report = compile_with_registry(&source, &irreducible);
+        let finding = report
+            .findings
+            .iter()
+            .find(|finding| finding.code == CORE_T2203)
+            .unwrap();
+        assert_eq!(finding.class, FindingClass::Unsatisfied);
+        assert_eq!(
+            finding.repairs[0].applicability,
+            RepairApplicability::MethodOwnerJudgment
+        );
+
+        let mut wrong_side = registry();
+        wrong_side.capability_types[1].outputs[0].permitted_claim_models =
+            vec![ClaimModelDeclaration::WorstCase {
+                side: BoundSide::Lower,
+                nominal: false,
+            }];
+        assert!(codes(&compile_with_registry(&source, &wrong_side)).contains(CORE_T2201));
+
+        let mut sufficient_side = registry();
+        sufficient_side.capability_types[1].outputs[0].permitted_claim_models =
+            vec![ClaimModelDeclaration::WorstCase {
+                side: BoundSide::Upper,
+                nominal: false,
+            }];
+        assert_eq!(
+            compile_with_registry(&source, &sufficient_side).status,
+            CompilationStatus::Compiled
+        );
+
+        let mut coverage_for_enclosure = registry();
+        coverage_for_enclosure.capability_types[1].outputs[0].permitted_claim_models =
+            vec![ClaimModelDeclaration::CoverageInterval];
+        let mut enclosure_contract = source;
+        enclosure_contract.requirements[0].basis.kind = BasisKind::Enclosure;
+        assert!(
+            codes(&compile_with_registry(
+                &enclosure_contract,
+                &coverage_for_enclosure
+            ))
+            .contains(CORE_T2201)
+        );
     }
 
     #[test]

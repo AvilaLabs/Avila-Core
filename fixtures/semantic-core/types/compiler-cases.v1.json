@@ -4,7 +4,7 @@
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "registry": {
     "path": "compiler.registry.v1.json",
-    "sha256": "sha256:e9dabf65930ce73055bc9b4e1163d64c99b92460b9548bfb6afaf6569e0621ef"
+    "sha256": "sha256:d3747754a6931d7bb42cac1463d7fce6dfae9d4d1acadc1a5c27b3f78bfa0483"
   },
   "fixtures": [
     {
@@ -15,7 +15,7 @@
         "status": "compiled",
         "findings": [],
         "compiled": {
-          "snapshot_sha256": "sha256:5850e14e8bda8d719ca432beb2122b0480c3dd687077b74a2762071ad5dd9fa4",
+          "snapshot_sha256": "sha256:87b8c9ec8abf99904a84abdd65716f0f88415331c53f17359de25cd1e1d9d0d8",
           "step_order": [
             "calculate",
             "bound"
@@ -93,7 +93,7 @@
         "status": "compiled",
         "findings": [],
         "compiled": {
-          "snapshot_sha256": "sha256:e9bf0dbfb2096d0e0c2acdc47a0de8c5274ea2b358da1f2a090214e9365a3e70",
+          "snapshot_sha256": "sha256:ec7e66520fb80d1f57fba9434a72c203b4855d3717c63a1ed7001d18f12949a0",
           "step_order": [
             "calculate",
             "bound"
@@ -135,6 +135,98 @@
             "primary": {
               "document": "contract",
               "pointer": "/workflow/0/bindings/0/source"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R3.irreducible.fail",
+      "clause": "SC-3 and SC-6 R3",
+      "contract": "types.R3.irreducible.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2203",
+            "class": "unsatisfied",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/basis"
+            },
+            "repairs": [
+              "method_owner_judgment"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R3.worst-case-side-insufficient.fail",
+      "clause": "SC-6 R3",
+      "contract": "types.R3.worst-case-side-insufficient.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2201",
+            "class": "unsatisfied",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/basis"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R3.worst-case-side-sufficient.pass",
+      "clause": "SC-6 R3",
+      "contract": "types.R3.worst-case-side-sufficient.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [],
+        "compiled": {
+          "snapshot_sha256": "sha256:cb245508543690d4bf92c7dd1ab0d4af0c87a2330668d63063b43f974187fa78",
+          "step_order": [
+            "calculate"
+          ],
+          "bindings": [
+            {
+              "step_id": "calculate",
+              "input_slot": "source",
+              "source": "input:case"
+            }
+          ],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.R3.enclosure-needs-interval.fail",
+      "clause": "SC-6 R3",
+      "contract": "types.R3.enclosure-needs-interval.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2201",
+            "class": "unsatisfied",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/basis"
             },
             "repairs": []
           }

@@ -11,7 +11,10 @@
         "id": "fixture.source_document",
         "major": 1
       },
-      "media_type": "application/octet-stream"
+      "media_type": "application/octet-stream",
+      "claim_model": {
+        "model": "unquantified"
+      }
     }
   ],
   "workflow": [

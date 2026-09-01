@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/evidence-contract/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
-  "contract_id": "fixture.types.R5.unknown-step.fail",
+  "contract_id": "fixture.types.R3.irreducible.fail",
   "revision": 1,
   "status": "draft",
   "inputs": [
@@ -15,6 +15,17 @@
       "claim_model": {
         "model": "unquantified"
       }
+    },
+    {
+      "input_id": "metric",
+      "role": {
+        "id": "nuclear.shutdown_dose_rate",
+        "major": 1
+      },
+      "media_type": "application/vnd.fixture.quantity+json",
+      "claim_model": {
+        "model": "standard_uncertainty"
+      }
     }
   ],
   "workflow": [
@@ -25,34 +36,15 @@
         "major": 1
       },
       "parameters": {}
-    },
-    {
-      "step_id": "bound",
-      "capability_type": {
-        "id": "fixture.bound_dose",
-        "major": 1
-      },
-      "bindings": [
-        {
-          "input_slot": "dose_rate",
-          "source": {
-            "source": "step_output",
-            "step_id": "missing",
-            "output_slot": "bounded_dose_rate"
-          }
-        }
-      ],
-      "parameters": {}
     }
   ],
   "requirements": [
     {
       "requirement_id": "R-001",
-      "statement": "The bounded specimen dose rate must not exceed the illustrative limit.",
+      "statement": "An irreducible uncertainty model needs an explicit expansion capability.",
       "metric": {
-        "source": "step_output",
-        "step_id": "bound",
-        "output_slot": "bounded_dose_rate"
+        "source": "contract_input",
+        "input_id": "metric"
       },
       "comparison": "less_than_or_equal",
       "limit": {

@@ -227,7 +227,7 @@ mod tests {
         assert_eq!(report.status, "draft");
         assert_eq!(report.total_vectors, 90);
         assert_eq!(report.implemented_vector_sets.len(), 4);
-        assert_eq!(report.total_compiler_fixtures, 14);
+        assert_eq!(report.total_compiler_fixtures, 18);
         assert_eq!(report.implemented_compiler_fixture_sets.len(), 1);
         assert!(
             report

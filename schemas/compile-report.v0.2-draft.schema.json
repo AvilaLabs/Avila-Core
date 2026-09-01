@@ -242,7 +242,8 @@
       "required": [
         "input_id",
         "role",
-        "media_type"
+        "media_type",
+        "claim_model"
       ],
       "properties": {
         "input_id": {
@@ -253,6 +254,9 @@
         },
         "media_type": {
           "$ref": "#/$defs/nonemptyString"
+        },
+        "claim_model": {
+          "$ref": "#/$defs/claimModel"
         }
       }
     },
@@ -450,6 +454,68 @@
           "$ref": "#/$defs/sha256"
         }
       }
+    },
+    "claimModel": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "model"
+          ],
+          "properties": {
+            "model": {
+              "enum": [
+                "exact",
+                "coverage_interval",
+                "standard_uncertainty",
+                "samples",
+                "distribution",
+                "unquantified"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "model"
+          ],
+          "properties": {
+            "model": {
+              "const": "interval"
+            },
+            "nominal": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "model",
+            "side"
+          ],
+          "properties": {
+            "model": {
+              "const": "worst_case"
+            },
+            "side": {
+              "enum": [
+                "lower",
+                "upper"
+              ]
+            },
+            "nominal": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      ]
     }
   }
 }

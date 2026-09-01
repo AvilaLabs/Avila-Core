@@ -129,7 +129,8 @@
         "role",
         "owner",
         "validator",
-        "accepted_media_types"
+        "accepted_media_types",
+        "permitted_claim_models"
       ],
       "properties": {
         "role": {
@@ -152,6 +153,13 @@
           "minItems": 1,
           "items": {
             "$ref": "#/$defs/nonemptyString"
+          }
+        },
+        "permitted_claim_models": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/claimModel"
           }
         },
         "non_claims": {
@@ -234,7 +242,8 @@
       "required": [
         "slot_id",
         "role",
-        "media_type"
+        "media_type",
+        "permitted_claim_models"
       ],
       "properties": {
         "slot_id": {
@@ -245,8 +254,77 @@
         },
         "media_type": {
           "$ref": "#/$defs/nonemptyString"
+        },
+        "permitted_claim_models": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/claimModel"
+          }
         }
       }
+    },
+    "claimModel": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "model"
+          ],
+          "properties": {
+            "model": {
+              "enum": [
+                "exact",
+                "coverage_interval",
+                "standard_uncertainty",
+                "samples",
+                "distribution",
+                "unquantified"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "model"
+          ],
+          "properties": {
+            "model": {
+              "const": "interval"
+            },
+            "nominal": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "model",
+            "side"
+          ],
+          "properties": {
+            "model": {
+              "const": "worst_case"
+            },
+            "side": {
+              "enum": [
+                "lower",
+                "upper"
+              ]
+            },
+            "nominal": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      ]
     }
   }
 }

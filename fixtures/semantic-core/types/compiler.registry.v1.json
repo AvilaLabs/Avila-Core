@@ -43,6 +43,11 @@
       "validator": "fixture.validate.source@1",
       "accepted_media_types": [
         "application/vnd.fixture.source+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
       ]
     },
     {
@@ -54,6 +59,11 @@
       "validator": "fixture.validate.alternate-source@1",
       "accepted_media_types": [
         "application/vnd.fixture.source+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
       ]
     },
     {
@@ -67,6 +77,31 @@
       "unit_class": "nuclear.dose_equivalent_rate.units@1",
       "accepted_media_types": [
         "application/vnd.fixture.quantity+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "exact"
+        },
+        {
+          "model": "interval"
+        },
+        {
+          "model": "coverage_interval"
+        },
+        {
+          "model": "worst_case",
+          "side": "lower"
+        },
+        {
+          "model": "worst_case",
+          "side": "upper"
+        },
+        {
+          "model": "standard_uncertainty"
+        },
+        {
+          "model": "unquantified"
+        }
       ]
     },
     {
@@ -80,6 +115,14 @@
       "unit_class": "nuclear.absorbed_dose_rate.units@1",
       "accepted_media_types": [
         "application/vnd.fixture.quantity+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "exact"
+        },
+        {
+          "model": "interval"
+        }
       ]
     }
   ],
@@ -110,7 +153,12 @@
             "id": "nuclear.shutdown_dose_rate",
             "major": 1
           },
-          "media_type": "application/vnd.fixture.quantity+json"
+          "media_type": "application/vnd.fixture.quantity+json",
+          "permitted_claim_models": [
+            {
+              "model": "unquantified"
+            }
+          ]
         }
       ]
     },
@@ -140,7 +188,12 @@
             "id": "nuclear.shutdown_dose_rate",
             "major": 1
           },
-          "media_type": "application/vnd.fixture.quantity+json"
+          "media_type": "application/vnd.fixture.quantity+json",
+          "permitted_claim_models": [
+            {
+              "model": "interval"
+            }
+          ]
         }
       ]
     }

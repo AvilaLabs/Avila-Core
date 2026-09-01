@@ -87,7 +87,7 @@ fn compiler_type_fixtures_are_executable() {
     assert_eq!(suite.fixture_set, "compiler-types");
     assert_eq!(suite.version, 1);
     assert_eq!(suite.semantic_profile, SEMANTIC_PROFILE);
-    assert_eq!(suite.fixtures.len(), 14);
+    assert_eq!(suite.fixtures.len(), 18);
 
     let registry_bytes = fs::read(fixture_root.join(&suite.registry.path)).unwrap();
     let registry_canonical = canonicalize_json(&registry_bytes).unwrap();

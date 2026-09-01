@@ -11,7 +11,10 @@
         "id": "fixture.source_document",
         "major": 1
       },
-      "media_type": "application/vnd.fixture.source+json"
+      "media_type": "application/vnd.fixture.source+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
     },
     {
       "input_id": "case-b",
@@ -19,7 +22,10 @@
         "id": "fixture.source_document",
         "major": 1
       },
-      "media_type": "application/vnd.fixture.source+json"
+      "media_type": "application/vnd.fixture.source+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
     }
   ],
   "workflow": [

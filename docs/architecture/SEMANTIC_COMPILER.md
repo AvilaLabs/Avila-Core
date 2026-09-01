@@ -275,6 +275,40 @@ canonical form; the compiler still refuses it rather than rewriting authored
 bytes. Only a syntax error ends the pass early; it points at the value being
 read and keeps the line and column in its message.
 
+## The diagnostic contract
+
+A finding is only useful if a tool that has never seen the document can act
+on it. That is enforced, not assumed: the harness in
+`crates/avila-core-compiler/tests/diagnostic_contract.rs` takes every compiled
+fixture, applies each of fourteen authoring mistakes with a deterministic
+generator, and checks every resulting report. Compiling twice must yield
+identical reports. Every pointer must anchor in the mutated document, either
+exactly, as the documented logical slot location `/workflow/{i}/inputs/{slot}`
+under a step whose type declares that slot, or as a `missing` finding whose
+parent or grandparent exists. Every `mechanically_safe` repair must have one
+candidate and remove its finding when applied verbatim. Every
+`constrained_choice` on a substitutable value must remove its finding when its
+first candidate is applied, and every feeding candidate on an unfed slot must
+name a role or producer the snapshot defines. Finally, a fixer that applies
+only the compiler's own repairs must reach a compiled snapshot within two
+rounds for every mistake that is mechanically repairable at all: an unknown
+field, a non-canonical number, a wrong enumerated value, or an unknown unit.
+
+The harness prints a summary per mistake: cases, findings per case, how many
+were fixed mechanically, and rounds to green. On the current corpus every
+mistake produces about one finding, so a single mistake does not cascade, and
+every mechanically repairable mistake is fixed in one round. That is the first
+measurement of the thesis that compiler feedback lets an agent repair a
+contract without re-reading everything. It is measured over synthetic
+fixtures; the defect corpus from real contracts that the validation plan
+requires does not exist yet.
+
+The harness also showed a limit of the current repair model: choosing an
+inequality for a requirement that carried an equality tolerance leaves the
+tolerance misplaced, and a repair that means "remove this" cannot be expressed
+as a value candidate. Repairs will need to become typed edits, such as replace,
+add, and remove at a pointer, before that class of fix is mechanical.
+
 ## Compiled identity
 
 Successful output is `avila.core/compiled-contract/v0.2-draft`. It contains:

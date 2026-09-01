@@ -32,7 +32,8 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   exclude; then emits an immutable snapshot with canonical configuration and
   exact requirement limits;
 - a diagnostic catalog explaining every finding code, with typed repair
-  candidates and accountable owners on every finding;
+  candidates and accountable owners on every finding, and a mutation harness
+  that proves every finding is anchored and every mechanical repair works;
 - a draft portable evidence model and SHA-256 utility;
 - JSON Schemas that the compiler embeds and enforces as its source layer, and
   a deliberately non-executable specimen contract and registry snapshot;

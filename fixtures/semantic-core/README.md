@@ -482,6 +482,15 @@ canonically.
 | `scenarios.verify-without-evaluator` | obligations report uses the four verifier categories in SC-17 |
 | `scenarios.bike-hook` | three findings → plan with rejected Elmer → INCONCLUSIVE → geometry change → memo reuse of `fdm_properties` → PASS → obligations report |
 
+## Mutation harness
+
+`crates/avila-core-compiler/tests/diagnostic_contract.rs` reuses every compiled
+fixture here as a base, applies a fixed set of authoring mistakes to each, and
+enforces the diagnostic contract on every report: determinism, anchored
+pointers, effective repairs, and bounded rounds to green for mechanically
+repairable mistakes. Adding a compiled fixture therefore widens that corpus
+automatically.
+
 ## Counting rule
 
 The future `fixtures-check` command must fail if any clause, rule id, admission

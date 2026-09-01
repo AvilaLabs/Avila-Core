@@ -87,7 +87,9 @@ implementations reach the same result from the same immutable snapshot.
 Evidence required:
 
 - a defect corpus drawn from real contracts rather than invented syntax cases
-  alone;
+  alone; the diagnostic-contract harness measures the synthetic half today,
+  where every mechanically repairable mistake is fixed from the compiler's own
+  repairs in one round;
 - measured failures caught before execution and reviewer clarification avoided;
 - complete boundary vectors for exact quantities, predicates, admission, verdict
   calculus, and invalidation;

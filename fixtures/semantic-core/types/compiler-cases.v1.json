@@ -113,7 +113,18 @@
       "contract": "types.R1.explicit-binding.pass.contract.json",
       "expected": {
         "status": "compiled",
-        "findings": [],
+        "findings": [
+          {
+            "code": "CORE-R3601",
+            "class": "notice",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/inputs/1"
+            },
+            "repairs": []
+          }
+        ],
         "compiled": {
           "snapshot_sha256": "sha256:93568c0601722792854056bb8f5b048ade523a3039df460da3d0d9633f0540ca",
           "execution_policy": {
@@ -231,7 +242,18 @@
       "contract": "types.R3.worst-case-side-sufficient.pass.contract.json",
       "expected": {
         "status": "compiled",
-        "findings": [],
+        "findings": [
+          {
+            "code": "CORE-R3602",
+            "class": "notice",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0"
+            },
+            "repairs": []
+          }
+        ],
         "compiled": {
           "snapshot_sha256": "sha256:34591c6fbe6ad503758a0d7eaf1caba5ac1d840fca98d42eb39c4672da427623",
           "execution_policy": {
@@ -811,6 +833,153 @@
             "repairs": []
           }
         ]
+      }
+    },
+    {
+      "fixture_id": "types.notice.unused-input.pass",
+      "clause": "SC-6 notices",
+      "contract": "types.notice.unused-input.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [
+          {
+            "code": "CORE-R3601",
+            "class": "notice",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/inputs/1"
+            },
+            "repairs": []
+          }
+        ],
+        "compiled": {
+          "snapshot_sha256": "sha256:6e15993ea729f9bfbf4aa6cd01fcf0c9ef5ce3d44eeb2bfe16b4bd458abeef4c",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": []
+          },
+          "step_order": [
+            "calculate",
+            "bound"
+          ],
+          "bindings": [
+            {
+              "step_id": "calculate",
+              "input_slot": "source",
+              "source": "input:case"
+            },
+            {
+              "step_id": "bound",
+              "input_slot": "dose_rate",
+              "source": "step:calculate/dose_rate"
+            }
+          ],
+          "reproducibility": [
+            {
+              "step_id": "calculate",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            },
+            {
+              "step_id": "bound",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            }
+          ],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s",
+              "purpose": "fixture.requirement_evaluation@1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.notice.unconsumed-step.pass",
+      "clause": "SC-6 notices",
+      "contract": "types.notice.unconsumed-step.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [
+          {
+            "code": "CORE-R3602",
+            "class": "notice",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/2"
+            },
+            "repairs": []
+          }
+        ],
+        "compiled": {
+          "snapshot_sha256": "sha256:60ce0ea803db957a2901cf06541f5881ddd5322a92c33a7ae4f5e6651f8dda83",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": []
+          },
+          "step_order": [
+            "calculate",
+            "bound",
+            "spare"
+          ],
+          "bindings": [
+            {
+              "step_id": "calculate",
+              "input_slot": "source",
+              "source": "input:case"
+            },
+            {
+              "step_id": "bound",
+              "input_slot": "dose_rate",
+              "source": "step:calculate/dose_rate"
+            },
+            {
+              "step_id": "spare",
+              "input_slot": "source",
+              "source": "input:case"
+            }
+          ],
+          "reproducibility": [
+            {
+              "step_id": "calculate",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            },
+            {
+              "step_id": "bound",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            },
+            {
+              "step_id": "spare",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            }
+          ],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s",
+              "purpose": "fixture.requirement_evaluation@1"
+            }
+          ]
+        }
       }
     }
   ]

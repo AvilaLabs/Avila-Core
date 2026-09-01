@@ -42,7 +42,7 @@ the acceptance conditions in that decision. A draft profile is not a scientific
 qualification.
 
 The current repository remains in this stage. Its draft kernel executes 90 pure
-vectors, and its static compiler executes 63 fixtures through R10. That includes
+vectors, and its static compiler executes 65 fixtures through R10. That includes
 pending accountable-review obligations and typed purpose exclusions, but not
 package binding, identities, signatures, eligibility-policy evaluation, review
 fulfillment, or admission.

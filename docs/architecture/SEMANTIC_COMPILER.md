@@ -229,7 +229,8 @@ rather than laundering an output into an unrestricted input.
 Every finding carries:
 
 - a stable code;
-- `missing`, `invalid`, `unsatisfied`, `inadmissible`, or `notice` class;
+- `missing`, `invalid`, `unsatisfied`, `inadmissible`, or `notice` class, of
+  which only `notice` does not block compilation;
 - an accountable owner;
 - a document plus JSON Pointer location;
 - related locations when applicable; and
@@ -239,6 +240,15 @@ Consumers match these fields, never explanatory wording. Findings are sorted
 deterministically and independent root causes are reported in one pass. The
 current slice suppresses checks whose premise could not be constructed, such
 as a unit check after the metric source itself is missing.
+
+Two findings are notices rather than blockers. `CORE-R3601` marks a contract
+input that no step binds, and `CORE-R3602` marks a non-review step whose
+outputs feed neither another step nor a requirement. Both describe declared
+work that would never enter the campaign's evidence, which matters to a
+product whose thesis is minimum sufficient computation. Notices are computed
+only when the contract is otherwise compilable, because an unfed declaration
+is usually a consequence of a blocking resolution failure reported elsewhere.
+A compiled report may therefore carry notices; a rejected report never does.
 
 Source-layer refusals are located too. The authoritative reader tracks the
 JSON Pointer of the value it is reading, so a binary float, `null`, duplicate

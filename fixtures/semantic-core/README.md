@@ -18,7 +18,7 @@ multiple historical profiles.
 - `verdict-calculus.v1.json`: 49 vectors: 41 requirement-evaluation vectors
   plus 8 aggregate-verdict vectors; and
 - `canon.v1.json`: 12 initial canonical-value and byte-reader vectors;
-- `types/compiler-cases.v1.json`: 30 executable compiler fixtures: 5 compiled
+- `types/compiler-cases.v1.json`: 32 executable compiler fixtures: 7 compiled
   cases and 25 rejected cases covering the current R1–R6 subset, claim-model
   sufficiency, coverage validity, equality tolerances, exact unit lowering,
   cascade suppression, independent findings, and source-layer refusals located
@@ -46,9 +46,9 @@ planned unless files exist for them.
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
 `scope-predicates.v1.json`, plus the 41 requirement and 8 aggregation vectors in
-`verdict-calculus.v1.json`. The compiler harness also executes all 63 cases in
+`verdict-calculus.v1.json`. The compiler harness also executes all 65 cases in
 the five compiler manifests and pins each registry digest plus all successful
-compiled-snapshot identities. Passing the 90 pure vectors and 63 compiler
+compiled-snapshot identities. Passing the 90 pure vectors and 65 compiler
 fixtures does not accept ADR-0006: package-level rule halves and other vector
 families in this coverage plan remain absent, and no result is scientifically
 qualified.
@@ -214,7 +214,7 @@ canonically.
 | `types.R1.resolved.pass` | unique source bound |
 | `types.R1.unresolved.fail` | `CORE-R3101`; repair `constrained_choice` lists `declare_input:<role>` and every `add_step:<type>/<output>` in the snapshot that could feed the slot |
 | `types.R1.ambiguous.fail` | two producers, no binding → `CORE-R3102`; repair `constrained_choice` |
-| `types.R1.explicit-binding.pass` | `bindings` resolves ambiguity |
+| `types.R1.explicit-binding.pass` | `bindings` resolves ambiguity; the input left unbound is reported as notice `CORE-R3601` |
 | `types.R2.role-mismatch.fail` | `CORE-T2101` |
 | `types.R3.type-satisfiable.pass` | capability type permits a model capable of satisfying the basis |
 | `types.R3.bound-package-coverage-sufficient.pass` | selected package declares 0.95, basis 0.95 |
@@ -270,6 +270,8 @@ canonically.
 | `types.satisfiable.pass` | a path of roles reaches the basis |
 | `types.satisfiable.fail` | no capability-type path can emit a reducible bounded model → `CORE-T2201` at the requirement; package admissibility is tested separately |
 | `types.independent-errors-one-pass.pass` | three unrelated errors reported together |
+| `types.notice.unused-input.pass` | an input bound to no step compiles with notice `CORE-R3601` at the input |
+| `types.notice.unconsumed-step.pass` | a non-review step whose outputs feed nothing compiles with notice `CORE-R3602` at the step |
 | `types.source.json-float.fail` | binary float refused at `/workflow/0/parameters/x` → `CORE-S1102` |
 | `types.source.unknown-field.fail` | undeclared key refused at its own pointer → `CORE-S1101` |
 | `types.source.noncanonical-decimal.fail` | `"100.0"` refused at `/requirements/0/limit/value` → `CORE-S1102`; repair `mechanically_safe` = `"100"` |

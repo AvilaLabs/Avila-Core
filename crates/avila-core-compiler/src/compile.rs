@@ -12,9 +12,10 @@ use thiserror::Error;
 
 use crate::diagnostic::{
     CORE_A4301, CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3401,
-    CORE_R3501, CORE_S1101, CORE_S1102, CORE_S1301, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103,
-    CORE_T2104, CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2401, CORE_T2402, CORE_T2501, CORE_T2601,
-    CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability, SourceLocation,
+    CORE_R3501, CORE_R3601, CORE_R3602, CORE_S1101, CORE_S1102, CORE_S1301, CORE_T2001, CORE_T2101,
+    CORE_T2102, CORE_T2103, CORE_T2104, CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2401, CORE_T2402,
+    CORE_T2501, CORE_T2601, CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability,
+    SourceLocation,
 };
 use crate::document::{
     BasisKind, BoundSide, COMPILE_REPORT_SCHEMA_VERSION, COMPILED_CONTRACT_SCHEMA_VERSION,
@@ -266,6 +267,14 @@ pub fn compile_documents(
         &mut findings,
     );
 
+    if !findings.iter().any(CoreDiagnostic::blocks_compilation) {
+        report_unconsumed_declarations(
+            &contract,
+            &registry_index,
+            &resolution.bindings,
+            &mut findings,
+        );
+    }
     sort_findings(&mut findings);
     if findings.iter().any(CoreDiagnostic::blocks_compilation) {
         return Ok(rejected_report(source_identities, findings));
@@ -1909,6 +1918,72 @@ fn missing_source_finding(
                     step.capability_type.id, step.capability_type.major
                 ),
             )
+        }
+    }
+}
+
+/// Notices for declarations that would never enter the campaign: a contract
+/// input no step binds, or a non-review step whose outputs feed neither
+/// another step nor a requirement. Neither blocks compilation. They are
+/// computed only when the contract is otherwise compilable, because an unfed
+/// declaration is usually a consequence of a blocking failure reported
+/// elsewhere.
+fn report_unconsumed_declarations(
+    contract: &ContractSource,
+    registry: &RegistryIndex<'_>,
+    bindings: &BTreeMap<String, Vec<ResolvedBinding>>,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    let consumed: BTreeSet<SourceRef> = bindings
+        .values()
+        .flatten()
+        .map(|binding| binding.source.clone())
+        .chain(
+            contract
+                .requirements
+                .iter()
+                .filter_map(|requirement| requirement.metric.clone()),
+        )
+        .collect();
+    for (index, input) in contract.inputs.iter().enumerate() {
+        let source = SourceRef::ContractInput {
+            input_id: input.input_id.clone(),
+        };
+        if !consumed.contains(&source) {
+            findings.push(CoreDiagnostic::new(
+                CORE_R3601,
+                FindingClass::Notice,
+                "contract_author",
+                contract_location(format!("/inputs/{index}")),
+                format!(
+                    "contract input `{}` is bound to no step and enters no campaign evidence",
+                    input.input_id
+                ),
+            ));
+        }
+    }
+    for (index, step) in contract.workflow.iter().enumerate() {
+        let is_review = registry
+            .capability_types
+            .get(&step.capability_type)
+            .is_some_and(|capability| capability.review.is_some());
+        if is_review {
+            continue;
+        }
+        let consumed_output = consumed.iter().any(|source| {
+            matches!(source, SourceRef::StepOutput { step_id, .. } if step_id == &step.step_id)
+        });
+        if !consumed_output {
+            findings.push(CoreDiagnostic::new(
+                CORE_R3602,
+                FindingClass::Notice,
+                "contract_author",
+                contract_location(format!("/workflow/{index}")),
+                format!(
+                    "step `{}` produces no output consumed by another step or requirement",
+                    step.step_id
+                ),
+            ));
         }
     }
 }
@@ -4028,6 +4103,47 @@ mod tests {
                 .message
                 .contains("declares no output slot")
         );
+    }
+
+    #[test]
+    fn unconsumed_declarations_are_notices_that_never_block() {
+        let mut unused_input = contract();
+        let mut spare = unused_input.inputs[0].clone();
+        spare.input_id = "spare".into();
+        spare.role = VersionedRef {
+            id: "fixture.alternate_source_document".into(),
+            major: 1,
+        };
+        unused_input.inputs.push(spare);
+        let report = compile_contract(&unused_input);
+        assert_eq!(report.status, CompilationStatus::Compiled);
+        assert_eq!(report.findings.len(), 1);
+        assert_eq!(report.findings[0].code, CORE_R3601);
+        assert_eq!(report.findings[0].class, FindingClass::Notice);
+        assert_eq!(report.findings[0].primary.pointer, "/inputs/1");
+        assert!(!report.findings[0].blocks_compilation());
+
+        let mut unconsumed_step = contract();
+        let mut spare = unconsumed_step.workflow[0].clone();
+        spare.step_id = "spare".into();
+        unconsumed_step.workflow.push(spare);
+        unconsumed_step.workflow[1].bindings.push(AuthoredBinding {
+            input_slot: "dose_rate".into(),
+            source: SourceRef::StepOutput {
+                step_id: "calculate".into(),
+                output_slot: "dose_rate".into(),
+            },
+        });
+        let report = compile_contract(&unconsumed_step);
+        assert_eq!(report.status, CompilationStatus::Compiled);
+        assert_eq!(report.findings.len(), 1, "{:?}", report.findings);
+        assert_eq!(report.findings[0].code, CORE_R3602);
+        assert_eq!(report.findings[0].primary.pointer, "/workflow/2");
+
+        let mut blocked = unused_input;
+        blocked.requirements[0].metric = None;
+        let report = compile_contract(&blocked);
+        assert_eq!(codes(&report), BTreeSet::from([CORE_R3301]));
     }
 
     #[test]

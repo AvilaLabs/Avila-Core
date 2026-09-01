@@ -96,9 +96,11 @@ Implements the first isolated portions of the draft semantic profile: canonical
 decimal lowering, reduced exact rationals under an explicit fail-closed work
 budget, authoritative JSON reading, duplicate-key rejection, NFC enforcement,
 deterministic JCS-derived key ordering, nominal quantity-kind registries, and
-exact within-kind unit scaling. Its conformance tests execute every vector in
-`canon.v1.json` and `unit-scaling.v1.json`. It does not yet evaluate predicates,
-compile contracts, admit evidence, or derive verdicts.
+exact within-kind unit scaling. It also evaluates the current bounded predicate
+language with strong Kleene `true`/`false`/`unknown` semantics over explicit
+contexts and source requirements. Its conformance tests execute every vector in
+`canon.v1.json`, `unit-scaling.v1.json`, and `scope-predicates.v1.json`. It does
+not yet compile contracts, admit evidence, or derive verdicts.
 
 ### `avila-core-evidence`
 

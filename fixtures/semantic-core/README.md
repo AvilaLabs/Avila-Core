@@ -23,10 +23,10 @@ All other fixtures below are required before ADR acceptance and are currently
 planned unless files exist for them.
 
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
-`canon.v1.json` and all 10 vectors in `unit-scaling.v1.json`. The predicate and
-verdict vector files remain reviewable specifications until their kernel
-operations and harnesses are implemented. Passing these vector sets does not
-accept ADR-0006 or imply scientific qualification.
+`canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
+`scope-predicates.v1.json`. The verdict vector file remains a reviewable
+specification until its kernel operations and harness are implemented. Passing
+these vector sets does not accept ADR-0006 or imply scientific qualification.
 
 ## Layout
 

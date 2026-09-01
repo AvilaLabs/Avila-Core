@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     CORE_S1102, CORE_T2001, CORE_T2102, ExactNumber, KernelError, Repair, RepairApplicability,
@@ -115,6 +115,13 @@ pub struct CanonicalQuantity {
     pub value: ExactNumber,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Quantity {
+    pub value: ExactNumber,
+    pub unit: String,
+}
+
 #[derive(Debug, Default)]
 pub struct KindRegistry {
     kinds: Vec<KindDefinition>,
@@ -216,6 +223,14 @@ impl KindRegistry {
                 candidates: kind.units.iter().map(|unit| unit.symbol.clone()).collect(),
             },
         ))
+    }
+
+    pub fn scale(
+        &self,
+        kind_id: &str,
+        quantity: &Quantity,
+    ) -> Result<CanonicalQuantity, KernelError> {
+        self.scale_quantity(kind_id, &quantity.value, &quantity.unit)
     }
 
     #[must_use]

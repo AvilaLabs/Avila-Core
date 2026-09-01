@@ -280,7 +280,9 @@ Maturity, qualification, and admission remain separate:
 
 Contract lifecycle and campaign execution are not one state machine.
 
-1. Contract status is `draft | in_review | approved | retired`.
+1. Contract status is `draft | in_review | approved | retired`. A contract
+   states its bounded question and any prose assumptions; the compiler carries
+   both into the compiled boundary and never interprets them.
 2. Template instantiation is immutable origin metadata, not a contract status.
    An instance pins a template digest, parameters, case inputs, and eligibility
    evaluation.

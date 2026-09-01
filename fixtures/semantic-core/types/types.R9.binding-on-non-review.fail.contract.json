@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R9.binding-on-non-review.fail",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R9.binding-on-non-review.fail; it has no physical meaning.",
   "workflow": [
     {
       "step_id": "analyze",

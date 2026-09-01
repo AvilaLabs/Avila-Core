@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R3.coverage-without-bounded-basis.fail",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R3.coverage-without-bounded-basis.fail; it has no physical meaning.",
   "inputs": [
     {
       "input_id": "case",

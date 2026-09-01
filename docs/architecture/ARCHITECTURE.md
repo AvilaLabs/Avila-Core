@@ -71,27 +71,19 @@ policy permits.
 The scaffold deliberately implements only the shaded foundation implied below:
 
 ```text
-avila-core-model
-    ├── avila-core-runtime   (planning only)
-    ├── avila-core-evidence  (record model + hashing only)
-    ├── avila-core-cli       (canonicalize, compile, validate, and plan)
-    └── avila-core-app       (thin read-only specimen UI)
-
 avila-core-kernel            (first canonical-value semantic slice)
-    └── avila-core-compiler  (v0.2-draft static compilation only)
+    └── avila-core-compiler  (v0.2-draft document types, static compilation,
+        │                     semantic IR, and the diagnostic catalog)
+        ├── avila-core-cli   (canonicalize, compile, explain)
+        └── avila-core-app   (thin client rendering compile reports)
+
+avila-core-evidence          (record model + hashing only)
 ```
 
-### `avila-core-model`
-
-Authoritative serializable types for evidence contracts, capability manifests,
-requirements, qualification, and verdicts. It performs structural validation but
-cannot assert scientific validity.
-
-### `avila-core-runtime`
-
-Validates the dependency graph, chooses a deterministic matching manifest, and
-marks unavailable or inadmissible steps as blocked. It contains no process
-runner, scheduler, cache, or remote backend.
+The `v0.1` contract model and planner were retired once the compiler's
+document types became the only authoritative contract representation
+(decision S-016). Package selection returns as an SC-5 and SC-8 binding pass
+over compiled snapshots, not as a separate planner.
 
 ### `avila-core-kernel`
 
@@ -109,9 +101,13 @@ invalidate dependencies, or verify packages.
 
 ### `avila-core-compiler`
 
-Accepts a `v0.2-draft` contract and one explicit immutable registry snapshot,
-then returns deterministic structured findings or a content-identified compiled
-snapshot. The current slice resolves typed slots, derives and checks the
+Owns the authoritative `v0.2-draft` document types, including the contract's
+bounded question and prose assumptions, which it carries into the compiled
+boundary and never interprets. It accepts a contract and one explicit
+immutable registry snapshot, validates both against the embedded schemas so
+every source-layer problem is reported in one pass, then returns deterministic
+structured findings or a content-identified compiled snapshot. The current
+slice resolves typed slots, derives and checks the
 dependency graph, validates nominal roles, claim-model sufficiency, and media,
 enforces declared parameter types and domains, and lowers parameters and
 requirement limits through exact kind/unit rules. It also binds each capability
@@ -135,14 +131,15 @@ writer, signature system, lineage validator, or independent verifier yet.
 
 Provides authoritative JSON canonicalization, embedded semantic-profile and
 vector-set identities, `v0.2-draft` compilation with a nonzero exit status for
-a rejected contract, the diagnostic catalog through `explain`, headless `v0.1`
-contract validation, and specimen plan rendering. All output explicitly
-distinguishes software conformance or structural validity from scientific
-validity.
+a rejected contract, and the diagnostic catalog through `explain`. All output
+explicitly distinguishes software conformance or structural validity from
+scientific validity.
 
 ### `avila-core-app`
 
-An egui client over the same model and planner. It does not perform calculations
+An egui client that compiles the embedded specimen through the same compiler
+and renders the report: question, contract, findings with owners and repairs,
+and the compiled snapshot when one exists. It does not perform calculations
 and must never grow a separate scientific state model.
 
 ## Target components

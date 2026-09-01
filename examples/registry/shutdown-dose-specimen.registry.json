@@ -1,0 +1,153 @@
+{
+  "schema_version": "avila.core/registry-snapshot/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "registry_id": "specimen.shutdown-dose.registry",
+  "revision": 1,
+  "kinds": [
+    {
+      "kind_id": "nuclear.dose_equivalent_rate",
+      "canonical_unit": "Sv/s",
+      "unit_class": "nuclear.dose_equivalent_rate.units@1",
+      "owner": "specimen.unassigned",
+      "units": [
+        { "symbol": "Sv/s", "factor": "1" },
+        { "symbol": "mSv/h", "factor": "1/3600000" },
+        { "symbol": "uSv/h", "factor": "1/3600000000" }
+      ]
+    },
+    {
+      "kind_id": "core.time.duration",
+      "canonical_unit": "s",
+      "unit_class": "core.time.duration.units@1",
+      "owner": "specimen.unassigned",
+      "units": [
+        { "symbol": "s", "factor": "1" },
+        { "symbol": "h", "factor": "3600" },
+        { "symbol": "d", "factor": "86400" }
+      ]
+    }
+  ],
+  "purposes": [
+    {
+      "purpose": { "id": "specimen.interface_development", "major": 1 },
+      "owner": "specimen.unassigned",
+      "description": "Interface development only. No engineering, safety, or regulatory use."
+    }
+  ],
+  "roles": [
+    {
+      "role": { "id": "specimen.component_geometry", "major": 1 },
+      "owner": "specimen.unassigned",
+      "validator": "specimen.validate.geometry@1",
+      "accepted_media_types": ["model/vnd.avila.geometry+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }],
+      "non_claims": ["A specimen role; no geometry semantics are standardized."]
+    },
+    {
+      "role": { "id": "specimen.material_definition", "major": 1 },
+      "owner": "specimen.unassigned",
+      "validator": "specimen.validate.material@1",
+      "accepted_media_types": ["application/vnd.avila.material+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "specimen.irradiation_scenario", "major": 1 },
+      "owner": "specimen.unassigned",
+      "validator": "specimen.validate.irradiation@1",
+      "accepted_media_types": ["application/vnd.avila.irradiation+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "specimen.particle_flux", "major": 1 },
+      "owner": "specimen.unassigned",
+      "validator": "specimen.validate.flux@1",
+      "accepted_media_types": ["application/vnd.avila.flux+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "specimen.radionuclide_inventory", "major": 1 },
+      "owner": "specimen.unassigned",
+      "validator": "specimen.validate.inventory@1",
+      "accepted_media_types": ["application/vnd.avila.inventory+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "specimen.shutdown_dose_rate", "major": 1 },
+      "owner": "specimen.unassigned",
+      "validator": "specimen.validate.dose-rate@1",
+      "quantity_kind": "nuclear.dose_equivalent_rate",
+      "unit_class": "nuclear.dose_equivalent_rate.units@1",
+      "accepted_media_types": ["application/vnd.avila.quantity+json"],
+      "permitted_claim_models": [
+        { "model": "unquantified" },
+        { "model": "exact" },
+        { "model": "interval" },
+        { "model": "standard_uncertainty" }
+      ],
+      "non_claims": ["No dose method is qualified; the role names a quantity kind only."]
+    }
+  ],
+  "capability_types": [
+    {
+      "capability_type": { "id": "specimen.transport.neutron", "major": 1 },
+      "owner": "specimen.unassigned",
+      "reproducibility": { "determinism": "seeded_stochastic", "material_factors": [] },
+      "inputs": [
+        { "slot_id": "geometry", "role": { "id": "specimen.component_geometry", "major": 1 }, "accepted_media_types": ["model/vnd.avila.geometry+json"] },
+        { "slot_id": "materials", "role": { "id": "specimen.material_definition", "major": 1 }, "accepted_media_types": ["application/vnd.avila.material+json"] },
+        { "slot_id": "exposure", "role": { "id": "specimen.irradiation_scenario", "major": 1 }, "accepted_media_types": ["application/vnd.avila.irradiation+json"] }
+      ],
+      "outputs": [
+        { "slot_id": "flux", "role": { "id": "specimen.particle_flux", "major": 1 }, "media_type": "application/vnd.avila.flux+json", "permitted_claim_models": [{ "model": "unquantified" }] }
+      ],
+      "parameters": [
+        { "parameter_id": "histories", "required": true, "value_type": { "type": "integer", "min": { "value": 1, "inclusive": true } } }
+      ],
+      "non_claims": ["No transport adapter or qualified method exists in this scaffold."]
+    },
+    {
+      "capability_type": { "id": "specimen.activation.inventory", "major": 1 },
+      "owner": "specimen.unassigned",
+      "reproducibility": { "determinism": "deterministic", "material_factors": [] },
+      "inputs": [
+        { "slot_id": "flux", "role": { "id": "specimen.particle_flux", "major": 1 }, "accepted_media_types": ["application/vnd.avila.flux+json"] },
+        { "slot_id": "materials", "role": { "id": "specimen.material_definition", "major": 1 }, "accepted_media_types": ["application/vnd.avila.material+json"] }
+      ],
+      "outputs": [
+        { "slot_id": "inventory", "role": { "id": "specimen.radionuclide_inventory", "major": 1 }, "media_type": "application/vnd.avila.inventory+json", "permitted_claim_models": [{ "model": "unquantified" }] }
+      ],
+      "parameters": [
+        { "parameter_id": "cooling_time", "required": true, "value_type": { "type": "quantity", "kind": "core.time.duration", "min": { "value": { "value": "0", "unit": "s" }, "inclusive": true } } }
+      ],
+      "non_claims": ["No activation method is implemented or qualified here."]
+    },
+    {
+      "capability_type": { "id": "specimen.dose.shutdown", "major": 1 },
+      "owner": "specimen.unassigned",
+      "reproducibility": { "determinism": "deterministic", "material_factors": [] },
+      "inputs": [
+        { "slot_id": "inventory", "role": { "id": "specimen.radionuclide_inventory", "major": 1 }, "accepted_media_types": ["application/vnd.avila.inventory+json"] },
+        { "slot_id": "geometry", "role": { "id": "specimen.component_geometry", "major": 1 }, "accepted_media_types": ["model/vnd.avila.geometry+json"] }
+      ],
+      "outputs": [
+        { "slot_id": "dose_rate", "role": { "id": "specimen.shutdown_dose_rate", "major": 1 }, "media_type": "application/vnd.avila.quantity+json", "permitted_claim_models": [{ "model": "unquantified" }] }
+      ],
+      "non_claims": ["A nominal specimen output; it carries no uncertainty claim."]
+    },
+    {
+      "capability_type": { "id": "specimen.bounds.continuous", "major": 1 },
+      "owner": "specimen.unassigned",
+      "reproducibility": { "determinism": "deterministic", "material_factors": [] },
+      "inputs": [
+        { "slot_id": "dose_rate", "role": { "id": "specimen.shutdown_dose_rate", "major": 1 }, "accepted_media_types": ["application/vnd.avila.quantity+json"] }
+      ],
+      "outputs": [
+        { "slot_id": "bounded_dose_rate", "role": { "id": "specimen.shutdown_dose_rate", "major": 1 }, "media_type": "application/vnd.avila.quantity+json", "permitted_claim_models": [{ "model": "interval" }] }
+      ],
+      "parameters": [
+        { "parameter_id": "uncertainty_set", "required": true, "value_type": { "type": "text" } }
+      ],
+      "non_claims": ["Soundness and tightness of any bound remain unestablished research questions."]
+    }
+  ]
+}

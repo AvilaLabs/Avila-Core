@@ -155,13 +155,17 @@ merely by being an administrator.
 
 ## Current egui scaffold
 
-The initial desktop shell demonstrates five workspaces:
+The desktop shell compiles the embedded specimen through the same compiler as
+the CLI and demonstrates six workspaces:
 
-1. **Overview:** the question and next blocked action;
-2. **Contract:** inputs, requirement, and evidence policy;
-3. **Execution plan:** selected specimen capabilities and honest blockers;
-4. **Results:** `NOT_EVALUATED` only; and
-5. **Evidence:** disabled export and explanation of what a future package contains.
+1. **Overview:** the question and the first blocking finding as the next action;
+2. **Contract:** inputs, workflow steps, parameters, and requirements;
+3. **Findings:** every finding with class, code, owner, pointer, repair
+   candidates, and the catalog's next action;
+4. **Compiled snapshot:** source identities, step order, and bindings when the
+   contract compiles, or the reason it did not;
+5. **Results:** `NOT_EVALUATED` only; and
+6. **Evidence:** disabled export and explanation of what a future package contains.
 
 It is a product-language prototype, not an execution application. The UI remains
-thin over the headless Rust model and planner.
+thin over the headless compiler and holds no scientific state of its own.

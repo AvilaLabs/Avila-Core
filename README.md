@@ -16,7 +16,8 @@ admissible answer while preserving the authority of domain professionals.
 
 This repository is a **pre-alpha scaffold**. It currently provides:
 
-- authoritative Rust types for contracts, capability manifests, and verdicts;
+- authoritative document types for `v0.2-draft` evidence contracts, which
+  carry their bounded question, and immutable registry snapshots;
 - the first semantic-kernel slice for exact bounded rationals, canonical
   decimals, authoritative JSON, quantity kinds, exact unit scaling, and
   three-valued applicability predicates;
@@ -30,12 +31,14 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   requirement purposes prevent outputs from serving uses they explicitly
   exclude; then emits an immutable snapshot with canonical configuration and
   exact requirement limits;
-- a deterministic dependency planner that fails closed;
+- a diagnostic catalog explaining every finding code, with typed repair
+  candidates and accountable owners on every finding;
 - a draft portable evidence model and SHA-256 utility;
 - JSON Schemas that the compiler embeds and enforces as its source layer, and
-  deliberately non-executable specimen documents;
-- a local CLI for structural validation and planning; and
-- an egui product shell showing the intended question-first experience.
+  a deliberately non-executable specimen contract and registry snapshot;
+- a local CLI for canonicalization, compilation, and the catalog; and
+- an egui shell that compiles the embedded specimen through the same compiler
+  and renders its findings, owners, and repairs.
 
 The repository also contains proposed `v0.2` semantic rules and an initial
 conformance-vector corpus. The Rust kernel executes all 90 current pure vectors:
@@ -46,10 +49,10 @@ compiler frontier is implemented, but package-level rule halves, other
 normative fixture families, admission, invalidation, and package semantics
 remain proposed and incomplete.
 
-It does **not** run scientific software, calculate a physical quantity, admit
-real evidence, evaluate a scientifically qualified requirement, certify a
-design, or produce decision-grade evidence. The specimen campaign is blocked on
-purpose.
+It does **not** run scientific software, calculate a physical quantity, select
+or bind capability packages, admit real evidence, evaluate a scientifically
+qualified requirement, certify a design, or produce decision-grade evidence.
+The specimen contract is an incomplete draft on purpose.
 
 ## Core objects
 
@@ -82,22 +85,17 @@ cargo run -p avila-core-cli -- compile \
 
 cargo run -p avila-core-cli -- explain CORE-R3102
 
-cargo run -p avila-core-cli -- \
-  validate-contract examples/contracts/shutdown-dose-specimen.json
-
-cargo run -p avila-core-cli -- plan \
+cargo run -p avila-core-cli -- compile \
   --contract examples/contracts/shutdown-dose-specimen.json \
-  --capability examples/capabilities/openmc-transport.specimen.json \
-  --capability examples/capabilities/actinv-activation.specimen.json \
-  --capability examples/capabilities/avila-dose.specimen.json \
-  --capability examples/capabilities/avify-bounds.specimen.json \
-  --capability examples/capabilities/core-requirement.specimen.json
+  --registry examples/registry/shutdown-dose-specimen.registry.json
 
 cargo run -p avila-core-app
 ```
 
-The plan command should return `"status": "blocked"`. That is the expected and
-only honest state of the included specimen.
+Compiling the specimen returns `"status": "rejected"` with only `missing`
+findings, one for each value the draft declares `not_defined`. That is the
+expected and only honest state of the included specimen; the app renders the
+same report.
 
 The compile command prints a JSON report and exits 0 when the contract
 compiled, possibly with notices; 1 when it was rejected; and 2 when the tool
@@ -110,13 +108,11 @@ code, or the whole catalog with `--all`.
 
 ```text
 crates/
-  avila-core-model/       contract, capability, requirement, and verdict types
   avila-core-kernel/      exact values, predicates, and verdict derivation
-  avila-core-compiler/    draft static compiler and immutable semantic IR
-  avila-core-runtime/     deterministic campaign planning; no execution yet
+  avila-core-compiler/    draft static compiler, document types, and semantic IR
   avila-core-evidence/    portable evidence records and hashing
   avila-core-cli/         headless local interface
-  avila-core-app/         thin egui client
+  avila-core-app/         thin egui client over the compiler
 docs/
   strategy/               north star, economics, and counter-positioning
   product/                product definition, evidence contracts, and UX
@@ -125,7 +121,7 @@ docs/
   roadmap/                staged validation and 1.0 planning hypotheses
   adr/                    durable architectural decisions
 schemas/                  machine-readable interchange drafts
-examples/                 unqualified, non-executable software specimens
+examples/                 an unqualified specimen contract and registry snapshot
 assets/branding/          provisional Avila Core mark
 fixtures/semantic-core/   proposed semantic-profile coverage and initial vectors
 ```

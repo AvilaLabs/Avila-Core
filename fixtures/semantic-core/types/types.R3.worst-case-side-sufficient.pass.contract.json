@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R3.worst-case-side-sufficient.pass",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R3.worst-case-side-sufficient.pass; it has no physical meaning.",
   "inputs": [
     {
       "input_id": "case",

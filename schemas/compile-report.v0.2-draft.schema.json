@@ -672,6 +672,8 @@
         "contract_id",
         "contract_revision",
         "contract_sha256",
+        "question",
+        "assumptions",
         "registry_id",
         "registry_revision",
         "registry_sha256",
@@ -700,6 +702,15 @@
         },
         "contract_sha256": {
           "$ref": "#/$defs/sha256"
+        },
+        "question": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonemptyString"
+          }
         },
         "registry_id": {
           "$ref": "#/$defs/nonemptyString"

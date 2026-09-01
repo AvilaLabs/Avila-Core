@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.independent-errors-one-pass.pass",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.independent-errors-one-pass.pass; it has no physical meaning.",
   "inputs": [],
   "workflow": [
     {

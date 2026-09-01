@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R1.unresolved.fail",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R1.unresolved.fail; it has no physical meaning.",
   "inputs": [],
   "workflow": [
     {

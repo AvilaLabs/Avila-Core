@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R5.unknown-step.fail",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R5.unknown-step.fail; it has no physical meaning.",
   "inputs": [
     {
       "input_id": "case",

@@ -1,20 +1,27 @@
 #![forbid(unsafe_code)]
 
-use avila_core_model::{CapabilityManifest, EvidenceContract, VerdictStatus};
-use avila_core_runtime::{CampaignPlan, CampaignPlanner, PlanStatus, StepState};
+//! Thin egui client over the semantic compiler.
+//!
+//! The application compiles the embedded specimen through the same compiler
+//! the CLI uses and renders the report: the question, the contract, every
+//! finding with its owner, pointer, and repair candidates, and the compiled
+//! snapshot when one exists. It performs no calculation and holds no
+//! scientific state of its own.
+
+use avila_core_compiler::{
+    CompilationStatus, CompileReport, ContractSource, CoreDiagnostic, FindingClass,
+    RepairApplicability, compile_documents, explain,
+};
+use avila_core_kernel::VerdictStatus;
 use eframe::egui;
 
 const CORE_ORANGE: egui::Color32 = egui::Color32::from_rgb(255, 140, 0);
 const TEXT_MUTED: egui::Color32 = egui::Color32::from_rgb(168, 173, 184);
 const LOGO_PNG: &[u8] = include_bytes!("../../../assets/branding/Avila_Core_Logo.png");
-const CONTRACT_JSON: &str = include_str!("../../../examples/contracts/shutdown-dose-specimen.json");
-const CAPABILITY_JSON: [&str; 5] = [
-    include_str!("../../../examples/capabilities/openmc-transport.specimen.json"),
-    include_str!("../../../examples/capabilities/actinv-activation.specimen.json"),
-    include_str!("../../../examples/capabilities/avila-dose.specimen.json"),
-    include_str!("../../../examples/capabilities/avify-bounds.specimen.json"),
-    include_str!("../../../examples/capabilities/core-requirement.specimen.json"),
-];
+const CONTRACT_JSON: &[u8] =
+    include_bytes!("../../../examples/contracts/shutdown-dose-specimen.json");
+const REGISTRY_JSON: &[u8] =
+    include_bytes!("../../../examples/registry/shutdown-dose-specimen.registry.json");
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
@@ -24,7 +31,7 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "Avila Core — Project North Star",
+        "Avila Core",
         options,
         Box::new(|creation_context| {
             configure_style(&creation_context.egui_ctx);
@@ -38,16 +45,18 @@ enum Workspace {
     #[default]
     Overview,
     Contract,
-    Plan,
+    Findings,
+    Compiled,
     Results,
     Evidence,
 }
 
 impl Workspace {
-    const ALL: [Self; 5] = [
+    const ALL: [Self; 6] = [
         Self::Overview,
         Self::Contract,
-        Self::Plan,
+        Self::Findings,
+        Self::Compiled,
         Self::Results,
         Self::Evidence,
     ];
@@ -56,40 +65,31 @@ impl Workspace {
         match self {
             Self::Overview => "Overview",
             Self::Contract => "Contract",
-            Self::Plan => "Execution plan",
+            Self::Findings => "Findings",
+            Self::Compiled => "Compiled snapshot",
             Self::Results => "Results",
             Self::Evidence => "Evidence",
         }
     }
 }
 
+struct Specimen {
+    contract: ContractSource,
+    report: CompileReport,
+}
+
 struct CoreApp {
     workspace: Workspace,
     logo: Option<egui::TextureHandle>,
-    contract: Option<EvidenceContract>,
-    plan: Option<CampaignPlan>,
-    startup_error: Option<String>,
+    specimen: Result<Specimen, String>,
 }
 
 impl CoreApp {
     fn new(context: &egui::Context) -> Self {
-        let logo = load_logo_texture(context).ok();
-        let loaded = load_specimen();
-        match loaded {
-            Ok((contract, plan)) => Self {
-                workspace: Workspace::Overview,
-                logo,
-                contract: Some(contract),
-                plan: Some(plan),
-                startup_error: None,
-            },
-            Err(error) => Self {
-                workspace: Workspace::Overview,
-                logo,
-                contract: None,
-                plan: None,
-                startup_error: Some(error),
-            },
+        Self {
+            workspace: Workspace::Overview,
+            logo: load_logo_texture(context).ok(),
+            specimen: load_specimen(),
         }
     }
 }
@@ -113,39 +113,36 @@ impl eframe::App for CoreApp {
         });
         ui.separator();
 
-        if let Some(error) = &self.startup_error {
-            ui.colored_label(
-                egui::Color32::LIGHT_RED,
-                format!("Embedded specimen rejected: {error}"),
-            );
-            return;
-        }
+        let specimen = match &self.specimen {
+            Ok(specimen) => specimen,
+            Err(error) => {
+                ui.colored_label(
+                    egui::Color32::LIGHT_RED,
+                    format!("Embedded specimen could not be read: {error}"),
+                );
+                return;
+            }
+        };
 
         egui::ScrollArea::vertical()
             .auto_shrink([false, false])
             .show(ui, |ui| match self.workspace {
-                Workspace::Overview => {
-                    show_overview(ui, self.contract.as_ref(), self.plan.as_ref())
-                }
-                Workspace::Contract => show_contract(ui, self.contract.as_ref()),
-                Workspace::Plan => show_plan(ui, self.plan.as_ref()),
-                Workspace::Results => show_results(ui, self.contract.as_ref()),
+                Workspace::Overview => show_overview(ui, specimen),
+                Workspace::Contract => show_contract(ui, &specimen.contract),
+                Workspace::Findings => show_findings(ui, &specimen.report),
+                Workspace::Compiled => show_compiled(ui, &specimen.report),
+                Workspace::Results => show_results(ui, &specimen.contract),
                 Workspace::Evidence => show_evidence(ui),
             });
     }
 }
 
-fn load_specimen() -> Result<(EvidenceContract, CampaignPlan), String> {
-    let contract: EvidenceContract =
-        serde_json::from_str(CONTRACT_JSON).map_err(|error| error.to_string())?;
-    let manifests: Vec<CapabilityManifest> = CAPABILITY_JSON
-        .into_iter()
-        .map(|json| serde_json::from_str(json).map_err(|error| error.to_string()))
-        .collect::<Result<_, _>>()?;
-    let plan = CampaignPlanner
-        .plan(&contract, &manifests)
-        .map_err(|error| error.to_string())?;
-    Ok((contract, plan))
+fn load_specimen() -> Result<Specimen, String> {
+    let contract: ContractSource =
+        serde_json::from_slice(CONTRACT_JSON).map_err(|error| error.to_string())?;
+    let report =
+        compile_documents(CONTRACT_JSON, REGISTRY_JSON).map_err(|error| error.to_string())?;
+    Ok(Specimen { contract, report })
 }
 
 fn load_logo_texture(context: &egui::Context) -> Result<egui::TextureHandle, String> {
@@ -198,7 +195,7 @@ fn show_header(ui: &mut egui::Ui, logo: Option<&egui::TextureHandle>) {
                 }
                 ui.vertical(|ui| {
                     ui.label(
-                        egui::RichText::new("PROJECT NORTH STAR")
+                        egui::RichText::new("SEMANTIC COMPILER")
                             .size(10.0)
                             .strong()
                             .color(TEXT_MUTED),
@@ -212,7 +209,7 @@ fn show_header(ui: &mut egui::Ui, logo: Option<&egui::TextureHandle>) {
                     );
                     ui.label(
                         egui::RichText::new(
-                            "Contract-first planning for portable computational evidence",
+                            "Contract-first compilation for portable computational evidence",
                         )
                         .color(TEXT_MUTED),
                     );
@@ -231,25 +228,19 @@ fn show_scaffold_notice(ui: &mut egui::Ui) {
             egui::RichText::new("NO CALCULATION PERFORMED").strong(),
         );
         ui.label(
-            "The included workflow is an unqualified software specimen. It cannot produce a technical or safety conclusion.",
+            "The included contract and registry are unqualified software specimens. Compilation establishes composability only; it cannot produce a technical or safety conclusion.",
         );
     });
 }
 
-fn show_overview(
-    ui: &mut egui::Ui,
-    contract: Option<&EvidenceContract>,
-    plan: Option<&CampaignPlan>,
-) {
+fn show_overview(ui: &mut egui::Ui, specimen: &Specimen) {
     section_heading(
         ui,
         "What do you need to establish?",
-        "Begin with a bounded question and its acceptance requirements—not a solver or a blank workflow.",
+        "Begin with a bounded question and its acceptance requirements, not a solver or a blank workflow.",
     );
-    let Some(contract) = contract else {
-        ui.label("No contract loaded.");
-        return;
-    };
+    let contract = &specimen.contract;
+    let report = &specimen.report;
 
     card(ui, |ui| {
         ui.label(
@@ -257,7 +248,7 @@ fn show_overview(
                 .small()
                 .strong(),
         );
-        ui.heading(&contract.title);
+        ui.heading(&contract.contract_id);
         ui.label(&contract.question);
         ui.add_space(6.0);
         ui.horizontal_wrapped(|ui| {
@@ -269,9 +260,10 @@ fn show_overview(
             );
             badge(
                 ui,
-                &format!("{} CAPABILITIES", contract.workflow.len()),
+                &format!("{} STEPS", contract.workflow.len()),
                 TEXT_MUTED,
             );
+            badge(ui, &format!("{} INPUTS", contract.inputs.len()), TEXT_MUTED);
         });
     });
 
@@ -284,8 +276,8 @@ fn show_overview(
         );
         overview_stage(
             &mut columns[1],
-            "2  Resolve",
-            "Core selects admissible capabilities and records every execution dependency.",
+            "2  Compile",
+            "Core resolves typed dataflow, checks every rule, and reports every finding with its owner and repair.",
         );
         overview_stage(
             &mut columns[2],
@@ -294,23 +286,39 @@ fn show_overview(
         );
     });
 
-    if let Some(plan) = plan {
-        ui.add_space(10.0);
-        card(ui, |ui| {
-            ui.label(egui::RichText::new("NEXT ACTION").small().strong());
-            match plan.status {
-                PlanStatus::Ready => {
-                    ui.label("Review the execution plan before approving a campaign.");
-                }
-                PlanStatus::Blocked => {
-                    ui.colored_label(
-                        CORE_ORANGE,
-                        "The campaign is blocked. Implement and qualify its required capabilities.",
-                    );
-                }
+    ui.add_space(10.0);
+    card(ui, |ui| {
+        ui.label(egui::RichText::new("NEXT ACTION").small().strong());
+        let blocking: Vec<_> = report
+            .findings
+            .iter()
+            .filter(|finding| finding.blocks_compilation())
+            .collect();
+        match (report.status, blocking.first()) {
+            (CompilationStatus::Compiled, _) => {
+                ui.label(
+                    "The contract compiled. Package binding, execution, admission, and verdicts are not implemented, so nothing can run yet.",
+                );
             }
-        });
-    }
+            (CompilationStatus::Rejected, Some(first)) => {
+                ui.colored_label(
+                    CORE_ORANGE,
+                    format!(
+                        "{} blocking finding{} to resolve. First: {} at {} ({})",
+                        blocking.len(),
+                        if blocking.len() == 1 { "" } else { "s" },
+                        first.code,
+                        first.primary.pointer,
+                        first.owner
+                    ),
+                );
+                ui.label(&first.message);
+            }
+            (CompilationStatus::Rejected, None) => {
+                ui.colored_label(CORE_ORANGE, "The contract was rejected.");
+            }
+        }
+    });
 }
 
 fn overview_stage(ui: &mut egui::Ui, title: &str, detail: &str) {
@@ -325,88 +333,173 @@ fn overview_stage(ui: &mut egui::Ui, title: &str, detail: &str) {
     });
 }
 
-fn show_contract(ui: &mut egui::Ui, contract: Option<&EvidenceContract>) {
+fn show_contract(ui: &mut egui::Ui, contract: &ContractSource) {
     section_heading(
         ui,
         "Evidence contract",
-        "The contract states the question, boundary, inputs, requirement, and admissibility policy before execution.",
+        "The contract states the question, inputs, workflow, and requirements before anything executes.",
     );
-    let Some(contract) = contract else {
-        ui.label("No contract loaded.");
-        return;
-    };
-
     card(ui, |ui| {
         key_value(ui, "Contract ID", &contract.contract_id);
+        key_value(ui, "Revision", &contract.revision.to_string());
         key_value(ui, "Status", "DRAFT / NOT APPROVED");
         key_value(ui, "Question", &contract.question);
+        for assumption in &contract.assumptions {
+            ui.colored_label(TEXT_MUTED, format!("Assumes: {assumption}"));
+        }
     });
     ui.add_space(10.0);
     ui.columns(2, |columns| {
         card(&mut columns[0], |ui| {
-            ui.label(egui::RichText::new("REQUIRED INPUTS").small().strong());
+            ui.label(egui::RichText::new("INPUTS").small().strong());
             for input in &contract.inputs {
                 ui.separator();
-                ui.label(egui::RichText::new(&input.role).strong());
-                ui.colored_label(TEXT_MUTED, &input.uri);
-            }
-        });
-        card(&mut columns[1], |ui| {
-            ui.label(
-                egui::RichText::new("ACCEPTANCE REQUIREMENTS")
-                    .small()
-                    .strong(),
-            );
-            for requirement in &contract.requirements {
-                ui.separator();
-                ui.label(egui::RichText::new(&requirement.requirement_id).strong());
-                ui.label(&requirement.statement);
+                ui.label(egui::RichText::new(&input.input_id).strong());
                 ui.colored_label(
                     TEXT_MUTED,
-                    format!("Limit: {} {}", requirement.limit, requirement.unit),
+                    format!(
+                        "{}@{}  ·  {}",
+                        input.role.id, input.role.major, input.media_type
+                    ),
                 );
             }
         });
+        card(&mut columns[1], |ui| {
+            ui.label(egui::RichText::new("WORKFLOW").small().strong());
+            for step in &contract.workflow {
+                ui.separator();
+                ui.label(egui::RichText::new(&step.step_id).strong());
+                ui.colored_label(
+                    TEXT_MUTED,
+                    format!("{}@{}", step.capability_type.id, step.capability_type.major),
+                );
+                for (parameter, value) in &step.parameters {
+                    ui.colored_label(TEXT_MUTED, format!("{parameter} = {value}"));
+                }
+            }
+        });
     });
     ui.add_space(10.0);
     card(ui, |ui| {
-        ui.label(egui::RichText::new("EVIDENCE POLICY").small().strong());
-        ui.label(format!(
-            "Complete lineage: {}  ·  Content hashes: {}  ·  Review roles: {}",
-            yes_no(contract.evidence_policy.require_complete_lineage),
-            yes_no(contract.evidence_policy.require_content_hashes),
-            contract.evidence_policy.required_review_roles.join(", ")
-        ));
-        ui.colored_label(
-            CORE_ORANGE,
-            "Specimen mode permits unqualified manifests for planning only; none may establish a verdict.",
+        ui.label(
+            egui::RichText::new("ACCEPTANCE REQUIREMENTS")
+                .small()
+                .strong(),
         );
+        for requirement in &contract.requirements {
+            ui.separator();
+            ui.label(egui::RichText::new(&requirement.requirement_id).strong());
+            ui.label(&requirement.statement);
+            ui.colored_label(
+                TEXT_MUTED,
+                format!(
+                    "Limit: {} {} ({})  ·  purpose {}@{}",
+                    requirement.limit.value,
+                    requirement.limit.unit,
+                    requirement.limit.kind,
+                    requirement.purpose.id,
+                    requirement.purpose.major
+                ),
+            );
+        }
     });
 }
 
-fn show_plan(ui: &mut egui::Ui, plan: Option<&CampaignPlan>) {
+fn show_findings(ui: &mut egui::Ui, report: &CompileReport) {
     section_heading(
         ui,
-        "Execution plan",
-        "A deterministic dependency plan. Planning does not execute a solver or create evidence.",
+        "Findings",
+        "Every finding carries a stable code, a class, an accountable owner, a JSON Pointer, and typed repair candidates where a bounded repair exists.",
     );
-    let Some(plan) = plan else {
-        ui.label("No plan available.");
+    if report.findings.is_empty() {
+        card(ui, |ui| {
+            ui.label("No findings. The contract compiled cleanly under the draft profile.");
+        });
         return;
-    };
+    }
+    for finding in &report.findings {
+        show_finding(ui, finding);
+        ui.add_space(7.0);
+    }
+}
 
+fn show_finding(ui: &mut egui::Ui, finding: &CoreDiagnostic) {
+    card(ui, |ui| {
+        ui.horizontal_wrapped(|ui| {
+            class_badge(ui, finding.class);
+            ui.label(
+                egui::RichText::new(&finding.code)
+                    .strong()
+                    .color(CORE_ORANGE),
+            );
+            ui.colored_label(TEXT_MUTED, format!("owner: {}", finding.owner));
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.monospace(format!(
+                    "{}:{}",
+                    finding.primary.document, finding.primary.pointer
+                ));
+            });
+        });
+        ui.label(&finding.message);
+        for related in &finding.related {
+            ui.colored_label(
+                TEXT_MUTED,
+                format!("related: {}:{}", related.document, related.pointer),
+            );
+        }
+        for repair in &finding.repairs {
+            let label = match repair.applicability {
+                RepairApplicability::MechanicallySafe => "mechanically safe repair",
+                RepairApplicability::ConstrainedChoice => "choose one",
+                RepairApplicability::MethodOwnerJudgment => "method owner judgment",
+            };
+            ui.horizontal_wrapped(|ui| {
+                badge(ui, label, egui::Color32::from_rgb(120, 164, 210));
+                ui.monospace(repair.candidates.join("  |  "));
+            });
+        }
+        if let Some(entry) = explain(&finding.code) {
+            ui.colored_label(TEXT_MUTED, format!("Next action: {}", entry.next_action));
+        }
+    });
+}
+
+fn show_compiled(ui: &mut egui::Ui, report: &CompileReport) {
+    section_heading(
+        ui,
+        "Compiled snapshot",
+        "A content-identified description of the campaign. It establishes composability under the draft profile, nothing more.",
+    );
     card(ui, |ui| {
         ui.horizontal(|ui| {
-            ui.label(egui::RichText::new("CAMPAIGN READINESS").small().strong());
-            match plan.status {
-                PlanStatus::Ready => badge(ui, "READY FOR REVIEW", egui::Color32::LIGHT_GREEN),
-                PlanStatus::Blocked => badge(ui, "BLOCKED", CORE_ORANGE),
+            ui.label(egui::RichText::new("COMPILATION").small().strong());
+            match report.status {
+                CompilationStatus::Compiled => badge(ui, "COMPILED", egui::Color32::LIGHT_GREEN),
+                CompilationStatus::Rejected => badge(ui, "REJECTED", CORE_ORANGE),
             }
         });
-        ui.colored_label(TEXT_MUTED, &plan.notice);
+        for identity in &report.source_identities {
+            key_value(ui, &identity.document, &identity.sha256);
+        }
+        ui.colored_label(TEXT_MUTED, &report.notice);
     });
+    let Some(compiled) = &report.compiled else {
+        ui.add_space(10.0);
+        card(ui, |ui| {
+            ui.label(
+                "No snapshot exists because the contract was rejected. Resolve the findings first.",
+            );
+        });
+        return;
+    };
     ui.add_space(10.0);
-    for (index, step) in plan.steps.iter().enumerate() {
+    card(ui, |ui| {
+        key_value(ui, "Snapshot", &compiled.snapshot_sha256);
+        key_value(ui, "Compiler", &compiled.compiler);
+        key_value(ui, "Semantic profile", &compiled.semantic_profile);
+    });
+    for (index, step) in compiled.workflow.iter().enumerate() {
+        ui.add_space(7.0);
         card(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.label(
@@ -417,49 +510,54 @@ fn show_plan(ui: &mut egui::Ui, plan: Option<&CampaignPlan>) {
                 );
                 ui.vertical(|ui| {
                     ui.label(egui::RichText::new(&step.step_id).strong());
-                    ui.colored_label(TEXT_MUTED, &step.capability_type);
+                    ui.colored_label(
+                        TEXT_MUTED,
+                        format!(
+                            "{}@{}  ·  {:?}",
+                            step.capability_type.id,
+                            step.capability_type.major,
+                            step.reproducibility.determinism
+                        ),
+                    );
                 });
-                ui.with_layout(
-                    egui::Layout::right_to_left(egui::Align::Center),
-                    |ui| match &step.state {
-                        StepState::Ready => badge(ui, "READY", egui::Color32::LIGHT_GREEN),
-                        StepState::Blocked { .. } => badge(ui, "BLOCKED", CORE_ORANGE),
-                    },
-                );
             });
-            if let Some(capability_id) = &step.capability_id {
-                key_value(ui, "Selected manifest", capability_id);
+            for binding in &step.bindings {
+                ui.colored_label(
+                    TEXT_MUTED,
+                    format!("{} ← {}", binding.input_slot, binding.source.label()),
+                );
             }
-            if let StepState::Blocked { reason } = &step.state {
-                ui.colored_label(CORE_ORANGE, reason);
+            if step.review_obligation.is_some() {
+                badge(
+                    ui,
+                    "PENDING EXTERNAL REVIEW",
+                    egui::Color32::from_rgb(120, 164, 210),
+                );
             }
         });
-        ui.add_space(7.0);
     }
 }
 
-fn show_results(ui: &mut egui::Ui, contract: Option<&EvidenceContract>) {
+fn show_results(ui: &mut egui::Ui, contract: &ContractSource) {
     section_heading(
         ui,
         "Results",
-        "A requirement receives a verdict only after every required capability and evidence gate succeeds.",
+        "A requirement receives a verdict only after admitted evidence exists. Compilation never produces one.",
     );
-    if let Some(contract) = contract {
-        for requirement in &contract.requirements {
-            card(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new(&requirement.requirement_id).strong());
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        verdict_badge(ui, VerdictStatus::NotEvaluated);
-                    });
+    for requirement in &contract.requirements {
+        card(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new(&requirement.requirement_id).strong());
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    verdict_badge(ui, VerdictStatus::NotEvaluated);
                 });
-                ui.label(&requirement.statement);
-                ui.colored_label(
-                    TEXT_MUTED,
-                    "No observed value, uncertainty bound, or admissible evidence exists.",
-                );
             });
-        }
+            ui.label(&requirement.statement);
+            ui.colored_label(
+                TEXT_MUTED,
+                "No observed value, uncertainty bound, or admissible evidence exists.",
+            );
+        });
     }
     ui.add_space(10.0);
     card(ui, |ui| {
@@ -494,7 +592,7 @@ fn show_evidence(ui: &mut egui::Ui) {
         });
         ui.heading("No evidence exists for this specimen campaign");
         ui.label(
-            "When implemented, an export will contain the contract, hashed inputs, selected capability manifests, execution receipts, outputs, lineage, verdicts, limitations, and reviews.",
+            "When implemented, an export will contain the compiled snapshot, hashed inputs, selected capability packages, execution receipts, outputs, lineage, verdicts, limitations, and reviews.",
         );
         ui.add_enabled(false, egui::Button::new("Export evidence package"));
     });
@@ -534,6 +632,17 @@ fn badge(ui: &mut egui::Ui, label: &str, color: egui::Color32) {
         });
 }
 
+fn class_badge(ui: &mut egui::Ui, class: FindingClass) {
+    let (label, color) = match class {
+        FindingClass::Missing => ("MISSING", egui::Color32::from_rgb(120, 164, 210)),
+        FindingClass::Invalid => ("INVALID", egui::Color32::from_rgb(232, 102, 102)),
+        FindingClass::Unsatisfied => ("UNSATISFIED", CORE_ORANGE),
+        FindingClass::Inadmissible => ("INADMISSIBLE", egui::Color32::from_rgb(190, 120, 220)),
+        FindingClass::Notice => ("NOTICE", TEXT_MUTED),
+    };
+    badge(ui, label, color);
+}
+
 fn verdict_badge(ui: &mut egui::Ui, verdict: VerdictStatus) {
     let (label, color) = match verdict {
         VerdictStatus::Pass => ("PASS", egui::Color32::from_rgb(95, 197, 128)),
@@ -544,18 +653,23 @@ fn verdict_badge(ui: &mut egui::Ui, verdict: VerdictStatus) {
     badge(ui, label, color);
 }
 
-const fn yes_no(value: bool) -> &'static str {
-    if value { "required" } else { "not required" }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn embedded_specimen_loads_but_cannot_run() {
-        let (_, plan) = load_specimen().expect("embedded specimen should load");
-        assert_eq!(plan.status, PlanStatus::Blocked);
+    fn embedded_specimen_is_an_honest_draft() {
+        let specimen = load_specimen().expect("embedded specimen should load");
+        assert_eq!(specimen.report.status, CompilationStatus::Rejected);
+        assert!(!specimen.report.findings.is_empty());
+        for finding in &specimen.report.findings {
+            assert_eq!(finding.class, FindingClass::Missing, "{finding:?}");
+            assert_eq!(finding.owner, "requester", "{finding:?}");
+            assert!(
+                matches!(finding.code.as_str(), "CORE-S1301" | "CORE-T2501"),
+                "only declared placeholders may block the specimen: {finding:?}"
+            );
+        }
     }
 
     #[test]

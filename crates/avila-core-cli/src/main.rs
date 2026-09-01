@@ -3,22 +3,19 @@
 use std::error::Error;
 use std::fs;
 use std::io::{self, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 use avila_core_compiler::{CompilationStatus, DIAGNOSTIC_CATALOG, compile_documents, explain};
 use avila_core_evidence::sha256_hex;
 use avila_core_kernel::{SEMANTIC_PROFILE, canonicalize_json};
-use avila_core_model::{CapabilityManifest, EvidenceContract};
-use avila_core_runtime::CampaignPlanner;
 use clap::{Parser, Subcommand};
-use serde::de::DeserializeOwned;
 
 #[derive(Debug, Parser)]
 #[command(
     name = "avila-core",
     version,
-    about = "Avila Core local semantic and planning interface"
+    about = "Avila Core local semantic compiler interface"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -49,15 +46,6 @@ enum Command {
         /// Print every catalog entry.
         #[arg(long)]
         all: bool,
-    },
-    /// Validate the structure of an evidence contract.
-    ValidateContract { contract: PathBuf },
-    /// Produce a deterministic campaign plan. This does not execute it.
-    Plan {
-        #[arg(long)]
-        contract: PathBuf,
-        #[arg(long = "capability", required = true)]
-        capabilities: Vec<PathBuf>,
     },
 }
 
@@ -108,30 +96,6 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             },
             _ => return Err("pass exactly one code, or `--all` for the whole catalog".into()),
         },
-        Command::ValidateContract { contract } => {
-            let contract: EvidenceContract = read_json(&contract)?;
-            contract.validate()?;
-            println!(
-                "{}",
-                serde_json::json!({
-                    "contract_id": contract.contract_id,
-                    "status": "structurally_valid",
-                    "notice": "No scientific validity or requirement verdict was evaluated."
-                })
-            );
-        }
-        Command::Plan {
-            contract,
-            capabilities,
-        } => {
-            let contract: EvidenceContract = read_json(&contract)?;
-            let manifests: Vec<CapabilityManifest> = capabilities
-                .iter()
-                .map(|path| read_json(path))
-                .collect::<Result<_, _>>()?;
-            let plan = CampaignPlanner.plan(&contract, &manifests)?;
-            println!("{}", serde_json::to_string_pretty(&plan)?);
-        }
     }
     Ok(ExitCode::SUCCESS)
 }
@@ -252,11 +216,6 @@ fn required_string<'a>(
         .get(field)
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| format!("embedded vector set is missing `{field}`").into())
-}
-
-fn read_json<T: DeserializeOwned>(path: &Path) -> Result<T, Box<dyn Error>> {
-    let bytes = fs::read(path)?;
-    Ok(serde_json::from_slice(&bytes)?)
 }
 
 #[cfg(test)]

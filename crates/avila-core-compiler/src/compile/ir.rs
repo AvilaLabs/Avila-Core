@@ -49,6 +49,8 @@ pub struct CompiledContract {
     pub contract_id: String,
     pub contract_revision: u64,
     pub contract_sha256: String,
+    pub question: String,
+    pub assumptions: Vec<String>,
     pub registry_id: String,
     pub registry_revision: u64,
     pub registry_sha256: String,

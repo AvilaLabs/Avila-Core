@@ -510,6 +510,7 @@ mod tests {
             "contract_id": "",
             "revision": 0,
             "status": "drafted",
+            "question": "Does the shape check report everything at once?",
             "workflow": [{"step_id": "a", "capability_type": {"id": "t", "major": 1}, "bogus": 1}],
             "requirements": [{
                 "requirement_id": "R",

@@ -11,8 +11,8 @@ name = "avila-core-app"
 path = "src/main.rs"
 
 [dependencies]
-avila-core-model.workspace = true
-avila-core-runtime.workspace = true
+avila-core-compiler.workspace = true
+avila-core-kernel.workspace = true
 eframe.workspace = true
 image.workspace = true
 serde_json.workspace = true

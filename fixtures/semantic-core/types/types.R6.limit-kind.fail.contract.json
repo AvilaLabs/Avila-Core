@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R6.limit-kind.fail",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R6.limit-kind.fail; it has no physical meaning.",
   "inputs": [
     {
       "input_id": "case",

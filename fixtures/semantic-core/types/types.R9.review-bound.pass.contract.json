@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R9.review-bound.pass",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R9.review-bound.pass; it has no physical meaning.",
   "execution_policy": {
     "permitted_nondeterministic_roles": [
       {

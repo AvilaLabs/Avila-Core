@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R9.nondeterminism-refused.fail",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R9.nondeterminism-refused.fail; it has no physical meaning.",
   "inputs": [
     {
       "input_id": "result",

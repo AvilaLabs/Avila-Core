@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R10.nominal-near-name.pass",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R10.nominal-near-name.pass; it has no physical meaning.",
   "workflow": [
     {
       "step_id": "evaluate",

@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R9.empty-independence.fail",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R9.empty-independence.fail; it has no physical meaning.",
   "execution_policy": {
     "permitted_nondeterministic_roles": [
       {

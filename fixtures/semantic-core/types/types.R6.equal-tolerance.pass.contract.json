@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R6.equal-tolerance.pass",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R6.equal-tolerance.pass; it has no physical meaning.",
   "inputs": [
     {
       "input_id": "case",

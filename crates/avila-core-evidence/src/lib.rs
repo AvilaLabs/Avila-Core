@@ -2,10 +2,11 @@
 //!
 //! A bundle is a container for claims and their lineage. Creating a bundle does
 //! not establish that any claim is correct, qualified, certified, or approved.
+//! Verdict records will be typed by the kernel's verdict output once the
+//! package format is specified; until then a bundle carries records only.
 
 #![forbid(unsafe_code)]
 
-use avila_core_model::RequirementVerdict;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -26,8 +27,6 @@ pub struct EvidenceBundle {
     #[serde(default)]
     pub records: Vec<EvidenceRecord>,
     #[serde(default)]
-    pub verdicts: Vec<RequirementVerdict>,
-    #[serde(default)]
     pub limitations: Vec<String>,
 }
 
@@ -44,7 +43,6 @@ impl EvidenceBundle {
             state: BundleState::Draft,
             created_at: created_at.into(),
             records: Vec::new(),
-            verdicts: Vec::new(),
             limitations: vec![
                 "Draft bundle: no scientific, regulatory, or safety claim is established.".into(),
             ],
@@ -103,6 +101,6 @@ mod tests {
     fn new_bundle_is_non_claiming() {
         let bundle = EvidenceBundle::empty_draft("bundle-1", "contract-1", "specimen");
         assert_eq!(bundle.state, BundleState::Draft);
-        assert!(bundle.verdicts.is_empty());
+        assert!(bundle.records.is_empty());
     }
 }

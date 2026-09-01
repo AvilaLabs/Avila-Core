@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.source.noncanonical-decimal.fail",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.source.noncanonical-decimal.fail; it has no physical meaning.",
   "inputs": [
     {
       "input_id": "case",

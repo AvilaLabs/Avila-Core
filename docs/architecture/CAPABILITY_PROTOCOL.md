@@ -1,6 +1,8 @@
 # Capability protocol
 
-**Status:** early design; only manifest parsing and planning exist.
+**Status:** early design; the registry snapshot's capability types are the
+only executable part. Package manifests, selection, and invocation are not
+implemented.
 
 ## Purpose
 
@@ -17,18 +19,14 @@ a label.
 
 ## Manifest identity
 
-The draft manifest currently records:
+The `v0.1` manifest was retired with decision S-016. The current executable
+record is the capability *type* in a registry snapshot: nominal input and
+output slots with roles and media types, permitted output claim models, typed
+parameters and domains, determinism class and material execution factors,
+review semantics, governed-purpose exclusions, non-claims, and owner.
 
-- schema version;
-- globally unique capability ID;
-- semantic capability type;
-- name, provider, and implementation version;
-- maturity and qualification record;
-- named accepted and produced slots with nominal evidence roles and cardinality;
-- process execution declaration or a fail-closed unavailable reason; and
-- metadata.
-
-Production manifests also need:
+Package manifests return under SC-5 and must identify the exact implementation
+and declare at least:
 
 - content digest and provider signature;
 - method owner and support contact;

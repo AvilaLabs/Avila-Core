@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R7.param-kind.fail",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R7.param-kind.fail; it has no physical meaning.",
   "workflow": [
     {
       "step_id": "evaluate",

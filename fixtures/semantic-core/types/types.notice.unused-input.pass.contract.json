@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.notice.unused-input.pass",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.notice.unused-input.pass; it has no physical meaning.",
   "inputs": [
     {
       "input_id": "case",

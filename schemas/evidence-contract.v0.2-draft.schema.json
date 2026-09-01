@@ -11,6 +11,7 @@
     "contract_id",
     "revision",
     "status",
+    "question",
     "workflow",
     "requirements"
   ],
@@ -35,6 +36,18 @@
         "approved",
         "retired"
       ]
+    },
+    "question": {
+      "description": "The bounded question the contract exists to resolve. Prose the compiler carries into the compiled boundary and never interprets.",
+      "$ref": "#/$defs/nonemptyString"
+    },
+    "assumptions": {
+      "description": "Conditions accepted without being established by the campaign. Prose, never interpreted; typed facts with provenance are a separate record.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonemptyString"
+      },
+      "default": []
     },
     "execution_policy": {
       "$ref": "#/$defs/executionPolicy"

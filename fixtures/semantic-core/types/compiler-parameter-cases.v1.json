@@ -15,7 +15,7 @@
         "status": "compiled",
         "findings": [],
         "compiled": {
-          "snapshot_sha256": "sha256:e2a1e574cbd58e23b81dae4329673defe0f4fecbb5898297f195028307f22e7f",
+          "snapshot_sha256": "sha256:1fa7ce5372bfdac742b042beac4799f9abd4dbd47bb99bf02be8d788ff301549",
           "execution_policy": {
             "permitted_nondeterministic_roles": []
           },

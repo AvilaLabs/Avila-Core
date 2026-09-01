@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R5.cycle.fail",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R5.cycle.fail; it has no physical meaning.",
   "inputs": [],
   "workflow": [
     {

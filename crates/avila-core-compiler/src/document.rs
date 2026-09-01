@@ -40,6 +40,13 @@ pub struct ContractSource {
     pub contract_id: String,
     pub revision: u64,
     pub status: ContractStatus,
+    /// The bounded question the contract exists to resolve. Prose the
+    /// compiler carries into the compiled boundary and never interprets.
+    pub question: String,
+    /// Conditions accepted without being established by the campaign. Prose,
+    /// never interpreted; typed facts with provenance are a separate record.
+    #[serde(default)]
+    pub assumptions: Vec<String>,
     #[serde(default)]
     pub execution_policy: ExecutionPolicy,
     #[serde(default)]
@@ -456,6 +463,8 @@ pub fn current_profile_contract(contract_id: impl Into<String>) -> ContractSourc
         contract_id: contract_id.into(),
         revision: 1,
         status: ContractStatus::Draft,
+        question: String::new(),
+        assumptions: Vec::new(),
         execution_policy: ExecutionPolicy::default(),
         inputs: Vec::new(),
         workflow: Vec::new(),

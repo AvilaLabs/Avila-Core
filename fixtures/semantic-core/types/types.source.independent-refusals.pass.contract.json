@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.source.independent-refusals.pass",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.source.independent-refusals.pass; it has no physical meaning.",
   "inputs": [
     {
       "input_id": "case",

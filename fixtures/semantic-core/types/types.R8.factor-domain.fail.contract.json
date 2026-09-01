@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R8.factor-domain.fail",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R8.factor-domain.fail; it has no physical meaning.",
   "workflow": [
     {
       "step_id": "evaluate",

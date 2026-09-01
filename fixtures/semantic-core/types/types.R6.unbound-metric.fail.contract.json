@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.R6.unbound-metric.fail",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.R6.unbound-metric.fail; it has no physical meaning.",
   "inputs": [
     {
       "input_id": "case",

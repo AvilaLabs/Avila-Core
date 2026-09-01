@@ -99,7 +99,7 @@ fn resolved_fixture_compiles_deterministically() {
     assert_eq!(compiled.requirements[0].limit.unit, "Sv/s");
     assert_eq!(
         compiled.snapshot_sha256,
-        "sha256:7a6968cc0e3cf02ea2b7835a500418813175b17a383767481e2758376199b775"
+        "sha256:cc802164995a2a326855de6414b175e2fb750072711fcebc175957540904bd3d"
     );
 }
 

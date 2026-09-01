@@ -20,6 +20,7 @@ decision records (ADRs). “Proposed” items are intentionally reversible.
 | S-013 | Proposed | The semantic profiles, conformance vectors, package format, and verifier interface should be independently auditable and reimplementable; licensing and publication follow an IP review so public disclosure does not accidentally waive protection options. |
 | S-014 | Proposed | JSON remains the canonical interchange. A textual `.acore` front end is built only after semantic fixtures stabilize and measured authoring evidence justifies it. |
 | S-015 | Accepted | A Core verdict is a conditional derivation from admitted records under named rules and authorities. It is not, by itself, scientific truth, certification, or regulatory approval. |
+| S-016 | Accepted | The `v0.1` contract model, capability manifests, and planner are retired. The `v0.2-draft` contract, which carries its bounded question, and the registry snapshot compiled by `avila-core-compiler` are the only authoritative document forms; package selection returns as an SC-5 and SC-8 binding pass over compiled snapshots. |
 
 Architecture records:
 

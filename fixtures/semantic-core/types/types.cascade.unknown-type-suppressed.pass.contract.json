@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.cascade.unknown-type-suppressed.pass",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.cascade.unknown-type-suppressed.pass; it has no physical meaning.",
   "inputs": [
     {
       "input_id": "case",

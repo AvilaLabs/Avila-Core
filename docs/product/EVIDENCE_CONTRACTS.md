@@ -40,7 +40,10 @@ A production contract must identify at least:
 10. **Completion:** which verdicts fulfill the delivery obligation and what makes
     a campaign invalid or incomplete.
 
-The current `v0.1` schema represents only a small structural subset.
+The current `v0.2-draft` schema represents the question, prose assumptions,
+inputs, workflow, requirements, execution policy, and review bindings. Facts,
+system boundary, capability constraints, evidence policy, and completion rules
+remain unrepresented.
 
 ## Contract and campaign lifecycles
 
@@ -99,8 +102,9 @@ contractually accepted limit of resolution.
 
 ### NOT_EVALUATED
 
-No verdict was attempted or the prerequisites for evaluation were not met. This
-is the only result in the current scaffold.
+No verdict was attempted or the prerequisites for evaluation were not met. The
+kernel derives all four states over admitted claim specimens; the scaffold has
+no admitted evidence, so no verdict is shown.
 
 Every verdict names the semantic profile, requirement purpose, policy, admitted
 evidence, attestations, assumptions, limitations, and exact comparison rule
@@ -128,4 +132,4 @@ Before execution, the contract should state:
 - dispute and independent-review mechanisms; and
 - liability and regulatory limitations.
 
-None of those commercial terms exist in the `v0.1` software schema yet.
+None of those commercial terms exist in the `v0.2-draft` software schema yet.

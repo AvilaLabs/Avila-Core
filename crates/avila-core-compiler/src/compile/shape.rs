@@ -17,6 +17,20 @@ pub(super) fn validate_contract_shape(
         "requester",
         findings,
     );
+    require_nonempty(
+        &contract.question,
+        contract_location("/question"),
+        "requester",
+        findings,
+    );
+    for (index, assumption) in contract.assumptions.iter().enumerate() {
+        require_nonempty(
+            assumption,
+            contract_location(format!("/assumptions/{index}")),
+            "requester",
+            findings,
+        );
+    }
     if contract.revision == 0 {
         invalid_value(
             contract_location("/revision"),

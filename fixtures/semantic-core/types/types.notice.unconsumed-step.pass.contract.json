@@ -4,6 +4,7 @@
   "contract_id": "fixture.types.notice.unconsumed-step.pass",
   "revision": 1,
   "status": "draft",
+  "question": "Specimen question for types.notice.unconsumed-step.pass; it has no physical meaning.",
   "inputs": [
     {
       "input_id": "case",

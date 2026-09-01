@@ -102,10 +102,10 @@ pub(super) fn compile_requirements(
                 },
             );
             if irreducible {
-                diagnostic = diagnostic.with_repair(DiagnosticRepair {
-                    applicability: RepairApplicability::MethodOwnerJudgment,
-                    candidates: vec!["core.uncertainty.expand@1".into()],
-                });
+                diagnostic = diagnostic.with_repair(DiagnosticRepair::labels(
+                    RepairApplicability::MethodOwnerJudgment,
+                    vec!["core.uncertainty.expand@1".into()],
+                ));
             }
             findings.push(diagnostic);
         }
@@ -236,7 +236,8 @@ pub(super) fn validate_basis_coverage(
                 ),
             );
             if let Some(repair) = error.repair() {
-                diagnostic = diagnostic.with_repair(compiler_repair(repair));
+                let path = diagnostic.primary.pointer.clone();
+                diagnostic = diagnostic.with_repair(compiler_repair(repair, &path));
             }
             findings.push(diagnostic);
             false
@@ -265,16 +266,24 @@ pub(super) fn validate_tolerance_presence(
         }
         (Comparison::Equal, Some(_)) | (_, None) => true,
         (comparison, Some(_)) => {
-            findings.push(CoreDiagnostic::new(
-                CORE_T2104,
-                FindingClass::Invalid,
-                "requester",
-                location,
-                format!(
-                    "a tolerance is only meaningful for an `equal` comparison, not `{}`",
-                    comparison_label(comparison)
-                ),
-            ));
+            let path = location.pointer.clone();
+            findings.push(
+                CoreDiagnostic::new(
+                    CORE_T2104,
+                    FindingClass::Invalid,
+                    "requester",
+                    location,
+                    format!(
+                        "a tolerance is only meaningful for an `equal` comparison, not `{}`",
+                        comparison_label(comparison)
+                    ),
+                )
+                .with_repair(DiagnosticRepair::removal(
+                    RepairApplicability::MechanicallySafe,
+                    "remove the tolerance",
+                    &path,
+                )),
+            );
             false
         }
     }
@@ -322,12 +331,15 @@ pub(super) fn lower_requirement_quantity(
                 avila_core_kernel::CORE_T2102 => CORE_T2103,
                 other => other,
             };
-            let repair = error.repair().map(compiler_repair);
+            let unit_path = format!("/requirements/{index}/{field}/unit");
+            let repair = error
+                .repair()
+                .map(|repair| compiler_repair(repair, &unit_path));
             let mut diagnostic = CoreDiagnostic::new(
                 code,
                 FindingClass::Invalid,
                 "requester",
-                contract_location(format!("/requirements/{index}/{field}/unit")),
+                contract_location(unit_path),
                 error.detail(),
             );
             if let Some(repair) = repair {

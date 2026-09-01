@@ -4,7 +4,10 @@ use super::findings::{contract_location, material_factor_location, seed_location
 use super::ir::CompiledReproducibility;
 use super::registry::RegistryIndex;
 use super::values::{NOT_DEFINED_PLACEHOLDER, lower_typed_value};
-use crate::diagnostic::{CORE_A4301, CORE_S1101, CORE_T2501, CoreDiagnostic, FindingClass};
+use crate::diagnostic::{
+    CORE_A4301, CORE_S1101, CORE_T2501, CoreDiagnostic, DiagnosticRepair, FindingClass,
+    RepairApplicability,
+};
 use crate::document::{
     CapabilityTypeDefinition, ContractSource, DeterminismClass, ExecutionPolicy,
     ParameterDefinition,
@@ -83,7 +86,8 @@ pub(super) fn compile_reproducibility(
             .collect();
         for factor_id in step.reproducibility.material_factors.keys() {
             if !definitions.contains_key(factor_id.as_str()) {
-                findings.push(CoreDiagnostic::new(
+                findings.push(
+                    CoreDiagnostic::new(
                     CORE_S1101,
                     FindingClass::Invalid,
                     "requester",
@@ -92,7 +96,13 @@ pub(super) fn compile_reproducibility(
                         "capability type `{}@{}` does not declare material execution factor `{factor_id}`",
                         step.capability_type.id, step.capability_type.major
                     ),
-                ));
+                    )
+                    .with_repair(DiagnosticRepair::removal(
+                    RepairApplicability::ConstrainedChoice,
+                    format!("remove material execution factor `{factor_id}`"),
+                    &material_factor_location(step_index, factor_id).pointer,
+                    )),
+                    );
             }
         }
 

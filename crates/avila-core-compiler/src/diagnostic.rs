@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 pub const CORE_S1101: &str = "CORE-S1101";
 pub const CORE_S1102: &str = "CORE-S1102";
@@ -72,12 +73,91 @@ pub enum RepairApplicability {
     MethodOwnerJudgment,
 }
 
+/// One edit of a repair alternative, in RFC 6902 JSON Patch form, so any
+/// tool that applies JSON Patch can apply a repair without understanding it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+pub enum RepairEdit {
+    Replace { path: String, value: Value },
+    Add { path: String, value: Value },
+    Remove { path: String },
+}
+
+/// A bounded repair: what kind of authority may apply it, a human label per
+/// alternative, and, when the compiler can state the exact bytes, the edits
+/// that realize each alternative.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DiagnosticRepair {
     pub applicability: RepairApplicability,
+    /// One label per alternative.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub candidates: Vec<String>,
+    /// Index-aligned with `candidates` when present: `edits[i]` realizes
+    /// `candidates[i]`. An alternative whose exact bytes the compiler cannot
+    /// state has an empty patch. Absent entirely when no alternative has one.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub edits: Vec<Vec<RepairEdit>>,
+}
+
+impl DiagnosticRepair {
+    /// Alternatives the compiler can only name, such as capability types a
+    /// method owner might add.
+    #[must_use]
+    pub fn labels(applicability: RepairApplicability, candidates: Vec<String>) -> Self {
+        Self {
+            applicability,
+            candidates,
+            edits: Vec::new(),
+        }
+    }
+
+    /// Alternatives that each replace the value at `path` with one candidate.
+    #[must_use]
+    pub fn replacements(
+        applicability: RepairApplicability,
+        path: &str,
+        candidates: Vec<String>,
+    ) -> Self {
+        let edits = candidates
+            .iter()
+            .map(|candidate| {
+                vec![RepairEdit::Replace {
+                    path: path.to_owned(),
+                    value: Value::String(candidate.clone()),
+                }]
+            })
+            .collect();
+        Self {
+            applicability,
+            candidates,
+            edits,
+        }
+    }
+
+    /// A single alternative that removes the value at `path`.
+    #[must_use]
+    pub fn removal(
+        applicability: RepairApplicability,
+        label: impl Into<String>,
+        path: &str,
+    ) -> Self {
+        Self {
+            applicability,
+            candidates: vec![label.into()],
+            edits: vec![vec![RepairEdit::Remove {
+                path: path.to_owned(),
+            }]],
+        }
+    }
+
+    /// Appends one alternative with its label and edits.
+    #[must_use]
+    pub fn alternative(mut self, label: impl Into<String>, edits: Vec<RepairEdit>) -> Self {
+        self.candidates.push(label.into());
+        self.edits.push(edits);
+        self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

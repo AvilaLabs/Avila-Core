@@ -7,11 +7,11 @@
 //! 1. compiling twice yields identical reports;
 //! 2. every pointer anchors in the mutated document, exactly, as a documented
 //!    logical slot location, or as a missing property under an existing parent;
-//! 3. every `mechanically_safe` repair has one candidate and removes its
-//!    finding when applied verbatim;
-//! 4. every `constrained_choice` on a substitutable value removes its finding
-//!    when its first candidate is applied, and every feeding candidate on an
-//!    unfed slot names something the snapshot actually defines; and
+//! 3. every `mechanically_safe` repair has one alternative and removes its
+//!    finding when its edits are applied verbatim;
+//! 4. every `constrained_choice` alternative that carries edits removes its
+//!    finding when applied, and every feeding candidate on an unfed slot names
+//!    something the snapshot actually defines; and
 //! 5. a fixer that applies only the compiler's own repairs reaches a compiled
 //!    snapshot within two rounds for every mistake that is mechanically
 //!    repairable at all.
@@ -25,7 +25,7 @@ use std::path::{Path, PathBuf};
 
 use avila_core_compiler::{
     CompilationStatus, CompileReport, CoreDiagnostic, FindingClass, RepairApplicability,
-    compile_documents,
+    RepairEdit, compile_documents,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -323,76 +323,102 @@ fn anchored(doc: &Value, registry: &Value, finding: &CoreDiagnostic) -> Result<(
     ))
 }
 
-/// Applies the compiler's own repair for one finding when it is mechanical:
-/// the canonical form, the first listed value, a listed source, or removal of
-/// an undeclared key. Returns whether anything changed.
+/// Applies the first alternative of a finding's first repair, if it carries
+/// edits, exactly as any JSON Patch tool would. Returns whether anything
+/// changed. The harness knows nothing about individual codes.
 fn apply_repair(doc: &mut Value, finding: &CoreDiagnostic) -> bool {
-    let pointer = finding.primary.pointer.as_str();
-    if finding.code == "CORE-S1101" {
-        let Some(split) = pointer.rfind('/') else {
-            return false;
-        };
-        let (parent, key) = (&pointer[..split], &pointer[split + 1..]);
-        return doc
-            .pointer_mut(parent)
-            .and_then(Value::as_object_mut)
-            .is_some_and(|object| object.remove(key).is_some());
-    }
     let Some(repair) = finding.repairs.first() else {
         return false;
     };
-    let Some(candidate) = repair.candidates.first() else {
+    if matches!(
+        repair.applicability,
+        RepairApplicability::MethodOwnerJudgment
+    ) {
+        return false;
+    }
+    let Some(edits) = repair.edits.first() else {
         return false;
     };
-    match repair.applicability {
-        RepairApplicability::MechanicallySafe => {
-            assert_eq!(
-                repair.candidates.len(),
-                1,
-                "a mechanically safe repair has exactly one candidate: {finding:?}"
-            );
-            let Some(slot) = doc.pointer_mut(pointer) else {
+    if edits.is_empty() {
+        return false;
+    }
+    if repair.applicability == RepairApplicability::MechanicallySafe {
+        assert_eq!(
+            repair.candidates.len(),
+            1,
+            "a mechanically safe repair has exactly one alternative: {finding:?}"
+        );
+    }
+    if !repair.candidates.is_empty() {
+        assert_eq!(
+            repair.candidates.len(),
+            repair.edits.len(),
+            "edits are index-aligned with candidates: {finding:?}"
+        );
+    }
+    for edit in edits {
+        assert!(
+            apply_edit(doc, edit),
+            "{finding:?}: edit did not apply: {edit:?}"
+        );
+    }
+    true
+}
+
+/// RFC 6902 `add`, `replace`, and `remove` over a document.
+fn apply_edit(doc: &mut Value, edit: &RepairEdit) -> bool {
+    match edit {
+        RepairEdit::Replace { path, value } => match doc.pointer_mut(path) {
+            Some(slot) => {
+                *slot = value.clone();
+                true
+            }
+            None => false,
+        },
+        RepairEdit::Add { path, value } => {
+            let Some(split) = path.rfind('/') else {
                 return false;
             };
-            *slot = json!(candidate);
-            true
-        }
-        RepairApplicability::ConstrainedChoice => match finding.code.as_str() {
-            "CORE-T2001" | "CORE-T2402" | "CORE-S1102" => {
-                let Some(slot) = doc.pointer_mut(pointer) else {
-                    return false;
-                };
-                *slot = json!(candidate);
-                true
-            }
-            "CORE-R3102" => {
-                let tokens: Vec<&str> = pointer.split('/').collect();
-                let ["", "workflow", index, "inputs", slot] = tokens.as_slice() else {
-                    return false;
-                };
-                let source = if let Some(input) = candidate.strip_prefix("input:") {
-                    json!({"source": "contract_input", "input_id": input})
-                } else if let Some((step, output)) = candidate
-                    .strip_prefix("step:")
-                    .and_then(|rest| rest.split_once('/'))
-                {
-                    json!({"source": "step_output", "step_id": step, "output_slot": output})
-                } else {
-                    return false;
-                };
-                let step = &mut doc["workflow"][index.parse::<usize>().unwrap()];
-                if !step["bindings"].is_array() {
-                    step["bindings"] = json!([]);
+            let (parent, token) = (&path[..split], &path[split + 1..]);
+            match doc.pointer_mut(parent) {
+                Some(Value::Array(items)) => {
+                    if token == "-" {
+                        items.push(value.clone());
+                    } else if let Ok(index) = token.parse::<usize>()
+                        && index <= items.len()
+                    {
+                        items.insert(index, value.clone());
+                    } else {
+                        return false;
+                    }
+                    true
                 }
-                step["bindings"]
-                    .as_array_mut()
-                    .unwrap()
-                    .push(json!({"input_slot": slot, "source": source}));
-                true
+                Some(Value::Object(object)) => {
+                    object.insert(token.replace("~1", "/").replace("~0", "~"), value.clone());
+                    true
+                }
+                _ => false,
             }
-            _ => false,
-        },
-        RepairApplicability::MethodOwnerJudgment => false,
+        }
+        RepairEdit::Remove { path } => {
+            let Some(split) = path.rfind('/') else {
+                return false;
+            };
+            let (parent, token) = (&path[..split], &path[split + 1..]);
+            match doc.pointer_mut(parent) {
+                Some(Value::Array(items)) => match token.parse::<usize>() {
+                    Ok(index) if index < items.len() => {
+                        items.remove(index);
+                        true
+                    }
+                    _ => false,
+                },
+                Some(Value::Object(object)) => object
+                    .remove(&token.replace("~1", "/").replace("~0", "~"))
+                    .is_some(),
+                _ => false,
+            }
+        }
     }
 }
 
@@ -494,20 +520,10 @@ fn every_finding_honors_the_diagnostic_contract() {
                 if finding.code == "CORE-R3101" && finding.primary.pointer.contains("/inputs/") {
                     feeding_candidates_exist(&base.registry, finding);
                 }
-                let substitutable =
-                    finding
-                        .repairs
-                        .first()
-                        .is_some_and(|repair| match repair.applicability {
-                            RepairApplicability::MechanicallySafe => true,
-                            RepairApplicability::ConstrainedChoice => {
-                                matches!(
-                                    finding.code.as_str(),
-                                    "CORE-T2001" | "CORE-T2402" | "CORE-S1102" | "CORE-R3102"
-                                )
-                            }
-                            RepairApplicability::MethodOwnerJudgment => false,
-                        });
+                let substitutable = finding.repairs.first().is_some_and(|repair| {
+                    repair.applicability != RepairApplicability::MethodOwnerJudgment
+                        && repair.edits.first().is_some_and(|edits| !edits.is_empty())
+                });
                 if substitutable {
                     let mut repaired = doc.clone();
                     assert!(
@@ -543,17 +559,7 @@ fn every_finding_honors_the_diagnostic_contract() {
                 tally.fixed += 1;
                 tally.rounds += rounds;
             }
-            // A listed comparison is a mechanical choice, but choosing an
-            // inequality for a requirement that carried an equality tolerance
-            // leaves the tolerance misplaced, and a repair that means "remove
-            // this" is not expressible as a value candidate yet.
-            let repairable = mistake.mechanically_repairable()
-                && !(mistake == Mistake::WrongComparison
-                    && doc["requirements"]
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .any(|requirement| requirement.get("tolerance").is_some()));
+            let repairable = mistake.mechanically_repairable();
             if repairable {
                 assert_eq!(
                     current.status,

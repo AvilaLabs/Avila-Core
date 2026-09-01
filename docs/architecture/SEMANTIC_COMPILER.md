@@ -238,7 +238,9 @@ Every finding carries:
   `registry_owner`;
 - a document plus JSON Pointer location;
 - related locations when applicable; and
-- typed repair applicability and candidates when a bounded repair exists.
+- typed repair applicability, a label per alternative, and, when the
+  compiler can state the exact bytes, the RFC 6902 JSON Patch that realizes
+  each alternative.
 
 Consumers match these fields, never explanatory wording. Every code is
 explained in the [diagnostic catalog](DIAGNOSTICS.md), which the CLI serves
@@ -303,11 +305,15 @@ contract without re-reading everything. It is measured over synthetic
 fixtures; the defect corpus from real contracts that the validation plan
 requires does not exist yet.
 
-The harness also showed a limit of the current repair model: choosing an
-inequality for a requirement that carried an equality tolerance leaves the
-tolerance misplaced, and a repair that means "remove this" cannot be expressed
-as a value candidate. Repairs will need to become typed edits, such as replace,
-add, and remove at a pointer, before that class of fix is mechanical.
+Repairs are typed edits. Each alternative carries its RFC 6902 patch when the
+compiler can state the exact bytes: replace a value with a canonical form or a
+listed choice, remove a misplaced tolerance, an unknown field, or an unused
+declaration, rename a misspelled property to a known one, add a binding for a
+listed source, or add the input or step that would feed an unfed slot. The
+harness's fixer applies the first alternative of every blocking finding with
+no knowledge of individual codes, which is exactly what an agent's mechanical
+loop should do; only a value the compiler cannot know, such as a missing
+tolerance, stays with the requester.
 
 ## Compiled identity
 

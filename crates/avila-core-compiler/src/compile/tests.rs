@@ -3,8 +3,8 @@ use super::{CompilationStatus, CompileReport, ReviewFulfillment, compile_documen
 use crate::diagnostic::{
     CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3401, CORE_R3501,
     CORE_R3601, CORE_R3602, CORE_S1101, CORE_S1102, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103,
-    CORE_T2104, CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2601, DiagnosticRepair, FindingClass,
-    RepairApplicability,
+    CORE_T2104, CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2601, FindingClass, RepairApplicability,
+    RepairEdit,
 };
 use crate::document::{
     AuthoredBinding, BasisKind, BoundSide, ClaimModelDeclaration, Comparison, ContractSource,
@@ -178,12 +178,15 @@ fn source_layer_findings_name_the_offending_value() {
         report.findings[0].primary.pointer,
         "/requirements/0/limit/value"
     );
+    let repair = &report.findings[0].repairs[0];
+    assert_eq!(repair.applicability, RepairApplicability::MechanicallySafe);
+    assert_eq!(repair.candidates, vec!["100".to_owned()]);
     assert_eq!(
-        report.findings[0].repairs,
-        vec![DiagnosticRepair {
-            applicability: RepairApplicability::MechanicallySafe,
-            candidates: vec!["100".into()],
-        }]
+        repair.edits,
+        vec![vec![RepairEdit::Replace {
+            path: "/requirements/0/limit/value".into(),
+            value: serde_json::json!("100"),
+        }]]
     );
 
     let mut several: serde_json::Value = serde_json::from_slice(CONTRACT).unwrap();
@@ -261,11 +264,25 @@ fn required_slots_fail_closed_when_unresolved_or_ambiguous() {
         .find(|finding| finding.code == CORE_R3101)
         .unwrap();
     assert_eq!(
-        finding.repairs,
-        vec![DiagnosticRepair {
-            applicability: RepairApplicability::ConstrainedChoice,
-            candidates: vec!["declare_input:fixture.source_document@1".into()],
-        }]
+        finding.repairs[0].applicability,
+        RepairApplicability::ConstrainedChoice
+    );
+    assert_eq!(
+        finding.repairs[0].candidates,
+        vec!["declare_input:fixture.source_document@1".to_owned()]
+    );
+    assert_eq!(
+        finding.repairs[0].edits,
+        vec![vec![RepairEdit::Add {
+            path: "/inputs".into(),
+            value: serde_json::json!([{
+                "input_id": "source",
+                "role": {"id": "fixture.source_document", "major": 1},
+                "media_type": "application/vnd.fixture.source+json",
+                "claim_model": {"model": "unquantified"},
+            }]),
+        }]],
+        "the input can be stated exactly, so the alternative carries its edit"
     );
 
     let mut no_producer = contract();
@@ -743,12 +760,10 @@ fn coverage_must_be_a_canonical_decimal_in_the_unit_interval_on_a_bounded_basis(
     let finding = coverage_finding(&noncanonical).unwrap();
     assert_eq!(finding.code, CORE_S1102);
     assert_eq!(
-        finding.repairs,
-        vec![DiagnosticRepair {
-            applicability: RepairApplicability::MechanicallySafe,
-            candidates: vec!["0.95".into()],
-        }]
+        finding.repairs[0].applicability,
+        RepairApplicability::MechanicallySafe
     );
+    assert_eq!(finding.repairs[0].candidates, vec!["0.95".to_owned()]);
 
     let misplaced = with_coverage(BasisKind::Enclosure, "0.95");
     assert_eq!(coverage_finding(&misplaced).unwrap().code, CORE_S1102);

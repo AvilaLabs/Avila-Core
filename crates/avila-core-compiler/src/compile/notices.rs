@@ -3,7 +3,9 @@
 use super::findings::contract_location;
 use super::ir::ResolvedBinding;
 use super::registry::RegistryIndex;
-use crate::diagnostic::{CORE_R3601, CORE_R3602, CoreDiagnostic, FindingClass};
+use crate::diagnostic::{
+    CORE_R3601, CORE_R3602, CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability,
+};
 use crate::document::{ContractSource, SourceRef};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -35,16 +37,24 @@ pub(super) fn report_unconsumed_declarations(
             input_id: input.input_id.clone(),
         };
         if !consumed.contains(&source) {
-            findings.push(CoreDiagnostic::new(
-                CORE_R3601,
-                FindingClass::Notice,
-                "requester",
-                contract_location(format!("/inputs/{index}")),
-                format!(
-                    "contract input `{}` is bound to no step and enters no campaign evidence",
-                    input.input_id
-                ),
-            ));
+            let path = format!("/inputs/{index}");
+            findings.push(
+                CoreDiagnostic::new(
+                    CORE_R3601,
+                    FindingClass::Notice,
+                    "requester",
+                    contract_location(&path),
+                    format!(
+                        "contract input `{}` is bound to no step and enters no campaign evidence",
+                        input.input_id
+                    ),
+                )
+                .with_repair(DiagnosticRepair::removal(
+                    RepairApplicability::ConstrainedChoice,
+                    format!("remove input `{}`", input.input_id),
+                    &path,
+                )),
+            );
         }
     }
     for (index, step) in contract.workflow.iter().enumerate() {
@@ -59,16 +69,24 @@ pub(super) fn report_unconsumed_declarations(
             matches!(source, SourceRef::StepOutput { step_id, .. } if step_id == &step.step_id)
         });
         if !consumed_output {
-            findings.push(CoreDiagnostic::new(
-                CORE_R3602,
-                FindingClass::Notice,
-                "requester",
-                contract_location(format!("/workflow/{index}")),
-                format!(
-                    "step `{}` produces no output consumed by another step or requirement",
-                    step.step_id
-                ),
-            ));
+            let path = format!("/workflow/{index}");
+            findings.push(
+                CoreDiagnostic::new(
+                    CORE_R3602,
+                    FindingClass::Notice,
+                    "requester",
+                    contract_location(&path),
+                    format!(
+                        "step `{}` produces no output consumed by another step or requirement",
+                        step.step_id
+                    ),
+                )
+                .with_repair(DiagnosticRepair::removal(
+                    RepairApplicability::ConstrainedChoice,
+                    format!("remove step `{}`", step.step_id),
+                    &path,
+                )),
+            );
         }
     }
 }

@@ -53,4 +53,7 @@ Repair applicability is typed. `mechanically_safe` means the single candidate
 is the unique correct value and may be applied verbatim; `constrained_choice`
 means one of the listed candidates must be chosen by the contract author;
 `method_owner_judgment` means a domain professional must decide, typically by
-adding or qualifying a capability. The compiler never applies a repair itself.
+adding or qualifying a capability. Each alternative carries its RFC 6902 JSON
+Patch under `edits` when the compiler can state the exact bytes, index-aligned
+with `candidates`; an alternative the compiler can only name has an empty
+patch. The compiler never applies a repair itself.

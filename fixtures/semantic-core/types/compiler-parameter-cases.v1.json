@@ -207,7 +207,9 @@
               "document": "contract",
               "pointer": "/workflow/0/parameters/invented_default"
             },
-            "repairs": []
+            "repairs": [
+              "constrained_choice"
+            ]
           }
         ]
       }

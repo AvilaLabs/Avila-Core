@@ -7,9 +7,11 @@ use super::registry::RegistryIndex;
 use crate::diagnostic::{
     CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_S1102, CORE_T2101, CORE_T2201,
     CORE_T2301, CORE_T2601, CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability,
+    RepairEdit,
 };
 use crate::document::{
     ClaimModelDeclaration, ContractSource, InputSlotDefinition, SourceRef, VersionedRef,
+    WorkflowStep,
 };
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -320,16 +322,19 @@ pub(super) fn resolve_workflow(
                             slot.slot_id, slot.role.id, slot.role.major
                         ),
                     )
-                    .with_repair(DiagnosticRepair {
-                        applicability: RepairApplicability::ConstrainedChoice,
-                        candidates: feeding_candidates(registry, slot),
-                    }),
+                    .with_repair(feeding_repair(contract, registry, slot)),
                 ),
                 [_, _, ..] if slot.required => {
-                    let candidate_labels = matches
-                        .iter()
-                        .map(|candidate| candidate.source.label())
-                        .collect();
+                    let mut repair = DiagnosticRepair::labels(
+                        RepairApplicability::ConstrainedChoice,
+                        Vec::new(),
+                    );
+                    for candidate in &matches {
+                        repair = repair.alternative(
+                            candidate.source.label(),
+                            binding_edit(step, step_index, &slot.slot_id, &candidate.source),
+                        );
+                    }
                     findings.push(
                         CoreDiagnostic::new(
                             CORE_R3102,
@@ -341,10 +346,7 @@ pub(super) fn resolve_workflow(
                                 slot.slot_id
                             ),
                         )
-                        .with_repair(DiagnosticRepair {
-                            applicability: RepairApplicability::ConstrainedChoice,
-                            candidates: candidate_labels,
-                        }),
+                        .with_repair(repair),
                     );
                 }
                 _ => {}
@@ -358,28 +360,104 @@ pub(super) fn resolve_workflow(
 
 /// Lists the ways a required slot could be fed under the pinned snapshot: a
 /// contract input carrying the slot's role, or a step of any capability type
-/// whose output produces that role in a media type the slot accepts. The list
-/// is a constrained choice for the contract author; it is not a qualification
+/// whose output produces that role in a media type the slot accepts. Each
+/// alternative carries an edit when the compiler can state its exact bytes;
+/// the list is a constrained choice for the requester, not a qualification
 /// claim about any of the named types.
-pub(super) fn feeding_candidates(
+pub(super) fn feeding_repair(
+    contract: &ContractSource,
     registry: &RegistryIndex<'_>,
     slot: &InputSlotDefinition,
-) -> Vec<String> {
-    let mut candidates = vec![format!(
-        "declare_input:{}@{}",
-        slot.role.id, slot.role.major
-    )];
+) -> DiagnosticRepair {
+    let mut repair = DiagnosticRepair::labels(RepairApplicability::ConstrainedChoice, Vec::new());
+    let input_edit = registry.roles.get(&slot.role).and_then(|role| {
+        let [media_type] = slot.accepted_media_types.as_slice() else {
+            return None;
+        };
+        let [claim_model] = role.permitted_claim_models.as_slice() else {
+            return None;
+        };
+        let input_id = unique_id(
+            &slot.slot_id,
+            contract.inputs.iter().map(|input| input.input_id.as_str()),
+        );
+        let input = serde_json::json!({
+            "input_id": input_id,
+            "role": slot.role,
+            "media_type": media_type,
+            "claim_model": claim_model,
+        });
+        Some(append_edit("/inputs", contract.inputs.is_empty(), input))
+    });
+    repair = repair.alternative(
+        format!("declare_input:{}@{}", slot.role.id, slot.role.major),
+        input_edit.unwrap_or_default(),
+    );
     for (reference, capability) in &registry.capability_types {
         for output in &capability.outputs {
             if output.role == slot.role && slot.accepted_media_types.contains(&output.media_type) {
-                candidates.push(format!(
-                    "add_step:{}@{}/{}",
-                    reference.id, reference.major, output.slot_id
-                ));
+                let step_id = unique_id(
+                    reference.id.rsplit('.').next().unwrap_or(&reference.id),
+                    contract.workflow.iter().map(|step| step.step_id.as_str()),
+                );
+                let step = serde_json::json!({
+                    "step_id": step_id,
+                    "capability_type": reference,
+                });
+                repair = repair.alternative(
+                    format!(
+                        "add_step:{}@{}/{}",
+                        reference.id, reference.major, output.slot_id
+                    ),
+                    append_edit("/workflow", contract.workflow.is_empty(), step),
+                );
             }
         }
     }
-    candidates
+    repair
+}
+
+/// The edit that binds `slot_id` of the step at `step_index` to `source`.
+fn binding_edit(
+    step: &WorkflowStep,
+    step_index: usize,
+    slot_id: &str,
+    source: &SourceRef,
+) -> Vec<RepairEdit> {
+    let binding = serde_json::json!({ "input_slot": slot_id, "source": source });
+    append_edit(
+        &format!("/workflow/{step_index}/bindings"),
+        step.bindings.is_empty(),
+        binding,
+    )
+}
+
+/// Appends `value` to the array at `path`. RFC 6902 `add` on an absent or
+/// existing member sets it, so an empty array is written whole; a non-empty
+/// one takes the `-` append form.
+fn append_edit(path: &str, empty: bool, value: serde_json::Value) -> Vec<RepairEdit> {
+    if empty {
+        vec![RepairEdit::Add {
+            path: path.to_owned(),
+            value: serde_json::Value::Array(vec![value]),
+        }]
+    } else {
+        vec![RepairEdit::Add {
+            path: format!("{path}/-"),
+            value,
+        }]
+    }
+}
+
+fn unique_id<'a>(preferred: &str, taken: impl Iterator<Item = &'a str>) -> String {
+    let taken: Vec<&str> = taken.collect();
+    if !taken.contains(&preferred) {
+        return preferred.to_owned();
+    }
+    (2..)
+        .map(|suffix| format!("{preferred}_{suffix}"))
+        .find(|candidate| !taken.contains(&candidate.as_str()))
+        .expect("an unused suffix exists")
 }
 
 /// A source is suppressed when it names an output of a step whose capability

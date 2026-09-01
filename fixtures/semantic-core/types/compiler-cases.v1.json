@@ -122,7 +122,9 @@
               "document": "contract",
               "pointer": "/inputs/1"
             },
-            "repairs": []
+            "repairs": [
+              "constrained_choice"
+            ]
           }
         ],
         "compiled": {
@@ -251,7 +253,9 @@
               "document": "contract",
               "pointer": "/workflow/0"
             },
-            "repairs": []
+            "repairs": [
+              "constrained_choice"
+            ]
           }
         ],
         "compiled": {
@@ -551,7 +555,9 @@
               "document": "contract",
               "pointer": "/workflow/1/bogus_field"
             },
-            "repairs": []
+            "repairs": [
+              "constrained_choice"
+            ]
           }
         ]
       }
@@ -694,7 +700,9 @@
               "document": "contract",
               "pointer": "/requirements/0/tolerance"
             },
-            "repairs": []
+            "repairs": [
+              "mechanically_safe"
+            ]
           }
         ]
       }
@@ -850,7 +858,9 @@
               "document": "contract",
               "pointer": "/inputs/1"
             },
-            "repairs": []
+            "repairs": [
+              "constrained_choice"
+            ]
           }
         ],
         "compiled": {
@@ -917,7 +927,9 @@
               "document": "contract",
               "pointer": "/workflow/2"
             },
-            "repairs": []
+            "repairs": [
+              "constrained_choice"
+            ]
           }
         ],
         "compiled": {
@@ -1051,7 +1063,9 @@
               "document": "contract",
               "pointer": "/workflow/1/bogus_field"
             },
-            "repairs": []
+            "repairs": [
+              "constrained_choice"
+            ]
           }
         ]
       }

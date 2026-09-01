@@ -23,7 +23,7 @@ use super::findings::{escape_pointer_token, owner_for};
 use super::values::compiler_repair;
 use crate::diagnostic::{
     CORE_S1101, CORE_S1102, CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability,
-    SourceLocation,
+    RepairEdit, SourceLocation,
 };
 
 const CONTRACT_SCHEMA: &str =
@@ -107,10 +107,11 @@ impl<'a> Validator<'a> {
         if let Some(expected) = node.get("const")
             && !matches_scalar(instance, expected)
         {
+            let repair = choice(&pointer, vec![render_plain(expected)]);
             self.invalid(
                 pointer,
                 format!("value must be {}", render(expected)),
-                Some(choice(vec![render_plain(expected)])),
+                Some(repair),
             );
             return;
         }
@@ -120,10 +121,11 @@ impl<'a> Validator<'a> {
                 .any(|option| matches_scalar(instance, option))
         {
             let candidates: Vec<_> = options.iter().map(render_plain).collect();
+            let repair = choice(&pointer, candidates.clone());
             self.invalid(
                 pointer,
                 format!("value must be one of {}", candidates.join(", ")),
-                Some(choice(candidates)),
+                Some(repair),
             );
             return;
         }
@@ -178,13 +180,41 @@ impl<'a> Validator<'a> {
             if let Some(schema) = properties.and_then(|properties| properties.get(key)) {
                 self.check(schema, value, child);
             } else if additional == Some(&Value::Bool(false)) {
-                self.findings.push(CoreDiagnostic::new(
-                    CORE_S1101,
-                    FindingClass::Invalid,
-                    self.owner,
-                    SourceLocation::new(self.document, child),
-                    format!("unknown property `{key}`; the schema does not define it"),
-                ));
+                let mut repair = DiagnosticRepair::removal(
+                    RepairApplicability::ConstrainedChoice,
+                    format!("remove `{key}`"),
+                    &child,
+                );
+                let present: Vec<&str> = entries.iter().map(|(name, _)| name.as_str()).collect();
+                for known in properties
+                    .into_iter()
+                    .flat_map(|properties| properties.keys())
+                    .filter(|known| !present.contains(&known.as_str()))
+                    .filter(|known| levenshtein(known, key) <= 2)
+                {
+                    repair = repair.alternative(
+                        format!("rename to `{known}`"),
+                        vec![
+                            RepairEdit::Remove {
+                                path: child.clone(),
+                            },
+                            RepairEdit::Add {
+                                path: format!("{pointer}/{}", escape_pointer_token(known)),
+                                value: to_json(value),
+                            },
+                        ],
+                    );
+                }
+                self.findings.push(
+                    CoreDiagnostic::new(
+                        CORE_S1101,
+                        FindingClass::Invalid,
+                        self.owner,
+                        SourceLocation::new(self.document, child),
+                        format!("unknown property `{key}`; the schema does not define it"),
+                    )
+                    .with_repair(repair),
+                );
             } else if let Some(schema) = additional.filter(|value| value.is_object()) {
                 self.check(schema, value, child);
             }
@@ -231,10 +261,11 @@ impl<'a> Validator<'a> {
         }) {
             Some(branch) => self.check(branch, instance, pointer),
             None => {
+                let repair = choice(&tag_pointer, admitted.clone());
                 self.invalid(
                     tag_pointer,
                     format!("`{tag}` must be one of {}", admitted.join(", ")),
-                    Some(choice(admitted)),
+                    Some(repair),
                 );
             }
         }
@@ -249,7 +280,9 @@ impl<'a> Validator<'a> {
             return;
         }
         if let Err(error) = ExactNumber::from_canonical(value) {
-            let repair = error.repair().map(compiler_repair);
+            let repair = error
+                .repair()
+                .map(|repair| compiler_repair(repair, &pointer));
             self.invalid(
                 pointer,
                 format!(
@@ -318,10 +351,41 @@ fn tag_values<'a>(branch: &'a Value, tag: &str) -> Vec<&'a Value> {
         .unwrap_or_default()
 }
 
-fn choice(candidates: Vec<String>) -> DiagnosticRepair {
-    DiagnosticRepair {
-        applicability: RepairApplicability::ConstrainedChoice,
-        candidates,
+fn choice(path: &str, candidates: Vec<String>) -> DiagnosticRepair {
+    DiagnosticRepair::replacements(RepairApplicability::ConstrainedChoice, path, candidates)
+}
+
+/// Edit distance used to offer a rename for a misspelled property name.
+fn levenshtein(left: &str, right: &str) -> usize {
+    let right: Vec<char> = right.chars().collect();
+    let mut previous: Vec<usize> = (0..=right.len()).collect();
+    for (row, left_char) in left.chars().enumerate() {
+        let mut current = vec![row + 1];
+        for (column, right_char) in right.iter().enumerate() {
+            let substitution = previous[column] + usize::from(left_char != *right_char);
+            current.push(
+                substitution
+                    .min(previous[column + 1] + 1)
+                    .min(current[column] + 1),
+            );
+        }
+        previous = current;
+    }
+    previous[right.len()]
+}
+
+fn to_json(value: &CanonicalJsonValue) -> Value {
+    match value {
+        CanonicalJsonValue::Bool(value) => Value::Bool(*value),
+        CanonicalJsonValue::Integer(value) => Value::from(*value),
+        CanonicalJsonValue::String(value) => Value::String(value.clone()),
+        CanonicalJsonValue::Array(values) => Value::Array(values.iter().map(to_json).collect()),
+        CanonicalJsonValue::Object(entries) => Value::Object(
+            entries
+                .iter()
+                .map(|(key, value)| (key.clone(), to_json(value)))
+                .collect(),
+        ),
     }
 }
 

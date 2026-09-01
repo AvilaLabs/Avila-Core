@@ -17,7 +17,8 @@ use super::prefixed_sha256;
 use super::schema::{SchemaDocument, validate_shape};
 use super::values::compiler_repair;
 use crate::diagnostic::{
-    CORE_S1101, CORE_S1102, CoreDiagnostic, DiagnosticRepair, FindingClass, SourceLocation,
+    CORE_S1101, CORE_S1102, CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability,
+    SourceLocation,
 };
 use crate::document::{
     CONTRACT_SCHEMA_VERSION, ContractSource, REGISTRY_SCHEMA_VERSION, RegistrySnapshot,
@@ -93,7 +94,15 @@ pub(super) fn read_document<T: serde::de::DeserializeOwned>(
             } else {
                 CORE_S1102
             };
-            let repair = canonical_number_repair(&canonical_value, &pointer, &detail);
+            let repair = if code == CORE_S1101 {
+                Some(DiagnosticRepair::removal(
+                    RepairApplicability::ConstrainedChoice,
+                    "remove the unknown field",
+                    &pointer,
+                ))
+            } else {
+                canonical_number_repair(&canonical_value, &pointer, &detail)
+            };
             let mut diagnostic = CoreDiagnostic::new(
                 code,
                 FindingClass::Invalid,
@@ -196,7 +205,7 @@ pub(super) fn canonical_number_repair(
     ExactNumber::from_canonical(raw)
         .err()?
         .repair()
-        .map(compiler_repair)
+        .map(|repair| compiler_repair(repair, pointer))
 }
 
 pub(super) fn validate_document_headers(

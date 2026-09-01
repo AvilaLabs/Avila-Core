@@ -36,16 +36,23 @@ pub(super) fn compile_parameters(
 
         for parameter_id in step.parameters.keys() {
             if !definitions.contains_key(parameter_id.as_str()) {
-                findings.push(CoreDiagnostic::new(
-                    CORE_S1101,
-                    FindingClass::Invalid,
-                    "requester",
-                    parameter_location(step_index, parameter_id),
-                    format!(
-                        "capability type `{}@{}` does not declare parameter `{parameter_id}`",
-                        step.capability_type.id, step.capability_type.major
-                    ),
-                ));
+                findings.push(
+                    CoreDiagnostic::new(
+                        CORE_S1101,
+                        FindingClass::Invalid,
+                        "requester",
+                        parameter_location(step_index, parameter_id),
+                        format!(
+                            "capability type `{}@{}` does not declare parameter `{parameter_id}`",
+                            step.capability_type.id, step.capability_type.major
+                        ),
+                    )
+                    .with_repair(DiagnosticRepair::removal(
+                        RepairApplicability::ConstrainedChoice,
+                        format!("remove parameter `{parameter_id}`"),
+                        &parameter_location(step_index, parameter_id).pointer,
+                    )),
+                );
             }
         }
 
@@ -313,7 +320,10 @@ pub(super) fn lower_quantity_parameter(
     let canonical = match kinds.scale_quantity(kind, &quantity.value, &quantity.unit) {
         Ok(canonical) => canonical,
         Err(error) => {
-            let repair = error.repair().map(compiler_repair);
+            let unit_path = format!("{}/unit", location.pointer);
+            let repair = error
+                .repair()
+                .map(|repair| compiler_repair(repair, &unit_path));
             parameter_type_finding(
                 value_kind,
                 &definition.parameter_id,
@@ -455,27 +465,35 @@ pub(super) fn parameter_domain_finding(
         format!("{value_kind} `{value_id}` {detail}"),
     );
     if let Some(candidates) = candidates {
-        diagnostic = diagnostic.with_repair(DiagnosticRepair {
-            applicability: RepairApplicability::ConstrainedChoice,
+        let path = diagnostic.primary.pointer.clone();
+        diagnostic = diagnostic.with_repair(DiagnosticRepair::replacements(
+            RepairApplicability::ConstrainedChoice,
+            &path,
             candidates,
-        });
+        ));
     }
     findings.push(diagnostic);
 }
 
-pub(super) fn compiler_repair(repair: &avila_core_kernel::Repair) -> DiagnosticRepair {
-    DiagnosticRepair {
-        applicability: match repair.applicability {
-            avila_core_kernel::RepairApplicability::MechanicallySafe => {
-                RepairApplicability::MechanicallySafe
-            }
-            avila_core_kernel::RepairApplicability::ConstrainedChoice => {
-                RepairApplicability::ConstrainedChoice
-            }
-            avila_core_kernel::RepairApplicability::MethodOwnerJudgment => {
-                RepairApplicability::MethodOwnerJudgment
-            }
-        },
-        candidates: repair.candidates.clone(),
+/// Lifts a kernel repair into a compiler repair whose alternatives replace
+/// the value at `path`; a method-owner judgment is names only.
+pub(super) fn compiler_repair(repair: &avila_core_kernel::Repair, path: &str) -> DiagnosticRepair {
+    match repair.applicability {
+        avila_core_kernel::RepairApplicability::MechanicallySafe => DiagnosticRepair::replacements(
+            RepairApplicability::MechanicallySafe,
+            path,
+            repair.candidates.clone(),
+        ),
+        avila_core_kernel::RepairApplicability::ConstrainedChoice => {
+            DiagnosticRepair::replacements(
+                RepairApplicability::ConstrainedChoice,
+                path,
+                repair.candidates.clone(),
+            )
+        }
+        avila_core_kernel::RepairApplicability::MethodOwnerJudgment => DiagnosticRepair::labels(
+            RepairApplicability::MethodOwnerJudgment,
+            repair.candidates.clone(),
+        ),
     }
 }

@@ -256,7 +256,20 @@ mod tests {
 
     #[test]
     fn every_code_the_compiler_source_emits_is_declared() {
-        let source = include_str!("compile.rs");
+        let source = [
+            include_str!("compile/mod.rs"),
+            include_str!("compile/findings.rs"),
+            include_str!("compile/notices.rs"),
+            include_str!("compile/registry.rs"),
+            include_str!("compile/reproducibility.rs"),
+            include_str!("compile/requirements.rs"),
+            include_str!("compile/resolve.rs"),
+            include_str!("compile/review.rs"),
+            include_str!("compile/shape.rs"),
+            include_str!("compile/source.rs"),
+            include_str!("compile/values.rs"),
+        ]
+        .concat();
         let mut referenced = BTreeSet::new();
         for (start, _) in source.match_indices("CORE_") {
             let token: String = source[start..]

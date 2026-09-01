@@ -13,9 +13,10 @@ mod document;
 
 pub use catalog::{DIAGNOSTIC_CATALOG, DiagnosticExplanation, explain};
 pub use compile::{
-    COMPILE_NOTICE, CompilationStatus, CompileReport, CompiledContract, CompiledParameterValue,
-    CompiledReproducibility, CompiledRequirement, CompiledReviewObligation, CompiledStep,
-    CompilerError, DocumentIdentity, ResolvedBinding, ReviewFulfillment, compile_documents,
+    COMPILE_NOTICE, CanonicalTypedQuantity, CompilationStatus, CompileReport, CompiledContract,
+    CompiledParameterValue, CompiledReproducibility, CompiledRequirement, CompiledReviewObligation,
+    CompiledStep, CompilerError, DocumentIdentity, ResolvedBinding, ReviewFulfillment,
+    compile_documents,
 };
 pub use diagnostic::{
     COMPILER_FINDING_CODES, CORE_A4301, CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203,

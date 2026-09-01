@@ -1,0 +1,67 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "fixture.types.R6.tolerance-without-equality.fail",
+  "revision": 1,
+  "status": "draft",
+  "inputs": [
+    {
+      "input_id": "case",
+      "role": {
+        "id": "fixture.source_document",
+        "major": 1
+      },
+      "media_type": "application/vnd.fixture.source+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "step_id": "calculate",
+      "capability_type": {
+        "id": "fixture.calculate_dose",
+        "major": 1
+      },
+      "parameters": {}
+    },
+    {
+      "step_id": "bound",
+      "capability_type": {
+        "id": "fixture.bound_dose",
+        "major": 1
+      },
+      "parameters": {}
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "R-001",
+      "statement": "The bounded specimen dose rate must not exceed the illustrative limit.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "bound",
+        "output_slot": "bounded_dose_rate"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "nuclear.dose_equivalent_rate",
+        "value": "100",
+        "unit": "uSv/h"
+      },
+      "basis": {
+        "kind": "bounded"
+      },
+      "purpose": {
+        "id": "fixture.requirement_evaluation",
+        "major": 1
+      },
+      "tolerance": {
+        "kind": "nuclear.dose_equivalent_rate",
+        "value": "1",
+        "unit": "uSv/h"
+      }
+    }
+  ]
+}

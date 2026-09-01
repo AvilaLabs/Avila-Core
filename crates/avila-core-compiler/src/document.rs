@@ -123,6 +123,9 @@ pub struct RequirementSource {
     pub metric: Option<SourceRef>,
     pub comparison: Comparison,
     pub limit: TypedQuantity,
+    /// Required by, and only meaningful for, an `equal` comparison.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tolerance: Option<TypedQuantity>,
     pub basis: RequirementBasis,
 }
 

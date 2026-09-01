@@ -614,6 +614,10 @@
         "limit": {
           "$ref": "#/$defs/canonicalQuantity"
         },
+        "tolerance": {
+          "description": "Present exactly when `comparison` is `equal`; lowered to the metric kind's canonical unit.",
+          "$ref": "#/$defs/canonicalQuantity"
+        },
         "basis": {
           "$ref": "#/$defs/basis"
         }

@@ -18,10 +18,11 @@ multiple historical profiles.
 - `verdict-calculus.v1.json`: 49 vectors: 41 requirement-evaluation vectors
   plus 8 aggregate-verdict vectors; and
 - `canon.v1.json`: 12 initial canonical-value and byte-reader vectors;
-- `types/compiler-cases.v1.json`: 22 executable compiler fixtures: 3 compiled
-  cases and 19 rejected cases covering the current R1–R6 subset, claim-model
-  sufficiency, exact unit lowering, cascade suppression, independent
-  findings, and source-layer refusals located by JSON Pointer; and
+- `types/compiler-cases.v1.json`: 28 executable compiler fixtures: 5 compiled
+  cases and 23 rejected cases covering the current R1–R6 subset, claim-model
+  sufficiency, coverage validity, equality tolerances, exact unit lowering,
+  cascade suppression, independent findings, and source-layer refusals located
+  by JSON Pointer; and
 - `types/compiler-parameter-cases.v1.json`: 9 executable R7 fixtures: 1
   compiled case and 8 rejected cases covering every parameter value family,
   exact canonical lowering, quantity kinds and domains, undeclared values, and
@@ -45,9 +46,9 @@ planned unless files exist for them.
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
 `scope-predicates.v1.json`, plus the 41 requirement and 8 aggregation vectors in
-`verdict-calculus.v1.json`. The compiler harness also executes all 55 cases in
+`verdict-calculus.v1.json`. The compiler harness also executes all 61 cases in
 the five compiler manifests and pins each registry digest plus all successful
-compiled-snapshot identities. Passing the 90 pure vectors and 55 compiler
+compiled-snapshot identities. Passing the 90 pure vectors and 61 compiler
 fixtures does not accept ADR-0006: package-level rule halves and other vector
 families in this coverage plan remain absent, and no result is scientifically
 qualified.
@@ -222,6 +223,9 @@ canonically.
 | `types.R3.unquantified-nominal.pass` | policy permits nominal basis |
 | `types.R3.irreducible.fail` | `CORE-T2203` |
 | `types.R3.enclosure-needs-interval.fail` | coverage_interval offered to `enclosure` → `CORE-T2201` |
+| `types.R3.coverage-basis.pass` | `bounded` basis with coverage `"0.95"` compiles and retains the coverage |
+| `types.R3.coverage-out-of-range.fail` | coverage `"1.2"` → `CORE-S1102` at `/requirements/0/basis/coverage`; a non-canonical coverage such as `"0.950"` carries a `mechanically_safe` repair |
+| `types.R3.coverage-without-bounded-basis.fail` | coverage on an `enclosure` or `nominal` basis → `CORE-S1102` |
 | `types.R3.worst-case-side-sufficient.pass/fail` | bound side is checked against comparison direction at bind time |
 | `types.R4.media.pass/fail` | `CORE-T2301` |
 | `types.R5.self-dependency.fail` | `CORE-R3201` |
@@ -230,6 +234,9 @@ canonically.
 | `types.R6.unbound-metric.fail` | `CORE-R3301` |
 | `types.R6.limit-kind.fail` | `CORE-T2102` |
 | `types.R6.limit-unit.fail` | `CORE-T2103` |
+| `types.R6.equal-tolerance.pass` | `equal` with a nonnegative tolerance of the metric kind lowers the tolerance to the canonical unit |
+| `types.R6.equal-no-tolerance.fail` | `equal` without a tolerance → `CORE-T2104` `missing`; the kernel could never evaluate it |
+| `types.R6.tolerance-without-equality.fail` | a tolerance on an inequality → `CORE-T2104` `invalid` |
 | `types.R7.param-kind.fail` | `CORE-T2401` |
 | `types.R7.param-domain.fail` | negative cooling time → `CORE-T2402` |
 | `types.R7.parameters.pass` | booleans, integers, exact numbers, text, and quantities lower to tagged canonical IR |
@@ -359,7 +366,7 @@ canonically.
 | `verdict.enclosure.*` | as bounded with coverage 1 required |
 | `verdict.nominal.within/exceeds` | vectors; `basis: nominal` visible |
 | `verdict.equal.within/outside/partial` | vectors |
-| `verdict.equal.no-tolerance.fail` | `CORE-T2104` |
+| `verdict.equal.no-tolerance.fail` | `CORE-T2104`; the compile-time half is covered by `types.R6.equal-no-tolerance.fail` |
 | `verdict.display-rounding-does-not-change.pass` | exact canonical values determine the verdict |
 | `verdict.decision-rounding-capability.pass` | admitted transformation output is compared exactly and raw input remains linked |
 | `verdict.unit-scaling-exact.pass` | 100 uSv/h limit vs Sv/s evidence |

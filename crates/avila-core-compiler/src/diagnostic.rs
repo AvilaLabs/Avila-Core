@@ -16,6 +16,7 @@ pub const CORE_T2001: &str = "CORE-T2001";
 pub const CORE_T2101: &str = "CORE-T2101";
 pub const CORE_T2102: &str = "CORE-T2102";
 pub const CORE_T2103: &str = "CORE-T2103";
+pub const CORE_T2104: &str = "CORE-T2104";
 pub const CORE_T2201: &str = "CORE-T2201";
 pub const CORE_T2203: &str = "CORE-T2203";
 pub const CORE_T2301: &str = "CORE-T2301";

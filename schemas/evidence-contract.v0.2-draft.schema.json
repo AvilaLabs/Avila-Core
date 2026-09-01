@@ -365,6 +365,10 @@
         "limit": {
           "$ref": "#/$defs/typedQuantity"
         },
+        "tolerance": {
+          "description": "Required by, and only meaningful for, an `equal` comparison: a nonnegative quantity of the metric kind. Its absence on `equal`, or presence on any other comparison, is CORE-T2104.",
+          "$ref": "#/$defs/typedQuantity"
+        },
         "basis": {
           "$ref": "#/$defs/requirementBasis"
         }
@@ -410,6 +414,7 @@
           ]
         },
         "coverage": {
+          "description": "Canonical decimal in (0, 1]; only meaningful when `kind` is `bounded`.",
           "$ref": "#/$defs/exactNumber"
         }
       }

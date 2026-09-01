@@ -571,6 +571,203 @@
           }
         ]
       }
+    },
+    {
+      "fixture_id": "types.R6.equal-tolerance.pass",
+      "clause": "SC-6 R6 and SC-10",
+      "contract": "types.R6.equal-tolerance.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [],
+        "compiled": {
+          "snapshot_sha256": "sha256:aae2b6fa382537220050abe8331fda8edf3ae948656e436f9db84f522abffeb2",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": []
+          },
+          "step_order": [
+            "calculate",
+            "bound"
+          ],
+          "bindings": [
+            {
+              "step_id": "calculate",
+              "input_slot": "source",
+              "source": "input:case"
+            },
+            {
+              "step_id": "bound",
+              "input_slot": "dose_rate",
+              "source": "step:calculate/dose_rate"
+            }
+          ],
+          "reproducibility": [
+            {
+              "step_id": "calculate",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            },
+            {
+              "step_id": "bound",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            }
+          ],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s",
+              "purpose": "fixture.requirement_evaluation@1",
+              "tolerance": {
+                "kind": "nuclear.dose_equivalent_rate",
+                "value": "1/3600000000",
+                "unit": "Sv/s"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.R6.equal-no-tolerance.fail",
+      "clause": "SC-6 R6 and SC-10",
+      "contract": "types.R6.equal-no-tolerance.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2104",
+            "class": "missing",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/tolerance"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R6.tolerance-without-equality.fail",
+      "clause": "SC-6 R6",
+      "contract": "types.R6.tolerance-without-equality.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2104",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/tolerance"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R3.coverage-basis.pass",
+      "clause": "SC-3 and SC-6 R3",
+      "contract": "types.R3.coverage-basis.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [],
+        "compiled": {
+          "snapshot_sha256": "sha256:684991aea36acf16453b3f130368117eb2a07b8e4f117e9108b10fbd21247ef0",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": []
+          },
+          "step_order": [
+            "calculate",
+            "bound"
+          ],
+          "bindings": [
+            {
+              "step_id": "calculate",
+              "input_slot": "source",
+              "source": "input:case"
+            },
+            {
+              "step_id": "bound",
+              "input_slot": "dose_rate",
+              "source": "step:calculate/dose_rate"
+            }
+          ],
+          "reproducibility": [
+            {
+              "step_id": "calculate",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            },
+            {
+              "step_id": "bound",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            }
+          ],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s",
+              "purpose": "fixture.requirement_evaluation@1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.R3.coverage-out-of-range.fail",
+      "clause": "SC-3 and SC-6 R3",
+      "contract": "types.R3.coverage-out-of-range.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-S1102",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/basis/coverage"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R3.coverage-without-bounded-basis.fail",
+      "clause": "SC-3 and SC-6 R3",
+      "contract": "types.R3.coverage-without-bounded-basis.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-S1102",
+            "class": "invalid",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/basis/coverage"
+            },
+            "repairs": []
+          }
+        ]
+      }
     }
   ]
 }

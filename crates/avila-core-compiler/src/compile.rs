@@ -3,7 +3,8 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use avila_core_kernel::{
     CanonicalJsonValue, EXACT_NUMBER_DECODE_PREFIX, ExactNumber, KindDefinition, KindRegistry,
-    SEMANTIC_PROFILE, UnitDefinition, canonicalize_json, read_authoritative_json,
+    SEMANTIC_PROFILE, UnitDefinition, canonicalize_json, read_authoritative_decimal,
+    read_authoritative_json,
 };
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -12,7 +13,7 @@ use thiserror::Error;
 use crate::diagnostic::{
     CORE_A4301, CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3401,
     CORE_R3501, CORE_S1101, CORE_S1102, CORE_S1301, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103,
-    CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2401, CORE_T2402, CORE_T2501, CORE_T2601,
+    CORE_T2104, CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2401, CORE_T2402, CORE_T2501, CORE_T2601,
     CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability, SourceLocation,
 };
 use crate::document::{
@@ -21,7 +22,8 @@ use crate::document::{
     ContractInput, ContractSource, ContractStatus, DeterminismClass, ExactBound, ExecutionPolicy,
     ImmutablePolicyRef, IntegerBound, ParameterDefinition, ParameterType, PurposeDefinition,
     QuantityBound, QuantityValue, REGISTRY_SCHEMA_VERSION, RegistrySnapshot, RequirementBasis,
-    ReviewDisposition, ReviewIndependence, ReviewParty, RoleDefinition, SourceRef, VersionedRef,
+    RequirementSource, ReviewDisposition, ReviewIndependence, ReviewParty, RoleDefinition,
+    SourceRef, TypedQuantity, VersionedRef,
 };
 
 pub const COMPILE_NOTICE: &str = "Compilation establishes structural and semantic consistency under the named draft profile only. It performs no execution, review fulfillment, reviewer-eligibility or trust evaluation, evidence admission, scientific qualification, or requirement verdict.";
@@ -157,6 +159,8 @@ pub struct CompiledRequirement {
     pub metric_role: VersionedRef,
     pub comparison: Comparison,
     pub limit: CanonicalTypedQuantity,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tolerance: Option<CanonicalTypedQuantity>,
     pub basis: RequirementBasis,
 }
 
@@ -648,6 +652,20 @@ fn validate_contract_shape(contract: &ContractSource, findings: &mut Vec<CoreDia
             "contract_author",
             findings,
         );
+        if let Some(tolerance) = &requirement.tolerance {
+            require_nonempty(
+                &tolerance.kind,
+                contract_location(format!("/requirements/{index}/tolerance/kind")),
+                "contract_author",
+                findings,
+            );
+            require_nonempty(
+                &tolerance.unit,
+                contract_location(format!("/requirements/{index}/tolerance/unit")),
+                "contract_author",
+                findings,
+            );
+        }
     }
 }
 
@@ -2701,6 +2719,8 @@ fn compile_requirements(
 ) -> Vec<CompiledRequirement> {
     let mut compiled = Vec::new();
     for (index, requirement) in contract.requirements.iter().enumerate() {
+        let coverage_valid = validate_basis_coverage(index, requirement, findings);
+        let tolerance_present_correctly = validate_tolerance_presence(index, requirement, findings);
         let Some(metric) = &requirement.metric else {
             findings.push(CoreDiagnostic::new(
                 CORE_R3301,
@@ -2801,36 +2821,34 @@ fn compile_requirements(
             ));
             continue;
         }
-        if !registry.kind_classes.contains_key(metric_kind) {
+        let limit = lower_requirement_quantity(
+            index,
+            "limit",
+            &requirement.limit,
+            metric_kind,
+            registry,
+            findings,
+        );
+        let tolerance = match (&requirement.tolerance, requirement.comparison) {
+            (Some(quantity), Comparison::Equal) => lower_requirement_quantity(
+                index,
+                "tolerance",
+                quantity,
+                metric_kind,
+                registry,
+                findings,
+            )
+            .filter(|canonical| {
+                tolerance_is_nonnegative(index, canonical, &quantity.value, findings)
+            }),
+            _ => None,
+        };
+        let (Some(limit), true, true) = (limit, coverage_valid, tolerance_present_correctly) else {
+            continue;
+        };
+        if requirement.comparison == Comparison::Equal && tolerance.is_none() {
             continue;
         }
-        let canonical = match registry.kinds.scale_quantity(
-            metric_kind,
-            &requirement.limit.value,
-            &requirement.limit.unit,
-        ) {
-            Ok(canonical) => canonical,
-            Err(error) => {
-                let code = match error.code() {
-                    avila_core_kernel::CORE_T2001 => CORE_T2001,
-                    avila_core_kernel::CORE_T2102 => CORE_T2103,
-                    other => other,
-                };
-                let repair = error.repair().map(compiler_repair);
-                let mut diagnostic = CoreDiagnostic::new(
-                    code,
-                    FindingClass::Invalid,
-                    "contract_author",
-                    contract_location(format!("/requirements/{index}/limit/unit")),
-                    error.detail(),
-                );
-                if let Some(repair) = repair {
-                    diagnostic = diagnostic.with_repair(repair);
-                }
-                findings.push(diagnostic);
-                continue;
-            }
-        };
         compiled.push(CompiledRequirement {
             requirement_id: requirement.requirement_id.clone(),
             statement: requirement.statement.clone(),
@@ -2838,15 +2856,210 @@ fn compile_requirements(
             metric: metric.clone(),
             metric_role: candidate.role.clone(),
             comparison: requirement.comparison,
-            limit: CanonicalTypedQuantity {
-                kind: metric_kind.into(),
-                value: canonical.value.canonical_rational(),
-                unit: canonical.canonical_unit,
-            },
+            limit,
+            tolerance,
             basis: requirement.basis.clone(),
         });
     }
     compiled
+}
+
+/// Checks that a `coverage` basis is a canonical decimal in `(0, 1]` and is
+/// declared only on a `bounded` basis. The kernel repeats this check at verdict
+/// time; catching it here keeps an unevaluable requirement from compiling.
+fn validate_basis_coverage(
+    index: usize,
+    requirement: &RequirementSource,
+    findings: &mut Vec<CoreDiagnostic>,
+) -> bool {
+    let Some(coverage) = requirement.basis.coverage.as_deref() else {
+        return true;
+    };
+    let location = contract_location(format!("/requirements/{index}/basis/coverage"));
+    if requirement.basis.kind != BasisKind::Bounded {
+        invalid_value(
+            location,
+            format!(
+                "coverage is only meaningful for a `bounded` basis, not `{}`",
+                basis_label(requirement.basis.kind)
+            ),
+            "contract_author",
+            findings,
+        );
+        return false;
+    }
+    match read_authoritative_decimal(coverage) {
+        Ok(value) => {
+            let one = ExactNumber::from_canonical("1").expect("`1` is canonical");
+            let in_range = value.is_positive()
+                && value
+                    .checked_cmp(&one)
+                    .is_ok_and(|ordering| ordering != Ordering::Greater);
+            if in_range {
+                true
+            } else {
+                invalid_value(
+                    location,
+                    "coverage must lie in the interval (0, 1]",
+                    "contract_author",
+                    findings,
+                );
+                false
+            }
+        }
+        Err(error) => {
+            let mut diagnostic = CoreDiagnostic::new(
+                CORE_S1102,
+                FindingClass::Invalid,
+                "contract_author",
+                location,
+                format!(
+                    "coverage must be a canonical decimal in the interval (0, 1]: {}",
+                    error.detail()
+                ),
+            );
+            if let Some(repair) = error.repair() {
+                diagnostic = diagnostic.with_repair(compiler_repair(repair));
+            }
+            findings.push(diagnostic);
+            false
+        }
+    }
+}
+
+/// An equality comparison needs a tolerance to be evaluable at all; any other
+/// comparison must not carry one, because it would silently mean nothing.
+fn validate_tolerance_presence(
+    index: usize,
+    requirement: &RequirementSource,
+    findings: &mut Vec<CoreDiagnostic>,
+) -> bool {
+    let location = contract_location(format!("/requirements/{index}/tolerance"));
+    match (requirement.comparison, &requirement.tolerance) {
+        (Comparison::Equal, None) => {
+            findings.push(CoreDiagnostic::new(
+                CORE_T2104,
+                FindingClass::Missing,
+                "contract_author",
+                location,
+                "an `equal` comparison requires an exact tolerance quantity of the metric kind",
+            ));
+            false
+        }
+        (Comparison::Equal, Some(_)) | (_, None) => true,
+        (comparison, Some(_)) => {
+            findings.push(CoreDiagnostic::new(
+                CORE_T2104,
+                FindingClass::Invalid,
+                "contract_author",
+                location,
+                format!(
+                    "a tolerance is only meaningful for an `equal` comparison, not `{}`",
+                    comparison_label(comparison)
+                ),
+            ));
+            false
+        }
+    }
+}
+
+/// Lowers a requirement-level quantity (`limit` or `tolerance`) into the
+/// metric kind's canonical unit, reporting kind and unit mismatches at the
+/// exact field.
+fn lower_requirement_quantity(
+    index: usize,
+    field: &str,
+    quantity: &TypedQuantity,
+    metric_kind: &str,
+    registry: &RegistryIndex<'_>,
+    findings: &mut Vec<CoreDiagnostic>,
+) -> Option<CanonicalTypedQuantity> {
+    if quantity.kind != metric_kind {
+        findings.push(CoreDiagnostic::new(
+            CORE_T2102,
+            FindingClass::Invalid,
+            "contract_author",
+            contract_location(format!("/requirements/{index}/{field}/kind")),
+            format!(
+                "{field} kind `{}` does not match metric kind `{metric_kind}`",
+                quantity.kind
+            ),
+        ));
+        return None;
+    }
+    if !registry.kind_classes.contains_key(metric_kind) {
+        return None;
+    }
+    match registry
+        .kinds
+        .scale_quantity(metric_kind, &quantity.value, &quantity.unit)
+    {
+        Ok(canonical) => Some(CanonicalTypedQuantity {
+            kind: metric_kind.into(),
+            value: canonical.value.canonical_rational(),
+            unit: canonical.canonical_unit,
+        }),
+        Err(error) => {
+            let code = match error.code() {
+                avila_core_kernel::CORE_T2001 => CORE_T2001,
+                avila_core_kernel::CORE_T2102 => CORE_T2103,
+                other => other,
+            };
+            let repair = error.repair().map(compiler_repair);
+            let mut diagnostic = CoreDiagnostic::new(
+                code,
+                FindingClass::Invalid,
+                "contract_author",
+                contract_location(format!("/requirements/{index}/{field}/unit")),
+                error.detail(),
+            );
+            if let Some(repair) = repair {
+                diagnostic = diagnostic.with_repair(repair);
+            }
+            findings.push(diagnostic);
+            None
+        }
+    }
+}
+
+fn tolerance_is_nonnegative(
+    index: usize,
+    canonical: &CanonicalTypedQuantity,
+    authored: &ExactNumber,
+    findings: &mut Vec<CoreDiagnostic>,
+) -> bool {
+    // Unit factors are positive, so the sign of the authored value decides.
+    if authored.is_zero() || authored.is_positive() {
+        return true;
+    }
+    invalid_value(
+        contract_location(format!("/requirements/{index}/tolerance/value")),
+        format!(
+            "tolerance cannot be negative; canonical value is `{}` {}",
+            canonical.value, canonical.unit
+        ),
+        "contract_author",
+        findings,
+    );
+    false
+}
+
+const fn basis_label(kind: BasisKind) -> &'static str {
+    match kind {
+        BasisKind::Bounded => "bounded",
+        BasisKind::Enclosure => "enclosure",
+        BasisKind::Nominal => "nominal",
+    }
+}
+
+const fn comparison_label(comparison: Comparison) -> &'static str {
+    match comparison {
+        Comparison::LessThan => "less_than",
+        Comparison::LessThanOrEqual => "less_than_or_equal",
+        Comparison::GreaterThan => "greater_than",
+        Comparison::GreaterThanOrEqual => "greater_than_or_equal",
+        Comparison::Equal => "equal",
+    }
 }
 
 fn claim_model_satisfies(
@@ -3653,6 +3866,127 @@ mod tests {
         let mut unknown_unit = contract();
         unknown_unit.requirements[0].limit.unit = "Mpa".into();
         assert!(codes(&compile_contract(&unknown_unit)).contains(CORE_T2001));
+    }
+
+    #[test]
+    fn equality_requires_a_nonnegative_tolerance_of_the_metric_kind() {
+        let tolerance = |value: &str, kind: &str, unit: &str| TypedQuantity {
+            kind: kind.into(),
+            value: ExactNumber::from_canonical(value).unwrap(),
+            unit: unit.into(),
+        };
+        let metric_kind = "nuclear.dose_equivalent_rate";
+
+        let mut missing = contract();
+        missing.requirements[0].comparison = Comparison::Equal;
+        let report = compile_contract(&missing);
+        let finding = report
+            .findings
+            .iter()
+            .find(|finding| finding.code == CORE_T2104)
+            .unwrap();
+        assert_eq!(finding.class, FindingClass::Missing);
+        assert_eq!(finding.primary.pointer, "/requirements/0/tolerance");
+
+        let mut misplaced = contract();
+        misplaced.requirements[0].tolerance = Some(tolerance("1", metric_kind, "uSv/h"));
+        let report = compile_contract(&misplaced);
+        let finding = report
+            .findings
+            .iter()
+            .find(|finding| finding.code == CORE_T2104)
+            .unwrap();
+        assert_eq!(finding.class, FindingClass::Invalid);
+
+        let mut negative = contract();
+        negative.requirements[0].comparison = Comparison::Equal;
+        negative.requirements[0].tolerance = Some(tolerance("-1", metric_kind, "uSv/h"));
+        let report = compile_contract(&negative);
+        assert!(report.findings.iter().any(|finding| {
+            finding.code == CORE_S1102
+                && finding.primary.pointer == "/requirements/0/tolerance/value"
+        }));
+
+        let mut wrong_kind = contract();
+        wrong_kind.requirements[0].comparison = Comparison::Equal;
+        wrong_kind.requirements[0].tolerance =
+            Some(tolerance("1", "nuclear.absorbed_dose_rate", "Gy/s"));
+        let report = compile_contract(&wrong_kind);
+        assert!(report.findings.iter().any(|finding| {
+            finding.code == CORE_T2102
+                && finding.primary.pointer == "/requirements/0/tolerance/kind"
+        }));
+
+        let mut wrong_unit = contract();
+        wrong_unit.requirements[0].comparison = Comparison::Equal;
+        wrong_unit.requirements[0].tolerance = Some(tolerance("1", metric_kind, "rem/h"));
+        let report = compile_contract(&wrong_unit);
+        assert!(report.findings.iter().any(|finding| {
+            finding.code == CORE_T2001
+                && finding.primary.pointer == "/requirements/0/tolerance/unit"
+        }));
+
+        let mut valid = contract();
+        valid.requirements[0].comparison = Comparison::Equal;
+        valid.requirements[0].tolerance = Some(tolerance("1", metric_kind, "uSv/h"));
+        let report = compile_contract(&valid);
+        assert_eq!(report.status, CompilationStatus::Compiled);
+        let compiled = report.compiled.unwrap();
+        let tolerance = compiled.requirements[0].tolerance.as_ref().unwrap();
+        assert_eq!(tolerance.value, "1/3600000000");
+        assert_eq!(tolerance.unit, "Sv/s");
+    }
+
+    #[test]
+    fn coverage_must_be_a_canonical_decimal_in_the_unit_interval_on_a_bounded_basis() {
+        let with_coverage = |kind: BasisKind, coverage: &str| {
+            let mut source = contract();
+            source.requirements[0].basis = RequirementBasis {
+                kind,
+                coverage: Some(coverage.into()),
+            };
+            compile_contract(&source)
+        };
+        let coverage_finding = |report: &CompileReport| {
+            report
+                .findings
+                .iter()
+                .find(|finding| finding.primary.pointer == "/requirements/0/basis/coverage")
+                .cloned()
+        };
+
+        for out_of_range in ["1.2", "0", "-0.5", "abc"] {
+            let report = with_coverage(BasisKind::Bounded, out_of_range);
+            let finding = coverage_finding(&report).unwrap_or_else(|| panic!("{out_of_range}"));
+            assert_eq!(finding.code, CORE_S1102, "{out_of_range}");
+            assert!(finding.repairs.is_empty(), "{out_of_range}");
+        }
+
+        let noncanonical = with_coverage(BasisKind::Bounded, "0.950");
+        let finding = coverage_finding(&noncanonical).unwrap();
+        assert_eq!(finding.code, CORE_S1102);
+        assert_eq!(
+            finding.repairs,
+            vec![DiagnosticRepair {
+                applicability: RepairApplicability::MechanicallySafe,
+                candidates: vec!["0.95".into()],
+            }]
+        );
+
+        let misplaced = with_coverage(BasisKind::Enclosure, "0.95");
+        assert_eq!(coverage_finding(&misplaced).unwrap().code, CORE_S1102);
+
+        for valid in ["0.95", "1"] {
+            let report = with_coverage(BasisKind::Bounded, valid);
+            assert_eq!(report.status, CompilationStatus::Compiled, "{valid}");
+            assert_eq!(
+                report.compiled.unwrap().requirements[0]
+                    .basis
+                    .coverage
+                    .as_deref(),
+                Some(valid)
+            );
+        }
     }
 
     #[test]

@@ -84,6 +84,8 @@ struct ExpectedLimit {
     kind: String,
     value: String,
     unit: String,
+    #[serde(default)]
+    tolerance: Option<serde_json::Value>,
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize)]
@@ -121,7 +123,7 @@ fn compiler_type_fixtures_are_executable() {
     ] {
         fixture_count += execute_suite(&fixture_root, suite_name);
     }
-    assert_eq!(fixture_count, 55);
+    assert_eq!(fixture_count, 61);
 }
 
 fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
@@ -271,6 +273,10 @@ fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
                         kind: requirement.limit.kind.clone(),
                         value: requirement.limit.value.clone(),
                         unit: requirement.limit.unit.clone(),
+                        tolerance: requirement
+                            .tolerance
+                            .as_ref()
+                            .map(|tolerance| serde_json::to_value(tolerance).unwrap()),
                     })
                     .collect();
                 assert_eq!(limits, expected.limits, "{} limits", fixture.fixture_id);

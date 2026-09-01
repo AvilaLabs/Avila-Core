@@ -105,6 +105,19 @@ invalid findings both block compilation, and the marker never enters compiled
 IR. This lets an unfinished draft state its incompleteness without allowing an
 incomplete value to masquerade as executable configuration.
 
+## Requirement lowering
+
+A requirement's `limit` and, for an `equal` comparison, its `tolerance` are
+lowered through the metric role's quantity kind into that kind's canonical
+unit. Kind and unit mismatches are reported at the exact field. An `equal`
+comparison without a tolerance is `CORE-T2104` as a `missing` finding, because
+the verdict calculus could never evaluate it; a tolerance on any other
+comparison is `CORE-T2104` as `invalid`, because it would silently mean
+nothing. A negative tolerance is refused. A `coverage` basis must be a
+canonical decimal in `(0, 1]` and may appear only on a `bounded` basis; the
+kernel repeats that check at verdict time, but a requirement that can never be
+evaluated must not compile.
+
 ## Type-level reproducibility
 
 Every capability type declares one determinism class: `deterministic`,
@@ -247,7 +260,8 @@ Successful output is `avila.core/compiled-contract/v0.2-draft`. It contains:
   eligibility-policy identities, and explicit independence constraints;
 - governed requirement-purpose identities and output-level explicit
   purpose exclusions;
-- exact requirement limits lowered to canonical units; and
+- exact requirement limits, and equality tolerances, lowered to canonical
+  units; and
 - a `snapshot_sha256` over the canonical compiled body, excluding the digest
   field itself.
 

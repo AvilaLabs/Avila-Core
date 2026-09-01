@@ -3,7 +3,8 @@
 - Status: proposed; not accepted until the required semantic fixtures and
   professional reviews exist
 - Date: 2026-08-31
-- Revised: 2026-09-01 after internal architecture review
+- Revised: 2026-09-01 after internal architecture review; 2026-09-01 to add
+  the compile-time tolerance and coverage rules to R6
 - Refines: ADR-0001, ADR-0002, ADR-0004, ADR-0005
 - Introduces: contract and manifest schema `v0.2`; governed kind, role,
   capability-type, qualification, admission, reuse, and verdict records
@@ -199,7 +200,7 @@ or combines them; Core never silently combines them.
 | R3 Claim sufficiency | Type-level permitted models can satisfy the requirement; after binding, the selected package's actual model and bound side can satisfy the comparison basis. | `CORE-T2201`–`CORE-T2203` |
 | R4 Media | Produced media is accepted by the destination role. | `CORE-T2301` |
 | R5 Graph shape | No self-dependency, cycle, or unknown dependency. | `CORE-R3201`–`CORE-R3203` |
-| R6 Requirement binding | A requirement names its metric source or aggregation set; limit kind and unit are compatible. | `CORE-R3301`, `CORE-T2102`, `CORE-T2103` |
+| R6 Requirement binding | A requirement names its metric source or aggregation set; limit kind and unit are compatible; an `equal` comparison carries a nonnegative tolerance of the metric kind and no other comparison carries one; a `coverage` basis is a canonical decimal in `(0, 1]` and appears only on a `bounded` basis. | `CORE-R3301`, `CORE-T2102`, `CORE-T2103`, `CORE-T2104`, `CORE-S1102` |
 | R7 Parameters | Values match kind, unit class, and domain; placeholders exist only in drafts. | `CORE-T2401`, `CORE-T2402`, `CORE-S1301` |
 | R8 Reproducibility | Seeds and every declared material execution factor are bound; policy governs nondeterminism. | `CORE-T2501`, `CORE-A4301` |
 | R9 Accountable review | The complete presented dossier, governance-only dispositions, digest-pinned external eligibility policy, and explicit independence constraints are compiled as a pending obligation. The compiler does not decide reviewer legitimacy or fulfill the review. | `CORE-R3401` |

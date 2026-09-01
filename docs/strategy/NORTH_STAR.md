@@ -20,7 +20,7 @@ is necessary plumbing. The durable product is a mechanism through which:
   screen.
 
 The conclusion is deliberately conditional. Core can establish that a verdict
-follows from named records, authorities, policies, and semantic rules. It cannot
+follows from named records, attestations, policies, and semantic rules. It cannot
 establish that every premise corresponds to physical reality, that a model is
 scientifically adequate outside its qualification, or that a regulator will
 accept the result. That boundary is part of the product, not disclaimer text.
@@ -148,7 +148,7 @@ implementation details.
 
 Core must preserve these properties while it grows:
 
-1. **Professional authority:** a named owner governs each technical method and
+1. **Professional ownership:** a named owner governs each technical method and
    applicability boundary.
 2. **Neutrality:** selection policy cannot secretly prefer an Avila capability
    or a high-margin compute route.

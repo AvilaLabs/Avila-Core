@@ -186,14 +186,17 @@ or unauthorized facts evaluate to `unknown` and fail closed.
 Review, data approval, or professional judgment can be capability steps when the
 contract defines:
 
-- required role and authority;
+- an immutable reference to the external reviewer-eligibility policy;
 - exact evidence presented;
-- allowed decisions and rationale fields;
+- governance-only dispositions and rationale fields, kept separate from
+  technical requirement verdicts;
 - independence and conflict rules;
 - identity and signature requirements; and
 - timeout, rejection, and escalation semantics.
 
 Human input is evidence, not an undocumented exception to the workflow.
-Core can enforce keys, signed role assertions, presented evidence, allowed
-decisions, and separation-of-duties policy. It cannot prove a person's internal
+The compiler emits a pending obligation and does not decide reviewer
+eligibility. Later admission can check keys, signed policy assertions, the exact
+presented dossier, permitted dispositions, and separation-of-duties rules under
+an organization-selected trust policy. It cannot prove a person's internal
 independence, attention, expertise, or reasoning merely from a signature.

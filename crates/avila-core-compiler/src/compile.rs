@@ -9,21 +9,21 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 use crate::diagnostic::{
-    CORE_A4301, CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3501,
-    CORE_S1101, CORE_S1102, CORE_S1301, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103, CORE_T2201,
-    CORE_T2203, CORE_T2301, CORE_T2401, CORE_T2402, CORE_T2501, CoreDiagnostic, DiagnosticRepair,
-    FindingClass, RepairApplicability, SourceLocation,
+    CORE_A4301, CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3401,
+    CORE_R3501, CORE_S1101, CORE_S1102, CORE_S1301, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103,
+    CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2401, CORE_T2402, CORE_T2501, CoreDiagnostic,
+    DiagnosticRepair, FindingClass, RepairApplicability, SourceLocation,
 };
 use crate::document::{
     BasisKind, BoundSide, COMPILE_REPORT_SCHEMA_VERSION, COMPILED_CONTRACT_SCHEMA_VERSION,
     CONTRACT_SCHEMA_VERSION, CapabilityTypeDefinition, ClaimModelDeclaration, Comparison,
     ContractInput, ContractSource, ContractStatus, DeterminismClass, ExactBound, ExecutionPolicy,
-    IntegerBound, ParameterDefinition, ParameterType, QuantityBound, QuantityValue,
-    REGISTRY_SCHEMA_VERSION, RegistrySnapshot, RequirementBasis, RoleDefinition, SourceRef,
-    VersionedRef,
+    ImmutablePolicyRef, IntegerBound, ParameterDefinition, ParameterType, QuantityBound,
+    QuantityValue, REGISTRY_SCHEMA_VERSION, RegistrySnapshot, RequirementBasis, ReviewDisposition,
+    ReviewIndependence, ReviewParty, RoleDefinition, SourceRef, VersionedRef,
 };
 
-pub const COMPILE_NOTICE: &str = "Compilation establishes structural and semantic consistency under the named draft profile only. It performs no execution, evidence admission, scientific qualification, or requirement verdict.";
+pub const COMPILE_NOTICE: &str = "Compilation establishes structural and semantic consistency under the named draft profile only. It performs no execution, review fulfillment, reviewer-eligibility or trust evaluation, evidence admission, scientific qualification, or requirement verdict.";
 const COMPILER_ID: &str = concat!("avila.core/compiler-rust@", env!("CARGO_PKG_VERSION"));
 const MAX_DOCUMENT_BYTES: usize = 16 * 1024 * 1024;
 const MAX_WORKFLOW_STEPS: usize = 2_048;
@@ -85,6 +85,27 @@ pub struct CompiledStep {
     pub bindings: Vec<ResolvedBinding>,
     pub parameters: BTreeMap<String, CompiledParameterValue>,
     pub reproducibility: CompiledReproducibility,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub review_obligation: Option<CompiledReviewObligation>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct CompiledReviewObligation {
+    pub fulfillment: ReviewFulfillment,
+    pub presented_evidence: Vec<ResolvedBinding>,
+    pub decision_output_slot: String,
+    pub decision_role: VersionedRef,
+    pub decision_media_type: String,
+    pub allowed_dispositions: Vec<ReviewDisposition>,
+    pub reviewer_eligibility_policy: ImmutablePolicyRef,
+    pub independence: ReviewIndependence,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReviewFulfillment {
+    PendingExternalReview,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -212,6 +233,12 @@ pub fn compile_documents(
         &invalid_sources,
         &mut findings,
     );
+    let compiled_reviews = compile_review_obligations(
+        &contract,
+        &registry_index,
+        &resolution.bindings,
+        &mut findings,
+    );
     let order = validate_graph(&contract, &resolution.dependencies, &mut findings);
     let compiled_requirements = compile_requirements(
         &contract,
@@ -237,6 +264,7 @@ pub fn compile_documents(
         &resolution.bindings,
         &compiled_parameters,
         &compiled_reproducibility,
+        &compiled_reviews,
         &order,
     );
     let mut inputs = contract.inputs.clone();
@@ -724,6 +752,7 @@ impl<'a> RegistryIndex<'a> {
                 &kind_classes,
                 findings,
             );
+            validate_review_declaration(capability, index, &roles, findings);
         }
 
         Self {
@@ -732,6 +761,176 @@ impl<'a> RegistryIndex<'a> {
             roles,
             capability_types,
         }
+    }
+}
+
+fn validate_review_declaration(
+    capability: &CapabilityTypeDefinition,
+    capability_index: usize,
+    roles: &BTreeMap<VersionedRef, &RoleDefinition>,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    let Some(review) = &capability.review else {
+        return;
+    };
+    let review_pointer = format!("/capability_types/{capability_index}/review");
+
+    if capability.reproducibility.determinism != DeterminismClass::Nondeterministic {
+        review_incomplete(
+            registry_location(format!(
+                "/capability_types/{capability_index}/reproducibility/determinism"
+            )),
+            "an accountable review capability must remain nondeterministic",
+            "registry_owner",
+            findings,
+        );
+    }
+    if capability.inputs.is_empty() {
+        review_incomplete(
+            registry_location(format!("{review_pointer}/presented_input_slots")),
+            "a review dossier must contain at least one evidence input",
+            "registry_owner",
+            findings,
+        );
+    }
+
+    let input_slots: BTreeSet<_> = capability
+        .inputs
+        .iter()
+        .map(|slot| slot.slot_id.as_str())
+        .collect();
+    let mut presented = BTreeSet::new();
+    for (index, slot_id) in review.presented_input_slots.iter().enumerate() {
+        let location = registry_location(format!("{review_pointer}/presented_input_slots/{index}"));
+        if slot_id.trim().is_empty() {
+            review_incomplete(
+                location,
+                "a presented review slot must not be empty",
+                "registry_owner",
+                findings,
+            );
+            continue;
+        }
+        if !presented.insert(slot_id.as_str()) {
+            review_incomplete(
+                location,
+                format!("review dossier repeats input slot `{slot_id}`"),
+                "registry_owner",
+                findings,
+            );
+        } else if !input_slots.contains(slot_id.as_str()) {
+            review_incomplete(
+                location,
+                format!("review dossier references unknown input slot `{slot_id}`"),
+                "registry_owner",
+                findings,
+            );
+        }
+    }
+    for (input_index, input) in capability.inputs.iter().enumerate() {
+        if !input.required {
+            review_incomplete(
+                registry_location(format!(
+                    "/capability_types/{capability_index}/inputs/{input_index}/required"
+                )),
+                format!(
+                    "review input slot `{}` must be required so the compiled dossier is exact",
+                    input.slot_id
+                ),
+                "registry_owner",
+                findings,
+            );
+        }
+        if !presented.contains(input.slot_id.as_str()) {
+            review_incomplete(
+                registry_location(format!("{review_pointer}/presented_input_slots")),
+                format!(
+                    "review dossier omits declared input slot `{}`",
+                    input.slot_id
+                ),
+                "registry_owner",
+                findings,
+            );
+        }
+    }
+
+    if review.allowed_dispositions.is_empty() {
+        review_incomplete(
+            registry_location(format!("{review_pointer}/allowed_dispositions")),
+            "a review must declare at least one governance disposition",
+            "registry_owner",
+            findings,
+        );
+    }
+    let mut dispositions = BTreeSet::new();
+    for (index, disposition) in review.allowed_dispositions.iter().enumerate() {
+        if !dispositions.insert(*disposition) {
+            review_incomplete(
+                registry_location(format!("{review_pointer}/allowed_dispositions/{index}")),
+                "a governance disposition may be declared only once",
+                "registry_owner",
+                findings,
+            );
+        }
+    }
+
+    if review.decision_output_slot.trim().is_empty() {
+        review_incomplete(
+            registry_location(format!("{review_pointer}/decision_output_slot")),
+            "a review must name its decision output slot",
+            "registry_owner",
+            findings,
+        );
+        return;
+    }
+    let Some(output) = capability
+        .outputs
+        .iter()
+        .find(|output| output.slot_id == review.decision_output_slot)
+    else {
+        review_incomplete(
+            registry_location(format!("{review_pointer}/decision_output_slot")),
+            format!(
+                "review decision output `{}` is not declared by the capability type",
+                review.decision_output_slot
+            ),
+            "registry_owner",
+            findings,
+        );
+        return;
+    };
+    if capability.outputs.len() != 1 {
+        review_incomplete(
+            registry_location(format!("/capability_types/{capability_index}/outputs")),
+            "the current R9 subset permits a review capability to emit only its decision record",
+            "registry_owner",
+            findings,
+        );
+    }
+    if output.permitted_claim_models.as_slice() != [ClaimModelDeclaration::Unquantified] {
+        review_incomplete(
+            registry_location(format!(
+                "/capability_types/{capability_index}/outputs/{}/permitted_claim_models",
+                capability
+                    .outputs
+                    .iter()
+                    .position(|candidate| candidate.slot_id == output.slot_id)
+                    .unwrap_or(0)
+            )),
+            "a review disposition is governance evidence and must use only the unquantified claim model",
+            "registry_owner",
+            findings,
+        );
+    }
+    if let Some(role) = roles.get(&output.role)
+        && (role.quantity_kind.is_some() || role.unit_class.is_some())
+    {
+        review_incomplete(
+            registry_location(format!("{review_pointer}/decision_output_slot")),
+            "a review decision role must be non-quantitative and cannot serve as a technical requirement metric",
+            "registry_owner",
+            findings,
+        );
     }
 }
 
@@ -1441,6 +1640,155 @@ fn add_dependency(resolution: &mut WorkflowResolution, destination_step: &str, s
             .or_default()
             .insert(step_id.clone());
     }
+}
+
+fn compile_review_obligations(
+    contract: &ContractSource,
+    registry: &RegistryIndex<'_>,
+    bindings: &BTreeMap<String, Vec<ResolvedBinding>>,
+    findings: &mut Vec<CoreDiagnostic>,
+) -> BTreeMap<String, CompiledReviewObligation> {
+    let mut compiled = BTreeMap::new();
+    for (step_index, step) in contract.workflow.iter().enumerate() {
+        let Some(capability) = registry.capability_types.get(&step.capability_type) else {
+            continue;
+        };
+        let Some(declaration) = &capability.review else {
+            if step.review.is_some() {
+                review_incomplete(
+                    contract_location(format!("/workflow/{step_index}/review")),
+                    format!(
+                        "capability type `{}@{}` does not declare accountable review semantics",
+                        step.capability_type.id, step.capability_type.major
+                    ),
+                    "policy_owner",
+                    findings,
+                );
+            }
+            continue;
+        };
+        let Some(binding) = &step.review else {
+            findings.push(CoreDiagnostic::new(
+                CORE_R3401,
+                FindingClass::Missing,
+                "policy_owner",
+                contract_location(format!("/workflow/{step_index}/review")),
+                "review capability requires an explicit eligibility policy and independence declaration",
+            ));
+            continue;
+        };
+
+        let policy_pointer = format!("/workflow/{step_index}/review/reviewer_eligibility_policy");
+        let mut valid = true;
+        if binding
+            .reviewer_eligibility_policy
+            .policy_id
+            .trim()
+            .is_empty()
+        {
+            review_incomplete(
+                contract_location(format!("{policy_pointer}/policy_id")),
+                "reviewer eligibility policy id must not be empty",
+                "policy_owner",
+                findings,
+            );
+            valid = false;
+        }
+        if binding.reviewer_eligibility_policy.revision == 0 {
+            review_incomplete(
+                contract_location(format!("{policy_pointer}/revision")),
+                "reviewer eligibility policy revision must be at least one",
+                "policy_owner",
+                findings,
+            );
+            valid = false;
+        }
+        if !is_sha256_identity(&binding.reviewer_eligibility_policy.sha256) {
+            review_incomplete(
+                contract_location(format!("{policy_pointer}/sha256")),
+                "reviewer eligibility policy must be pinned by a lowercase sha256 identity",
+                "policy_owner",
+                findings,
+            );
+            valid = false;
+        }
+
+        if let ReviewIndependence::Constraints { requirements } = &binding.independence {
+            let independence_pointer =
+                format!("/workflow/{step_index}/review/independence/requirements");
+            if requirements.is_empty() {
+                review_incomplete(
+                    contract_location(&independence_pointer),
+                    "constraint-based review independence must name at least one party",
+                    "policy_owner",
+                    findings,
+                );
+                valid = false;
+            }
+            let mut parties = BTreeSet::<ReviewParty>::new();
+            for (index, requirement) in requirements.iter().enumerate() {
+                if !parties.insert(requirement.separated_from) {
+                    review_incomplete(
+                        contract_location(format!("{independence_pointer}/{index}/separated_from")),
+                        "review independence may constrain each party only once",
+                        "policy_owner",
+                        findings,
+                    );
+                    valid = false;
+                }
+            }
+        }
+
+        let Some(output) = capability
+            .outputs
+            .iter()
+            .find(|output| output.slot_id == declaration.decision_output_slot)
+        else {
+            continue;
+        };
+        let resolved: BTreeMap<_, _> = bindings
+            .get(&step.step_id)
+            .into_iter()
+            .flatten()
+            .map(|binding| (binding.input_slot.as_str(), binding))
+            .collect();
+        let presented_evidence: Vec<_> = declaration
+            .presented_input_slots
+            .iter()
+            .filter_map(|slot_id| resolved.get(slot_id.as_str()).copied().cloned())
+            .collect();
+        if presented_evidence.len() != declaration.presented_input_slots.len() {
+            continue;
+        }
+        if !valid {
+            continue;
+        }
+
+        compiled.insert(
+            step.step_id.clone(),
+            CompiledReviewObligation {
+                fulfillment: ReviewFulfillment::PendingExternalReview,
+                presented_evidence,
+                decision_output_slot: output.slot_id.clone(),
+                decision_role: output.role.clone(),
+                decision_media_type: output.media_type.clone(),
+                allowed_dispositions: declaration.allowed_dispositions.clone(),
+                reviewer_eligibility_policy: binding.reviewer_eligibility_policy.clone(),
+                independence: binding.independence.clone(),
+            },
+        );
+    }
+    compiled
+}
+
+fn is_sha256_identity(value: &str) -> bool {
+    let Some(hex) = value.strip_prefix("sha256:") else {
+        return false;
+    };
+    hex.len() == 64
+        && hex
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 fn validate_graph(
@@ -2373,6 +2721,7 @@ fn build_compiled_steps(
     bindings: &BTreeMap<String, Vec<ResolvedBinding>>,
     parameters: &BTreeMap<String, BTreeMap<String, CompiledParameterValue>>,
     reproducibility: &BTreeMap<String, CompiledReproducibility>,
+    review_obligations: &BTreeMap<String, CompiledReviewObligation>,
     order: &[String],
 ) -> Vec<CompiledStep> {
     let steps: BTreeMap<_, _> = contract
@@ -2395,6 +2744,7 @@ fn build_compiled_steps(
                     .get(step_id)
                     .cloned()
                     .expect("every compiled step has a reproducibility declaration"),
+                review_obligation: review_obligations.get(step_id).cloned(),
             }
         })
         .collect()
@@ -2556,6 +2906,21 @@ fn registry_incomplete(
     ));
 }
 
+fn review_incomplete(
+    location: SourceLocation,
+    message: impl Into<String>,
+    owner: &str,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    findings.push(CoreDiagnostic::new(
+        CORE_R3401,
+        FindingClass::Invalid,
+        owner,
+        location,
+        message,
+    ));
+}
+
 fn logical_input_location(step_index: usize, slot: &str) -> SourceLocation {
     contract_location(format!(
         "/workflow/{step_index}/inputs/{}",
@@ -2643,6 +3008,11 @@ mod tests {
     const PARAMETER_REGISTRY: &[u8] = include_bytes!(
         "../../../fixtures/semantic-core/types/compiler.parameters.registry.v1.json"
     );
+    const REVIEW_CONTRACT: &[u8] = include_bytes!(
+        "../../../fixtures/semantic-core/types/types.R9.review-bound.pass.contract.json"
+    );
+    const REVIEW_REGISTRY: &[u8] =
+        include_bytes!("../../../fixtures/semantic-core/types/compiler.review.registry.v1.json");
 
     fn contract() -> ContractSource {
         serde_json::from_slice(CONTRACT).unwrap()
@@ -2658,6 +3028,14 @@ mod tests {
 
     fn parameter_registry() -> RegistrySnapshot {
         serde_json::from_slice(PARAMETER_REGISTRY).unwrap()
+    }
+
+    fn review_contract() -> ContractSource {
+        serde_json::from_slice(REVIEW_CONTRACT).unwrap()
+    }
+
+    fn review_registry() -> RegistrySnapshot {
+        serde_json::from_slice(REVIEW_REGISTRY).unwrap()
     }
 
     fn compile_contract(contract: &ContractSource) -> CompileReport {
@@ -2765,6 +3143,78 @@ mod tests {
             RepairApplicability::ConstrainedChoice
         );
         assert_eq!(finding.repairs[0].candidates.len(), 2);
+    }
+
+    #[test]
+    fn review_obligation_never_becomes_a_technical_verdict() {
+        let report = compile_documents(REVIEW_CONTRACT, REVIEW_REGISTRY).unwrap();
+        assert_eq!(report.status, CompilationStatus::Compiled);
+        let compiled = report.compiled.unwrap();
+        let review = compiled
+            .workflow
+            .iter()
+            .find(|step| step.step_id == "review")
+            .and_then(|step| step.review_obligation.as_ref())
+            .unwrap();
+        assert_eq!(review.fulfillment, ReviewFulfillment::PendingExternalReview);
+        assert_eq!(review.presented_evidence[0].input_slot, "trace");
+        assert_eq!(review.presented_evidence[1].input_slot, "result");
+        assert!(compiled.requirements.iter().all(|requirement| {
+            !matches!(
+                &requirement.metric,
+                SourceRef::StepOutput { step_id, .. } if step_id == "review"
+            )
+        }));
+    }
+
+    #[test]
+    fn incomplete_review_type_declarations_fail_closed() {
+        let source = review_contract();
+
+        let mut deterministic = review_registry();
+        deterministic.capability_types[1]
+            .reproducibility
+            .determinism = DeterminismClass::Deterministic;
+        assert!(codes(&compile_with_registry(&source, &deterministic)).contains(CORE_R3401));
+
+        let mut hidden_input = review_registry();
+        hidden_input.capability_types[1]
+            .review
+            .as_mut()
+            .unwrap()
+            .presented_input_slots
+            .pop();
+        assert!(codes(&compile_with_registry(&source, &hidden_input)).contains(CORE_R3401));
+
+        let mut optional_input = review_registry();
+        optional_input.capability_types[1].inputs[0].required = false;
+        assert!(codes(&compile_with_registry(&source, &optional_input)).contains(CORE_R3401));
+
+        let mut technical_decision = review_registry();
+        technical_decision.capability_types[1].outputs[0].permitted_claim_models =
+            vec![ClaimModelDeclaration::Interval { nominal: false }];
+        assert!(codes(&compile_with_registry(&source, &technical_decision)).contains(CORE_R3401));
+
+        let mut quantitative_decision = review_registry();
+        quantitative_decision.capability_types[1].outputs[0].role =
+            quantitative_decision.roles[0].role.clone();
+        quantitative_decision.capability_types[1].outputs[0].media_type =
+            "application/vnd.fixture.quantity+json".into();
+        assert!(
+            codes(&compile_with_registry(&source, &quantitative_decision)).contains(CORE_R3401)
+        );
+
+        let mut duplicate_disposition = review_registry();
+        let declaration = duplicate_disposition.capability_types[1]
+            .review
+            .as_mut()
+            .unwrap();
+        declaration
+            .allowed_dispositions
+            .push(declaration.allowed_dispositions[0]);
+        assert!(
+            codes(&compile_with_registry(&source, &duplicate_disposition)).contains(CORE_R3401)
+        );
     }
 
     #[test]

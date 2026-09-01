@@ -29,7 +29,11 @@ multiple historical profiles.
 - `types/compiler-reproducibility-cases.v1.json`: 9 executable type-level R8
   fixtures: 3 compiled cases and 6 rejected cases covering deterministic,
   seeded-stochastic, and nondeterministic types, material execution factors,
-  seeds, and explicit role-scoped nondeterminism policy.
+  seeds, and explicit role-scoped nondeterminism policy; and
+- `types/compiler-review-cases.v1.json`: 9 executable structural R9 fixtures:
+  2 compiled cases and 7 rejected cases covering exact review dossiers,
+  governance-only dispositions, digest-pinned external eligibility policy,
+  explicit independence, and pending review obligations.
 
 All other fixtures below are required before ADR acceptance and are currently
 planned unless files exist for them.
@@ -37,9 +41,9 @@ planned unless files exist for them.
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
 `scope-predicates.v1.json`, plus the 41 requirement and 8 aggregation vectors in
-`verdict-calculus.v1.json`. The compiler harness also executes all 36 cases in
-the three compiler manifests and pins each registry digest plus all successful
-compiled-snapshot identities. Passing the 90 pure vectors and 36
+`verdict-calculus.v1.json`. The compiler harness also executes all 45 cases in
+the four compiler manifests and pins each registry digest plus all successful
+compiled-snapshot identities. Passing the 90 pure vectors and 45
 compiler fixtures does not accept ADR-0006: remaining compiler rules and other
 vector families in this coverage plan remain absent, and no result is
 scientifically qualified.
@@ -69,6 +73,8 @@ fixtures/semantic-core/
                              executable manifest for SC-6 R7 parameters
   types/compiler-reproducibility-cases.v1.json
                              executable manifest for type-level SC-6 R8
+  types/compiler-review-cases.v1.json
+                             executable manifest for structural SC-6 R9
   types/*.contract.json     exact contract inputs named by that manifest
   types/compiler.registry.v1.json
                              exact shared registry input pinned by the manifest
@@ -76,6 +82,8 @@ fixtures/semantic-core/
                              exact parameter registry pinned by the R7 manifest
   types/compiler.reproducibility.registry.v1.json
                              exact determinism registry pinned by the R8 manifest
+  types/compiler.review.registry.v1.json
+                             exact accountable-review registry pinned by the R9 manifest
   scenarios/                 planned end-to-end campaign fixtures
 ```
 
@@ -231,7 +239,13 @@ canonically.
 | `types.R8.nondeterministic-refused.fail` | `CORE-A4301` |
 | `types.R8.nondeterministic-permitted.pass` | explicit policy permits every produced role without changing the nondeterministic class |
 | `types.R8.permission-scope.fail` | permission for an unrelated role does not enable the step → `CORE-A4301` |
-| `types.R9.review-incomplete.fail` | `CORE-R3401` |
+| `types.R9.review-bound.pass` | exact dossier, governance dispositions, external eligibility-policy identity, and independence constraints compile to `pending_external_review` |
+| `types.R9.explicit-none.pass` | an explicit lack of separation is preserved as a visible weakening, never inferred as a default |
+| `types.R9.missing-review.fail` | a review capability without its contract policy binding → `CORE-R3401` |
+| `types.R9.policy-digest.fail` / `policy-revision.fail` | eligibility policy must be pinned by a valid immutable identity → `CORE-R3401` |
+| `types.R9.empty-independence.fail` / `duplicate-independence.fail` | constraint mode is nonempty and unambiguous → `CORE-R3401` |
+| `types.R9.binding-on-non-review.fail` | a normal capability cannot acquire review semantics from contract syntax → `CORE-R3401` |
+| `types.R9.nondeterminism-refused.fail` | review remains nondeterministic and still requires explicit R8 role-scoped permission → `CORE-A4301` |
 | `types.R10.non-claim.fail` | flux used as dose → `CORE-T2601` |
 | `types.satisfiable.pass` | a path of roles reaches the basis |
 | `types.satisfiable.fail` | no capability-type path can emit a reducible bounded model → `CORE-T2201` at the requirement; package admissibility is tested separately |
@@ -239,7 +253,7 @@ canonically.
 | `types.cascade-suppressed.pass` | consequence of a root error summarized under it |
 | `types.cascade-preserves-independent.pass` | dependency-blocked step with its own `CORE-P5101` reports both |
 | `types.conversion-capability.pass` | Gy→Sv via `core.convert.absorbed_dose_to_dose_equivalent@1` type-checks with weighting role bound |
-| `types.human-step.pass` | review step with `core.review.decision@1` output |
+| `types.human-step.pass` | fulfilled, signed `core.review.decision@1` record is admitted under external organization policy; type-level obligation is now covered by the executable R9 fixtures |
 | `types.partial-outputs.pass/fail` | declaration admits only named slots; undeclared partial → `CORE-E7201` |
 
 ### applicability/ (SC-7)

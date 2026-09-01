@@ -1,0 +1,78 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "fixture.types.R9.empty-independence.fail",
+  "revision": 1,
+  "status": "draft",
+  "execution_policy": {
+    "permitted_nondeterministic_roles": [
+      {
+        "id": "core.review.decision",
+        "major": 1
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "input_id": "result",
+      "role": {
+        "id": "nuclear.shutdown_dose_rate",
+        "major": 1
+      },
+      "media_type": "application/vnd.fixture.quantity+json",
+      "claim_model": {
+        "model": "interval"
+      }
+    },
+    {
+      "input_id": "trace",
+      "role": {
+        "id": "fixture.analysis_trace",
+        "major": 1
+      },
+      "media_type": "application/vnd.fixture.analysis-trace+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "step_id": "review",
+      "capability_type": {
+        "id": "fixture.accountable_review",
+        "major": 1
+      },
+      "review": {
+        "reviewer_eligibility_policy": {
+          "policy_id": "fixture.organization/reviewer-eligibility",
+          "revision": 3,
+          "sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "independence": {
+          "mode": "constraints",
+          "requirements": []
+        }
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "R-001",
+      "statement": "Technical evidence remains the source of the technical verdict.",
+      "metric": {
+        "source": "contract_input",
+        "input_id": "result"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "nuclear.dose_equivalent_rate",
+        "value": "100",
+        "unit": "uSv/h"
+      },
+      "basis": {
+        "kind": "bounded"
+      }
+    }
+  ]
+}

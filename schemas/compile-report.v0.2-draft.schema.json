@@ -311,6 +311,145 @@
         },
         "reproducibility": {
           "$ref": "#/$defs/compiledReproducibility"
+        },
+        "review_obligation": {
+          "$ref": "#/$defs/compiledReviewObligation"
+        }
+      }
+    },
+    "compiledReviewObligation": {
+      "type": "object",
+      "description": "A structurally complete but unfulfilled review obligation. Reviewer eligibility, signatures, independence, and admission remain external future checks.",
+      "additionalProperties": false,
+      "required": [
+        "fulfillment",
+        "presented_evidence",
+        "decision_output_slot",
+        "decision_role",
+        "decision_media_type",
+        "allowed_dispositions",
+        "reviewer_eligibility_policy",
+        "independence"
+      ],
+      "properties": {
+        "fulfillment": {
+          "const": "pending_external_review"
+        },
+        "presented_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/resolvedBinding"
+          }
+        },
+        "decision_output_slot": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "decision_role": {
+          "$ref": "#/$defs/versionedRef"
+        },
+        "decision_media_type": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "allowed_dispositions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "approve_for_use",
+              "reject_for_use",
+              "request_changes",
+              "abstain"
+            ]
+          }
+        },
+        "reviewer_eligibility_policy": {
+          "$ref": "#/$defs/immutablePolicyRef"
+        },
+        "independence": {
+          "$ref": "#/$defs/reviewIndependence"
+        }
+      }
+    },
+    "immutablePolicyRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "revision",
+        "sha256"
+      ],
+      "properties": {
+        "policy_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "reviewIndependence": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "const": "none"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "requirements"
+          ],
+          "properties": {
+            "mode": {
+              "const": "constraints"
+            },
+            "requirements": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/independenceRequirement"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "independenceRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "separated_from",
+        "minimum_separation"
+      ],
+      "properties": {
+        "separated_from": {
+          "enum": [
+            "requester",
+            "method_owner",
+            "capability_provider",
+            "executor"
+          ]
+        },
+        "minimum_separation": {
+          "enum": [
+            "different_person",
+            "different_organization"
+          ]
         }
       }
     },

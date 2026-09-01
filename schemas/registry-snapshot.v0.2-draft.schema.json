@@ -210,12 +210,51 @@
           },
           "default": []
         },
+        "review": {
+          "$ref": "#/$defs/reviewDeclaration"
+        },
         "non_claims": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/nonemptyString"
           },
           "default": []
+        }
+      }
+    },
+    "reviewDeclaration": {
+      "type": "object",
+      "description": "Type-level accountable-review signature. Dispositions govern use and never constitute a technical requirement verdict.",
+      "additionalProperties": false,
+      "required": [
+        "presented_input_slots",
+        "decision_output_slot",
+        "allowed_dispositions"
+      ],
+      "properties": {
+        "presented_input_slots": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonemptyString"
+          }
+        },
+        "decision_output_slot": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "allowed_dispositions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "approve_for_use",
+              "reject_for_use",
+              "request_changes",
+              "abstain"
+            ]
+          }
         }
       }
     },

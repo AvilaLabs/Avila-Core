@@ -68,6 +68,8 @@ pub struct WorkflowStep {
     pub parameters: BTreeMap<String, Value>,
     #[serde(default)]
     pub reproducibility: ReproducibilityBinding,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub review: Option<ReviewPolicyBinding>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -214,8 +216,74 @@ pub struct CapabilityTypeDefinition {
     pub outputs: Vec<OutputSlotDefinition>,
     #[serde(default)]
     pub parameters: Vec<ParameterDefinition>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub review: Option<ReviewDeclaration>,
     #[serde(default)]
     pub non_claims: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReviewDeclaration {
+    pub presented_input_slots: Vec<String>,
+    pub decision_output_slot: String,
+    pub allowed_dispositions: Vec<ReviewDisposition>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReviewDisposition {
+    ApproveForUse,
+    RejectForUse,
+    RequestChanges,
+    Abstain,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReviewPolicyBinding {
+    pub reviewer_eligibility_policy: ImmutablePolicyRef,
+    pub independence: ReviewIndependence,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ImmutablePolicyRef {
+    pub policy_id: String,
+    pub revision: u64,
+    pub sha256: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "mode", rename_all = "snake_case", deny_unknown_fields)]
+pub enum ReviewIndependence {
+    None,
+    Constraints {
+        requirements: Vec<IndependenceRequirement>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct IndependenceRequirement {
+    pub separated_from: ReviewParty,
+    pub minimum_separation: SeparationLevel,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReviewParty {
+    Requester,
+    MethodOwner,
+    CapabilityProvider,
+    Executor,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SeparationLevel {
+    DifferentPerson,
+    DifferentOrganization,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

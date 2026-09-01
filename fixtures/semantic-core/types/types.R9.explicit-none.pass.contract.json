@@ -1,0 +1,61 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "fixture.types.R9.explicit-none.pass",
+  "revision": 1,
+  "status": "draft",
+  "execution_policy": {
+    "permitted_nondeterministic_roles": [
+      {
+        "id": "core.review.decision",
+        "major": 1
+      }
+    ]
+  },
+  "workflow": [
+    {
+      "step_id": "analyze",
+      "capability_type": {
+        "id": "fixture.dose_analysis",
+        "major": 1
+      }
+    },
+    {
+      "step_id": "review",
+      "capability_type": {
+        "id": "fixture.accountable_review",
+        "major": 1
+      },
+      "review": {
+        "reviewer_eligibility_policy": {
+          "policy_id": "fixture.organization/reviewer-eligibility",
+          "revision": 3,
+          "sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "independence": {
+          "mode": "none"
+        }
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "R-001",
+      "statement": "The bounded technical result remains below the limit independently of review disposition.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "analyze",
+        "output_slot": "dose_rate"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "nuclear.dose_equivalent_rate",
+        "value": "100",
+        "unit": "uSv/h"
+      },
+      "basis": {
+        "kind": "bounded"
+      }
+    }
+  ]
+}

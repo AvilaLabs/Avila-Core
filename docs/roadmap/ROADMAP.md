@@ -41,7 +41,10 @@ ADR-0006 remains proposed until its written semantics and fixture coverage pass
 the acceptance conditions in that decision. A draft profile is not a scientific
 qualification.
 
-The current repository is at the beginning of this stage.
+The current repository remains in this stage. Its draft kernel executes 90 pure
+vectors, and its static compiler executes 45 fixtures through structural R9.
+That includes pending accountable-review obligations, but not identities,
+signatures, eligibility-policy evaluation, review fulfillment, or admission.
 
 ## Stage 1 — vertical reference prototype
 
@@ -50,7 +53,8 @@ The current repository is at the beginning of this stage.
 Build only the chosen evidence chain:
 
 - canonical semantic kernel and contract compiler for the selected question;
-- contract editor and semantic preflight over that same headless authority;
+- contract editor and semantic preflight over that same headless semantic
+  kernel;
 - controlled local runner with sandbox strategy;
 - two or more real adapters needed for the chain;
 - immutable artifact store and execution receipts;
@@ -73,8 +77,10 @@ Exit gate:
 
 Build:
 
-- identity and roles for requester, method owner, and reviewer;
-- immutable plan approval and review records;
+- organization-scoped identities and externally governed eligibility policies
+  for requester, method owner, provider, and reviewer;
+- immutable plan attestations and review records bound to the exact compiled
+  dossier, with technical verdict and governance disposition kept separate;
 - private capability registry snapshot;
 - resumable campaigns, resource controls, and honest estimates;
 - dependency-aware invalidation and selective reruns;

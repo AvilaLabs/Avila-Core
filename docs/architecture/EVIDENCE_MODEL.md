@@ -107,7 +107,7 @@ No provider output is itself the final verdict. The evaluator consumes admitted
 evidence under the contract’s encoded semantics.
 
 The verdict establishes only that its state follows from the admitted records
-under the named authorities, policy, semantic profile, and rules. It does not
+under the named trust policy, semantic profile, and rules. It does not
 turn those premises into physical truth or confer certification. Its complete
 boundary statement is authoritative; a badge or summary is not.
 

@@ -1,0 +1,375 @@
+{
+  "fixture_set": "compiler-accountable-review-types",
+  "version": 1,
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "registry": {
+    "path": "compiler.review.registry.v1.json",
+    "sha256": "sha256:4c7b95d661dfb55e4895f7e59b29389a68ebfe5010de2647d3aa67842fe0e334"
+  },
+  "fixtures": [
+    {
+      "fixture_id": "types.R9.review-bound.pass",
+      "clause": "SC-5 and SC-6 R9",
+      "contract": "types.R9.review-bound.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [],
+        "compiled": {
+          "snapshot_sha256": "sha256:97cf4e8dead235da4855e8d32d2de7632930349ff671be4e9e40ccfffeeebd7e",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": [
+              {
+                "id": "core.review.decision",
+                "major": 1
+              }
+            ]
+          },
+          "step_order": [
+            "analyze",
+            "review"
+          ],
+          "bindings": [
+            {
+              "step_id": "review",
+              "input_slot": "result",
+              "source": "step:analyze/dose_rate"
+            },
+            {
+              "step_id": "review",
+              "input_slot": "trace",
+              "source": "step:analyze/trace"
+            }
+          ],
+          "parameters": [],
+          "reproducibility": [
+            {
+              "step_id": "analyze",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            },
+            {
+              "step_id": "review",
+              "value": {
+                "determinism": "nondeterministic",
+                "material_factors": {}
+              }
+            }
+          ],
+          "reviews": [
+            {
+              "step_id": "review",
+              "value": {
+                "fulfillment": "pending_external_review",
+                "presented_evidence": [
+                  {
+                    "input_slot": "trace",
+                    "source": {
+                      "source": "step_output",
+                      "step_id": "analyze",
+                      "output_slot": "trace"
+                    }
+                  },
+                  {
+                    "input_slot": "result",
+                    "source": {
+                      "source": "step_output",
+                      "step_id": "analyze",
+                      "output_slot": "dose_rate"
+                    }
+                  }
+                ],
+                "decision_output_slot": "decision",
+                "decision_role": {
+                  "id": "core.review.decision",
+                  "major": 1
+                },
+                "decision_media_type": "application/vnd.avila-core.review-decision+json",
+                "allowed_dispositions": [
+                  "approve_for_use",
+                  "reject_for_use",
+                  "request_changes",
+                  "abstain"
+                ],
+                "reviewer_eligibility_policy": {
+                  "policy_id": "fixture.organization/reviewer-eligibility",
+                  "revision": 3,
+                  "sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                },
+                "independence": {
+                  "mode": "constraints",
+                  "requirements": [
+                    {
+                      "separated_from": "requester",
+                      "minimum_separation": "different_person"
+                    },
+                    {
+                      "separated_from": "executor",
+                      "minimum_separation": "different_organization"
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.R9.explicit-none.pass",
+      "clause": "SC-5 and SC-6 R9",
+      "contract": "types.R9.explicit-none.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [],
+        "compiled": {
+          "snapshot_sha256": "sha256:ebfd1f46cac51cccd0907b3a03f3f01f91aa9deed9c8862bacda3c2e2dcaeefb",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": [
+              {
+                "id": "core.review.decision",
+                "major": 1
+              }
+            ]
+          },
+          "step_order": [
+            "analyze",
+            "review"
+          ],
+          "bindings": [
+            {
+              "step_id": "review",
+              "input_slot": "result",
+              "source": "step:analyze/dose_rate"
+            },
+            {
+              "step_id": "review",
+              "input_slot": "trace",
+              "source": "step:analyze/trace"
+            }
+          ],
+          "parameters": [],
+          "reproducibility": [
+            {
+              "step_id": "analyze",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            },
+            {
+              "step_id": "review",
+              "value": {
+                "determinism": "nondeterministic",
+                "material_factors": {}
+              }
+            }
+          ],
+          "reviews": [
+            {
+              "step_id": "review",
+              "value": {
+                "fulfillment": "pending_external_review",
+                "presented_evidence": [
+                  {
+                    "input_slot": "trace",
+                    "source": {
+                      "source": "step_output",
+                      "step_id": "analyze",
+                      "output_slot": "trace"
+                    }
+                  },
+                  {
+                    "input_slot": "result",
+                    "source": {
+                      "source": "step_output",
+                      "step_id": "analyze",
+                      "output_slot": "dose_rate"
+                    }
+                  }
+                ],
+                "decision_output_slot": "decision",
+                "decision_role": {
+                  "id": "core.review.decision",
+                  "major": 1
+                },
+                "decision_media_type": "application/vnd.avila-core.review-decision+json",
+                "allowed_dispositions": [
+                  "approve_for_use",
+                  "reject_for_use",
+                  "request_changes",
+                  "abstain"
+                ],
+                "reviewer_eligibility_policy": {
+                  "policy_id": "fixture.organization/reviewer-eligibility",
+                  "revision": 3,
+                  "sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                },
+                "independence": {
+                  "mode": "none"
+                }
+              }
+            }
+          ],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.R9.missing-review.fail",
+      "clause": "SC-6 R9",
+      "contract": "types.R9.missing-review.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3401",
+            "class": "missing",
+            "owner": "policy_owner",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/review"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R9.policy-digest.fail",
+      "clause": "SC-6 R9",
+      "contract": "types.R9.policy-digest.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3401",
+            "class": "invalid",
+            "owner": "policy_owner",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/review/reviewer_eligibility_policy/sha256"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R9.policy-revision.fail",
+      "clause": "SC-6 R9",
+      "contract": "types.R9.policy-revision.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3401",
+            "class": "invalid",
+            "owner": "policy_owner",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/review/reviewer_eligibility_policy/revision"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R9.empty-independence.fail",
+      "clause": "SC-6 R9",
+      "contract": "types.R9.empty-independence.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3401",
+            "class": "invalid",
+            "owner": "policy_owner",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/review/independence/requirements"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R9.duplicate-independence.fail",
+      "clause": "SC-6 R9",
+      "contract": "types.R9.duplicate-independence.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3401",
+            "class": "invalid",
+            "owner": "policy_owner",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/review/independence/requirements/1/separated_from"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R9.binding-on-non-review.fail",
+      "clause": "SC-6 R9",
+      "contract": "types.R9.binding-on-non-review.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3401",
+            "class": "invalid",
+            "owner": "policy_owner",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/review"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R9.nondeterminism-refused.fail",
+      "clause": "SC-5 R8 and SC-6 R9",
+      "contract": "types.R9.nondeterminism-refused.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-A4301",
+            "class": "inadmissible",
+            "owner": "policy_owner",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/capability_type"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -67,6 +67,10 @@
       "type": "string",
       "minLength": 1
     },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
     "versionedRef": {
       "type": "object",
       "additionalProperties": false,
@@ -137,6 +141,9 @@
         },
         "reproducibility": {
           "$ref": "#/$defs/reproducibilityBinding"
+        },
+        "review": {
+          "$ref": "#/$defs/reviewPolicyBinding"
         }
       }
     },
@@ -165,6 +172,104 @@
           "type": "object",
           "additionalProperties": true,
           "default": {}
+        }
+      }
+    },
+    "reviewPolicyBinding": {
+      "type": "object",
+      "description": "Contract binding for a pending accountable-review obligation. The compiler preserves the external policy identity and independence requirements but does not evaluate either.",
+      "additionalProperties": false,
+      "required": [
+        "reviewer_eligibility_policy",
+        "independence"
+      ],
+      "properties": {
+        "reviewer_eligibility_policy": {
+          "$ref": "#/$defs/immutablePolicyRef"
+        },
+        "independence": {
+          "$ref": "#/$defs/reviewIndependence"
+        }
+      }
+    },
+    "immutablePolicyRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "revision",
+        "sha256"
+      ],
+      "properties": {
+        "policy_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "reviewIndependence": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "const": "none"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "requirements"
+          ],
+          "properties": {
+            "mode": {
+              "const": "constraints"
+            },
+            "requirements": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/independenceRequirement"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "independenceRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "separated_from",
+        "minimum_separation"
+      ],
+      "properties": {
+        "separated_from": {
+          "enum": [
+            "requester",
+            "method_owner",
+            "capability_provider",
+            "executor"
+          ]
+        },
+        "minimum_separation": {
+          "enum": [
+            "different_person",
+            "different_organization"
+          ]
         }
       }
     },

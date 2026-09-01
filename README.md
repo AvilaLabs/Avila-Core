@@ -24,8 +24,10 @@ This repository is a **pre-alpha scaffold**. It currently provides:
 - a first `v0.2-draft` semantic compiler that resolves typed dataflow,
   enforces typed parameter domains, diagnoses graph and binding failures, and
   checks type-level determinism, seeds, and material execution factors before
-  emitting an immutable compiled snapshot with canonical configuration and
-  exact requirement limits;
+  compiling accountable review steps into pending obligations bound to an
+  exact evidence dossier, external eligibility-policy identity, explicit
+  independence rules, and governance-only dispositions; then emits an
+  immutable snapshot with canonical configuration and exact requirement limits;
 - a deterministic dependency planner that fails closed;
 - a draft portable evidence model and SHA-256 utility;
 - JSON Schemas and deliberately non-executable specimen documents;
@@ -35,8 +37,8 @@ This repository is a **pre-alpha scaffold**. It currently provides:
 The repository also contains proposed `v0.2` semantic rules and an initial
 conformance-vector corpus. The Rust kernel executes all 90 current pure vectors:
 12 canonical-value, 10 unit-scaling, 19 scope-predicate, 41 requirement-verdict,
-and 8 aggregate-verdict cases. A separate compiler harness executes 36 current
-type fixtures across three pinned registry snapshots. The first compiler slice
+and 8 aggregate-verdict cases. A separate compiler harness executes 45 current
+type fixtures across four pinned registry snapshots. The first compiler slice
 is implemented, but its remaining type rules and normative fixture families,
 along with admission, invalidation, and package semantics, remain proposed and
 incomplete.

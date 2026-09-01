@@ -1,0 +1,46 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "fixture.types.R9.binding-on-non-review.fail",
+  "revision": 1,
+  "status": "draft",
+  "workflow": [
+    {
+      "step_id": "analyze",
+      "capability_type": {
+        "id": "fixture.dose_analysis",
+        "major": 1
+      },
+      "review": {
+        "reviewer_eligibility_policy": {
+          "policy_id": "fixture.organization/reviewer-eligibility",
+          "revision": 3,
+          "sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "independence": {
+          "mode": "none"
+        }
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "R-001",
+      "statement": "Technical evidence remains the source of the technical verdict.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "analyze",
+        "output_slot": "dose_rate"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "nuclear.dose_equivalent_rate",
+        "value": "100",
+        "unit": "uSv/h"
+      },
+      "basis": {
+        "kind": "bounded"
+      }
+    }
+  ]
+}

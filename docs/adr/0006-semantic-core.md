@@ -183,7 +183,8 @@ or combines them; Core never silently combines them.
 6. Partial results are admitted only for slots the type permits and the receipt
    declares complete.
 7. Review and cross-kind conversion are capability types, not hidden special
-   cases.
+   cases. A compiled review step is a pending obligation, never a fulfilled
+   approval or a technical verdict.
 
 ### SC-6 Composition rules
 
@@ -197,13 +198,13 @@ or combines them; Core never silently combines them.
 | R6 Requirement binding | A requirement names its metric source or aggregation set; limit kind and unit are compatible. | `CORE-R3301`, `CORE-T2102`, `CORE-T2103` |
 | R7 Parameters | Values match kind, unit class, and domain; placeholders exist only in drafts. | `CORE-T2401`, `CORE-T2402`, `CORE-S1301` |
 | R8 Reproducibility | Seeds and every declared material execution factor are bound; policy governs nondeterminism. | `CORE-T2501`, `CORE-A4301` |
-| R9 Human steps | Presented evidence, allowed decisions, authority, and independence are explicit. | `CORE-R3401` |
+| R9 Accountable review | The complete presented dossier, governance-only dispositions, digest-pinned external eligibility policy, and explicit independence constraints are compiled as a pending obligation. The compiler does not decide reviewer legitimacy or fulfill the review. | `CORE-R3401` |
 | R10 Non-claims | A requirement purpose cannot rely on a purpose explicitly excluded by the producing type. | `CORE-T2601` |
 
 The type checker reports independent findings in one pass. It suppresses only a
 finding that would not exist if an earlier root cause were repaired.
 
-### SC-7 Applicability predicates and fact authority
+### SC-7 Applicability predicates and fact provenance
 
 Scope, template eligibility, policy constraints, and reuse conditions share a
 closed, non-Turing-complete predicate language:
@@ -380,7 +381,7 @@ An artifact is admitted for role `r` at step `s` only if all conditions hold:
 | A6 | The role validator accepted the artifact and its declared claim model matches the package declaration. | quarantine |
 | A7 | Qualification scope evaluates true against the actual receipted context, or policy explicitly records qualification as not required. | quarantine |
 | A8 | Bind-time admission remains valid for the recorded policy and as-of snapshot. | invalidated |
-| A9 | Required pre-admission reviews are present and accept. | awaiting review |
+| A9 | Required pre-admission review records are present, bind the exact dossier, and carry a disposition admitted by the named external organization policy. | awaiting review |
 | A10 | No current invalidation targets the artifact or an ancestor. | invalidated |
 
 Validation establishes only the validator's declared responsibility. It does not
@@ -432,24 +433,29 @@ new run over the same bound plan; admitted current work is reused under SC-12.
 An amendment supersedes the campaign and cancels in-flight steps with receipts.
 Human deadlines may trigger escalation but never manufacture a review decision.
 
-### SC-14 Authorities, identity, and approvals
+### SC-14 Identity, attestations, and organizational trust
 
-Core consumes four classes of authority record:
+The semantic compiler has no registry of people or institutions it considers
+authoritative. It compiles requirements for attributable records:
 
-- contract approvals over an exact contract or plan digest;
+- contract attestations over an exact contract or plan digest;
 - method qualification and reuse records;
 - execution receipts and sourced facts; and
 - kernel derivations identified by semantic profile and implementation.
 
-Core mediates these records; it does not own their underlying professional
-authority. Identities are keys plus organization-scoped role assertions.
-Approvals bind exact plan digests and satisfy policy-defined separation of
-duties.
+Reviewer eligibility is an external, organization-scoped policy input pinned by
+identity and digest. Compilation establishes only that a review obligation is
+complete enough to evaluate later. It does not load a mutable directory, decide
+that a person is qualified, validate a credential, satisfy separation of duties,
+or manufacture a review record.
 
-Software can enforce which keys and role assertions authorize an operation. It
-cannot determine whether a human used an AI assistant while exercising a key.
-Organizations remain responsible for key custody and accountable approval. No
-model output, prompt, or interface event is itself an authority record.
+At admission time, software may verify signatures, key-to-role assertions, the
+exact dossier reviewed, and declared independence constraints under the named
+trust policy. Those checks establish attribution and policy conformance, not the
+scientific truth of the reviewed claim. Organizations remain responsible for
+trust roots, key custody, professional eligibility, and accountable decisions.
+No model output, prompt, button click, or interface event is itself an
+attestation.
 
 ### SC-15 Evidence ownership invariants
 
@@ -531,7 +537,8 @@ This ADR remains proposed until:
   not an unverified claim.
 - Exact comparison replaces built-in outcome-changing rounding.
 - Contract and campaign lifecycle are separated.
-- Fact provenance and authority become typed inputs to applicability.
+- Fact provenance and source-eligibility requirements become typed inputs to
+  applicability.
 - Open specification and verifier compatibility are necessary for independent
   trust, but the specification alone is not the commercial moat.
 - Domain governance, qualification networks, adapters, templates, accumulated

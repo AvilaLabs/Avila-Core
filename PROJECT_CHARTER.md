@@ -10,7 +10,7 @@
 Avila Core exists to make rigorous computational work easier for the
 professionals responsible for it. It should help them translate a technical
 question into a reproducible chain of methods, evidence, review, and an explicit
-decision state without replacing their scientific authority.
+decision state without replacing their professional responsibility or judgment.
 
 The north-star product is a neutral semantic, market, and trust layer for
 computational engineering:
@@ -77,10 +77,10 @@ Core may not, by itself:
 - Core is solver-, provider-, language-, and infrastructure-neutral.
 - The local runtime and independent verifier must remain viable product
   boundaries even if their final license is not yet decided.
-- Scientific authority stays with named method owners, reviewers, and evidence
-  policy—not with the graphical interface.
-- Every Core verdict remains conditional on the exact records, authorities,
-  policy, semantic profile, and limitations named in it.
+- Scientific judgment stays with named method owners, reviewers, and evidence
+  consumers—not with the graphical interface or semantic compiler.
+- Every Core verdict remains conditional on the exact records, trust policy,
+  semantic profile, and limitations named in it.
 - Core should minimize redundant compute rather than benefit from its growth.
 - Qualification scope and limitations must be explicit and inspectable.
 

@@ -10,6 +10,7 @@ pub const CORE_R3201: &str = "CORE-R3201";
 pub const CORE_R3202: &str = "CORE-R3202";
 pub const CORE_R3203: &str = "CORE-R3203";
 pub const CORE_R3301: &str = "CORE-R3301";
+pub const CORE_R3401: &str = "CORE-R3401";
 pub const CORE_R3501: &str = "CORE-R3501";
 pub const CORE_T2001: &str = "CORE-T2001";
 pub const CORE_T2101: &str = "CORE-T2101";

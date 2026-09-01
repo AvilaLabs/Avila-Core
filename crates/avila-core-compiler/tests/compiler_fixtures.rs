@@ -63,6 +63,8 @@ struct ExpectedCompiled {
     #[serde(default)]
     parameters: Vec<ExpectedParameter>,
     reproducibility: Vec<ExpectedReproducibility>,
+    #[serde(default)]
+    reviews: Vec<ExpectedReview>,
     limits: Vec<ExpectedLimit>,
 }
 
@@ -98,6 +100,13 @@ struct ExpectedReproducibility {
     value: serde_json::Value,
 }
 
+#[derive(Debug, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedReview {
+    step_id: String,
+    value: serde_json::Value,
+}
+
 #[test]
 fn compiler_type_fixtures_are_executable() {
     let fixture_root = fixture_root();
@@ -106,10 +115,11 @@ fn compiler_type_fixtures_are_executable() {
         "compiler-cases.v1.json",
         "compiler-parameter-cases.v1.json",
         "compiler-reproducibility-cases.v1.json",
+        "compiler-review-cases.v1.json",
     ] {
         fixture_count += execute_suite(&fixture_root, suite_name);
     }
-    assert_eq!(fixture_count, 36);
+    assert_eq!(fixture_count, 45);
 }
 
 fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
@@ -234,6 +244,19 @@ fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
                     "{} reproducibility",
                     fixture.fixture_id
                 );
+                let reviews: Vec<_> = compiled
+                    .workflow
+                    .iter()
+                    .filter_map(|step| {
+                        step.review_obligation
+                            .as_ref()
+                            .map(|review| ExpectedReview {
+                                step_id: step.step_id.clone(),
+                                value: serde_json::to_value(review).unwrap(),
+                            })
+                    })
+                    .collect();
+                assert_eq!(reviews, expected.reviews, "{} reviews", fixture.fixture_id);
                 let limits: Vec<_> = compiled
                     .requirements
                     .iter()

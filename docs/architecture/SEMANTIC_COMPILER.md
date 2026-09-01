@@ -15,10 +15,10 @@ read an ambient registry, inspect installed software, discover a provider, or
 fill a missing value from machine state. The same bytes and compiler version
 therefore produce the same report.
 
-This boundary has no authority to execute a capability, qualify a method,
-admit evidence, or emit a requirement verdict. A successful compilation means
-only that the source is internally composable under the implemented semantic
-rules and pinned registry snapshot.
+This boundary cannot execute a capability, qualify a method, determine whether
+a reviewer is eligible, fulfill a review, admit evidence, or emit a requirement
+verdict. A successful compilation means only that the source is internally
+composable under the implemented semantic rules and pinned registry snapshot.
 
 ## Current pipeline
 
@@ -36,6 +36,9 @@ parameter and reproducibility declaration checks
               │
               ▼
 slot resolution + role/media checks
+              │
+              ▼
+accountable-review obligation checks
               │
               ▼
 derived dependency graph + cycle check
@@ -127,6 +130,51 @@ material environment, hardware, ABI, validator, and implementation factors.
 Those factors cannot be checked until package binding exists, so successful
 static compilation is not a package-level reproducibility judgment.
 
+## Accountable review obligations
+
+R9 represents review as a capability type, but gives it no privileged power over
+technical claims. A review type must be nondeterministic, name every required
+input in the exact dossier presented to the reviewer, emit only one nominal
+decision record with the `unquantified` claim model, and declare a closed set of
+governance dispositions: `approve_for_use`, `reject_for_use`,
+`request_changes`, or `abstain`. None is a technical `PASS` or `FAIL`.
+
+Each workflow use binds a reviewer-eligibility policy by id, revision, and
+lowercase SHA-256 identity. The policy bytes, identities, credentials, and trust
+roots are deliberately not compiler inputs. Independence is nevertheless
+explicit in the contract: either `none`, preserving the visible weakening, or a
+nonempty set of minimum person/organization separations from named campaign
+parties.
+
+Successful compilation records `pending_external_review`, the exact resolved
+evidence sources, decision role and media type, permitted dispositions, policy
+identity, and independence constraints. This is an obligation for later
+execution and admission. It is not evidence that a review occurred or that any
+reviewer was legitimate. A later signed decision must bind the compiled plan and
+the exact dossier; an organization-scoped admission policy must independently
+evaluate eligibility and separation.
+
+Technical result, review disposition, and admission state remain separate. A
+review may govern whether an organization uses a result, but cannot silently
+turn a violated or inconclusive technical requirement into a satisfied one.
+
+The later fulfillment record is intentionally not implemented or assigned an
+authoritative schema yet. Its interface must eventually bind at least the
+compiled snapshot and review-step identity, the exact realized dossier artifact
+identities, one allowed disposition and rationale, the eligibility-policy
+identity, signer key and organization-scoped eligibility assertions,
+independence-evaluation inputs and result, canonical payload identity,
+signature, and supersession or revocation state. It must contain no field that
+overrides a technical requirement verdict.
+
+`CORE-R3401` is reserved for an authored review obligation that is structurally
+incomplete or contradictory. Once a valid obligation has compiled, absence of a
+real decision is a future `awaiting_review` campaign state, not a compiler
+error. A bad signature, failed eligibility check, or failed independence check
+is a future admission refusal. Keeping those outcomes distinct prevents static
+composition, human action, and organizational trust from collapsing into one
+misleading status.
+
 ## Findings
 
 Every finding carries:
@@ -153,6 +201,8 @@ Successful output is `avila.core/compiled-contract/v0.2-draft`. It contains:
 - typed parameter values lowered to canonical exact representations;
 - type-level determinism, seeds, material execution factors, and the effective
   contract nondeterminism policy;
+- pending accountable-review obligations, exact presented evidence, external
+  eligibility-policy identities, and explicit independence constraints;
 - exact requirement limits lowered to canonical units; and
 - a `snapshot_sha256` over the canonical compiled body, excluding the digest
   field itself.
@@ -166,11 +216,12 @@ and semantic compatibility are related but not interchangeable claims.
 ## Implemented and deferred rules
 
 This initial slice implements the currently representable portions of SC-1,
-SC-2, SC-3, SC-4, and SC-6 R1–R8. In particular it covers canonical source
+SC-2, SC-3, SC-4, and SC-6 R1–R9. In particular it covers canonical source
 identity, exact within-kind unit scaling, unique slot resolution, nominal
 role-major compatibility, type-level claim-model/basis satisfiability, media
 compatibility, graph shape, metric binding, limit kind/unit compatibility,
-typed parameter/domain enforcement, and type-level reproducibility bindings.
+typed parameter/domain enforcement, type-level reproducibility bindings, and
+the structural half of accountable review.
 
 It does not yet represent or decide:
 
@@ -178,7 +229,9 @@ It does not yet represent or decide:
   binding half of R3);
 - package-declared environment, hardware, ABI, validator, and implementation
   factors (the binding half of R8);
-- human-review signatures (R9);
+- actual reviewer identities, credentials, signatures, eligibility-policy
+  evaluation, independence evaluation, and signed decision admission (the
+  fulfillment half of R9);
 - purpose/non-claim conflicts (R10);
 - capability packages, qualification, policy, admission, or selection; or
 - campaign execution and evidence lifecycle.

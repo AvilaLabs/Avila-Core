@@ -2,18 +2,20 @@
 
 ## Architectural goal
 
-Core must separate five kinds of authority:
+Core must separate five kinds of responsibility and provenance:
 
-1. **Contract authority:** what question and policy were approved.
-2. **Semantic authority:** which versioned language rules give the records and
-   derivations their meaning.
-3. **Method authority:** which professional-owned capability is admissible for
-   that context.
-4. **Execution authority:** what inputs, software, data, environment, and process
-   actually ran.
-5. **Verdict authority:** how admitted evidence maps to a requirement state.
+1. **Contract intent:** what question and policy were approved.
+2. **Semantic rules:** which versioned language gives records and derivations
+   their meaning.
+3. **Method qualification:** which professional-owned capability is admissible
+   for a context of use.
+4. **Execution provenance:** what inputs, software, data, environment, and
+   process actually ran.
+5. **Verdict derivation:** how admitted evidence maps to a requirement state.
 
-No single interface, provider, or process should be able to impersonate all five.
+No single interface, provider, reviewer, or process may impersonate all five.
+In particular, the compiler checks explicit obligations; it does not decide who
+deserves professional or institutional trust.
 
 ## Target system context
 
@@ -75,7 +77,7 @@ avila-core-model
     ├── avila-core-cli       (canonicalize, compile, validate, and plan)
     └── avila-core-app       (thin read-only specimen UI)
 
-avila-core-kernel            (first canonical-value authority slice)
+avila-core-kernel            (first canonical-value semantic slice)
     └── avila-core-compiler  (v0.2-draft static compilation only)
 ```
 
@@ -114,9 +116,13 @@ dependency graph, validates nominal roles, claim-model sufficiency, and media,
 enforces declared parameter types and domains, and lowers parameters and
 requirement limits through exact kind/unit rules. It also binds each capability
 type's determinism class, seed, and declared material execution factors while
-leaving package-level reproducibility to future package binding. It performs no
-package selection, execution, evidence admission, qualification decision, or
-verdict. See the [semantic compiler boundary](SEMANTIC_COMPILER.md).
+leaving package-level reproducibility to future package binding. Accountable
+review types lower to pending obligations containing the exact dossier,
+governance dispositions, digest-pinned external eligibility policy, and
+explicit independence constraints. The compiler neither evaluates that policy
+nor fulfills the review. It performs no package selection, execution, evidence
+admission, qualification decision, or verdict. See the
+[semantic compiler boundary](SEMANTIC_COMPILER.md).
 
 ### `avila-core-evidence`
 
@@ -163,10 +169,10 @@ Future components should be added only behind acceptance gates:
 Names are provisional. Separate crates are appropriate only when they enforce a
 real dependency or trust boundary.
 
-The compiler, admission engine, and verdict evaluator are conceptual authority
+The compiler, admission engine, and verdict evaluator are separate enforcement
 boundaries even if an early implementation keeps them in fewer crates. Front
-ends may author and explain records; only the kernel boundaries may construct
-admissions and verdicts.
+ends may author and explain records; only the semantic kernel boundaries may
+construct admissions and verdicts.
 
 ## Data flow
 
@@ -256,7 +262,7 @@ boundaries are:
 - produced artifact → output validator;
 - evidence graph → verdict evaluator;
 - package → independent verifier; and
-- organization identity → provider or reviewer authority.
+- organization identity → external provider or reviewer eligibility policy.
 
 Parsing success, process exit code zero, and a valid signature each establish
 only their narrow claim.
@@ -274,7 +280,7 @@ profile.
   affected claim.
 - No capability can directly set the final verdict badge.
 - No interface, agent, or provider can construct an admission or verdict record
-  outside the authority kernel.
+  outside the semantic kernel.
 - A changed input or method cannot preserve a downstream conclusion without an
   explicit reuse rule.
 - The UI cannot invent placeholder numbers.

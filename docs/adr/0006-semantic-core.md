@@ -195,7 +195,7 @@ or combines them; Core never silently combines them.
 
 | Rule | Statement | Principal diagnostic |
 | --- | --- | --- |
-| R1 Resolution | Every required slot resolves to exactly one named source; ambiguity requires an explicit binding. | `CORE-R3101`, `CORE-R3102` |
+| R1 Resolution | Every required slot resolves to exactly one named source; ambiguity requires an explicit binding; an unfed slot names the inputs or capability types in the snapshot that could feed it. | `CORE-R3101`, `CORE-R3102` |
 | R2 Nominal identity | Source and destination roles have the same identity and compatible major version. | `CORE-T2101` |
 | R3 Claim sufficiency | Type-level permitted models can satisfy the requirement; after binding, the selected package's actual model and bound side can satisfy the comparison basis. | `CORE-T2201`–`CORE-T2203` |
 | R4 Media | Produced media is accepted by the destination role. | `CORE-T2301` |

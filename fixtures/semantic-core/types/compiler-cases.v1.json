@@ -78,7 +78,9 @@
               "document": "contract",
               "pointer": "/workflow/0/inputs/source"
             },
-            "repairs": []
+            "repairs": [
+              "constrained_choice"
+            ]
           }
         ]
       }
@@ -475,7 +477,9 @@
               "document": "contract",
               "pointer": "/workflow/0/inputs/source"
             },
-            "repairs": []
+            "repairs": [
+              "constrained_choice"
+            ]
           },
           {
             "code": "CORE-R3203",

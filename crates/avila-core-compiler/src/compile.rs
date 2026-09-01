@@ -20,10 +20,10 @@ use crate::document::{
     BasisKind, BoundSide, COMPILE_REPORT_SCHEMA_VERSION, COMPILED_CONTRACT_SCHEMA_VERSION,
     CONTRACT_SCHEMA_VERSION, CapabilityTypeDefinition, ClaimModelDeclaration, Comparison,
     ContractInput, ContractSource, ContractStatus, DeterminismClass, ExactBound, ExecutionPolicy,
-    ImmutablePolicyRef, IntegerBound, ParameterDefinition, ParameterType, PurposeDefinition,
-    QuantityBound, QuantityValue, REGISTRY_SCHEMA_VERSION, RegistrySnapshot, RequirementBasis,
-    RequirementSource, ReviewDisposition, ReviewIndependence, ReviewParty, RoleDefinition,
-    SourceRef, TypedQuantity, VersionedRef,
+    ImmutablePolicyRef, InputSlotDefinition, IntegerBound, ParameterDefinition, ParameterType,
+    PurposeDefinition, QuantityBound, QuantityValue, REGISTRY_SCHEMA_VERSION, RegistrySnapshot,
+    RequirementBasis, RequirementSource, ReviewDisposition, ReviewIndependence, ReviewParty,
+    RoleDefinition, SourceRef, TypedQuantity, VersionedRef,
 };
 
 pub const COMPILE_NOTICE: &str = "Compilation establishes structural and semantic consistency under the named draft profile only. It performs no execution, review fulfillment, reviewer-eligibility or trust evaluation, evidence admission, scientific qualification, or requirement verdict.";
@@ -1785,18 +1785,22 @@ fn resolve_workflow(
                         source: candidate.source.clone(),
                     });
                 }
-                [] if slot.required && !blocked_by_invalid_source => {
-                    findings.push(CoreDiagnostic::new(
+                [] if slot.required && !blocked_by_invalid_source => findings.push(
+                    CoreDiagnostic::new(
                         CORE_R3101,
                         FindingClass::Missing,
                         "contract_author",
                         logical_input_location(step_index, &slot.slot_id),
                         format!(
-                            "required input slot `{}` has no compatible source",
-                            slot.slot_id
+                            "required input slot `{}` (role `{}@{}`) has no compatible source",
+                            slot.slot_id, slot.role.id, slot.role.major
                         ),
-                    ))
-                }
+                    )
+                    .with_repair(DiagnosticRepair {
+                        applicability: RepairApplicability::ConstrainedChoice,
+                        candidates: feeding_candidates(registry, slot),
+                    }),
+                ),
                 [_, _, ..] if slot.required => {
                     let candidate_labels = matches
                         .iter()
@@ -1826,6 +1830,29 @@ fn resolve_workflow(
         result.bindings.insert(step.step_id.clone(), resolved);
     }
     result
+}
+
+/// Lists the ways a required slot could be fed under the pinned snapshot: a
+/// contract input carrying the slot's role, or a step of any capability type
+/// whose output produces that role in a media type the slot accepts. The list
+/// is a constrained choice for the contract author; it is not a qualification
+/// claim about any of the named types.
+fn feeding_candidates(registry: &RegistryIndex<'_>, slot: &InputSlotDefinition) -> Vec<String> {
+    let mut candidates = vec![format!(
+        "declare_input:{}@{}",
+        slot.role.id, slot.role.major
+    )];
+    for (reference, capability) in &registry.capability_types {
+        for output in &capability.outputs {
+            if output.role == slot.role && slot.accepted_media_types.contains(&output.media_type) {
+                candidates.push(format!(
+                    "add_step:{}@{}/{}",
+                    reference.id, reference.major, output.slot_id
+                ));
+            }
+        }
+    }
+    candidates
 }
 
 /// A source is suppressed when it names an output of a step whose capability
@@ -3665,6 +3692,36 @@ mod tests {
         unresolved.inputs.clear();
         let report = compile_contract(&unresolved);
         assert!(codes(&report).contains(CORE_R3101));
+        let finding = report
+            .findings
+            .iter()
+            .find(|finding| finding.code == CORE_R3101)
+            .unwrap();
+        assert_eq!(
+            finding.repairs,
+            vec![DiagnosticRepair {
+                applicability: RepairApplicability::ConstrainedChoice,
+                candidates: vec!["declare_input:fixture.source_document@1".into()],
+            }]
+        );
+
+        let mut no_producer = contract();
+        no_producer.workflow.remove(0);
+        let report = compile_contract(&no_producer);
+        let finding = report
+            .findings
+            .iter()
+            .find(|finding| finding.code == CORE_R3101)
+            .unwrap();
+        assert_eq!(finding.primary.pointer, "/workflow/0/inputs/dose_rate");
+        assert_eq!(
+            finding.repairs[0].candidates,
+            vec![
+                "declare_input:nuclear.shutdown_dose_rate@1".to_owned(),
+                "add_step:fixture.bound_dose@1/bounded_dose_rate".to_owned(),
+                "add_step:fixture.calculate_dose@1/dose_rate".to_owned(),
+            ]
+        );
 
         let mut ambiguous = contract();
         let mut second = ambiguous.inputs[0].clone();

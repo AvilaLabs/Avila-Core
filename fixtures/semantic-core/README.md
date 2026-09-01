@@ -212,7 +212,7 @@ canonically.
 | Fixture | Expected |
 | --- | --- |
 | `types.R1.resolved.pass` | unique source bound |
-| `types.R1.unresolved.fail` | `CORE-R3101` |
+| `types.R1.unresolved.fail` | `CORE-R3101`; repair `constrained_choice` lists `declare_input:<role>` and every `add_step:<type>/<output>` in the snapshot that could feed the slot |
 | `types.R1.ambiguous.fail` | two producers, no binding → `CORE-R3102`; repair `constrained_choice` |
 | `types.R1.explicit-binding.pass` | `bindings` resolves ambiguity |
 | `types.R2.role-mismatch.fail` | `CORE-T2101` |

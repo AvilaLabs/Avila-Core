@@ -64,7 +64,10 @@ Capability types declare named input and output slots. A source is either a
 named contract input or a named step output. For each required input slot:
 
 - one compatible source is resolved;
-- no compatible source emits `CORE-R3101`;
+- no compatible source emits `CORE-R3101` with a `constrained_choice` repair
+  naming every way the slot could be fed under the pinned snapshot:
+  `declare_input:<role>` or `add_step:<capability type>/<output slot>`; the
+  list is computed from the snapshot alone and is not a qualification claim;
 - multiple compatible sources emit `CORE-R3102` and require an explicit
   constrained choice; and
 - an authored binding is checked independently for nominal role identity and

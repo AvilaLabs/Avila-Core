@@ -21,7 +21,11 @@ multiple historical profiles.
 - `types/compiler-cases.v1.json`: 18 executable compiler fixtures: 3 compiled
   cases and 15 rejected cases covering the current R1–R6 subset, claim-model
   sufficiency, exact unit lowering, cascade suppression, and independent
-  findings.
+  findings; and
+- `types/compiler-parameter-cases.v1.json`: 9 executable R7 fixtures: 1
+  compiled case and 8 rejected cases covering every parameter value family,
+  exact canonical lowering, quantity kinds and domains, undeclared values, and
+  draft versus approved placeholder behavior.
 
 All other fixtures below are required before ADR acceptance and are currently
 planned unless files exist for them.
@@ -29,9 +33,9 @@ planned unless files exist for them.
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
 `scope-predicates.v1.json`, plus the 41 requirement and 8 aggregation vectors in
-`verdict-calculus.v1.json`. The compiler harness also executes all 14 cases in
-`types/compiler-cases.v1.json` and pins the shared registry digest plus all
-successful compiled-snapshot identities. Passing the 90 pure vectors and 18
+`verdict-calculus.v1.json`. The compiler harness also executes all 27 cases in
+the two compiler manifests and pins each registry digest plus all successful
+compiled-snapshot identities. Passing the 90 pure vectors and 27
 compiler fixtures does not accept ADR-0006: most compiler rules and other
 vector families in this coverage plan remain absent, and no result is
 scientifically qualified.
@@ -57,9 +61,13 @@ fixtures/semantic-core/
   <area>/<fixture_id>.json   compiler fixtures: a snapshot in, expected findings/records out
   types/compiler-cases.v1.json
                              executable manifest for the current compiler subset
+  types/compiler-parameter-cases.v1.json
+                             executable manifest for SC-6 R7 parameters
   types/*.contract.json     exact contract inputs named by that manifest
   types/compiler.registry.v1.json
                              exact shared registry input pinned by the manifest
+  types/compiler.parameters.registry.v1.json
+                             exact parameter registry pinned by the R7 manifest
   scenarios/                 planned end-to-end campaign fixtures
 ```
 
@@ -200,8 +208,13 @@ canonically.
 | `types.R6.limit-unit.fail` | `CORE-T2103` |
 | `types.R7.param-kind.fail` | `CORE-T2401` |
 | `types.R7.param-domain.fail` | negative cooling time → `CORE-T2402` |
+| `types.R7.parameters.pass` | booleans, integers, exact numbers, text, and quantities lower to tagged canonical IR |
+| `types.R7.scalar-type.fail` | scalar family mismatch → `CORE-T2401` |
+| `types.R7.scalar-domains.fail` | independent integer, text-choice, and exact-number domain findings |
+| `types.R7.unknown-param.fail` | undeclared values cannot become implicit defaults → `CORE-S1101` |
 | `types.R7.placeholder-draft.pass` | `not_defined` in `draft` → `missing` finding, owner requester |
 | `types.R7.placeholder-approved.fail` | `CORE-S1301` |
+| `types.R7.required-missing-draft.pass` | absent required value → `missing` finding, owner requester |
 | `types.R8.missing-seed.fail` | `CORE-T2501` |
 | `types.R8.nondeterministic-refused.fail` | `CORE-A4301` |
 | `types.R8.nondeterministic-permitted.pass` | policy `permit_nondeterministic` for the role |

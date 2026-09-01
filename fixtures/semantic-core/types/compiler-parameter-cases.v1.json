@@ -1,0 +1,263 @@
+{
+  "fixture_set": "compiler-parameter-types",
+  "version": 1,
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "registry": {
+    "path": "compiler.parameters.registry.v1.json",
+    "sha256": "sha256:7913c6608ad1239db389d8b31b55b3d66a764098fe0a04e695b298f27ce2aa6f"
+  },
+  "fixtures": [
+    {
+      "fixture_id": "types.R7.parameters.pass",
+      "clause": "SC-6 R7",
+      "contract": "types.R7.parameters.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [],
+        "compiled": {
+          "snapshot_sha256": "sha256:449d50537da2ec4d69d3475e66a5cae3743be0cd9426d6064df759f8d8e16409",
+          "step_order": [
+            "evaluate"
+          ],
+          "bindings": [],
+          "parameters": [
+            {
+              "step_id": "evaluate",
+              "parameter_id": "cooling_time",
+              "value": {
+                "type": "quantity",
+                "kind": "core.time.duration",
+                "value": "86400",
+                "unit": "s"
+              }
+            },
+            {
+              "step_id": "evaluate",
+              "parameter_id": "enabled",
+              "value": {
+                "type": "boolean",
+                "value": true
+              }
+            },
+            {
+              "step_id": "evaluate",
+              "parameter_id": "iterations",
+              "value": {
+                "type": "integer",
+                "value": 10
+              }
+            },
+            {
+              "step_id": "evaluate",
+              "parameter_id": "mode",
+              "value": {
+                "type": "text",
+                "value": "fast"
+              }
+            },
+            {
+              "step_id": "evaluate",
+              "parameter_id": "threshold",
+              "value": {
+                "type": "exact_number",
+                "value": "1/2"
+              }
+            }
+          ],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.R7.param-kind.fail",
+      "clause": "SC-6 R7",
+      "contract": "types.R7.param-kind.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2401",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/parameters/cooling_time"
+            },
+            "repairs": [
+              "method_owner_judgment"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R7.param-domain.fail",
+      "clause": "SC-6 R7",
+      "contract": "types.R7.param-domain.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2402",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/parameters/cooling_time"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R7.scalar-type.fail",
+      "clause": "SC-6 R7",
+      "contract": "types.R7.scalar-type.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2401",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/parameters/enabled"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R7.scalar-domains.fail",
+      "clause": "SC-6 R7",
+      "contract": "types.R7.scalar-domains.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2402",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/parameters/iterations"
+            },
+            "repairs": []
+          },
+          {
+            "code": "CORE-T2402",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/parameters/mode"
+            },
+            "repairs": [
+              "constrained_choice"
+            ]
+          },
+          {
+            "code": "CORE-T2402",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/parameters/threshold"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R7.unknown-param.fail",
+      "clause": "SC-6 R7",
+      "contract": "types.R7.unknown-param.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-S1101",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/parameters/invented_default"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R7.placeholder-draft.pass",
+      "clause": "SC-6 R7",
+      "contract": "types.R7.placeholder-draft.pass.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-S1301",
+            "class": "missing",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/parameters/cooling_time"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R7.placeholder-approved.fail",
+      "clause": "SC-6 R7",
+      "contract": "types.R7.placeholder-approved.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-S1301",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/parameters/cooling_time"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R7.required-missing-draft.pass",
+      "clause": "SC-6 R7",
+      "contract": "types.R7.required-missing-draft.pass.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-S1301",
+            "class": "missing",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/parameters/cooling_time"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    }
+  ]
+}

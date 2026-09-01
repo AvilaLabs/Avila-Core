@@ -59,6 +59,8 @@ struct ExpectedCompiled {
     snapshot_sha256: String,
     step_order: Vec<String>,
     bindings: Vec<ExpectedBinding>,
+    #[serde(default)]
+    parameters: Vec<ExpectedParameter>,
     limits: Vec<ExpectedLimit>,
 }
 
@@ -79,20 +81,36 @@ struct ExpectedLimit {
     unit: String,
 }
 
+#[derive(Debug, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedParameter {
+    step_id: String,
+    parameter_id: String,
+    value: serde_json::Value,
+}
+
 #[test]
 fn compiler_type_fixtures_are_executable() {
     let fixture_root = fixture_root();
-    let suite_bytes = fs::read(fixture_root.join("compiler-cases.v1.json")).unwrap();
+    let mut fixture_count = 0;
+    for suite_name in ["compiler-cases.v1.json", "compiler-parameter-cases.v1.json"] {
+        fixture_count += execute_suite(&fixture_root, suite_name);
+    }
+    assert_eq!(fixture_count, 27);
+}
+
+fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
+    let suite_bytes = fs::read(fixture_root.join(suite_name)).unwrap();
     let suite: FixtureSuite = serde_json::from_slice(&suite_bytes).unwrap();
-    assert_eq!(suite.fixture_set, "compiler-types");
+    assert!(!suite.fixture_set.is_empty());
     assert_eq!(suite.version, 1);
     assert_eq!(suite.semantic_profile, SEMANTIC_PROFILE);
-    assert_eq!(suite.fixtures.len(), 18);
 
     let registry_bytes = fs::read(fixture_root.join(&suite.registry.path)).unwrap();
     let registry_canonical = canonicalize_json(&registry_bytes).unwrap();
     assert_eq!(prefixed_sha256(&registry_canonical), suite.registry.sha256);
 
+    let fixture_count = suite.fixtures.len();
     for fixture in suite.fixtures {
         assert!(
             !fixture.clause.is_empty(),
@@ -166,6 +184,24 @@ fn compiler_type_fixtures_are_executable() {
                     "{} bindings",
                     fixture.fixture_id
                 );
+                let parameters: Vec<_> = compiled
+                    .workflow
+                    .iter()
+                    .flat_map(|step| {
+                        step.parameters
+                            .iter()
+                            .map(|(parameter_id, value)| ExpectedParameter {
+                                step_id: step.step_id.clone(),
+                                parameter_id: parameter_id.clone(),
+                                value: serde_json::to_value(value).unwrap(),
+                            })
+                    })
+                    .collect();
+                assert_eq!(
+                    parameters, expected.parameters,
+                    "{} parameters",
+                    fixture.fixture_id
+                );
                 let limits: Vec<_> = compiled
                     .requirements
                     .iter()
@@ -185,6 +221,7 @@ fn compiler_type_fixtures_are_executable() {
             ),
         }
     }
+    fixture_count
 }
 
 fn fixture_root() -> PathBuf {

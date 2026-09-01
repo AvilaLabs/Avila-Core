@@ -32,6 +32,9 @@ schema + semantic-profile check
 registry integrity and nominal identities
               │
               ▼
+parameter declaration, type, and domain checks
+              │
+              ▼
 slot resolution + role/media checks
               │
               ▼
@@ -73,6 +76,32 @@ outputs in the supplied snapshot. That rule is intentionally simple and total.
 Future scope or aggregation semantics must revise the semantic profile and its
 fixtures rather than quietly changing candidate discovery.
 
+## Parameter semantics
+
+Capability types own parameter declarations. Each declaration names whether
+the value is required and one of five closed value families: boolean, signed
+64-bit integer, exact number, text, or typed quantity. Integer and exact-number
+types may declare inclusive or exclusive minimum and maximum bounds. Text may
+declare a finite choice set. Quantity bounds name a quantity kind and are
+lowered through that kind's exact unit registry before comparison.
+
+Authored exact numbers are strings, never binary floating-point JSON numbers.
+Authored quantities are objects containing an exact string `value` and a
+`unit`. Successful compilation replaces raw parameter JSON with tagged typed
+values; exact numbers are reduced to canonical rationals and quantities are
+stored in the kind's canonical unit. Undeclared parameters, wrong value
+families or quantity kinds, and out-of-domain values are blocking findings.
+Core does not coerce strings into booleans, round numbers, choose an enum value,
+or invent a default.
+
+The exact string `not_defined` is reserved across every parameter family. In a
+draft it emits `CORE-S1301` as a `missing` finding owned by the requester. Once
+the contract is `in_review`, `approved`, or `retired`, it is an `invalid`
+finding. Missing required parameters follow the same status rule. Missing and
+invalid findings both block compilation, and the marker never enters compiled
+IR. This lets an unfinished draft state its incompleteness without allowing an
+incomplete value to masquerade as executable configuration.
+
 ## Findings
 
 Every finding carries:
@@ -96,6 +125,7 @@ Successful output is `avila.core/compiled-contract/v0.2-draft`. It contains:
 - the canonical SHA-256 identities of both source documents;
 - the semantic profile and compiler implementation identity;
 - resolved bindings in deterministic topological order;
+- typed parameter values lowered to canonical exact representations;
 - exact requirement limits lowered to canonical units; and
 - a `snapshot_sha256` over the canonical compiled body, excluding the digest
   field itself.
@@ -109,16 +139,16 @@ and semantic compatibility are related but not interchangeable claims.
 ## Implemented and deferred rules
 
 This initial slice implements the currently representable portions of SC-1,
-SC-2, SC-3, SC-4, and SC-6 R1–R6. In particular it covers canonical source
+SC-2, SC-3, SC-4, and SC-6 R1–R7. In particular it covers canonical source
 identity, exact within-kind unit scaling, unique slot resolution, nominal
 role-major compatibility, type-level claim-model/basis satisfiability, media
-compatibility, graph shape, metric binding, and limit kind/unit compatibility.
+compatibility, graph shape, metric binding, limit kind/unit compatibility, and
+typed parameter/domain enforcement.
 
 It does not yet represent or decide:
 
 - package-level actual claim-model, coverage, and bound-side sufficiency (the
   binding half of R3);
-- typed parameter domains and placeholders (R7);
 - seed and execution-factor completeness (R8);
 - human-review signatures (R9);
 - purpose/non-claim conflicts (R10);

@@ -128,7 +128,8 @@
         },
         "parameters": {
           "type": "object",
-          "description": "Parameter typing is deferred to SC-6 R7. Values are still subject to the authoritative canonical JSON profile.",
+          "description": "Values are checked against the capability type's declared parameter types and domains. Exact numbers are strings; quantities are objects with exact string `value` and `unit`. The exact string `not_defined` is reserved as an incomplete draft marker and never compiles into IR.",
+          "additionalProperties": true,
           "default": {}
         }
       }

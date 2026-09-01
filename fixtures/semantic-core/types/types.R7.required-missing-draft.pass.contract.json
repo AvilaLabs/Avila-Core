@@ -1,0 +1,36 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "fixture.types.R7.required-missing-draft.pass",
+  "revision": 1,
+  "status": "draft",
+  "workflow": [
+    {
+      "step_id": "evaluate",
+      "capability_type": {
+        "id": "fixture.parameterized_metric",
+        "major": 1
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "R-001",
+      "statement": "Bounded shutdown dose rate remains below the limit.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "evaluate",
+        "output_slot": "bounded_dose_rate"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "nuclear.dose_equivalent_rate",
+        "value": "100",
+        "unit": "uSv/h"
+      },
+      "basis": {
+        "kind": "bounded"
+      }
+    }
+  ]
+}

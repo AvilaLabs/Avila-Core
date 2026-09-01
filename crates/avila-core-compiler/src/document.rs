@@ -192,7 +192,74 @@ pub struct CapabilityTypeDefinition {
     #[serde(default)]
     pub outputs: Vec<OutputSlotDefinition>,
     #[serde(default)]
+    pub parameters: Vec<ParameterDefinition>,
+    #[serde(default)]
     pub non_claims: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ParameterDefinition {
+    pub parameter_id: String,
+    pub required: bool,
+    pub value_type: ParameterType,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
+pub enum ParameterType {
+    Boolean,
+    Integer {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        min: Option<IntegerBound>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max: Option<IntegerBound>,
+    },
+    ExactNumber {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        min: Option<ExactBound>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max: Option<ExactBound>,
+    },
+    Text {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        allowed_values: Option<Vec<String>>,
+    },
+    Quantity {
+        kind: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        min: Option<QuantityBound>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max: Option<QuantityBound>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct IntegerBound {
+    pub value: i64,
+    pub inclusive: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExactBound {
+    pub value: ExactNumber,
+    pub inclusive: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct QuantityBound {
+    pub value: QuantityValue,
+    pub inclusive: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct QuantityValue {
+    pub value: ExactNumber,
+    pub unit: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -78,6 +78,10 @@
       "type": "string",
       "pattern": "^sha256:[a-f0-9]{64}$"
     },
+    "canonicalExactNumber": {
+      "type": "string",
+      "pattern": "^(?:0|-?[1-9][0-9]*)(?:/[1-9][0-9]*)?$"
+    },
     "documentIdentity": {
       "type": "object",
       "additionalProperties": false,
@@ -299,9 +303,106 @@
           }
         },
         "parameters": {
-          "type": "object"
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/compiledParameterValue"
+          }
         }
       }
+    },
+    "compiledParameterValue": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "value"
+          ],
+          "properties": {
+            "type": {
+              "const": "boolean"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "value"
+          ],
+          "properties": {
+            "type": {
+              "const": "integer"
+            },
+            "value": {
+              "type": "integer",
+              "minimum": -9223372036854775808,
+              "maximum": 9223372036854775807
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "value"
+          ],
+          "properties": {
+            "type": {
+              "const": "exact_number"
+            },
+            "value": {
+              "$ref": "#/$defs/canonicalExactNumber"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "value"
+          ],
+          "properties": {
+            "type": {
+              "const": "text"
+            },
+            "value": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "kind",
+            "value",
+            "unit"
+          ],
+          "properties": {
+            "type": {
+              "const": "quantity"
+            },
+            "kind": {
+              "$ref": "#/$defs/nonemptyString"
+            },
+            "value": {
+              "$ref": "#/$defs/canonicalExactNumber"
+            },
+            "unit": {
+              "$ref": "#/$defs/nonemptyString"
+            }
+          }
+        }
+      ]
     },
     "compiledRequirement": {
       "type": "object",

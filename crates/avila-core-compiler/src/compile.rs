@@ -1,7 +1,8 @@
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use avila_core_kernel::{
-    KindDefinition, KindRegistry, SEMANTIC_PROFILE, UnitDefinition, canonicalize_json,
+    ExactNumber, KindDefinition, KindRegistry, SEMANTIC_PROFILE, UnitDefinition, canonicalize_json,
 };
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -9,20 +10,23 @@ use thiserror::Error;
 
 use crate::diagnostic::{
     CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3501, CORE_S1101,
-    CORE_S1102, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103, CORE_T2201, CORE_T2203, CORE_T2301,
-    CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability, SourceLocation,
+    CORE_S1102, CORE_S1301, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103, CORE_T2201, CORE_T2203,
+    CORE_T2301, CORE_T2401, CORE_T2402, CoreDiagnostic, DiagnosticRepair, FindingClass,
+    RepairApplicability, SourceLocation,
 };
 use crate::document::{
     BasisKind, BoundSide, COMPILE_REPORT_SCHEMA_VERSION, COMPILED_CONTRACT_SCHEMA_VERSION,
     CONTRACT_SCHEMA_VERSION, CapabilityTypeDefinition, ClaimModelDeclaration, Comparison,
-    ContractInput, ContractSource, REGISTRY_SCHEMA_VERSION, RegistrySnapshot, RequirementBasis,
-    RoleDefinition, SourceRef, VersionedRef,
+    ContractInput, ContractSource, ContractStatus, ExactBound, IntegerBound, ParameterDefinition,
+    ParameterType, QuantityBound, QuantityValue, REGISTRY_SCHEMA_VERSION, RegistrySnapshot,
+    RequirementBasis, RoleDefinition, SourceRef, VersionedRef,
 };
 
 pub const COMPILE_NOTICE: &str = "Compilation establishes structural and semantic consistency under the named draft profile only. It performs no execution, evidence admission, scientific qualification, or requirement verdict.";
 const COMPILER_ID: &str = concat!("avila.core/compiler-rust@", env!("CARGO_PKG_VERSION"));
 const MAX_DOCUMENT_BYTES: usize = 16 * 1024 * 1024;
 const MAX_WORKFLOW_STEPS: usize = 2_048;
+const NOT_DEFINED_PLACEHOLDER: &str = "not_defined";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -77,7 +81,29 @@ pub struct CompiledStep {
     pub step_id: String,
     pub capability_type: VersionedRef,
     pub bindings: Vec<ResolvedBinding>,
-    pub parameters: BTreeMap<String, serde_json::Value>,
+    pub parameters: BTreeMap<String, CompiledParameterValue>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
+pub enum CompiledParameterValue {
+    Boolean {
+        value: bool,
+    },
+    Integer {
+        value: i64,
+    },
+    ExactNumber {
+        value: String,
+    },
+    Text {
+        value: String,
+    },
+    Quantity {
+        kind: String,
+        value: String,
+        unit: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -149,6 +175,7 @@ pub fn compile_documents(
     let registry_index = RegistryIndex::build(&registry, &mut findings);
     let invalid_sources =
         validate_contract_registry_refs(&contract, &registry_index, &mut findings);
+    let compiled_parameters = compile_parameters(&contract, &registry_index, &mut findings);
 
     if contract.workflow.len() > MAX_WORKFLOW_STEPS {
         findings.push(CoreDiagnostic::new(
@@ -191,7 +218,12 @@ pub fn compile_documents(
     let registry_sha256 = identity_for(&source_identities, "registry")
         .expect("a parsed registry has a canonical identity")
         .to_owned();
-    let workflow = build_compiled_steps(&contract, &resolution.bindings, &order);
+    let workflow = build_compiled_steps(
+        &contract,
+        &resolution.bindings,
+        &compiled_parameters,
+        &order,
+    );
     let mut inputs = contract.inputs.clone();
     inputs.sort_by(|left, right| left.input_id.cmp(&right.input_id));
     let mut requirements = compiled_requirements;
@@ -645,6 +677,7 @@ impl<'a> RegistryIndex<'a> {
                 );
             }
             validate_slots(capability, index, &roles, findings);
+            validate_parameter_definitions(capability, index, &kinds, &kind_classes, findings);
         }
 
         Self {
@@ -654,6 +687,212 @@ impl<'a> RegistryIndex<'a> {
             capability_types,
         }
     }
+}
+
+fn validate_parameter_definitions(
+    capability: &CapabilityTypeDefinition,
+    capability_index: usize,
+    kinds: &KindRegistry,
+    kind_classes: &BTreeMap<&str, &str>,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    let mut parameter_ids = BTreeSet::new();
+    for (index, parameter) in capability.parameters.iter().enumerate() {
+        let pointer = format!("/capability_types/{capability_index}/parameters/{index}");
+        require_nonempty(
+            &parameter.parameter_id,
+            registry_location(format!("{pointer}/parameter_id")),
+            "registry_owner",
+            findings,
+        );
+        if !parameter_ids.insert(parameter.parameter_id.as_str()) {
+            invalid_value(
+                registry_location(format!("{pointer}/parameter_id")),
+                format!("duplicate parameter `{}`", parameter.parameter_id),
+                "registry_owner",
+                findings,
+            );
+        }
+
+        match &parameter.value_type {
+            ParameterType::Boolean => {}
+            ParameterType::Integer { min, max } => {
+                if let (Some(min), Some(max)) = (min, max)
+                    && range_is_empty(min.value.cmp(&max.value), min.inclusive, max.inclusive)
+                {
+                    registry_incomplete(
+                        registry_location(format!("{pointer}/value_type")),
+                        format!(
+                            "parameter `{}` declares an empty integer domain",
+                            parameter.parameter_id
+                        ),
+                        findings,
+                    );
+                }
+            }
+            ParameterType::ExactNumber { min, max } => {
+                validate_exact_parameter_range(parameter, min, max, &pointer, findings);
+            }
+            ParameterType::Text { allowed_values } => {
+                if let Some(values) = allowed_values {
+                    if values.is_empty() {
+                        registry_incomplete(
+                            registry_location(format!("{pointer}/value_type/allowed_values")),
+                            format!(
+                                "parameter `{}` declares an empty set of allowed text values",
+                                parameter.parameter_id
+                            ),
+                            findings,
+                        );
+                    }
+                    let mut unique = BTreeSet::new();
+                    if values.iter().any(|value| !unique.insert(value.as_str())) {
+                        registry_incomplete(
+                            registry_location(format!("{pointer}/value_type/allowed_values")),
+                            format!(
+                                "parameter `{}` declares duplicate allowed text values",
+                                parameter.parameter_id
+                            ),
+                            findings,
+                        );
+                    }
+                    if values.iter().any(|value| value == NOT_DEFINED_PLACEHOLDER) {
+                        registry_incomplete(
+                            registry_location(format!("{pointer}/value_type/allowed_values")),
+                            format!(
+                                "parameter `{}` cannot admit the reserved draft placeholder `{NOT_DEFINED_PLACEHOLDER}` as a text value",
+                                parameter.parameter_id
+                            ),
+                            findings,
+                        );
+                    }
+                }
+            }
+            ParameterType::Quantity { kind, min, max } => {
+                if !kind_classes.contains_key(kind.as_str()) {
+                    registry_incomplete(
+                        registry_location(format!("{pointer}/value_type/kind")),
+                        format!(
+                            "parameter `{}` references unknown quantity kind `{kind}`",
+                            parameter.parameter_id
+                        ),
+                        findings,
+                    );
+                    continue;
+                }
+                validate_quantity_parameter_range(
+                    parameter, kind, min, max, &pointer, kinds, findings,
+                );
+            }
+        }
+    }
+}
+
+fn validate_exact_parameter_range(
+    parameter: &ParameterDefinition,
+    min: &Option<ExactBound>,
+    max: &Option<ExactBound>,
+    pointer: &str,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    let (Some(min), Some(max)) = (min, max) else {
+        return;
+    };
+    match min.value.checked_cmp(&max.value) {
+        Ok(ordering) if range_is_empty(ordering, min.inclusive, max.inclusive) => {
+            registry_incomplete(
+                registry_location(format!("{pointer}/value_type")),
+                format!(
+                    "parameter `{}` declares an empty exact-number domain",
+                    parameter.parameter_id
+                ),
+                findings,
+            );
+        }
+        Ok(_) => {}
+        Err(error) => registry_incomplete(
+            registry_location(format!("{pointer}/value_type")),
+            format!(
+                "parameter `{}` domain cannot be compared: {}",
+                parameter.parameter_id,
+                error.detail()
+            ),
+            findings,
+        ),
+    }
+}
+
+fn validate_quantity_parameter_range(
+    parameter: &ParameterDefinition,
+    kind: &str,
+    min: &Option<QuantityBound>,
+    max: &Option<QuantityBound>,
+    pointer: &str,
+    kinds: &KindRegistry,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    let lower = min.as_ref().and_then(|bound| {
+        validate_registry_quantity_bound(parameter, kind, bound, "min", pointer, kinds, findings)
+    });
+    let upper = max.as_ref().and_then(|bound| {
+        validate_registry_quantity_bound(parameter, kind, bound, "max", pointer, kinds, findings)
+    });
+    let (Some(lower), Some(upper), Some(min), Some(max)) = (lower, upper, min, max) else {
+        return;
+    };
+    match lower.checked_cmp(&upper) {
+        Ok(ordering) if range_is_empty(ordering, min.inclusive, max.inclusive) => {
+            registry_incomplete(
+                registry_location(format!("{pointer}/value_type")),
+                format!(
+                    "parameter `{}` declares an empty quantity domain",
+                    parameter.parameter_id
+                ),
+                findings,
+            );
+        }
+        Ok(_) => {}
+        Err(error) => registry_incomplete(
+            registry_location(format!("{pointer}/value_type")),
+            format!(
+                "parameter `{}` domain cannot be compared: {}",
+                parameter.parameter_id,
+                error.detail()
+            ),
+            findings,
+        ),
+    }
+}
+
+fn validate_registry_quantity_bound(
+    parameter: &ParameterDefinition,
+    kind: &str,
+    bound: &QuantityBound,
+    side: &str,
+    pointer: &str,
+    kinds: &KindRegistry,
+    findings: &mut Vec<CoreDiagnostic>,
+) -> Option<ExactNumber> {
+    match kinds.scale_quantity(kind, &bound.value.value, &bound.value.unit) {
+        Ok(quantity) => Some(quantity.value),
+        Err(error) => {
+            registry_incomplete(
+                registry_location(format!("{pointer}/value_type/{side}")),
+                format!(
+                    "parameter `{}` has an invalid {side} quantity bound: {}",
+                    parameter.parameter_id,
+                    error.detail()
+                ),
+                findings,
+            );
+            None
+        }
+    }
+}
+
+fn range_is_empty(ordering: Ordering, min_inclusive: bool, max_inclusive: bool) -> bool {
+    ordering == Ordering::Greater
+        || (ordering == Ordering::Equal && !(min_inclusive && max_inclusive))
 }
 
 fn validate_slots(
@@ -1195,6 +1434,436 @@ fn can_reach_self(
     false
 }
 
+fn compile_parameters(
+    contract: &ContractSource,
+    registry: &RegistryIndex<'_>,
+    findings: &mut Vec<CoreDiagnostic>,
+) -> BTreeMap<String, BTreeMap<String, CompiledParameterValue>> {
+    let mut compiled_steps = BTreeMap::new();
+    for (step_index, step) in contract.workflow.iter().enumerate() {
+        let Some(capability) = registry.capability_types.get(&step.capability_type) else {
+            continue;
+        };
+        let definitions: BTreeMap<_, _> = capability
+            .parameters
+            .iter()
+            .map(|definition| (definition.parameter_id.as_str(), definition))
+            .collect();
+        let mut compiled = BTreeMap::new();
+
+        for parameter_id in step.parameters.keys() {
+            if !definitions.contains_key(parameter_id.as_str()) {
+                findings.push(CoreDiagnostic::new(
+                    CORE_S1101,
+                    FindingClass::Invalid,
+                    "requester",
+                    parameter_location(step_index, parameter_id),
+                    format!(
+                        "capability type `{}@{}` does not declare parameter `{parameter_id}`",
+                        step.capability_type.id, step.capability_type.major
+                    ),
+                ));
+            }
+        }
+
+        for definition in &capability.parameters {
+            let Some(value) = step.parameters.get(&definition.parameter_id) else {
+                if definition.required {
+                    add_missing_parameter_finding(
+                        contract.status,
+                        step_index,
+                        &definition.parameter_id,
+                        findings,
+                    );
+                }
+                continue;
+            };
+            if value.as_str() == Some(NOT_DEFINED_PLACEHOLDER) {
+                add_placeholder_parameter_finding(
+                    contract.status,
+                    step_index,
+                    &definition.parameter_id,
+                    findings,
+                );
+                continue;
+            }
+            if let Some(value) =
+                lower_parameter_value(definition, value, step_index, &registry.kinds, findings)
+            {
+                compiled.insert(definition.parameter_id.clone(), value);
+            }
+        }
+        compiled_steps.insert(step.step_id.clone(), compiled);
+    }
+    compiled_steps
+}
+
+fn add_missing_parameter_finding(
+    status: ContractStatus,
+    step_index: usize,
+    parameter_id: &str,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    findings.push(CoreDiagnostic::new(
+        CORE_S1301,
+        placeholder_finding_class(status),
+        "requester",
+        parameter_location(step_index, parameter_id),
+        format!("required parameter `{parameter_id}` is not defined"),
+    ));
+}
+
+fn add_placeholder_parameter_finding(
+    status: ContractStatus,
+    step_index: usize,
+    parameter_id: &str,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    findings.push(CoreDiagnostic::new(
+        CORE_S1301,
+        placeholder_finding_class(status),
+        "requester",
+        parameter_location(step_index, parameter_id),
+        if status == ContractStatus::Draft {
+            format!("parameter `{parameter_id}` remains explicitly not defined in this draft")
+        } else {
+            format!(
+                "parameter `{parameter_id}` cannot remain `not_defined` when contract status is `{}`",
+                contract_status_label(status)
+            )
+        },
+    ));
+}
+
+const fn placeholder_finding_class(status: ContractStatus) -> FindingClass {
+    if matches!(status, ContractStatus::Draft) {
+        FindingClass::Missing
+    } else {
+        FindingClass::Invalid
+    }
+}
+
+const fn contract_status_label(status: ContractStatus) -> &'static str {
+    match status {
+        ContractStatus::Draft => "draft",
+        ContractStatus::InReview => "in_review",
+        ContractStatus::Approved => "approved",
+        ContractStatus::Retired => "retired",
+    }
+}
+
+fn lower_parameter_value(
+    definition: &ParameterDefinition,
+    authored: &serde_json::Value,
+    step_index: usize,
+    kinds: &KindRegistry,
+    findings: &mut Vec<CoreDiagnostic>,
+) -> Option<CompiledParameterValue> {
+    let location = parameter_location(step_index, &definition.parameter_id);
+    match &definition.value_type {
+        ParameterType::Boolean => authored.as_bool().map_or_else(
+            || {
+                parameter_type_finding(
+                    &definition.parameter_id,
+                    "boolean",
+                    location,
+                    None,
+                    findings,
+                );
+                None
+            },
+            |value| Some(CompiledParameterValue::Boolean { value }),
+        ),
+        ParameterType::Integer { min, max } => {
+            let Some(value) = authored.as_i64() else {
+                parameter_type_finding(
+                    &definition.parameter_id,
+                    "integer",
+                    location,
+                    None,
+                    findings,
+                );
+                return None;
+            };
+            if integer_outside_domain(value, min, max) {
+                parameter_domain_finding(
+                    &definition.parameter_id,
+                    location,
+                    "integer value is outside its declared domain",
+                    None,
+                    findings,
+                );
+                return None;
+            }
+            Some(CompiledParameterValue::Integer { value })
+        }
+        ParameterType::ExactNumber { min, max } => {
+            let Some(text) = authored.as_str() else {
+                parameter_type_finding(
+                    &definition.parameter_id,
+                    "exact-number string",
+                    location,
+                    None,
+                    findings,
+                );
+                return None;
+            };
+            let value = match ExactNumber::from_canonical(text) {
+                Ok(value) => value,
+                Err(error) => {
+                    parameter_type_finding(
+                        &definition.parameter_id,
+                        "exact-number string",
+                        location,
+                        Some(error.detail()),
+                        findings,
+                    );
+                    return None;
+                }
+            };
+            match exact_outside_domain(&value, min, max) {
+                Ok(true) => {
+                    parameter_domain_finding(
+                        &definition.parameter_id,
+                        location,
+                        "exact number is outside its declared domain",
+                        None,
+                        findings,
+                    );
+                    None
+                }
+                Ok(false) => Some(CompiledParameterValue::ExactNumber {
+                    value: value.canonical_rational(),
+                }),
+                Err(error) => {
+                    parameter_type_finding(
+                        &definition.parameter_id,
+                        "comparable exact-number value",
+                        location,
+                        Some(error.detail()),
+                        findings,
+                    );
+                    None
+                }
+            }
+        }
+        ParameterType::Text { allowed_values } => {
+            let Some(value) = authored.as_str() else {
+                parameter_type_finding(&definition.parameter_id, "text", location, None, findings);
+                return None;
+            };
+            if let Some(allowed) = allowed_values
+                && !allowed.iter().any(|candidate| candidate == value)
+            {
+                parameter_domain_finding(
+                    &definition.parameter_id,
+                    location,
+                    "text value is outside its declared choice set",
+                    Some(allowed.clone()),
+                    findings,
+                );
+                return None;
+            }
+            Some(CompiledParameterValue::Text {
+                value: value.into(),
+            })
+        }
+        ParameterType::Quantity { kind, min, max } => lower_quantity_parameter(
+            definition, authored, kind, min, max, location, kinds, findings,
+        ),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn lower_quantity_parameter(
+    definition: &ParameterDefinition,
+    authored: &serde_json::Value,
+    kind: &str,
+    min: &Option<QuantityBound>,
+    max: &Option<QuantityBound>,
+    location: SourceLocation,
+    kinds: &KindRegistry,
+    findings: &mut Vec<CoreDiagnostic>,
+) -> Option<CompiledParameterValue> {
+    let quantity = match serde_json::from_value::<QuantityValue>(authored.clone()) {
+        Ok(quantity) => quantity,
+        Err(error) => {
+            let detail = error.to_string();
+            parameter_type_finding(
+                &definition.parameter_id,
+                "quantity object with exact string `value` and `unit`",
+                location,
+                Some(&detail),
+                findings,
+            );
+            return None;
+        }
+    };
+    let canonical = match kinds.scale_quantity(kind, &quantity.value, &quantity.unit) {
+        Ok(canonical) => canonical,
+        Err(error) => {
+            let repair = error.repair().map(compiler_repair);
+            parameter_type_finding(
+                &definition.parameter_id,
+                &format!("quantity of kind `{kind}`"),
+                location,
+                Some(error.detail()),
+                findings,
+            );
+            if let Some(repair) = repair
+                && let Some(diagnostic) = findings.last_mut()
+            {
+                diagnostic.repairs.push(repair);
+            }
+            return None;
+        }
+    };
+    match quantity_outside_domain(&canonical.value, kind, min, max, kinds) {
+        Ok(true) => {
+            parameter_domain_finding(
+                &definition.parameter_id,
+                location,
+                "quantity is outside its declared domain",
+                None,
+                findings,
+            );
+            None
+        }
+        Ok(false) => Some(CompiledParameterValue::Quantity {
+            kind: kind.into(),
+            value: canonical.value.canonical_rational(),
+            unit: canonical.canonical_unit,
+        }),
+        Err(error) => {
+            parameter_type_finding(
+                &definition.parameter_id,
+                &format!("quantity of kind `{kind}` with a comparable domain"),
+                location,
+                Some(error.detail()),
+                findings,
+            );
+            None
+        }
+    }
+}
+
+fn integer_outside_domain(
+    value: i64,
+    min: &Option<IntegerBound>,
+    max: &Option<IntegerBound>,
+) -> bool {
+    min.as_ref()
+        .is_some_and(|bound| value < bound.value || (value == bound.value && !bound.inclusive))
+        || max
+            .as_ref()
+            .is_some_and(|bound| value > bound.value || (value == bound.value && !bound.inclusive))
+}
+
+fn exact_outside_domain(
+    value: &ExactNumber,
+    min: &Option<ExactBound>,
+    max: &Option<ExactBound>,
+) -> Result<bool, avila_core_kernel::KernelError> {
+    if let Some(bound) = min {
+        let ordering = value.checked_cmp(&bound.value)?;
+        if ordering == Ordering::Less || (ordering == Ordering::Equal && !bound.inclusive) {
+            return Ok(true);
+        }
+    }
+    if let Some(bound) = max {
+        let ordering = value.checked_cmp(&bound.value)?;
+        if ordering == Ordering::Greater || (ordering == Ordering::Equal && !bound.inclusive) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn quantity_outside_domain(
+    value: &ExactNumber,
+    kind: &str,
+    min: &Option<QuantityBound>,
+    max: &Option<QuantityBound>,
+    kinds: &KindRegistry,
+) -> Result<bool, avila_core_kernel::KernelError> {
+    if let Some(bound) = min {
+        let canonical = kinds.scale_quantity(kind, &bound.value.value, &bound.value.unit)?;
+        let ordering = value.checked_cmp(&canonical.value)?;
+        if ordering == Ordering::Less || (ordering == Ordering::Equal && !bound.inclusive) {
+            return Ok(true);
+        }
+    }
+    if let Some(bound) = max {
+        let canonical = kinds.scale_quantity(kind, &bound.value.value, &bound.value.unit)?;
+        let ordering = value.checked_cmp(&canonical.value)?;
+        if ordering == Ordering::Greater || (ordering == Ordering::Equal && !bound.inclusive) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn parameter_type_finding(
+    parameter_id: &str,
+    expected: &str,
+    location: SourceLocation,
+    detail: Option<&str>,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    let mut message = format!("parameter `{parameter_id}` must be authored as {expected}");
+    if let Some(detail) = detail {
+        message.push_str(": ");
+        message.push_str(detail);
+    }
+    findings.push(CoreDiagnostic::new(
+        CORE_T2401,
+        FindingClass::Invalid,
+        "requester",
+        location,
+        message,
+    ));
+}
+
+fn parameter_domain_finding(
+    parameter_id: &str,
+    location: SourceLocation,
+    detail: &str,
+    candidates: Option<Vec<String>>,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    let mut diagnostic = CoreDiagnostic::new(
+        CORE_T2402,
+        FindingClass::Invalid,
+        "requester",
+        location,
+        format!("parameter `{parameter_id}` {detail}"),
+    );
+    if let Some(candidates) = candidates {
+        diagnostic = diagnostic.with_repair(DiagnosticRepair {
+            applicability: RepairApplicability::ConstrainedChoice,
+            candidates,
+        });
+    }
+    findings.push(diagnostic);
+}
+
+fn compiler_repair(repair: &avila_core_kernel::Repair) -> DiagnosticRepair {
+    DiagnosticRepair {
+        applicability: match repair.applicability {
+            avila_core_kernel::RepairApplicability::MechanicallySafe => {
+                RepairApplicability::MechanicallySafe
+            }
+            avila_core_kernel::RepairApplicability::ConstrainedChoice => {
+                RepairApplicability::ConstrainedChoice
+            }
+            avila_core_kernel::RepairApplicability::MethodOwnerJudgment => {
+                RepairApplicability::MethodOwnerJudgment
+            }
+        },
+        candidates: repair.candidates.clone(),
+    }
+}
+
 fn compile_requirements(
     contract: &ContractSource,
     registry: &RegistryIndex<'_>,
@@ -1303,20 +1972,7 @@ fn compile_requirements(
                     avila_core_kernel::CORE_T2102 => CORE_T2103,
                     other => other,
                 };
-                let repair = error.repair().map(|repair| DiagnosticRepair {
-                    applicability: match repair.applicability {
-                        avila_core_kernel::RepairApplicability::MechanicallySafe => {
-                            RepairApplicability::MechanicallySafe
-                        }
-                        avila_core_kernel::RepairApplicability::ConstrainedChoice => {
-                            RepairApplicability::ConstrainedChoice
-                        }
-                        avila_core_kernel::RepairApplicability::MethodOwnerJudgment => {
-                            RepairApplicability::MethodOwnerJudgment
-                        }
-                    },
-                    candidates: repair.candidates.clone(),
-                });
+                let repair = error.repair().map(compiler_repair);
                 let mut diagnostic = CoreDiagnostic::new(
                     code,
                     FindingClass::Invalid,
@@ -1399,6 +2055,7 @@ fn find_exact_candidate<'a>(
 fn build_compiled_steps(
     contract: &ContractSource,
     bindings: &BTreeMap<String, Vec<ResolvedBinding>>,
+    parameters: &BTreeMap<String, BTreeMap<String, CompiledParameterValue>>,
     order: &[String],
 ) -> Vec<CompiledStep> {
     let steps: BTreeMap<_, _> = contract
@@ -1416,7 +2073,7 @@ fn build_compiled_steps(
                 step_id: step.step_id.clone(),
                 capability_type: step.capability_type.clone(),
                 bindings: bindings.get(step_id).cloned().unwrap_or_default(),
-                parameters: step.parameters.clone(),
+                parameters: parameters.get(step_id).cloned().unwrap_or_default(),
             }
         })
         .collect()
@@ -1582,6 +2239,13 @@ fn logical_input_location(step_index: usize, slot: &str) -> SourceLocation {
     ))
 }
 
+fn parameter_location(step_index: usize, parameter_id: &str) -> SourceLocation {
+    contract_location(format!(
+        "/workflow/{step_index}/parameters/{}",
+        escape_pointer_token(parameter_id)
+    ))
+}
+
 fn contract_location(pointer: impl Into<String>) -> SourceLocation {
     SourceLocation::new("contract", pointer)
 }
@@ -1638,6 +2302,12 @@ mod tests {
     );
     const REGISTRY: &[u8] =
         include_bytes!("../../../fixtures/semantic-core/types/compiler.registry.v1.json");
+    const PARAMETER_CONTRACT: &[u8] = include_bytes!(
+        "../../../fixtures/semantic-core/types/types.R7.parameters.pass.contract.json"
+    );
+    const PARAMETER_REGISTRY: &[u8] = include_bytes!(
+        "../../../fixtures/semantic-core/types/compiler.parameters.registry.v1.json"
+    );
 
     fn contract() -> ContractSource {
         serde_json::from_slice(CONTRACT).unwrap()
@@ -1645,6 +2315,14 @@ mod tests {
 
     fn registry() -> RegistrySnapshot {
         serde_json::from_slice(REGISTRY).unwrap()
+    }
+
+    fn parameter_contract() -> ContractSource {
+        serde_json::from_slice(PARAMETER_CONTRACT).unwrap()
+    }
+
+    fn parameter_registry() -> RegistrySnapshot {
+        serde_json::from_slice(PARAMETER_REGISTRY).unwrap()
     }
 
     fn compile_contract(contract: &ContractSource) -> CompileReport {
@@ -1694,6 +2372,39 @@ mod tests {
         assert_eq!(report.status, CompilationStatus::Rejected);
         assert_eq!(report.findings[0].code, CORE_S1102);
         assert!(report.compiled.is_none());
+    }
+
+    #[test]
+    fn invalid_parameter_declarations_fail_as_registry_findings() {
+        let source = parameter_contract();
+
+        let mut empty_integer_domain = parameter_registry();
+        let ParameterType::Integer { min: Some(min), .. } =
+            &mut empty_integer_domain.capability_types[0].parameters[1].value_type
+        else {
+            panic!("fixture parameter must be an integer");
+        };
+        min.value = 101;
+        assert!(codes(&compile_with_registry(&source, &empty_integer_domain)).contains(CORE_R3501));
+
+        let mut reserved_choice = parameter_registry();
+        let ParameterType::Text {
+            allowed_values: Some(values),
+        } = &mut reserved_choice.capability_types[0].parameters[3].value_type
+        else {
+            panic!("fixture parameter must be text");
+        };
+        values.push(NOT_DEFINED_PLACEHOLDER.into());
+        assert!(codes(&compile_with_registry(&source, &reserved_choice)).contains(CORE_R3501));
+
+        let mut unknown_kind = parameter_registry();
+        let ParameterType::Quantity { kind, .. } =
+            &mut unknown_kind.capability_types[0].parameters[0].value_type
+        else {
+            panic!("fixture parameter must be a quantity");
+        };
+        *kind = "fixture.unknown_kind".into();
+        assert!(codes(&compile_with_registry(&source, &unknown_kind)).contains(CORE_R3501));
     }
 
     #[test]

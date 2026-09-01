@@ -111,8 +111,9 @@ Accepts a `v0.2-draft` contract and one explicit immutable registry snapshot,
 then returns deterministic structured findings or a content-identified compiled
 snapshot. The current slice resolves typed slots, derives and checks the
 dependency graph, validates nominal roles, claim-model sufficiency, and media,
-and lowers requirement limits through exact kind/unit rules. It performs no package selection,
-execution, evidence admission, qualification decision, or verdict. See the
+enforces declared parameter types and domains, and lowers parameters and
+requirement limits through exact kind/unit rules. It performs no package
+selection, execution, evidence admission, qualification decision, or verdict. See the
 [semantic compiler boundary](SEMANTIC_COMPILER.md).
 
 ### `avila-core-evidence`

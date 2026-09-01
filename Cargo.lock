@@ -482,6 +482,8 @@ dependencies = [
 name = "avila-core-cli"
 version = "0.1.0"
 dependencies = [
+ "avila-core-evidence",
+ "avila-core-kernel",
  "avila-core-model",
  "avila-core-runtime",
  "clap",

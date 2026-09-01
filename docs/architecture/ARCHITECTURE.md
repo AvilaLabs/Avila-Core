@@ -72,7 +72,7 @@ The scaffold deliberately implements only the shaded foundation implied below:
 avila-core-model
     ├── avila-core-runtime   (planning only)
     ├── avila-core-evidence  (record model + hashing only)
-    ├── avila-core-cli       (validate and plan)
+    ├── avila-core-cli       (canonicalize, validate, and plan)
     └── avila-core-app       (thin read-only specimen UI)
 
 avila-core-kernel            (first canonical-value authority slice)
@@ -111,8 +111,10 @@ writer, signature system, lineage validator, or independent verifier yet.
 
 ### `avila-core-cli`
 
-Provides headless contract validation and plan rendering. All output explicitly
-distinguishes structural validity from scientific validity.
+Provides authoritative JSON canonicalization, embedded semantic-profile and
+vector-set identities, headless contract validation, and plan rendering. All
+output explicitly distinguishes software conformance or structural validity
+from scientific validity.
 
 ### `avila-core-app`
 

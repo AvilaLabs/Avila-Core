@@ -59,6 +59,10 @@ Requirements: Rust 1.95.0 and the native libraries required by `eframe`.
 ```bash
 cargo test --workspace --all-targets
 
+cargo run -p avila-core-cli -- semantic-profile
+
+cargo run -p avila-core-cli -- canonicalize path/to/authoritative.json
+
 cargo run -p avila-core-cli -- \
   validate-contract examples/contracts/shutdown-dose-specimen.json
 

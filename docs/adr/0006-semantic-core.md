@@ -159,8 +159,9 @@ or combines them; Core never silently combines them.
 ### SC-5 Capability types are signatures; workflows are programs
 
 1. A capability type declares accepted slots, produced slots, permitted output
-   claim models, typed parameters and domains, determinism class, partial-output
-   behavior, non-claims, conformance fixtures, and owner.
+   claim models, typed parameters and domains, determinism class, any
+   type-level material execution factors, partial-output behavior, non-claims,
+   conformance fixtures, and owner.
 2. A package manifest identifies the exact implementation and declares which
    permitted model it actually emits for each output, its environment and
    hardware requirements, ABI versions, validators, typed preflight facts,
@@ -176,7 +177,9 @@ or combines them; Core never silently combines them.
    determinism.
 5. `seeded_stochastic` includes the seed in invocation identity.
    `nondeterministic` is never execution-memoized and is admissible only under
-   explicit policy.
+   explicit policy. Static contract compilation requires every role produced by
+   a nondeterministic type to be explicitly permitted; that contract permission
+   does not replace organization-level admission policy.
 6. Partial results are admitted only for slots the type permits and the receipt
    declares complete.
 7. Review and cross-kind conversion are capability types, not hidden special

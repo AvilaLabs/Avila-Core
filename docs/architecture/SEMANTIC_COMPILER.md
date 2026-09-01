@@ -32,7 +32,7 @@ schema + semantic-profile check
 registry integrity and nominal identities
               │
               ▼
-parameter declaration, type, and domain checks
+parameter and reproducibility declaration checks
               │
               ▼
 slot resolution + role/media checks
@@ -102,6 +102,31 @@ invalid findings both block compilation, and the marker never enters compiled
 IR. This lets an unfinished draft state its incompleteness without allowing an
 incomplete value to masquerade as executable configuration.
 
+## Type-level reproducibility
+
+Every capability type declares one determinism class: `deterministic`,
+`seeded_stochastic`, or `nondeterministic`. It also declares every execution
+factor that the type considers material to invocation identity. Material
+factors use the same closed typed-value and domain machinery as parameters and
+must all be explicitly bound on each step. Their canonical typed values are
+retained in compiled IR.
+
+A `seeded_stochastic` step must bind a nonempty opaque seed, which is retained
+in invocation identity. A seed on either of the other classes is rejected
+because silently treating irrelevant configuration as identity would obscure
+the type's actual reproducibility claim. Nondeterminism is forbidden when the
+contract omits an execution policy; a nondeterministic type compiles only when
+the contract explicitly lists every produced evidence role under
+`permitted_nondeterministic_roles`. Permission is scoped by nominal role and
+does not make the capability deterministic, scientifically qualified, or
+acceptable under an organization's policy. Its compiled class remains
+`nondeterministic`, and downstream execution memoization must remain disabled.
+
+This is the type-level half of R8 only. Exact packages may declare additional
+material environment, hardware, ABI, validator, and implementation factors.
+Those factors cannot be checked until package binding exists, so successful
+static compilation is not a package-level reproducibility judgment.
+
 ## Findings
 
 Every finding carries:
@@ -126,6 +151,8 @@ Successful output is `avila.core/compiled-contract/v0.2-draft`. It contains:
 - the semantic profile and compiler implementation identity;
 - resolved bindings in deterministic topological order;
 - typed parameter values lowered to canonical exact representations;
+- type-level determinism, seeds, material execution factors, and the effective
+  contract nondeterminism policy;
 - exact requirement limits lowered to canonical units; and
 - a `snapshot_sha256` over the canonical compiled body, excluding the digest
   field itself.
@@ -139,17 +166,18 @@ and semantic compatibility are related but not interchangeable claims.
 ## Implemented and deferred rules
 
 This initial slice implements the currently representable portions of SC-1,
-SC-2, SC-3, SC-4, and SC-6 R1–R7. In particular it covers canonical source
+SC-2, SC-3, SC-4, and SC-6 R1–R8. In particular it covers canonical source
 identity, exact within-kind unit scaling, unique slot resolution, nominal
 role-major compatibility, type-level claim-model/basis satisfiability, media
-compatibility, graph shape, metric binding, limit kind/unit compatibility, and
-typed parameter/domain enforcement.
+compatibility, graph shape, metric binding, limit kind/unit compatibility,
+typed parameter/domain enforcement, and type-level reproducibility bindings.
 
 It does not yet represent or decide:
 
 - package-level actual claim-model, coverage, and bound-side sufficiency (the
   binding half of R3);
-- seed and execution-factor completeness (R8);
+- package-declared environment, hardware, ABI, validator, and implementation
+  factors (the binding half of R8);
 - human-review signatures (R9);
 - purpose/non-claim conflicts (R10);
 - capability packages, qualification, policy, admission, or selection; or

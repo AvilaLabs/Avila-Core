@@ -112,9 +112,11 @@ then returns deterministic structured findings or a content-identified compiled
 snapshot. The current slice resolves typed slots, derives and checks the
 dependency graph, validates nominal roles, claim-model sufficiency, and media,
 enforces declared parameter types and domains, and lowers parameters and
-requirement limits through exact kind/unit rules. It performs no package
-selection, execution, evidence admission, qualification decision, or verdict. See the
-[semantic compiler boundary](SEMANTIC_COMPILER.md).
+requirement limits through exact kind/unit rules. It also binds each capability
+type's determinism class, seed, and declared material execution factors while
+leaving package-level reproducibility to future package binding. It performs no
+package selection, execution, evidence admission, qualification decision, or
+verdict. See the [semantic compiler boundary](SEMANTIC_COMPILER.md).
 
 ### `avila-core-evidence`
 

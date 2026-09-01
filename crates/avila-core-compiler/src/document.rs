@@ -25,6 +25,13 @@ pub enum ContractStatus {
     Retired,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExecutionPolicy {
+    #[serde(default)]
+    pub permitted_nondeterministic_roles: Vec<VersionedRef>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ContractSource {
@@ -33,6 +40,8 @@ pub struct ContractSource {
     pub contract_id: String,
     pub revision: u64,
     pub status: ContractStatus,
+    #[serde(default)]
+    pub execution_policy: ExecutionPolicy,
     #[serde(default)]
     pub inputs: Vec<ContractInput>,
     pub workflow: Vec<WorkflowStep>,
@@ -57,6 +66,17 @@ pub struct WorkflowStep {
     pub bindings: Vec<AuthoredBinding>,
     #[serde(default)]
     pub parameters: BTreeMap<String, Value>,
+    #[serde(default)]
+    pub reproducibility: ReproducibilityBinding,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReproducibilityBinding {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seed: Option<String>,
+    #[serde(default)]
+    pub material_factors: BTreeMap<String, Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -187,6 +207,7 @@ pub struct RoleDefinition {
 pub struct CapabilityTypeDefinition {
     pub capability_type: VersionedRef,
     pub owner: String,
+    pub reproducibility: ReproducibilityDeclaration,
     #[serde(default)]
     pub inputs: Vec<InputSlotDefinition>,
     #[serde(default)]
@@ -195,6 +216,29 @@ pub struct CapabilityTypeDefinition {
     pub parameters: Vec<ParameterDefinition>,
     #[serde(default)]
     pub non_claims: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReproducibilityDeclaration {
+    pub determinism: DeterminismClass,
+    #[serde(default)]
+    pub material_factors: Vec<ExecutionFactorDefinition>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeterminismClass {
+    Deterministic,
+    SeededStochastic,
+    Nondeterministic,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExecutionFactorDefinition {
+    pub factor_id: String,
+    pub value_type: ParameterType,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -329,6 +373,7 @@ pub fn current_profile_contract(contract_id: impl Into<String>) -> ContractSourc
         contract_id: contract_id.into(),
         revision: 1,
         status: ContractStatus::Draft,
+        execution_policy: ExecutionPolicy::default(),
         inputs: Vec::new(),
         workflow: Vec::new(),
         requirements: Vec::new(),

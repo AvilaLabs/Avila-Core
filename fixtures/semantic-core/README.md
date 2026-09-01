@@ -17,7 +17,7 @@ multiple historical profiles.
 - `scope-predicates.v1.json`: 19 vectors;
 - `verdict-calculus.v1.json`: 49 vectors: 41 requirement-evaluation vectors
   plus 8 aggregate-verdict vectors; and
-- `canon.v1.json`: 12 initial canonical-value and byte-reader vectors.
+- `canon.v1.json`: 12 initial canonical-value and byte-reader vectors;
 - `types/compiler-cases.v1.json`: 18 executable compiler fixtures: 3 compiled
   cases and 15 rejected cases covering the current R1–R6 subset, claim-model
   sufficiency, exact unit lowering, cascade suppression, and independent
@@ -25,7 +25,11 @@ multiple historical profiles.
 - `types/compiler-parameter-cases.v1.json`: 9 executable R7 fixtures: 1
   compiled case and 8 rejected cases covering every parameter value family,
   exact canonical lowering, quantity kinds and domains, undeclared values, and
-  draft versus approved placeholder behavior.
+  draft versus approved placeholder behavior;
+- `types/compiler-reproducibility-cases.v1.json`: 9 executable type-level R8
+  fixtures: 3 compiled cases and 6 rejected cases covering deterministic,
+  seeded-stochastic, and nondeterministic types, material execution factors,
+  seeds, and explicit role-scoped nondeterminism policy.
 
 All other fixtures below are required before ADR acceptance and are currently
 planned unless files exist for them.
@@ -33,10 +37,10 @@ planned unless files exist for them.
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
 `scope-predicates.v1.json`, plus the 41 requirement and 8 aggregation vectors in
-`verdict-calculus.v1.json`. The compiler harness also executes all 27 cases in
-the two compiler manifests and pins each registry digest plus all successful
-compiled-snapshot identities. Passing the 90 pure vectors and 27
-compiler fixtures does not accept ADR-0006: most compiler rules and other
+`verdict-calculus.v1.json`. The compiler harness also executes all 36 cases in
+the three compiler manifests and pins each registry digest plus all successful
+compiled-snapshot identities. Passing the 90 pure vectors and 36
+compiler fixtures does not accept ADR-0006: remaining compiler rules and other
 vector families in this coverage plan remain absent, and no result is
 scientifically qualified.
 
@@ -63,11 +67,15 @@ fixtures/semantic-core/
                              executable manifest for the current compiler subset
   types/compiler-parameter-cases.v1.json
                              executable manifest for SC-6 R7 parameters
+  types/compiler-reproducibility-cases.v1.json
+                             executable manifest for type-level SC-6 R8
   types/*.contract.json     exact contract inputs named by that manifest
   types/compiler.registry.v1.json
                              exact shared registry input pinned by the manifest
   types/compiler.parameters.registry.v1.json
                              exact parameter registry pinned by the R7 manifest
+  types/compiler.reproducibility.registry.v1.json
+                             exact determinism registry pinned by the R8 manifest
   scenarios/                 planned end-to-end campaign fixtures
 ```
 
@@ -215,9 +223,14 @@ canonically.
 | `types.R7.placeholder-draft.pass` | `not_defined` in `draft` → `missing` finding, owner requester |
 | `types.R7.placeholder-approved.fail` | `CORE-S1301` |
 | `types.R7.required-missing-draft.pass` | absent required value → `missing` finding, owner requester |
-| `types.R8.missing-seed.fail` | `CORE-T2501` |
+| `types.R8.deterministic-bound.pass` | declared material factors are typed and retained in compiled identity |
+| `types.R8.missing-factor.fail` | every type-declared material factor must be bound → `CORE-T2501` |
+| `types.R8.factor-domain.fail` | factor values use the same typed domains → `CORE-T2402` |
+| `types.R8.extraneous-seed.fail` | seeds do not enter deterministic invocation identity → `CORE-T2501` |
+| `types.R8.seeded-bound.pass` / `missing-seed.fail` | seeded-stochastic identity requires the seed and material factors |
 | `types.R8.nondeterministic-refused.fail` | `CORE-A4301` |
-| `types.R8.nondeterministic-permitted.pass` | policy `permit_nondeterministic` for the role |
+| `types.R8.nondeterministic-permitted.pass` | explicit policy permits every produced role without changing the nondeterministic class |
+| `types.R8.permission-scope.fail` | permission for an unrelated role does not enable the step → `CORE-A4301` |
 | `types.R9.review-incomplete.fail` | `CORE-R3401` |
 | `types.R10.non-claim.fail` | flux used as dose → `CORE-T2601` |
 | `types.satisfiable.pass` | a path of roles reaches the basis |

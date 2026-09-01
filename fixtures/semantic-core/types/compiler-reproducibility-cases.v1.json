@@ -1,0 +1,262 @@
+{
+  "fixture_set": "compiler-reproducibility-types",
+  "version": 1,
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "registry": {
+    "path": "compiler.reproducibility.registry.v1.json",
+    "sha256": "sha256:c47285d9920fd52387b2711017d8d0ee12a5c26d1c31fa0e073bd38225850abf"
+  },
+  "fixtures": [
+    {
+      "fixture_id": "types.R8.deterministic-bound.pass",
+      "clause": "SC-5 and SC-6 R8",
+      "contract": "types.R8.deterministic-bound.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [],
+        "compiled": {
+          "snapshot_sha256": "sha256:275c1cf6048c6c5cae04cd58018b8f19884a0e70b82b58d4919d624c3f091c77",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": []
+          },
+          "step_order": [
+            "evaluate"
+          ],
+          "bindings": [],
+          "parameters": [],
+          "reproducibility": [
+            {
+              "step_id": "evaluate",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {
+                  "environment_image": {
+                    "type": "text",
+                    "value": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  },
+                  "thread_count": {
+                    "type": "integer",
+                    "value": 4
+                  }
+                }
+              }
+            }
+          ],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.R8.missing-factor.fail",
+      "clause": "SC-6 R8",
+      "contract": "types.R8.missing-factor.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2501",
+            "class": "missing",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/reproducibility/material_factors/thread_count"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R8.factor-domain.fail",
+      "clause": "SC-6 R7 and R8",
+      "contract": "types.R8.factor-domain.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2402",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/reproducibility/material_factors/thread_count"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R8.extraneous-seed.fail",
+      "clause": "SC-6 R8",
+      "contract": "types.R8.extraneous-seed.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2501",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/reproducibility/seed"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R8.seeded-bound.pass",
+      "clause": "SC-5 and SC-6 R8",
+      "contract": "types.R8.seeded-bound.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [],
+        "compiled": {
+          "snapshot_sha256": "sha256:e6729328e9a0cffce2ef711d6d7380daf5d346aee441f38202a4e8561236346f",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": []
+          },
+          "step_order": [
+            "evaluate"
+          ],
+          "bindings": [],
+          "parameters": [],
+          "reproducibility": [
+            {
+              "step_id": "evaluate",
+              "value": {
+                "determinism": "seeded_stochastic",
+                "seed": "campaign-0001",
+                "material_factors": {
+                  "rng_algorithm": {
+                    "type": "text",
+                    "value": "pcg64"
+                  }
+                }
+              }
+            }
+          ],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.R8.missing-seed.fail",
+      "clause": "SC-6 R8",
+      "contract": "types.R8.missing-seed.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-T2501",
+            "class": "missing",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/reproducibility/seed"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R8.nondeterministic-refused.fail",
+      "clause": "SC-5 and SC-6 R8",
+      "contract": "types.R8.nondeterministic-refused.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-A4301",
+            "class": "inadmissible",
+            "owner": "policy_owner",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/capability_type"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R8.nondeterministic-permitted.pass",
+      "clause": "SC-5 and SC-6 R8",
+      "contract": "types.R8.nondeterministic-permitted.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [],
+        "compiled": {
+          "snapshot_sha256": "sha256:c523e6db57cfff8400ae233f3f54258495c6182186fdcb506131407097845d6b",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": [
+              {
+                "id": "nuclear.shutdown_dose_rate",
+                "major": 1
+              }
+            ]
+          },
+          "step_order": [
+            "evaluate"
+          ],
+          "bindings": [],
+          "parameters": [],
+          "reproducibility": [
+            {
+              "step_id": "evaluate",
+              "value": {
+                "determinism": "nondeterministic",
+                "material_factors": {}
+              }
+            }
+          ],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fixture_id": "types.R8.permission-scope.fail",
+      "clause": "SC-5 and SC-6 R8",
+      "contract": "types.R8.permission-scope.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-A4301",
+            "class": "inadmissible",
+            "owner": "policy_owner",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/capability_type"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    }
+  ]
+}

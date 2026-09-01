@@ -36,6 +36,9 @@
         "retired"
       ]
     },
+    "execution_policy": {
+      "$ref": "#/$defs/executionPolicy"
+    },
     "inputs": {
       "type": "array",
       "items": {
@@ -129,6 +132,37 @@
         "parameters": {
           "type": "object",
           "description": "Values are checked against the capability type's declared parameter types and domains. Exact numbers are strings; quantities are objects with exact string `value` and `unit`. The exact string `not_defined` is reserved as an incomplete draft marker and never compiles into IR.",
+          "additionalProperties": true,
+          "default": {}
+        },
+        "reproducibility": {
+          "$ref": "#/$defs/reproducibilityBinding"
+        }
+      }
+    },
+    "executionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "permitted_nondeterministic_roles": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/versionedRef"
+          },
+          "default": []
+        }
+      }
+    },
+    "reproducibilityBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "seed": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "material_factors": {
+          "type": "object",
           "additionalProperties": true,
           "default": {}
         }

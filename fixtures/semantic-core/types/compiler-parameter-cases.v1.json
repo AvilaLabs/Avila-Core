@@ -4,7 +4,7 @@
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "registry": {
     "path": "compiler.parameters.registry.v1.json",
-    "sha256": "sha256:7913c6608ad1239db389d8b31b55b3d66a764098fe0a04e695b298f27ce2aa6f"
+    "sha256": "sha256:b23273a43298fb776c2ba4b88ebe9ef3a2b7d31a1490152a8b272c2037383680"
   },
   "fixtures": [
     {
@@ -15,7 +15,10 @@
         "status": "compiled",
         "findings": [],
         "compiled": {
-          "snapshot_sha256": "sha256:449d50537da2ec4d69d3475e66a5cae3743be0cd9426d6064df759f8d8e16409",
+          "snapshot_sha256": "sha256:6f0881f3f4fe7f2217de582a67999cf26f3cdbe151046d88c816db970f4fce4f",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": []
+          },
           "step_order": [
             "evaluate"
           ],
@@ -61,6 +64,15 @@
               "value": {
                 "type": "exact_number",
                 "value": "1/2"
+              }
+            }
+          ],
+          "reproducibility": [
+            {
+              "step_id": "evaluate",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
               }
             }
           ],

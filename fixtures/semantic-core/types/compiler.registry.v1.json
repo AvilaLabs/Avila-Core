@@ -133,6 +133,10 @@
         "major": 1
       },
       "owner": "fixture.method_owner",
+      "reproducibility": {
+        "determinism": "deterministic",
+        "material_factors": []
+      },
       "inputs": [
         {
           "slot_id": "source",
@@ -168,6 +172,10 @@
         "major": 1
       },
       "owner": "fixture.method_owner",
+      "reproducibility": {
+        "determinism": "deterministic",
+        "material_factors": []
+      },
       "inputs": [
         {
           "slot_id": "dose_rate",

@@ -4,7 +4,7 @@
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "registry": {
     "path": "compiler.registry.v1.json",
-    "sha256": "sha256:d3747754a6931d7bb42cac1463d7fce6dfae9d4d1acadc1a5c27b3f78bfa0483"
+    "sha256": "sha256:16420bc7b40129acf08aaf3dd39d6cb4558f271e9b1ad150a0e133a7524ccbe3"
   },
   "fixtures": [
     {
@@ -15,7 +15,10 @@
         "status": "compiled",
         "findings": [],
         "compiled": {
-          "snapshot_sha256": "sha256:87b8c9ec8abf99904a84abdd65716f0f88415331c53f17359de25cd1e1d9d0d8",
+          "snapshot_sha256": "sha256:981acc836e8250b8d10bd165b3676d507ac4b9bde536e67c268eb718173b8c54",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": []
+          },
           "step_order": [
             "calculate",
             "bound"
@@ -30,6 +33,22 @@
               "step_id": "bound",
               "input_slot": "dose_rate",
               "source": "step:calculate/dose_rate"
+            }
+          ],
+          "reproducibility": [
+            {
+              "step_id": "calculate",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            },
+            {
+              "step_id": "bound",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
             }
           ],
           "limits": [
@@ -93,7 +112,10 @@
         "status": "compiled",
         "findings": [],
         "compiled": {
-          "snapshot_sha256": "sha256:ec7e66520fb80d1f57fba9434a72c203b4855d3717c63a1ed7001d18f12949a0",
+          "snapshot_sha256": "sha256:ee76f2df1fb6afbe6c1729f960d983e175298f591c9c5d3355957121a02a5675",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": []
+          },
           "step_order": [
             "calculate",
             "bound"
@@ -108,6 +130,22 @@
               "step_id": "bound",
               "input_slot": "dose_rate",
               "source": "step:calculate/dose_rate"
+            }
+          ],
+          "reproducibility": [
+            {
+              "step_id": "calculate",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            },
+            {
+              "step_id": "bound",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
             }
           ],
           "limits": [
@@ -191,7 +229,10 @@
         "status": "compiled",
         "findings": [],
         "compiled": {
-          "snapshot_sha256": "sha256:cb245508543690d4bf92c7dd1ab0d4af0c87a2330668d63063b43f974187fa78",
+          "snapshot_sha256": "sha256:6d49109605048b3e87af36e821a742902fde8265486035133a4dd1270cd1dd55",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": []
+          },
           "step_order": [
             "calculate"
           ],
@@ -200,6 +241,15 @@
               "step_id": "calculate",
               "input_slot": "source",
               "source": "input:case"
+            }
+          ],
+          "reproducibility": [
+            {
+              "step_id": "calculate",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
             }
           ],
           "limits": [

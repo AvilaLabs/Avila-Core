@@ -176,7 +176,8 @@
       "additionalProperties": false,
       "required": [
         "capability_type",
-        "owner"
+        "owner",
+        "reproducibility"
       ],
       "properties": {
         "capability_type": {
@@ -184,6 +185,9 @@
         },
         "owner": {
           "$ref": "#/$defs/nonemptyString"
+        },
+        "reproducibility": {
+          "$ref": "#/$defs/reproducibilityDeclaration"
         },
         "inputs": {
           "type": "array",
@@ -212,6 +216,45 @@
             "$ref": "#/$defs/nonemptyString"
           },
           "default": []
+        }
+      }
+    },
+    "reproducibilityDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "determinism"
+      ],
+      "properties": {
+        "determinism": {
+          "enum": [
+            "deterministic",
+            "seeded_stochastic",
+            "nondeterministic"
+          ]
+        },
+        "material_factors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/executionFactorDefinition"
+          },
+          "default": []
+        }
+      }
+    },
+    "executionFactorDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "factor_id",
+        "value_type"
+      ],
+      "properties": {
+        "factor_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "value_type": {
+          "$ref": "#/$defs/parameterType"
         }
       }
     },

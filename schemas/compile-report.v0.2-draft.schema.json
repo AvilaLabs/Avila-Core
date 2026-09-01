@@ -287,7 +287,8 @@
         "step_id",
         "capability_type",
         "bindings",
-        "parameters"
+        "parameters",
+        "reproducibility"
       ],
       "properties": {
         "step_id": {
@@ -303,6 +304,35 @@
           }
         },
         "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/compiledParameterValue"
+          }
+        },
+        "reproducibility": {
+          "$ref": "#/$defs/compiledReproducibility"
+        }
+      }
+    },
+    "compiledReproducibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "determinism",
+        "material_factors"
+      ],
+      "properties": {
+        "determinism": {
+          "enum": [
+            "deterministic",
+            "seeded_stochastic",
+            "nondeterministic"
+          ]
+        },
+        "seed": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "material_factors": {
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/compiledParameterValue"
@@ -498,6 +528,7 @@
         "registry_id",
         "registry_revision",
         "registry_sha256",
+        "execution_policy",
         "inputs",
         "workflow",
         "requirements",
@@ -533,6 +564,9 @@
         "registry_sha256": {
           "$ref": "#/$defs/sha256"
         },
+        "execution_policy": {
+          "$ref": "#/$defs/executionPolicy"
+        },
         "inputs": {
           "type": "array",
           "items": {
@@ -553,6 +587,22 @@
         },
         "snapshot_sha256": {
           "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "executionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "permitted_nondeterministic_roles"
+      ],
+      "properties": {
+        "permitted_nondeterministic_roles": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/versionedRef"
+          }
         }
       }
     },

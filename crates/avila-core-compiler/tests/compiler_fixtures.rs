@@ -57,10 +57,12 @@ struct ExpectedFinding {
 #[serde(deny_unknown_fields)]
 struct ExpectedCompiled {
     snapshot_sha256: String,
+    execution_policy: serde_json::Value,
     step_order: Vec<String>,
     bindings: Vec<ExpectedBinding>,
     #[serde(default)]
     parameters: Vec<ExpectedParameter>,
+    reproducibility: Vec<ExpectedReproducibility>,
     limits: Vec<ExpectedLimit>,
 }
 
@@ -89,14 +91,25 @@ struct ExpectedParameter {
     value: serde_json::Value,
 }
 
+#[derive(Debug, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedReproducibility {
+    step_id: String,
+    value: serde_json::Value,
+}
+
 #[test]
 fn compiler_type_fixtures_are_executable() {
     let fixture_root = fixture_root();
     let mut fixture_count = 0;
-    for suite_name in ["compiler-cases.v1.json", "compiler-parameter-cases.v1.json"] {
+    for suite_name in [
+        "compiler-cases.v1.json",
+        "compiler-parameter-cases.v1.json",
+        "compiler-reproducibility-cases.v1.json",
+    ] {
         fixture_count += execute_suite(&fixture_root, suite_name);
     }
-    assert_eq!(fixture_count, 27);
+    assert_eq!(fixture_count, 36);
 }
 
 fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
@@ -158,6 +171,12 @@ fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
                     "{} snapshot identity",
                     fixture.fixture_id
                 );
+                assert_eq!(
+                    serde_json::to_value(&compiled.execution_policy).unwrap(),
+                    expected.execution_policy,
+                    "{} execution policy",
+                    fixture.fixture_id
+                );
                 let step_order: Vec<_> = compiled
                     .workflow
                     .iter()
@@ -200,6 +219,19 @@ fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
                 assert_eq!(
                     parameters, expected.parameters,
                     "{} parameters",
+                    fixture.fixture_id
+                );
+                let reproducibility: Vec<_> = compiled
+                    .workflow
+                    .iter()
+                    .map(|step| ExpectedReproducibility {
+                        step_id: step.step_id.clone(),
+                        value: serde_json::to_value(&step.reproducibility).unwrap(),
+                    })
+                    .collect();
+                assert_eq!(
+                    reproducibility, expected.reproducibility,
+                    "{} reproducibility",
                     fixture.fixture_id
                 );
                 let limits: Vec<_> = compiled

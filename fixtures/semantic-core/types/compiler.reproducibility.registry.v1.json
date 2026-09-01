@@ -1,0 +1,172 @@
+{
+  "schema_version": "avila.core/registry-snapshot/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "registry_id": "fixtures.compiler.reproducibility.registry",
+  "revision": 1,
+  "kinds": [
+    {
+      "kind_id": "nuclear.dose_equivalent_rate",
+      "canonical_unit": "Sv/s",
+      "unit_class": "nuclear.dose_equivalent_rate.units@1",
+      "owner": "fixture.method_owner",
+      "units": [
+        {
+          "symbol": "Sv/s",
+          "factor": "1"
+        },
+        {
+          "symbol": "uSv/h",
+          "factor": "1/3600000000"
+        }
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "role": {
+        "id": "nuclear.shutdown_dose_rate",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "validator": "fixture.validate.dose-rate@1",
+      "quantity_kind": "nuclear.dose_equivalent_rate",
+      "unit_class": "nuclear.dose_equivalent_rate.units@1",
+      "accepted_media_types": [
+        "application/vnd.fixture.quantity+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "interval"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "fixture.audit_trace",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "validator": "fixture.validate.audit-trace@1",
+      "accepted_media_types": [
+        "application/vnd.fixture.audit+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ]
+    }
+  ],
+  "capability_types": [
+    {
+      "capability_type": {
+        "id": "fixture.deterministic_metric",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "reproducibility": {
+        "determinism": "deterministic",
+        "material_factors": [
+          {
+            "factor_id": "environment_image",
+            "value_type": {
+              "type": "text"
+            }
+          },
+          {
+            "factor_id": "thread_count",
+            "value_type": {
+              "type": "integer",
+              "min": {
+                "value": 1,
+                "inclusive": true
+              },
+              "max": {
+                "value": 64,
+                "inclusive": true
+              }
+            }
+          }
+        ]
+      },
+      "outputs": [
+        {
+          "slot_id": "bounded_dose_rate",
+          "role": {
+            "id": "nuclear.shutdown_dose_rate",
+            "major": 1
+          },
+          "media_type": "application/vnd.fixture.quantity+json",
+          "permitted_claim_models": [
+            {
+              "model": "interval"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "capability_type": {
+        "id": "fixture.seeded_metric",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "reproducibility": {
+        "determinism": "seeded_stochastic",
+        "material_factors": [
+          {
+            "factor_id": "rng_algorithm",
+            "value_type": {
+              "type": "text",
+              "allowed_values": [
+                "pcg64",
+                "philox"
+              ]
+            }
+          }
+        ]
+      },
+      "outputs": [
+        {
+          "slot_id": "bounded_dose_rate",
+          "role": {
+            "id": "nuclear.shutdown_dose_rate",
+            "major": 1
+          },
+          "media_type": "application/vnd.fixture.quantity+json",
+          "permitted_claim_models": [
+            {
+              "model": "interval"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "capability_type": {
+        "id": "fixture.nondeterministic_metric",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "reproducibility": {
+        "determinism": "nondeterministic",
+        "material_factors": []
+      },
+      "outputs": [
+        {
+          "slot_id": "bounded_dose_rate",
+          "role": {
+            "id": "nuclear.shutdown_dose_rate",
+            "major": 1
+          },
+          "media_type": "application/vnd.fixture.quantity+json",
+          "permitted_claim_models": [
+            {
+              "model": "interval"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

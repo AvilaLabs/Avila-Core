@@ -9,17 +9,18 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 use crate::diagnostic::{
-    CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3501, CORE_S1101,
-    CORE_S1102, CORE_S1301, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103, CORE_T2201, CORE_T2203,
-    CORE_T2301, CORE_T2401, CORE_T2402, CoreDiagnostic, DiagnosticRepair, FindingClass,
-    RepairApplicability, SourceLocation,
+    CORE_A4301, CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3501,
+    CORE_S1101, CORE_S1102, CORE_S1301, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103, CORE_T2201,
+    CORE_T2203, CORE_T2301, CORE_T2401, CORE_T2402, CORE_T2501, CoreDiagnostic, DiagnosticRepair,
+    FindingClass, RepairApplicability, SourceLocation,
 };
 use crate::document::{
     BasisKind, BoundSide, COMPILE_REPORT_SCHEMA_VERSION, COMPILED_CONTRACT_SCHEMA_VERSION,
     CONTRACT_SCHEMA_VERSION, CapabilityTypeDefinition, ClaimModelDeclaration, Comparison,
-    ContractInput, ContractSource, ContractStatus, ExactBound, IntegerBound, ParameterDefinition,
-    ParameterType, QuantityBound, QuantityValue, REGISTRY_SCHEMA_VERSION, RegistrySnapshot,
-    RequirementBasis, RoleDefinition, SourceRef, VersionedRef,
+    ContractInput, ContractSource, ContractStatus, DeterminismClass, ExactBound, ExecutionPolicy,
+    IntegerBound, ParameterDefinition, ParameterType, QuantityBound, QuantityValue,
+    REGISTRY_SCHEMA_VERSION, RegistrySnapshot, RequirementBasis, RoleDefinition, SourceRef,
+    VersionedRef,
 };
 
 pub const COMPILE_NOTICE: &str = "Compilation establishes structural and semantic consistency under the named draft profile only. It performs no execution, evidence admission, scientific qualification, or requirement verdict.";
@@ -69,6 +70,7 @@ pub struct CompiledContract {
     pub registry_id: String,
     pub registry_revision: u64,
     pub registry_sha256: String,
+    pub execution_policy: ExecutionPolicy,
     pub inputs: Vec<ContractInput>,
     pub workflow: Vec<CompiledStep>,
     pub requirements: Vec<CompiledRequirement>,
@@ -82,6 +84,16 @@ pub struct CompiledStep {
     pub capability_type: VersionedRef,
     pub bindings: Vec<ResolvedBinding>,
     pub parameters: BTreeMap<String, CompiledParameterValue>,
+    pub reproducibility: CompiledReproducibility,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct CompiledReproducibility {
+    pub determinism: DeterminismClass,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub seed: Option<String>,
+    pub material_factors: BTreeMap<String, CompiledParameterValue>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -176,6 +188,8 @@ pub fn compile_documents(
     let invalid_sources =
         validate_contract_registry_refs(&contract, &registry_index, &mut findings);
     let compiled_parameters = compile_parameters(&contract, &registry_index, &mut findings);
+    let compiled_reproducibility =
+        compile_reproducibility(&contract, &registry_index, &mut findings);
 
     if contract.workflow.len() > MAX_WORKFLOW_STEPS {
         findings.push(CoreDiagnostic::new(
@@ -222,6 +236,7 @@ pub fn compile_documents(
         &contract,
         &resolution.bindings,
         &compiled_parameters,
+        &compiled_reproducibility,
         &order,
     );
     let mut inputs = contract.inputs.clone();
@@ -411,6 +426,30 @@ fn validate_contract_shape(contract: &ContractSource, findings: &mut Vec<CoreDia
         "/requirements",
         findings,
     );
+
+    let mut permitted_roles = BTreeSet::new();
+    for (index, role) in contract
+        .execution_policy
+        .permitted_nondeterministic_roles
+        .iter()
+        .enumerate()
+    {
+        let location = contract_location(format!(
+            "/execution_policy/permitted_nondeterministic_roles/{index}"
+        ));
+        validate_versioned_ref(role, location.clone(), "policy_owner", findings);
+        if !permitted_roles.insert(role) {
+            invalid_value(
+                location,
+                format!(
+                    "nondeterminism permission repeats role `{}@{}`",
+                    role.id, role.major
+                ),
+                "policy_owner",
+                findings,
+            );
+        }
+    }
 
     for (index, input) in contract.inputs.iter().enumerate() {
         require_nonempty(
@@ -678,6 +717,13 @@ impl<'a> RegistryIndex<'a> {
             }
             validate_slots(capability, index, &roles, findings);
             validate_parameter_definitions(capability, index, &kinds, &kind_classes, findings);
+            validate_reproducibility_declaration(
+                capability,
+                index,
+                &kinds,
+                &kind_classes,
+                findings,
+            );
         }
 
         Self {
@@ -713,83 +759,136 @@ fn validate_parameter_definitions(
                 findings,
             );
         }
+        validate_value_type_definition(
+            "parameter",
+            &parameter.parameter_id,
+            &parameter.value_type,
+            &pointer,
+            kinds,
+            kind_classes,
+            findings,
+        );
+    }
+}
 
-        match &parameter.value_type {
-            ParameterType::Boolean => {}
-            ParameterType::Integer { min, max } => {
-                if let (Some(min), Some(max)) = (min, max)
-                    && range_is_empty(min.value.cmp(&max.value), min.inclusive, max.inclusive)
-                {
-                    registry_incomplete(
-                        registry_location(format!("{pointer}/value_type")),
-                        format!(
-                            "parameter `{}` declares an empty integer domain",
-                            parameter.parameter_id
-                        ),
-                        findings,
-                    );
-                }
-            }
-            ParameterType::ExactNumber { min, max } => {
-                validate_exact_parameter_range(parameter, min, max, &pointer, findings);
-            }
-            ParameterType::Text { allowed_values } => {
-                if let Some(values) = allowed_values {
-                    if values.is_empty() {
-                        registry_incomplete(
-                            registry_location(format!("{pointer}/value_type/allowed_values")),
-                            format!(
-                                "parameter `{}` declares an empty set of allowed text values",
-                                parameter.parameter_id
-                            ),
-                            findings,
-                        );
-                    }
-                    let mut unique = BTreeSet::new();
-                    if values.iter().any(|value| !unique.insert(value.as_str())) {
-                        registry_incomplete(
-                            registry_location(format!("{pointer}/value_type/allowed_values")),
-                            format!(
-                                "parameter `{}` declares duplicate allowed text values",
-                                parameter.parameter_id
-                            ),
-                            findings,
-                        );
-                    }
-                    if values.iter().any(|value| value == NOT_DEFINED_PLACEHOLDER) {
-                        registry_incomplete(
-                            registry_location(format!("{pointer}/value_type/allowed_values")),
-                            format!(
-                                "parameter `{}` cannot admit the reserved draft placeholder `{NOT_DEFINED_PLACEHOLDER}` as a text value",
-                                parameter.parameter_id
-                            ),
-                            findings,
-                        );
-                    }
-                }
-            }
-            ParameterType::Quantity { kind, min, max } => {
-                if !kind_classes.contains_key(kind.as_str()) {
-                    registry_incomplete(
-                        registry_location(format!("{pointer}/value_type/kind")),
-                        format!(
-                            "parameter `{}` references unknown quantity kind `{kind}`",
-                            parameter.parameter_id
-                        ),
-                        findings,
-                    );
-                    continue;
-                }
-                validate_quantity_parameter_range(
-                    parameter, kind, min, max, &pointer, kinds, findings,
+fn validate_reproducibility_declaration(
+    capability: &CapabilityTypeDefinition,
+    capability_index: usize,
+    kinds: &KindRegistry,
+    kind_classes: &BTreeMap<&str, &str>,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    let mut factor_ids = BTreeSet::new();
+    for (index, factor) in capability
+        .reproducibility
+        .material_factors
+        .iter()
+        .enumerate()
+    {
+        let pointer = format!(
+            "/capability_types/{capability_index}/reproducibility/material_factors/{index}"
+        );
+        require_nonempty(
+            &factor.factor_id,
+            registry_location(format!("{pointer}/factor_id")),
+            "registry_owner",
+            findings,
+        );
+        if !factor_ids.insert(factor.factor_id.as_str()) {
+            invalid_value(
+                registry_location(format!("{pointer}/factor_id")),
+                format!("duplicate material execution factor `{}`", factor.factor_id),
+                "registry_owner",
+                findings,
+            );
+        }
+        validate_value_type_definition(
+            "material execution factor",
+            &factor.factor_id,
+            &factor.value_type,
+            &pointer,
+            kinds,
+            kind_classes,
+            findings,
+        );
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_value_type_definition(
+    value_kind: &str,
+    value_id: &str,
+    value_type: &ParameterType,
+    pointer: &str,
+    kinds: &KindRegistry,
+    kind_classes: &BTreeMap<&str, &str>,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    match value_type {
+        ParameterType::Boolean => {}
+        ParameterType::Integer { min, max } => {
+            if let (Some(min), Some(max)) = (min, max)
+                && range_is_empty(min.value.cmp(&max.value), min.inclusive, max.inclusive)
+            {
+                registry_incomplete(
+                    registry_location(format!("{pointer}/value_type")),
+                    format!("{value_kind} `{value_id}` declares an empty integer domain"),
+                    findings,
                 );
             }
+        }
+        ParameterType::ExactNumber { min, max } => {
+            validate_exact_value_range(value_kind, value_id, min, max, pointer, findings);
+        }
+        ParameterType::Text { allowed_values } => {
+            if let Some(values) = allowed_values {
+                if values.is_empty() {
+                    registry_incomplete(
+                        registry_location(format!("{pointer}/value_type/allowed_values")),
+                        format!(
+                            "{value_kind} `{value_id}` declares an empty set of allowed text values"
+                        ),
+                        findings,
+                    );
+                }
+                let mut unique = BTreeSet::new();
+                if values.iter().any(|value| !unique.insert(value.as_str())) {
+                    registry_incomplete(
+                        registry_location(format!("{pointer}/value_type/allowed_values")),
+                        format!("{value_kind} `{value_id}` declares duplicate allowed text values"),
+                        findings,
+                    );
+                }
+                if values.iter().any(|value| value == NOT_DEFINED_PLACEHOLDER) {
+                    registry_incomplete(
+                        registry_location(format!("{pointer}/value_type/allowed_values")),
+                        format!(
+                            "{value_kind} `{value_id}` cannot admit the reserved draft placeholder `{NOT_DEFINED_PLACEHOLDER}` as a text value"
+                        ),
+                        findings,
+                    );
+                }
+            }
+        }
+        ParameterType::Quantity { kind, min, max } => {
+            if !kind_classes.contains_key(kind.as_str()) {
+                registry_incomplete(
+                    registry_location(format!("{pointer}/value_type/kind")),
+                    format!("{value_kind} `{value_id}` references unknown quantity kind `{kind}`"),
+                    findings,
+                );
+                return;
+            }
+            validate_quantity_value_range(
+                value_kind, value_id, kind, min, max, pointer, kinds, findings,
+            );
         }
     }
 }
 
-fn validate_exact_parameter_range(
-    parameter: &ParameterDefinition,
+fn validate_exact_value_range(
+    value_kind: &str,
+    value_id: &str,
     min: &Option<ExactBound>,
     max: &Option<ExactBound>,
     pointer: &str,
@@ -802,10 +901,7 @@ fn validate_exact_parameter_range(
         Ok(ordering) if range_is_empty(ordering, min.inclusive, max.inclusive) => {
             registry_incomplete(
                 registry_location(format!("{pointer}/value_type")),
-                format!(
-                    "parameter `{}` declares an empty exact-number domain",
-                    parameter.parameter_id
-                ),
+                format!("{value_kind} `{value_id}` declares an empty exact-number domain"),
                 findings,
             );
         }
@@ -813,8 +909,7 @@ fn validate_exact_parameter_range(
         Err(error) => registry_incomplete(
             registry_location(format!("{pointer}/value_type")),
             format!(
-                "parameter `{}` domain cannot be compared: {}",
-                parameter.parameter_id,
+                "{value_kind} `{value_id}` domain cannot be compared: {}",
                 error.detail()
             ),
             findings,
@@ -822,8 +917,10 @@ fn validate_exact_parameter_range(
     }
 }
 
-fn validate_quantity_parameter_range(
-    parameter: &ParameterDefinition,
+#[allow(clippy::too_many_arguments)]
+fn validate_quantity_value_range(
+    value_kind: &str,
+    value_id: &str,
     kind: &str,
     min: &Option<QuantityBound>,
     max: &Option<QuantityBound>,
@@ -832,10 +929,14 @@ fn validate_quantity_parameter_range(
     findings: &mut Vec<CoreDiagnostic>,
 ) {
     let lower = min.as_ref().and_then(|bound| {
-        validate_registry_quantity_bound(parameter, kind, bound, "min", pointer, kinds, findings)
+        validate_registry_quantity_bound(
+            value_kind, value_id, kind, bound, "min", pointer, kinds, findings,
+        )
     });
     let upper = max.as_ref().and_then(|bound| {
-        validate_registry_quantity_bound(parameter, kind, bound, "max", pointer, kinds, findings)
+        validate_registry_quantity_bound(
+            value_kind, value_id, kind, bound, "max", pointer, kinds, findings,
+        )
     });
     let (Some(lower), Some(upper), Some(min), Some(max)) = (lower, upper, min, max) else {
         return;
@@ -844,10 +945,7 @@ fn validate_quantity_parameter_range(
         Ok(ordering) if range_is_empty(ordering, min.inclusive, max.inclusive) => {
             registry_incomplete(
                 registry_location(format!("{pointer}/value_type")),
-                format!(
-                    "parameter `{}` declares an empty quantity domain",
-                    parameter.parameter_id
-                ),
+                format!("{value_kind} `{value_id}` declares an empty quantity domain"),
                 findings,
             );
         }
@@ -855,8 +953,7 @@ fn validate_quantity_parameter_range(
         Err(error) => registry_incomplete(
             registry_location(format!("{pointer}/value_type")),
             format!(
-                "parameter `{}` domain cannot be compared: {}",
-                parameter.parameter_id,
+                "{value_kind} `{value_id}` domain cannot be compared: {}",
                 error.detail()
             ),
             findings,
@@ -864,8 +961,10 @@ fn validate_quantity_parameter_range(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn validate_registry_quantity_bound(
-    parameter: &ParameterDefinition,
+    value_kind: &str,
+    value_id: &str,
     kind: &str,
     bound: &QuantityBound,
     side: &str,
@@ -879,8 +978,7 @@ fn validate_registry_quantity_bound(
             registry_incomplete(
                 registry_location(format!("{pointer}/value_type/{side}")),
                 format!(
-                    "parameter `{}` has an invalid {side} quantity bound: {}",
-                    parameter.parameter_id,
+                    "{value_kind} `{value_id}` has an invalid {side} quantity bound: {}",
                     error.detail()
                 ),
                 findings,
@@ -1024,6 +1122,27 @@ fn validate_contract_registry_refs(
     findings: &mut Vec<CoreDiagnostic>,
 ) -> BTreeSet<SourceRef> {
     let mut invalid_sources = BTreeSet::new();
+    for (index, role) in contract
+        .execution_policy
+        .permitted_nondeterministic_roles
+        .iter()
+        .enumerate()
+    {
+        if !registry.roles.contains_key(role) {
+            findings.push(CoreDiagnostic::new(
+                CORE_S1102,
+                FindingClass::Invalid,
+                "policy_owner",
+                contract_location(format!(
+                    "/execution_policy/permitted_nondeterministic_roles/{index}"
+                )),
+                format!(
+                    "nondeterminism policy references role `{}@{}` absent from the supplied registry snapshot",
+                    role.id, role.major
+                ),
+            ));
+        }
+    }
     for (index, input) in contract.inputs.iter().enumerate() {
         match registry.roles.get(&input.role) {
             None => {
@@ -1434,6 +1553,170 @@ fn can_reach_self(
     false
 }
 
+fn compile_reproducibility(
+    contract: &ContractSource,
+    registry: &RegistryIndex<'_>,
+    findings: &mut Vec<CoreDiagnostic>,
+) -> BTreeMap<String, CompiledReproducibility> {
+    let mut compiled_steps = BTreeMap::new();
+    for (step_index, step) in contract.workflow.iter().enumerate() {
+        let Some(capability) = registry.capability_types.get(&step.capability_type) else {
+            continue;
+        };
+        let declaration = &capability.reproducibility;
+
+        if declaration.determinism == DeterminismClass::Nondeterministic
+            && !nondeterminism_permitted(&contract.execution_policy, capability)
+        {
+            findings.push(
+                CoreDiagnostic::new(
+                    CORE_A4301,
+                    FindingClass::Inadmissible,
+                    "policy_owner",
+                    contract_location(format!("/workflow/{step_index}/capability_type")),
+                    format!(
+                        "capability type `{}@{}` is nondeterministic, but the contract execution policy does not permit nondeterminism for every produced role",
+                        step.capability_type.id, step.capability_type.major
+                    ),
+                )
+                .with_related(vec![contract_location(
+                    "/execution_policy/permitted_nondeterministic_roles",
+                )]),
+            );
+        }
+
+        let seed = match declaration.determinism {
+            DeterminismClass::SeededStochastic => match step.reproducibility.seed.as_deref() {
+                Some(seed) if !seed.trim().is_empty() && seed != NOT_DEFINED_PLACEHOLDER => {
+                    Some(seed.to_owned())
+                }
+                _ => {
+                    findings.push(CoreDiagnostic::new(
+                        CORE_T2501,
+                        FindingClass::Missing,
+                        "requester",
+                        seed_location(step_index),
+                        "seeded-stochastic capability requires an explicit nonempty seed",
+                    ));
+                    None
+                }
+            },
+            DeterminismClass::Deterministic | DeterminismClass::Nondeterministic => {
+                if step.reproducibility.seed.is_some() {
+                    findings.push(CoreDiagnostic::new(
+                        CORE_T2501,
+                        FindingClass::Invalid,
+                        "requester",
+                        seed_location(step_index),
+                        format!(
+                            "a seed is not part of the invocation identity for a `{}` capability",
+                            determinism_label(declaration.determinism)
+                        ),
+                    ));
+                }
+                None
+            }
+        };
+
+        let definitions: BTreeMap<_, _> = declaration
+            .material_factors
+            .iter()
+            .map(|factor| (factor.factor_id.as_str(), factor))
+            .collect();
+        for factor_id in step.reproducibility.material_factors.keys() {
+            if !definitions.contains_key(factor_id.as_str()) {
+                findings.push(CoreDiagnostic::new(
+                    CORE_S1101,
+                    FindingClass::Invalid,
+                    "requester",
+                    material_factor_location(step_index, factor_id),
+                    format!(
+                        "capability type `{}@{}` does not declare material execution factor `{factor_id}`",
+                        step.capability_type.id, step.capability_type.major
+                    ),
+                ));
+            }
+        }
+
+        let mut material_factors = BTreeMap::new();
+        for factor in &declaration.material_factors {
+            let location = material_factor_location(step_index, &factor.factor_id);
+            let Some(authored) = step.reproducibility.material_factors.get(&factor.factor_id)
+            else {
+                findings.push(CoreDiagnostic::new(
+                    CORE_T2501,
+                    FindingClass::Missing,
+                    "requester",
+                    location,
+                    format!(
+                        "material execution factor `{}` is not bound",
+                        factor.factor_id
+                    ),
+                ));
+                continue;
+            };
+            if authored.as_str() == Some(NOT_DEFINED_PLACEHOLDER) {
+                findings.push(CoreDiagnostic::new(
+                    CORE_T2501,
+                    FindingClass::Missing,
+                    "requester",
+                    location,
+                    format!(
+                        "material execution factor `{}` remains explicitly not defined",
+                        factor.factor_id
+                    ),
+                ));
+                continue;
+            }
+            let typed_definition = ParameterDefinition {
+                parameter_id: factor.factor_id.clone(),
+                required: true,
+                value_type: factor.value_type.clone(),
+            };
+            if let Some(value) = lower_typed_value(
+                "material execution factor",
+                &typed_definition,
+                authored,
+                location,
+                &registry.kinds,
+                findings,
+            ) {
+                material_factors.insert(factor.factor_id.clone(), value);
+            }
+        }
+
+        compiled_steps.insert(
+            step.step_id.clone(),
+            CompiledReproducibility {
+                determinism: declaration.determinism,
+                seed,
+                material_factors,
+            },
+        );
+    }
+    compiled_steps
+}
+
+fn nondeterminism_permitted(
+    policy: &ExecutionPolicy,
+    capability: &CapabilityTypeDefinition,
+) -> bool {
+    !capability.outputs.is_empty()
+        && capability.outputs.iter().all(|output| {
+            policy
+                .permitted_nondeterministic_roles
+                .contains(&output.role)
+        })
+}
+
+const fn determinism_label(determinism: DeterminismClass) -> &'static str {
+    match determinism {
+        DeterminismClass::Deterministic => "deterministic",
+        DeterminismClass::SeededStochastic => "seeded_stochastic",
+        DeterminismClass::Nondeterministic => "nondeterministic",
+    }
+}
+
 fn compile_parameters(
     contract: &ContractSource,
     registry: &RegistryIndex<'_>,
@@ -1560,10 +1843,22 @@ fn lower_parameter_value(
     findings: &mut Vec<CoreDiagnostic>,
 ) -> Option<CompiledParameterValue> {
     let location = parameter_location(step_index, &definition.parameter_id);
+    lower_typed_value("parameter", definition, authored, location, kinds, findings)
+}
+
+fn lower_typed_value(
+    value_kind: &str,
+    definition: &ParameterDefinition,
+    authored: &serde_json::Value,
+    location: SourceLocation,
+    kinds: &KindRegistry,
+    findings: &mut Vec<CoreDiagnostic>,
+) -> Option<CompiledParameterValue> {
     match &definition.value_type {
         ParameterType::Boolean => authored.as_bool().map_or_else(
             || {
                 parameter_type_finding(
+                    value_kind,
                     &definition.parameter_id,
                     "boolean",
                     location,
@@ -1577,6 +1872,7 @@ fn lower_parameter_value(
         ParameterType::Integer { min, max } => {
             let Some(value) = authored.as_i64() else {
                 parameter_type_finding(
+                    value_kind,
                     &definition.parameter_id,
                     "integer",
                     location,
@@ -1587,6 +1883,7 @@ fn lower_parameter_value(
             };
             if integer_outside_domain(value, min, max) {
                 parameter_domain_finding(
+                    value_kind,
                     &definition.parameter_id,
                     location,
                     "integer value is outside its declared domain",
@@ -1600,6 +1897,7 @@ fn lower_parameter_value(
         ParameterType::ExactNumber { min, max } => {
             let Some(text) = authored.as_str() else {
                 parameter_type_finding(
+                    value_kind,
                     &definition.parameter_id,
                     "exact-number string",
                     location,
@@ -1612,6 +1910,7 @@ fn lower_parameter_value(
                 Ok(value) => value,
                 Err(error) => {
                     parameter_type_finding(
+                        value_kind,
                         &definition.parameter_id,
                         "exact-number string",
                         location,
@@ -1624,6 +1923,7 @@ fn lower_parameter_value(
             match exact_outside_domain(&value, min, max) {
                 Ok(true) => {
                     parameter_domain_finding(
+                        value_kind,
                         &definition.parameter_id,
                         location,
                         "exact number is outside its declared domain",
@@ -1637,6 +1937,7 @@ fn lower_parameter_value(
                 }),
                 Err(error) => {
                     parameter_type_finding(
+                        value_kind,
                         &definition.parameter_id,
                         "comparable exact-number value",
                         location,
@@ -1649,13 +1950,21 @@ fn lower_parameter_value(
         }
         ParameterType::Text { allowed_values } => {
             let Some(value) = authored.as_str() else {
-                parameter_type_finding(&definition.parameter_id, "text", location, None, findings);
+                parameter_type_finding(
+                    value_kind,
+                    &definition.parameter_id,
+                    "text",
+                    location,
+                    None,
+                    findings,
+                );
                 return None;
             };
             if let Some(allowed) = allowed_values
                 && !allowed.iter().any(|candidate| candidate == value)
             {
                 parameter_domain_finding(
+                    value_kind,
                     &definition.parameter_id,
                     location,
                     "text value is outside its declared choice set",
@@ -1669,13 +1978,14 @@ fn lower_parameter_value(
             })
         }
         ParameterType::Quantity { kind, min, max } => lower_quantity_parameter(
-            definition, authored, kind, min, max, location, kinds, findings,
+            value_kind, definition, authored, kind, min, max, location, kinds, findings,
         ),
     }
 }
 
 #[allow(clippy::too_many_arguments)]
 fn lower_quantity_parameter(
+    value_kind: &str,
     definition: &ParameterDefinition,
     authored: &serde_json::Value,
     kind: &str,
@@ -1690,6 +2000,7 @@ fn lower_quantity_parameter(
         Err(error) => {
             let detail = error.to_string();
             parameter_type_finding(
+                value_kind,
                 &definition.parameter_id,
                 "quantity object with exact string `value` and `unit`",
                 location,
@@ -1704,6 +2015,7 @@ fn lower_quantity_parameter(
         Err(error) => {
             let repair = error.repair().map(compiler_repair);
             parameter_type_finding(
+                value_kind,
                 &definition.parameter_id,
                 &format!("quantity of kind `{kind}`"),
                 location,
@@ -1721,6 +2033,7 @@ fn lower_quantity_parameter(
     match quantity_outside_domain(&canonical.value, kind, min, max, kinds) {
         Ok(true) => {
             parameter_domain_finding(
+                value_kind,
                 &definition.parameter_id,
                 location,
                 "quantity is outside its declared domain",
@@ -1736,6 +2049,7 @@ fn lower_quantity_parameter(
         }),
         Err(error) => {
             parameter_type_finding(
+                value_kind,
                 &definition.parameter_id,
                 &format!("quantity of kind `{kind}` with a comparable domain"),
                 location,
@@ -1804,13 +2118,14 @@ fn quantity_outside_domain(
 }
 
 fn parameter_type_finding(
-    parameter_id: &str,
+    value_kind: &str,
+    value_id: &str,
     expected: &str,
     location: SourceLocation,
     detail: Option<&str>,
     findings: &mut Vec<CoreDiagnostic>,
 ) {
-    let mut message = format!("parameter `{parameter_id}` must be authored as {expected}");
+    let mut message = format!("{value_kind} `{value_id}` must be authored as {expected}");
     if let Some(detail) = detail {
         message.push_str(": ");
         message.push_str(detail);
@@ -1825,7 +2140,8 @@ fn parameter_type_finding(
 }
 
 fn parameter_domain_finding(
-    parameter_id: &str,
+    value_kind: &str,
+    value_id: &str,
     location: SourceLocation,
     detail: &str,
     candidates: Option<Vec<String>>,
@@ -1836,7 +2152,7 @@ fn parameter_domain_finding(
         FindingClass::Invalid,
         "requester",
         location,
-        format!("parameter `{parameter_id}` {detail}"),
+        format!("{value_kind} `{value_id}` {detail}"),
     );
     if let Some(candidates) = candidates {
         diagnostic = diagnostic.with_repair(DiagnosticRepair {
@@ -2056,6 +2372,7 @@ fn build_compiled_steps(
     contract: &ContractSource,
     bindings: &BTreeMap<String, Vec<ResolvedBinding>>,
     parameters: &BTreeMap<String, BTreeMap<String, CompiledParameterValue>>,
+    reproducibility: &BTreeMap<String, CompiledReproducibility>,
     order: &[String],
 ) -> Vec<CompiledStep> {
     let steps: BTreeMap<_, _> = contract
@@ -2074,6 +2391,10 @@ fn build_compiled_steps(
                 capability_type: step.capability_type.clone(),
                 bindings: bindings.get(step_id).cloned().unwrap_or_default(),
                 parameters: parameters.get(step_id).cloned().unwrap_or_default(),
+                reproducibility: reproducibility
+                    .get(step_id)
+                    .cloned()
+                    .expect("every compiled step has a reproducibility declaration"),
             }
         })
         .collect()
@@ -2100,6 +2421,7 @@ fn create_compiled_contract(
         registry_id: &'a str,
         registry_revision: u64,
         registry_sha256: &'a str,
+        execution_policy: &'a ExecutionPolicy,
         inputs: &'a [ContractInput],
         workflow: &'a [CompiledStep],
         requirements: &'a [CompiledRequirement],
@@ -2115,6 +2437,7 @@ fn create_compiled_contract(
         registry_id: &registry.registry_id,
         registry_revision: registry.revision,
         registry_sha256: &registry_sha256,
+        execution_policy: &contract.execution_policy,
         inputs: &inputs,
         workflow: &workflow,
         requirements: &requirements,
@@ -2135,6 +2458,7 @@ fn create_compiled_contract(
         registry_id: registry.registry_id.clone(),
         registry_revision: registry.revision,
         registry_sha256,
+        execution_policy: contract.execution_policy.clone(),
         inputs,
         workflow,
         requirements,
@@ -2243,6 +2567,17 @@ fn parameter_location(step_index: usize, parameter_id: &str) -> SourceLocation {
     contract_location(format!(
         "/workflow/{step_index}/parameters/{}",
         escape_pointer_token(parameter_id)
+    ))
+}
+
+fn seed_location(step_index: usize) -> SourceLocation {
+    contract_location(format!("/workflow/{step_index}/reproducibility/seed"))
+}
+
+fn material_factor_location(step_index: usize, factor_id: &str) -> SourceLocation {
+    contract_location(format!(
+        "/workflow/{step_index}/reproducibility/material_factors/{}",
+        escape_pointer_token(factor_id)
     ))
 }
 
@@ -2362,7 +2697,7 @@ mod tests {
         assert_eq!(compiled.requirements[0].limit.unit, "Sv/s");
         assert_eq!(
             compiled.snapshot_sha256,
-            "sha256:87b8c9ec8abf99904a84abdd65716f0f88415331c53f17359de25cd1e1d9d0d8"
+            "sha256:981acc836e8250b8d10bd165b3676d507ac4b9bde536e67c268eb718173b8c54"
         );
     }
 

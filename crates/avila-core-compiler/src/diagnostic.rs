@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 pub const CORE_S1101: &str = "CORE-S1101";
 pub const CORE_S1102: &str = "CORE-S1102";
 pub const CORE_S1301: &str = "CORE-S1301";
+pub const CORE_A4301: &str = "CORE-A4301";
 pub const CORE_R3101: &str = "CORE-R3101";
 pub const CORE_R3102: &str = "CORE-R3102";
 pub const CORE_R3201: &str = "CORE-R3201";
@@ -19,6 +20,7 @@ pub const CORE_T2203: &str = "CORE-T2203";
 pub const CORE_T2301: &str = "CORE-T2301";
 pub const CORE_T2401: &str = "CORE-T2401";
 pub const CORE_T2402: &str = "CORE-T2402";
+pub const CORE_T2501: &str = "CORE-T2501";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

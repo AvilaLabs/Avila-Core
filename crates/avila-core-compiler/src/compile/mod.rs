@@ -92,7 +92,7 @@ pub fn compile_documents(
         findings.push(CoreDiagnostic::new(
             CORE_S1102,
             FindingClass::Invalid,
-            "contract_author",
+            "requester",
             contract_location("/workflow"),
             format!(
                 "workflow contains {} steps; the compiler work limit is {MAX_WORKFLOW_STEPS}",

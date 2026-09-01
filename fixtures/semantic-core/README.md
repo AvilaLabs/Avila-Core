@@ -133,7 +133,7 @@ canonical `expected` bytes exactly.
   "snapshot": { "contract": {...}, "registry": {...}, "policy": {...}, "approvals": [], "receipts": [], "artifacts": [] },
   "operation": "compiler/check | plan/preview | admit | compiler/impact | verdict | package/verify",
   "expected": {
-    "findings": [ { "code": "CORE-R3102", "class": "invalid", "owner": "contract_author",
+    "findings": [ { "code": "CORE-R3102", "class": "invalid", "owner": "requester",
                     "primary": { "document": "contract", "pointer": "/workflow/1/inputs/particle_flux" },
                     "repairs": [ { "applicability": "constrained_choice" } ] } ],
     "records": { ... }

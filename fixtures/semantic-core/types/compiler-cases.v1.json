@@ -73,7 +73,7 @@
           {
             "code": "CORE-R3101",
             "class": "missing",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/0/inputs/source"
@@ -95,7 +95,7 @@
           {
             "code": "CORE-R3102",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/0/inputs/source"
@@ -117,7 +117,7 @@
           {
             "code": "CORE-R3601",
             "class": "notice",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/inputs/1"
@@ -184,7 +184,7 @@
           {
             "code": "CORE-T2101",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/0/bindings/0/source"
@@ -204,7 +204,7 @@
           {
             "code": "CORE-T2203",
             "class": "unsatisfied",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/basis"
@@ -226,7 +226,7 @@
           {
             "code": "CORE-T2201",
             "class": "unsatisfied",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/basis"
@@ -246,7 +246,7 @@
           {
             "code": "CORE-R3602",
             "class": "notice",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/0"
@@ -300,7 +300,7 @@
           {
             "code": "CORE-T2201",
             "class": "unsatisfied",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/basis"
@@ -320,7 +320,7 @@
           {
             "code": "CORE-T2301",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/inputs/0/media_type"
@@ -340,7 +340,7 @@
           {
             "code": "CORE-R3201",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/1/bindings/0/source"
@@ -360,7 +360,7 @@
           {
             "code": "CORE-R3202",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/0/bindings"
@@ -380,7 +380,7 @@
           {
             "code": "CORE-R3203",
             "class": "missing",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/1/bindings/0/source"
@@ -400,7 +400,7 @@
           {
             "code": "CORE-R3301",
             "class": "missing",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/metric"
@@ -420,7 +420,7 @@
           {
             "code": "CORE-T2102",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/limit/kind"
@@ -440,7 +440,7 @@
           {
             "code": "CORE-T2103",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/limit/unit"
@@ -462,7 +462,7 @@
           {
             "code": "CORE-T2001",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/limit/unit"
@@ -484,7 +484,7 @@
           {
             "code": "CORE-R3301",
             "class": "missing",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/metric"
@@ -494,7 +494,7 @@
           {
             "code": "CORE-R3101",
             "class": "missing",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/0/inputs/source"
@@ -506,7 +506,7 @@
           {
             "code": "CORE-R3203",
             "class": "missing",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/1/bindings/0/source"
@@ -526,7 +526,7 @@
           {
             "code": "CORE-S1102",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/0/parameters/x"
@@ -546,7 +546,7 @@
           {
             "code": "CORE-S1101",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/1/bogus_field"
@@ -566,7 +566,7 @@
           {
             "code": "CORE-S1102",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/limit/value"
@@ -588,7 +588,7 @@
           {
             "code": "CORE-S1103",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/1/step_id"
@@ -669,7 +669,7 @@
           {
             "code": "CORE-T2104",
             "class": "missing",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/tolerance"
@@ -689,7 +689,7 @@
           {
             "code": "CORE-T2104",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/tolerance"
@@ -765,7 +765,7 @@
           {
             "code": "CORE-S1102",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/basis/coverage"
@@ -785,7 +785,7 @@
           {
             "code": "CORE-S1102",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/basis/coverage"
@@ -805,7 +805,7 @@
           {
             "code": "CORE-R3101",
             "class": "unsatisfied",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/0/capability_type"
@@ -825,7 +825,7 @@
           {
             "code": "CORE-R3203",
             "class": "missing",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/1/bindings/0/source"
@@ -845,7 +845,7 @@
           {
             "code": "CORE-R3601",
             "class": "notice",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/inputs/1"
@@ -912,7 +912,7 @@
           {
             "code": "CORE-R3602",
             "class": "notice",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/workflow/2"

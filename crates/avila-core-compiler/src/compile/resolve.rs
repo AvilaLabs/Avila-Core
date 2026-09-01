@@ -45,7 +45,7 @@ pub(super) fn validate_contract_registry_refs(
             findings.push(CoreDiagnostic::new(
                 CORE_T2601,
                 FindingClass::Invalid,
-                "contract_author",
+                "requester",
                 contract_location(format!("/requirements/{index}/purpose")),
                 format!(
                     "requirement references governed purpose `{}@{}` absent from the supplied registry snapshot",
@@ -63,7 +63,7 @@ pub(super) fn validate_contract_registry_refs(
                 findings.push(CoreDiagnostic::new(
                     CORE_R3101,
                     FindingClass::Unsatisfied,
-                    "contract_author",
+                    "requester",
                     contract_location(format!("/inputs/{index}/role")),
                     format!(
                         "input references role `{}@{}` absent from the supplied registry snapshot",
@@ -78,7 +78,7 @@ pub(super) fn validate_contract_registry_refs(
                 findings.push(CoreDiagnostic::new(
                     CORE_T2301,
                     FindingClass::Invalid,
-                    "contract_author",
+                    "requester",
                     contract_location(format!("/inputs/{index}/media_type")),
                     format!(
                         "media type `{}` is not accepted by role `{}@{}`",
@@ -93,7 +93,7 @@ pub(super) fn validate_contract_registry_refs(
                 findings.push(CoreDiagnostic::new(
                     CORE_T2201,
                     FindingClass::Invalid,
-                    "contract_author",
+                    "requester",
                     contract_location(format!("/inputs/{index}/claim_model")),
                     format!(
                         "claim model is not permitted by role `{}@{}`",
@@ -176,7 +176,7 @@ pub(super) fn resolve_workflow(
             findings.push(CoreDiagnostic::new(
                 CORE_R3101,
                 FindingClass::Unsatisfied,
-                "contract_author",
+                "requester",
                 contract_location(format!("/workflow/{step_index}/capability_type")),
                 format!(
                     "capability type `{}@{}` is absent from the supplied registry snapshot",
@@ -201,7 +201,7 @@ pub(super) fn resolve_workflow(
                         "capability type `{}@{}` has no input slot `{}`",
                         step.capability_type.id, step.capability_type.major, binding.input_slot
                     ),
-                    "contract_author",
+                    "requester",
                     findings,
                 );
             }
@@ -226,7 +226,7 @@ pub(super) fn resolve_workflow(
                     findings.push(CoreDiagnostic::new(
                         CORE_R3201,
                         FindingClass::Invalid,
-                        "contract_author",
+                        "requester",
                         contract_location(pointer),
                         format!("step `{}` depends on its own output", step.step_id),
                     ));
@@ -241,7 +241,7 @@ pub(super) fn resolve_workflow(
                     findings.push(CoreDiagnostic::new(
                         code,
                         FindingClass::Missing,
-                        "contract_author",
+                        "requester",
                         contract_location(pointer),
                         message,
                     ));
@@ -256,7 +256,7 @@ pub(super) fn resolve_workflow(
                     findings.push(CoreDiagnostic::new(
                         CORE_T2101,
                         FindingClass::Invalid,
-                        "contract_author",
+                        "requester",
                         contract_location(pointer.clone()),
                         format!(
                             "source role `{}@{}` cannot satisfy nominal role `{}@{}`",
@@ -268,7 +268,7 @@ pub(super) fn resolve_workflow(
                     findings.push(CoreDiagnostic::new(
                         CORE_T2301,
                         FindingClass::Invalid,
-                        "contract_author",
+                        "requester",
                         contract_location(pointer),
                         format!(
                             "source media type `{}` is not accepted by input slot `{}`",
@@ -313,7 +313,7 @@ pub(super) fn resolve_workflow(
                     CoreDiagnostic::new(
                         CORE_R3101,
                         FindingClass::Missing,
-                        "contract_author",
+                        "requester",
                         logical_input_location(step_index, &slot.slot_id),
                         format!(
                             "required input slot `{}` (role `{}@{}`) has no compatible source",
@@ -334,7 +334,7 @@ pub(super) fn resolve_workflow(
                         CoreDiagnostic::new(
                             CORE_R3102,
                             FindingClass::Invalid,
-                            "contract_author",
+                            "requester",
                             logical_input_location(step_index, &slot.slot_id),
                             format!(
                                 "required input slot `{}` has multiple compatible sources",
@@ -512,7 +512,7 @@ pub(super) fn validate_graph(
             CoreDiagnostic::new(
                 CORE_R3202,
                 FindingClass::Invalid,
-                "contract_author",
+                "requester",
                 contract_location(format!("/workflow/{primary_index}/bindings")),
                 format!("workflow bindings contain a dependency cycle: {cyclic:?}"),
             )

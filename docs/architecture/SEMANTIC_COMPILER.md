@@ -231,7 +231,8 @@ Every finding carries:
 - a stable code;
 - `missing`, `invalid`, `unsatisfied`, `inadmissible`, or `notice` class, of
   which only `notice` does not block compilation;
-- an accountable owner;
+- an accountable owner, always a product role: `requester`, `policy_owner`, or
+  `registry_owner`;
 - a document plus JSON Pointer location;
 - related locations when applicable; and
 - typed repair applicability and candidates when a bounded repair exists.

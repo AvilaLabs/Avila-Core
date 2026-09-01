@@ -18,7 +18,7 @@ pub(super) fn find_duplicate_ids<'a>(
             invalid_value(
                 contract_location(format!("{collection_pointer}/{index}")),
                 format!("duplicate {kind} identifier `{value}`"),
-                "contract_author",
+                "requester",
                 findings,
             );
         }
@@ -132,7 +132,7 @@ pub(super) fn registry_location(pointer: impl Into<String>) -> SourceLocation {
 pub(super) fn owner_for(document: &str) -> &'static str {
     match document {
         "registry" => "registry_owner",
-        _ => "contract_author",
+        _ => "requester",
     }
 }
 

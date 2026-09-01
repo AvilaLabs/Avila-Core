@@ -35,7 +35,7 @@ pub(super) fn compile_requirements(
             findings.push(CoreDiagnostic::new(
                 CORE_R3301,
                 FindingClass::Missing,
-                "contract_author",
+                "requester",
                 contract_location(format!("/requirements/{index}/metric")),
                 format!(
                     "requirement `{}` does not name a metric source",
@@ -52,7 +52,7 @@ pub(super) fn compile_requirements(
             findings.push(CoreDiagnostic::new(
                 CORE_R3301,
                 FindingClass::Missing,
-                "contract_author",
+                "requester",
                 contract_location(format!("/requirements/{index}/metric")),
                 format!(
                     "metric source `{}` cannot be resolved: {message}",
@@ -70,7 +70,7 @@ pub(super) fn compile_requirements(
             findings.push(CoreDiagnostic::new(
                 CORE_T2601,
                 FindingClass::Unsatisfied,
-                "contract_author",
+                "requester",
                 contract_location(format!("/requirements/{index}/purpose")),
                 format!(
                     "metric source `{}` explicitly excludes governed purpose `{}@{}`",
@@ -93,7 +93,7 @@ pub(super) fn compile_requirements(
             let mut diagnostic = CoreDiagnostic::new(
                 if irreducible { CORE_T2203 } else { CORE_T2201 },
                 FindingClass::Unsatisfied,
-                "contract_author",
+                "requester",
                 contract_location(format!("/requirements/{index}/basis")),
                 if irreducible {
                     "metric source permits only claim models that the semantic kernel cannot reduce"
@@ -116,7 +116,7 @@ pub(super) fn compile_requirements(
             findings.push(CoreDiagnostic::new(
                 CORE_T2102,
                 FindingClass::Invalid,
-                "contract_author",
+                "requester",
                 contract_location(format!("/requirements/{index}/metric")),
                 format!(
                     "metric role `{}@{}` is not a quantity role",
@@ -129,7 +129,7 @@ pub(super) fn compile_requirements(
             findings.push(CoreDiagnostic::new(
                 CORE_T2102,
                 FindingClass::Invalid,
-                "contract_author",
+                "requester",
                 contract_location(format!("/requirements/{index}/limit/kind")),
                 format!(
                     "limit kind `{}` does not match metric kind `{metric_kind}`",
@@ -200,7 +200,7 @@ pub(super) fn validate_basis_coverage(
                 "coverage is only meaningful for a `bounded` basis, not `{}`",
                 basis_label(requirement.basis.kind)
             ),
-            "contract_author",
+            "requester",
             findings,
         );
         return false;
@@ -218,7 +218,7 @@ pub(super) fn validate_basis_coverage(
                 invalid_value(
                     location,
                     "coverage must lie in the interval (0, 1]",
-                    "contract_author",
+                    "requester",
                     findings,
                 );
                 false
@@ -228,7 +228,7 @@ pub(super) fn validate_basis_coverage(
             let mut diagnostic = CoreDiagnostic::new(
                 CORE_S1102,
                 FindingClass::Invalid,
-                "contract_author",
+                "requester",
                 location,
                 format!(
                     "coverage must be a canonical decimal in the interval (0, 1]: {}",
@@ -257,7 +257,7 @@ pub(super) fn validate_tolerance_presence(
             findings.push(CoreDiagnostic::new(
                 CORE_T2104,
                 FindingClass::Missing,
-                "contract_author",
+                "requester",
                 location,
                 "an `equal` comparison requires an exact tolerance quantity of the metric kind",
             ));
@@ -268,7 +268,7 @@ pub(super) fn validate_tolerance_presence(
             findings.push(CoreDiagnostic::new(
                 CORE_T2104,
                 FindingClass::Invalid,
-                "contract_author",
+                "requester",
                 location,
                 format!(
                     "a tolerance is only meaningful for an `equal` comparison, not `{}`",
@@ -295,7 +295,7 @@ pub(super) fn lower_requirement_quantity(
         findings.push(CoreDiagnostic::new(
             CORE_T2102,
             FindingClass::Invalid,
-            "contract_author",
+            "requester",
             contract_location(format!("/requirements/{index}/{field}/kind")),
             format!(
                 "{field} kind `{}` does not match metric kind `{metric_kind}`",
@@ -326,7 +326,7 @@ pub(super) fn lower_requirement_quantity(
             let mut diagnostic = CoreDiagnostic::new(
                 code,
                 FindingClass::Invalid,
-                "contract_author",
+                "requester",
                 contract_location(format!("/requirements/{index}/{field}/unit")),
                 error.detail(),
             );
@@ -355,7 +355,7 @@ pub(super) fn tolerance_is_nonnegative(
             "tolerance cannot be negative; canonical value is `{}` {}",
             canonical.value, canonical.unit
         ),
-        "contract_author",
+        "requester",
         findings,
     );
     false

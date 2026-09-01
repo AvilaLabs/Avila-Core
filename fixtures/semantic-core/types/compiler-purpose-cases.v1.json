@@ -56,7 +56,7 @@
           {
             "code": "CORE-T2601",
             "class": "unsatisfied",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/purpose"
@@ -154,7 +154,7 @@
           {
             "code": "CORE-T2601",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/purpose"
@@ -174,7 +174,7 @@
           {
             "code": "CORE-T2601",
             "class": "invalid",
-            "owner": "contract_author",
+            "owner": "requester",
             "primary": {
               "document": "contract",
               "pointer": "/requirements/0/purpose"

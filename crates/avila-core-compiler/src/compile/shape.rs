@@ -14,14 +14,14 @@ pub(super) fn validate_contract_shape(
     require_nonempty(
         &contract.contract_id,
         contract_location("/contract_id"),
-        "contract_author",
+        "requester",
         findings,
     );
     if contract.revision == 0 {
         invalid_value(
             contract_location("/revision"),
             "contract revision must be at least one",
-            "contract_author",
+            "requester",
             findings,
         );
     }
@@ -29,7 +29,7 @@ pub(super) fn validate_contract_shape(
         invalid_value(
             contract_location("/workflow"),
             "a contract workflow must contain at least one step",
-            "contract_author",
+            "requester",
             findings,
         );
     }
@@ -37,7 +37,7 @@ pub(super) fn validate_contract_shape(
         invalid_value(
             contract_location("/requirements"),
             "a contract must contain at least one requirement",
-            "contract_author",
+            "requester",
             findings,
         );
     }
@@ -92,19 +92,19 @@ pub(super) fn validate_contract_shape(
         require_nonempty(
             &input.input_id,
             contract_location(format!("/inputs/{index}/input_id")),
-            "contract_author",
+            "requester",
             findings,
         );
         require_nonempty(
             &input.media_type,
             contract_location(format!("/inputs/{index}/media_type")),
-            "contract_author",
+            "requester",
             findings,
         );
         validate_versioned_ref(
             &input.role,
             contract_location(format!("/inputs/{index}/role")),
-            "contract_author",
+            "requester",
             findings,
         );
     }
@@ -112,13 +112,13 @@ pub(super) fn validate_contract_shape(
         require_nonempty(
             &step.step_id,
             contract_location(format!("/workflow/{index}/step_id")),
-            "contract_author",
+            "requester",
             findings,
         );
         validate_versioned_ref(
             &step.capability_type,
             contract_location(format!("/workflow/{index}/capability_type")),
-            "contract_author",
+            "requester",
             findings,
         );
         let mut slots = BTreeSet::new();
@@ -128,7 +128,7 @@ pub(super) fn validate_contract_shape(
                 contract_location(format!(
                     "/workflow/{index}/bindings/{binding_index}/input_slot"
                 )),
-                "contract_author",
+                "requester",
                 findings,
             );
             if !slots.insert(binding.input_slot.as_str()) {
@@ -140,7 +140,7 @@ pub(super) fn validate_contract_shape(
                         "step `{}` binds input slot `{}` more than once",
                         step.step_id, binding.input_slot
                     ),
-                    "contract_author",
+                    "requester",
                     findings,
                 );
             }
@@ -150,44 +150,44 @@ pub(super) fn validate_contract_shape(
         require_nonempty(
             &requirement.requirement_id,
             contract_location(format!("/requirements/{index}/requirement_id")),
-            "contract_author",
+            "requester",
             findings,
         );
         require_nonempty(
             &requirement.statement,
             contract_location(format!("/requirements/{index}/statement")),
-            "contract_author",
+            "requester",
             findings,
         );
         validate_versioned_ref(
             &requirement.purpose,
             contract_location(format!("/requirements/{index}/purpose")),
-            "contract_author",
+            "requester",
             findings,
         );
         require_nonempty(
             &requirement.limit.kind,
             contract_location(format!("/requirements/{index}/limit/kind")),
-            "contract_author",
+            "requester",
             findings,
         );
         require_nonempty(
             &requirement.limit.unit,
             contract_location(format!("/requirements/{index}/limit/unit")),
-            "contract_author",
+            "requester",
             findings,
         );
         if let Some(tolerance) = &requirement.tolerance {
             require_nonempty(
                 &tolerance.kind,
                 contract_location(format!("/requirements/{index}/tolerance/kind")),
-                "contract_author",
+                "requester",
                 findings,
             );
             require_nonempty(
                 &tolerance.unit,
                 contract_location(format!("/requirements/{index}/tolerance/unit")),
-                "contract_author",
+                "requester",
                 findings,
             );
         }

@@ -38,7 +38,7 @@ pub(super) fn report_unconsumed_declarations(
             findings.push(CoreDiagnostic::new(
                 CORE_R3601,
                 FindingClass::Notice,
-                "contract_author",
+                "requester",
                 contract_location(format!("/inputs/{index}")),
                 format!(
                     "contract input `{}` is bound to no step and enters no campaign evidence",
@@ -62,7 +62,7 @@ pub(super) fn report_unconsumed_declarations(
             findings.push(CoreDiagnostic::new(
                 CORE_R3602,
                 FindingClass::Notice,
-                "contract_author",
+                "requester",
                 contract_location(format!("/workflow/{index}")),
                 format!(
                     "step `{}` produces no output consumed by another step or requirement",

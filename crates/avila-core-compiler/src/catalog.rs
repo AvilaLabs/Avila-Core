@@ -102,7 +102,7 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         title: "Undeclared field",
         rule: "SC-2 authoritative documents; SC-6 R7 and R8",
         meaning: "A document contains a key its schema does not define, or a step supplies a parameter or material execution factor its capability type does not declare. Undeclared values never become implicit defaults.",
-        next_action: "Remove the key, or declare it in the schema or capability type through a new registry snapshot. For parameters and factors the owner is the requester.",
+        next_action: "Remove the key, or declare it in the schema or capability type through a new registry snapshot.",
     },
     DiagnosticExplanation {
         code: "CORE-S1102",

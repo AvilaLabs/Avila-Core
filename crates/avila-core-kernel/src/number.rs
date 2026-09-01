@@ -1,6 +1,9 @@
 use std::cmp::Ordering;
 use std::fmt;
 
+use serde::de::{self, Visitor};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
 use crate::{CORE_S1102, KernelError};
 
 const MAX_AUTHORED_BYTES: usize = 16_384;
@@ -56,6 +59,21 @@ impl ExactNumber {
     #[must_use]
     pub const fn denominator(&self) -> u128 {
         self.denominator
+    }
+
+    #[must_use]
+    pub const fn is_zero(&self) -> bool {
+        self.numerator == 0
+    }
+
+    #[must_use]
+    pub const fn is_one(&self) -> bool {
+        self.numerator == 1 && self.denominator == 1
+    }
+
+    #[must_use]
+    pub const fn is_positive(&self) -> bool {
+        self.numerator > 0
     }
 
     pub fn checked_mul(&self, other: &Self) -> Result<Self, KernelError> {
@@ -150,6 +168,41 @@ impl ExactNumber {
 impl fmt::Display for ExactNumber {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(&self.canonical_rational())
+    }
+}
+
+impl Serialize for ExactNumber {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.canonical_rational())
+    }
+}
+
+impl<'de> Deserialize<'de> for ExactNumber {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(ExactNumberVisitor)
+    }
+}
+
+struct ExactNumberVisitor;
+
+impl Visitor<'_> for ExactNumberVisitor {
+    type Value = ExactNumber;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a canonical decimal or reduced rational string")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        ExactNumber::from_canonical(value).map_err(E::custom)
     }
 }
 

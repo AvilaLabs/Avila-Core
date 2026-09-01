@@ -9,12 +9,16 @@
 mod canonical_json;
 mod diagnostic;
 mod number;
+mod unit;
 
 pub use canonical_json::{CanonicalJsonValue, canonicalize_json, read_authoritative_json};
-pub use diagnostic::{CORE_S1102, CORE_S1103, KernelError};
+pub use diagnostic::{
+    CORE_S1102, CORE_S1103, CORE_T2001, CORE_T2102, KernelError, Repair, RepairApplicability,
+};
 pub use number::{
     ExactNumber, lower_authored_decimal, read_authoritative_decimal, read_authoritative_rational,
 };
+pub use unit::{CanonicalQuantity, KindDefinition, KindRegistry, UnitDefinition};
 
 /// Draft profile implemented incrementally by this kernel.
 pub const SEMANTIC_PROFILE: &str = "avila.core/semantic/0.2-draft";

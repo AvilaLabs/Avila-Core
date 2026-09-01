@@ -92,11 +92,12 @@ runner, scheduler, cache, or remote backend.
 
 ### `avila-core-kernel`
 
-Implements the first isolated portion of the draft semantic profile: canonical
+Implements the first isolated portions of the draft semantic profile: canonical
 decimal lowering, reduced exact rationals under an explicit fail-closed work
 budget, authoritative JSON reading, duplicate-key rejection, NFC enforcement,
-and deterministic JCS-derived key ordering. Its conformance test executes every
-vector in `canon.v1.json`. It does not yet scale quantities, evaluate predicates,
+deterministic JCS-derived key ordering, nominal quantity-kind registries, and
+exact within-kind unit scaling. Its conformance tests execute every vector in
+`canon.v1.json` and `unit-scaling.v1.json`. It does not yet evaluate predicates,
 compile contracts, admit evidence, or derive verdicts.
 
 ### `avila-core-evidence`

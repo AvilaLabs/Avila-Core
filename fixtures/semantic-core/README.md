@@ -22,6 +22,11 @@ multiple historical profiles.
 All other fixtures below are required before ADR acceptance and are currently
 planned unless files exist for them.
 
+The `avila-core-kernel` conformance test currently executes all 12 vectors in
+`canon.v1.json`. The other vector files remain reviewable specifications until
+their kernel operations and harnesses are implemented. Passing one vector set
+does not accept ADR-0006 or imply scientific qualification.
+
 ## Layout
 
 ```

@@ -499,6 +499,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "avila-core-kernel"
+version = "0.1.0"
+dependencies = [
+ "icu_normalizer",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "avila-core-model"
 version = "0.1.0"
 dependencies = [

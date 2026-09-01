@@ -74,6 +74,8 @@ avila-core-model
     ├── avila-core-evidence  (record model + hashing only)
     ├── avila-core-cli       (validate and plan)
     └── avila-core-app       (thin read-only specimen UI)
+
+avila-core-kernel            (first canonical-value authority slice)
 ```
 
 ### `avila-core-model`
@@ -87,6 +89,15 @@ cannot assert scientific validity.
 Validates the dependency graph, chooses a deterministic matching manifest, and
 marks unavailable or inadmissible steps as blocked. It contains no process
 runner, scheduler, cache, or remote backend.
+
+### `avila-core-kernel`
+
+Implements the first isolated portion of the draft semantic profile: canonical
+decimal lowering, reduced exact rationals under an explicit fail-closed work
+budget, authoritative JSON reading, duplicate-key rejection, NFC enforcement,
+and deterministic JCS-derived key ordering. Its conformance test executes every
+vector in `canon.v1.json`. It does not yet scale quantities, evaluate predicates,
+compile contracts, admit evidence, or derive verdicts.
 
 ### `avila-core-evidence`
 
@@ -107,8 +118,9 @@ and must never grow a separate scientific state model.
 
 Future components should be added only behind acceptance gates:
 
-- `core-semantics`: canonical values, nominal quantity kinds, evidence roles,
-  predicate evaluation, and semantic-profile compatibility;
+- `avila-core-kernel`: extend the existing canonical-value slice with nominal
+  quantity kinds, evidence roles, predicate evaluation, verdict derivation, and
+  semantic-profile compatibility;
 - `core-compiler`: authored-document lowering, static checks, deterministic
   findings, and impact analysis without authority to admit evidence or emit a
   verdict;

@@ -17,6 +17,8 @@ admissible answer while preserving the authority of domain professionals.
 This repository is a **pre-alpha scaffold**. It currently provides:
 
 - authoritative Rust types for contracts, capability manifests, and verdicts;
+- the first semantic-kernel slice for exact bounded rationals, canonical
+  decimals, and authoritative JSON;
 - a deterministic dependency planner that fails closed;
 - a draft portable evidence model and SHA-256 utility;
 - JSON Schemas and deliberately non-executable specimen documents;
@@ -24,8 +26,9 @@ This repository is a **pre-alpha scaffold**. It currently provides:
 - an egui product shell showing the intended question-first experience.
 
 The repository also contains proposed `v0.2` semantic rules and an initial
-conformance-vector corpus. Those documents describe a target architecture; the
-current Rust scaffold does not implement them.
+conformance-vector corpus. The Rust kernel executes the 12 canonical-value and
+byte-reader vectors. Unit scaling, predicates, verdict calculus, and the wider
+compiler semantics remain proposed and unimplemented.
 
 It does **not** run scientific software, calculate a physical quantity, verify a
 requirement, certify a design, or produce decision-grade evidence. The specimen
@@ -74,6 +77,7 @@ only honest state of the included specimen.
 ```text
 crates/
   avila-core-model/       contract, capability, requirement, and verdict types
+  avila-core-kernel/      exact values and authoritative canonical JSON
   avila-core-runtime/     deterministic campaign planning; no execution yet
   avila-core-evidence/    portable evidence records and hashing
   avila-core-cli/         headless local interface

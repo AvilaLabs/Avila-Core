@@ -72,6 +72,42 @@ pub fn read_authoritative_json(input: &[u8]) -> Result<CanonicalJsonValue, Kerne
     Ok(value)
 }
 
+/// Diagnostic read that records every value refusal instead of stopping at
+/// the first one.
+///
+/// A binary float, `null`, unsafe integer, non-NFC string, or duplicate key is
+/// recorded with its JSON Pointer and replaced by a placeholder so the read can
+/// continue; only a syntax error ends it early. The returned tree exists so a
+/// caller can report further shape problems in the same pass. It is not
+/// authoritative and must never be canonicalized, hashed, or compiled.
+pub fn diagnose_authoritative_json(input: &[u8]) -> (Option<CanonicalJsonValue>, Vec<KernelError>) {
+    let mut state = ReaderState {
+        path: Vec::new(),
+        code: None,
+        collected: Some(Vec::new()),
+    };
+    let mut deserializer = serde_json::Deserializer::from_slice(input);
+    let outcome = CanonicalSeed { state: &mut state }
+        .deserialize(&mut deserializer)
+        .map_err(|error| {
+            KernelError::new(CORE_S1102, error.to_string()).at_pointer(json_pointer(&state.path))
+        })
+        .and_then(|value| {
+            deserializer
+                .end()
+                .map(|()| value)
+                .map_err(|error| KernelError::new(CORE_S1102, error.to_string()).at_pointer(""))
+        });
+    let mut refusals = state.collected.take().unwrap_or_default();
+    match outcome {
+        Ok(value) => (Some(value), refusals),
+        Err(syntax) => {
+            refusals.push(syntax);
+            (None, refusals)
+        }
+    }
+}
+
 pub fn canonicalize_json(input: &[u8]) -> Result<Vec<u8>, KernelError> {
     let value = read_authoritative_json(input)?;
     serde_json::to_vec(&value).map_err(|error| KernelError::new(CORE_S1102, error.to_string()))
@@ -112,6 +148,29 @@ enum PathSegment {
 struct ReaderState {
     path: Vec<PathSegment>,
     code: Option<&'static str>,
+    /// When present, value refusals are recorded here and the read continues
+    /// with a placeholder instead of failing.
+    collected: Option<Vec<KernelError>>,
+}
+
+impl ReaderState {
+    fn refuse<E: de::Error>(
+        &mut self,
+        code: &'static str,
+        detail: &str,
+        placeholder: CanonicalJsonValue,
+    ) -> Result<CanonicalJsonValue, E> {
+        match &mut self.collected {
+            Some(collected) => {
+                collected.push(KernelError::new(code, detail).at_pointer(json_pointer(&self.path)));
+                Ok(placeholder)
+            }
+            None => {
+                self.code = Some(code);
+                Err(E::custom(detail))
+            }
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for CanonicalJsonValue {
@@ -144,7 +203,11 @@ impl<'de> Visitor<'de> for CanonicalValueVisitor<'_> {
         E: de::Error,
     {
         if !(-MAX_SAFE_INTEGER..=MAX_SAFE_INTEGER).contains(&value) {
-            return Err(E::custom("JSON integer exceeds the exact ±2^53 profile"));
+            return self.state.refuse(
+                CORE_S1102,
+                "JSON integer exceeds the exact ±2^53 profile",
+                CanonicalJsonValue::Integer(value.clamp(-MAX_SAFE_INTEGER, MAX_SAFE_INTEGER)),
+            );
         }
         Ok(CanonicalJsonValue::Integer(value))
     }
@@ -153,25 +216,38 @@ impl<'de> Visitor<'de> for CanonicalValueVisitor<'_> {
     where
         E: de::Error,
     {
-        let value = i64::try_from(value)
-            .map_err(|_| E::custom("JSON integer exceeds the exact ±2^53 profile"))?;
-        self.visit_i64(value)
+        match i64::try_from(value) {
+            Ok(value) => self.visit_i64(value),
+            Err(_) => self.state.refuse(
+                CORE_S1102,
+                "JSON integer exceeds the exact ±2^53 profile",
+                CanonicalJsonValue::Integer(MAX_SAFE_INTEGER),
+            ),
+        }
     }
 
     fn visit_f64<E>(self, _value: f64) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        Err(E::custom(
+        self.state.refuse(
+            CORE_S1102,
             "binary floating-point JSON numbers are not authoritative values",
-        ))
+            CanonicalJsonValue::Integer(0),
+        )
     }
 
     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        validate_nfc(value)?;
+        if !is_nfc(value) {
+            return self.state.refuse(
+                CORE_S1102,
+                NFC_DETAIL,
+                CanonicalJsonValue::String(value.into()),
+            );
+        }
         Ok(CanonicalJsonValue::String(value.into()))
     }
 
@@ -179,7 +255,11 @@ impl<'de> Visitor<'de> for CanonicalValueVisitor<'_> {
     where
         E: de::Error,
     {
-        validate_nfc(&value)?;
+        if !is_nfc(&value) {
+            return self
+                .state
+                .refuse(CORE_S1102, NFC_DETAIL, CanonicalJsonValue::String(value));
+        }
         Ok(CanonicalJsonValue::String(value))
     }
 
@@ -187,7 +267,11 @@ impl<'de> Visitor<'de> for CanonicalValueVisitor<'_> {
     where
         E: de::Error,
     {
-        Err(E::custom("null is not an alias for an absent field"))
+        self.state.refuse(
+            CORE_S1102,
+            "null is not an alias for an absent field",
+            CanonicalJsonValue::Bool(false),
+        )
     }
 
     fn visit_unit<E>(self) -> Result<Self::Value, E>
@@ -227,18 +311,28 @@ impl<'de> Visitor<'de> for CanonicalValueVisitor<'_> {
         let mut entries = Vec::with_capacity(map.size_hint().unwrap_or(0).min(16_384));
         while let Some(key) = map.next_key::<String>()? {
             self.state.path.push(PathSegment::Key(key.clone()));
-            validate_nfc::<A::Error>(&key)?;
-            if !seen.insert(key.clone()) {
-                self.state.code = Some(CORE_S1103);
-                return Err(<A::Error as de::Error>::custom(format!(
-                    "duplicate object key `{key}`"
-                )));
+            if !is_nfc(&key) {
+                self.state.refuse::<A::Error>(
+                    CORE_S1102,
+                    NFC_DETAIL,
+                    CanonicalJsonValue::Bool(false),
+                )?;
+            }
+            let duplicate = !seen.insert(key.clone());
+            if duplicate {
+                self.state.refuse::<A::Error>(
+                    CORE_S1103,
+                    &format!("duplicate object key `{key}`"),
+                    CanonicalJsonValue::Bool(false),
+                )?;
             }
             let value = map.next_value_seed(CanonicalSeed {
                 state: &mut *self.state,
             })?;
             self.state.path.pop();
-            entries.push((key, value));
+            if !duplicate {
+                entries.push((key, value));
+            }
         }
         entries.sort_by(|left, right| utf16_cmp(&left.0, &right.0));
         Ok(CanonicalJsonValue::Object(entries))
@@ -287,14 +381,10 @@ impl Serialize for CanonicalJsonValue {
     }
 }
 
-fn validate_nfc<E: de::Error>(value: &str) -> Result<(), E> {
-    if ComposingNormalizerBorrowed::new_nfc().is_normalized(value) {
-        Ok(())
-    } else {
-        Err(E::custom(
-            "authoritative strings must already be Unicode NFC",
-        ))
-    }
+const NFC_DETAIL: &str = "authoritative strings must already be Unicode NFC";
+
+fn is_nfc(value: &str) -> bool {
+    ComposingNormalizerBorrowed::new_nfc().is_normalized(value)
 }
 
 fn utf16_cmp(left: &str, right: &str) -> std::cmp::Ordering {
@@ -327,6 +417,41 @@ mod tests {
             assert_eq!(error.code(), code, "{input}");
             assert_eq!(error.pointer(), Some(pointer), "{input}");
         }
+    }
+
+    #[test]
+    fn diagnostic_read_collects_every_value_refusal_in_one_pass() {
+        let input = format!(
+            r#"{{"a":1.5,"b":null,"c":{{"d":1,"d":2}},"e":[99999999999999999999],"f":"e{}"}}"#,
+            '\u{301}'
+        );
+        assert!(read_authoritative_json(input.as_bytes()).is_err());
+        let (tree, refusals) = diagnose_authoritative_json(input.as_bytes());
+        let located: Vec<_> = refusals
+            .iter()
+            .map(|error| (error.code(), error.pointer().unwrap_or_default()))
+            .collect();
+        assert_eq!(
+            located,
+            vec![
+                (CORE_S1102, "/a"),
+                (CORE_S1102, "/b"),
+                (CORE_S1103, "/c/d"),
+                (CORE_S1102, "/e/0"),
+                (CORE_S1102, "/f"),
+            ]
+        );
+        let tree = tree.expect("a syntactically valid document yields a diagnostic tree");
+        assert_eq!(tree.pointer("/c/d"), Some(&CanonicalJsonValue::Integer(1)));
+
+        let (tree, refusals) = diagnose_authoritative_json(br#"{"a":1.5,"b":}"#);
+        assert!(tree.is_none());
+        assert_eq!(refusals.len(), 2, "the float and then the syntax error");
+        assert_eq!(
+            refusals[1].pointer(),
+            Some("/b"),
+            "a syntax error points at the value being read"
+        );
     }
 
     #[test]

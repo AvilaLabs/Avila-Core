@@ -1,8 +1,20 @@
-//! Source layer: authoritative reading, typed decoding, and header checks.
+//! Source layer: authoritative reading, shape validation, typed decoding, and
+//! header checks.
+//!
+//! The layer reports in one pass wherever a typed document does not yet exist
+//! to continue with: every value refusal from the authoritative reader, then
+//! every shape violation against the embedded schema, and only then typed
+//! decoding, which after a clean shape pass fails only for internal drift.
+
+use avila_core_kernel::{
+    CanonicalJsonValue, EXACT_NUMBER_DECODE_PREFIX, ExactNumber, SEMANTIC_PROFILE,
+    diagnose_authoritative_json, read_authoritative_json,
+};
 
 use super::findings::{escape_pointer_token, owner_for};
 use super::ir::DocumentIdentity;
 use super::prefixed_sha256;
+use super::schema::{SchemaDocument, validate_shape};
 use super::values::compiler_repair;
 use crate::diagnostic::{
     CORE_S1101, CORE_S1102, CoreDiagnostic, DiagnosticRepair, FindingClass, SourceLocation,
@@ -10,15 +22,12 @@ use crate::diagnostic::{
 use crate::document::{
     CONTRACT_SCHEMA_VERSION, ContractSource, REGISTRY_SCHEMA_VERSION, RegistrySnapshot,
 };
-use avila_core_kernel::{
-    CanonicalJsonValue, EXACT_NUMBER_DECODE_PREFIX, ExactNumber, SEMANTIC_PROFILE,
-    read_authoritative_json,
-};
 
 pub(super) const MAX_DOCUMENT_BYTES: usize = 16 * 1024 * 1024;
 
 pub(super) fn read_document<T: serde::de::DeserializeOwned>(
     document: &str,
+    which: SchemaDocument,
     bytes: &[u8],
     identities: &mut Vec<DocumentIdentity>,
     findings: &mut Vec<CoreDiagnostic>,
@@ -38,14 +47,8 @@ pub(super) fn read_document<T: serde::de::DeserializeOwned>(
     }
     let canonical_value = match read_authoritative_json(bytes) {
         Ok(value) => value,
-        Err(error) => {
-            findings.push(CoreDiagnostic::new(
-                error.code(),
-                FindingClass::Invalid,
-                owner_for(document),
-                SourceLocation::new(document, error.pointer().unwrap_or_default()),
-                error.detail(),
-            ));
+        Err(_) => {
+            report_every_refusal(document, which, bytes, findings);
             return None;
         }
     };
@@ -66,6 +69,13 @@ pub(super) fn read_document<T: serde::de::DeserializeOwned>(
         document: document.into(),
         sha256: prefixed_sha256(&canonical),
     });
+
+    let mut shape = Vec::new();
+    validate_shape(document, which, &canonical_value, &mut shape);
+    if !shape.is_empty() {
+        findings.extend(shape);
+        return None;
+    }
 
     let mut deserializer = serde_json::Deserializer::from_slice(bytes);
     match serde_path_to_error::deserialize::<_, T>(&mut deserializer) {
@@ -98,6 +108,42 @@ pub(super) fn read_document<T: serde::de::DeserializeOwned>(
             None
         }
     }
+}
+
+/// Reports every reader refusal in the document, then every shape violation
+/// of the diagnostic tree that is not already explained by a refusal at or
+/// above its pointer. Nothing reported here is authoritative.
+fn report_every_refusal(
+    document: &str,
+    which: SchemaDocument,
+    bytes: &[u8],
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    let (tree, refusals) = diagnose_authoritative_json(bytes);
+    let refused: Vec<String> = refusals
+        .iter()
+        .map(|refusal| refusal.pointer().unwrap_or_default().to_owned())
+        .collect();
+    for refusal in &refusals {
+        findings.push(CoreDiagnostic::new(
+            refusal.code(),
+            FindingClass::Invalid,
+            owner_for(document),
+            SourceLocation::new(document, refusal.pointer().unwrap_or_default()),
+            refusal.detail(),
+        ));
+    }
+    let Some(tree) = tree else {
+        return;
+    };
+    let mut shape = Vec::new();
+    validate_shape(document, which, &tree, &mut shape);
+    findings.extend(shape.into_iter().filter(|finding| {
+        !refused.iter().any(|pointer| {
+            finding.primary.pointer == *pointer
+                || finding.primary.pointer.starts_with(&format!("{pointer}/"))
+        })
+    }));
 }
 
 /// Lowers the path at which typed decoding stopped to a JSON Pointer.

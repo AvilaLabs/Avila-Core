@@ -11,6 +11,7 @@ mod reproducibility;
 mod requirements;
 mod resolve;
 mod review;
+mod schema;
 mod shape;
 mod source;
 mod values;
@@ -27,6 +28,7 @@ use self::resolve::{
     collect_sources, resolve_workflow, validate_contract_registry_refs, validate_graph,
 };
 use self::review::compile_review_obligations;
+use self::schema::SchemaDocument;
 use self::shape::validate_contract_shape;
 use self::source::{read_document, validate_document_headers};
 use self::values::compile_parameters;
@@ -63,12 +65,14 @@ pub fn compile_documents(
 
     let contract = read_document::<ContractSource>(
         "contract",
+        SchemaDocument::Contract,
         contract_bytes,
         &mut source_identities,
         &mut findings,
     );
     let registry = read_document::<RegistrySnapshot>(
         "registry",
+        SchemaDocument::Registry,
         registry_bytes,
         &mut source_identities,
         &mut findings,

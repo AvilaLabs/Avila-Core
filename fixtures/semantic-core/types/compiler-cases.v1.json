@@ -981,6 +981,80 @@
           ]
         }
       }
+    },
+    {
+      "fixture_id": "types.source.independent-refusals.pass",
+      "clause": "SC-2 source layer, one pass",
+      "contract": "types.source.independent-refusals.pass.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-S1102",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/inputs/0/media_type"
+            },
+            "repairs": []
+          },
+          {
+            "code": "CORE-S1102",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/comparison"
+            },
+            "repairs": [
+              "constrained_choice"
+            ]
+          },
+          {
+            "code": "CORE-S1102",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/limit/value"
+            },
+            "repairs": [
+              "mechanically_safe"
+            ]
+          },
+          {
+            "code": "CORE-S1102",
+            "class": "missing",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/statement"
+            },
+            "repairs": []
+          },
+          {
+            "code": "CORE-S1102",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/parameters/x"
+            },
+            "repairs": []
+          },
+          {
+            "code": "CORE-S1101",
+            "class": "invalid",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/1/bogus_field"
+            },
+            "repairs": []
+          }
+        ]
+      }
     }
   ]
 }

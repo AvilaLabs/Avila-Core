@@ -44,7 +44,8 @@ code blocks compilation.
 Owners are product roles: `requester` for the contract and its values,
 `policy_owner` for execution and review policy bindings, and `registry_owner`
 for the snapshot. Finding classes are `missing`, `invalid`, `unsatisfied`,
-`inadmissible`, and `notice`. The class is decided per finding, not per code: `CORE-S1301` is
+`inadmissible`, and `notice`. The class is decided per finding, not per code: a
+required property absent from a document is `CORE-S1102` as `missing`, `CORE-S1301` is
 `missing` in a draft and `invalid` afterwards, and `CORE-T2104` is `missing`
 when a tolerance is absent and `invalid` when one is misplaced.
 

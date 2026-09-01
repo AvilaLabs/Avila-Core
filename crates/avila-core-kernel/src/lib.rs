@@ -13,7 +13,9 @@ mod predicate;
 mod unit;
 mod verdict;
 
-pub use canonical_json::{CanonicalJsonValue, canonicalize_json, read_authoritative_json};
+pub use canonical_json::{
+    CanonicalJsonValue, canonicalize_json, diagnose_authoritative_json, read_authoritative_json,
+};
 pub use diagnostic::{
     CORE_E7301, CORE_R3301, CORE_S1102, CORE_S1103, CORE_T2001, CORE_T2102, CORE_T2203,
     KernelError, Repair, RepairApplicability,

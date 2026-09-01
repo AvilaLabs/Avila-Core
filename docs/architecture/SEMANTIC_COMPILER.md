@@ -23,10 +23,13 @@ composable under the implemented semantic rules and pinned registry snapshot.
 ## Current pipeline
 
 ```text
-strict authoritative JSON reader
+authoritative JSON reader, every value refusal
               │
               ▼
-schema + semantic-profile check
+embedded-schema shape check, every violation
+              │
+              ▼
+typed decode + semantic-profile check
               │
               ▼
 registry integrity and nominal identities
@@ -253,19 +256,24 @@ only when the contract is otherwise compilable, because an unfed declaration
 is usually a consequence of a blocking resolution failure reported elsewhere.
 A compiled report may therefore carry notices; a rejected report never does.
 
-Source-layer refusals are located too. The authoritative reader tracks the
-JSON Pointer of the value it is reading, so a binary float, `null`, duplicate
-key, non-NFC string, or unsafe integer is reported at that value rather than at
-the document root. Typed decoding reports an unknown field at the field itself
-and a wrong value family at the value. A number that is well formed but not
-canonical, such as `"100.0"` or `"2/4"`, carries a `mechanically_safe` repair
-naming its unique canonical form; the compiler still refuses it rather than
-rewriting authored bytes. Decoding inside an internally tagged object, such as
-a binding `source`, is buffered by the decoder, so a failure there points at
-the object rather than the field inside it. Unlike the semantic checks, the
-source layer stops at the first refusal because no typed document exists to
-continue with; a syntax error points at the container being read and keeps the
-line and column in its message.
+Source-layer refusals are located and reported in one pass too. The
+authoritative reader tracks the JSON Pointer of the value it is reading, so a
+binary float, `null`, duplicate key, non-NFC string, or unsafe integer is
+reported at that value rather than at the document root; when a document is
+refused, a diagnostic read records every such refusal instead of stopping at
+the first. The compiler then checks the document's shape against the embedded
+`v0.2-draft` schema, reporting every unknown property, missing required
+property, wrong value family, wrong tagged variant, and non-canonical number at
+its own pointer. That stage enforces exactly what typed decoding would refuse;
+every rule the decoder would accept, such as cardinality, uniqueness, minimums,
+empty identifiers, and identity formats, stays with the semantic pass that owns
+it so the finding carries its semantic code and accountable owner. A wrong
+variant or enumerated value carries a `constrained_choice` repair naming the
+admitted values. A number that is well formed but not canonical, such as
+`"100.0"` or `"2/4"`, carries a `mechanically_safe` repair naming its unique
+canonical form; the compiler still refuses it rather than rewriting authored
+bytes. Only a syntax error ends the pass early; it points at the value being
+read and keeps the line and column in its message.
 
 ## Compiled identity
 

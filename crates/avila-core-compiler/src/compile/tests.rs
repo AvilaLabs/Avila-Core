@@ -107,9 +107,23 @@ fn resolved_fixture_compiles_deterministically() {
 fn authoritative_failures_become_findings() {
     let report = compile_documents(br#"{"value":1.0}"#, REGISTRY).unwrap();
     assert_eq!(report.status, CompilationStatus::Rejected);
-    assert_eq!(report.findings[0].code, CORE_S1102);
-    assert_eq!(report.findings[0].primary.pointer, "/value");
     assert!(report.compiled.is_none());
+    let located: Vec<_> = report
+        .findings
+        .iter()
+        .map(|finding| {
+            (
+                finding.code.as_str(),
+                finding.class,
+                finding.primary.pointer.as_str(),
+            )
+        })
+        .collect();
+    assert!(located.contains(&(CORE_S1102, FindingClass::Invalid, "/value")));
+    assert!(
+        located.contains(&(CORE_S1102, FindingClass::Missing, "/contract_id")),
+        "shape problems are reported in the same pass as reader refusals: {located:?}"
+    );
 }
 
 #[test]
@@ -118,6 +132,7 @@ fn source_layer_findings_name_the_offending_value() {
     float_parameter["workflow"][0]["parameters"]["x"] = serde_json::json!(1.5);
     let report =
         compile_documents(&serde_json::to_vec(&float_parameter).unwrap(), REGISTRY).unwrap();
+    assert_eq!(report.findings.len(), 1, "{:?}", report.findings);
     assert_eq!(report.findings[0].code, CORE_S1102);
     assert_eq!(
         report.findings[0].primary.pointer,
@@ -127,6 +142,7 @@ fn source_layer_findings_name_the_offending_value() {
     let mut unknown_field: serde_json::Value = serde_json::from_slice(CONTRACT).unwrap();
     unknown_field["workflow"][1]["bogus_field"] = serde_json::json!(1);
     let report = compile_documents(&serde_json::to_vec(&unknown_field).unwrap(), REGISTRY).unwrap();
+    assert_eq!(report.findings.len(), 1, "{:?}", report.findings);
     assert_eq!(report.findings[0].code, CORE_S1101);
     assert_eq!(
         report.findings[0].primary.pointer,
@@ -136,16 +152,27 @@ fn source_layer_findings_name_the_offending_value() {
     let mut wrong_variant: serde_json::Value = serde_json::from_slice(CONTRACT).unwrap();
     wrong_variant["requirements"][0]["comparison"] = serde_json::json!("lessthan");
     let report = compile_documents(&serde_json::to_vec(&wrong_variant).unwrap(), REGISTRY).unwrap();
+    assert_eq!(report.findings.len(), 1, "{:?}", report.findings);
     assert_eq!(report.findings[0].code, CORE_S1102);
     assert_eq!(
         report.findings[0].primary.pointer,
         "/requirements/0/comparison"
     );
-    assert!(report.findings[0].repairs.is_empty());
+    assert_eq!(
+        report.findings[0].repairs[0].candidates,
+        vec![
+            "less_than".to_owned(),
+            "less_than_or_equal".into(),
+            "greater_than".into(),
+            "greater_than_or_equal".into(),
+            "equal".into(),
+        ]
+    );
 
     let mut noncanonical: serde_json::Value = serde_json::from_slice(CONTRACT).unwrap();
     noncanonical["requirements"][0]["limit"]["value"] = serde_json::json!("100.0");
     let report = compile_documents(&serde_json::to_vec(&noncanonical).unwrap(), REGISTRY).unwrap();
+    assert_eq!(report.findings.len(), 1, "{:?}", report.findings);
     assert_eq!(report.findings[0].code, CORE_S1102);
     assert_eq!(
         report.findings[0].primary.pointer,
@@ -157,6 +184,35 @@ fn source_layer_findings_name_the_offending_value() {
             applicability: RepairApplicability::MechanicallySafe,
             candidates: vec!["100".into()],
         }]
+    );
+
+    let mut several: serde_json::Value = serde_json::from_slice(CONTRACT).unwrap();
+    several["workflow"][0]["parameters"]["x"] = serde_json::json!(1.5);
+    several["inputs"][0]["media_type"] = serde_json::Value::Null;
+    several["workflow"][1]["bogus_field"] = serde_json::json!(1);
+    several["requirements"][0]["limit"]["value"] = serde_json::json!("100.0");
+    several["requirements"][0]["comparison"] = serde_json::json!("lessthan");
+    several["requirements"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("statement");
+    let report = compile_documents(&serde_json::to_vec(&several).unwrap(), REGISTRY).unwrap();
+    let located: Vec<_> = report
+        .findings
+        .iter()
+        .map(|finding| (finding.code.as_str(), finding.primary.pointer.as_str()))
+        .collect();
+    assert_eq!(
+        located,
+        vec![
+            (CORE_S1102, "/inputs/0/media_type"),
+            (CORE_S1102, "/requirements/0/comparison"),
+            (CORE_S1102, "/requirements/0/limit/value"),
+            (CORE_S1102, "/requirements/0/statement"),
+            (CORE_S1102, "/workflow/0/parameters/x"),
+            (CORE_S1101, "/workflow/1/bogus_field"),
+        ],
+        "six independent source-layer problems in one pass"
     );
 }
 

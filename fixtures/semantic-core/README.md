@@ -19,6 +19,15 @@ multiple historical profiles.
   plus 8 aggregate-verdict vectors; and
 - `canon.v1.json`: 12 initial canonical-value and byte-reader vectors.
 
+The `types/` directory now also contains one shared draft registry snapshot and
+one positive, file-backed R1 compilation specimen. The compiler test suite
+derives adversarial unresolved, ambiguous, explicit-binding, role, media,
+dependency, metric, kind, unit, and independent-error cases from that specimen.
+Those generated unit cases exercise the implementation, but they do **not** yet
+satisfy the named, portable compiler-fixture inventory below. Each required
+case still needs a standalone snapshot and canonical expected record before
+ADR-0006 can be accepted.
+
 All other fixtures below are required before ADR acceptance and are currently
 planned unless files exist for them.
 
@@ -50,6 +59,12 @@ fixtures/semantic-core/
   <area>/<fixture_id>.json   compiler fixtures: a snapshot in, expected findings/records out
   scenarios/                 planned end-to-end campaign fixtures
 ```
+
+During the draft bootstrap, `types/compiler.registry.v1.json` and
+`types/types.R1.resolved.pass.contract.json` are reusable compiler inputs rather
+than a complete conformance fixture. They are kept separate so the CLI can
+exercise the real two-document boundary. The eventual portable fixtures remain
+self-contained snapshots in the format below.
 
 ### Vector format (`vectors/*.json`)
 

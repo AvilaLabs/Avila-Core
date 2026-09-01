@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/evidence-contract/v0.2-draft.schema.json",
+  "title": "Avila Core Evidence Contract v0.2 draft compiler subset",
+  "description": "The currently executable contract subset accepted by avila-core-compiler. Scientific sufficiency, qualification, admission, and verdict semantics remain incomplete.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "semantic_profile",
+    "contract_id",
+    "revision",
+    "status",
+    "workflow",
+    "requirements"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/evidence-contract/v0.2-draft"
+    },
+    "semantic_profile": {
+      "const": "avila.core/semantic/0.2-draft"
+    },
+    "contract_id": {
+      "$ref": "#/$defs/nonemptyString"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "in_review",
+        "approved",
+        "retired"
+      ]
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/contractInput"
+      },
+      "default": []
+    },
+    "workflow": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2048,
+      "items": {
+        "$ref": "#/$defs/workflowStep"
+      }
+    },
+    "requirements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/requirement"
+      }
+    }
+  },
+  "$defs": {
+    "nonemptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "versionedRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "major"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "major": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "contractInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_id",
+        "role",
+        "media_type"
+      ],
+      "properties": {
+        "input_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "role": {
+          "$ref": "#/$defs/versionedRef"
+        },
+        "media_type": {
+          "$ref": "#/$defs/nonemptyString"
+        }
+      }
+    },
+    "workflowStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_id",
+        "capability_type"
+      ],
+      "properties": {
+        "step_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "capability_type": {
+          "$ref": "#/$defs/versionedRef"
+        },
+        "bindings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/binding"
+          },
+          "default": []
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Parameter typing is deferred to SC-6 R7. Values are still subject to the authoritative canonical JSON profile.",
+          "default": {}
+        }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_slot",
+        "source"
+      ],
+      "properties": {
+        "input_slot": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "source": {
+          "$ref": "#/$defs/sourceRef"
+        }
+      }
+    },
+    "sourceRef": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "input_id"
+          ],
+          "properties": {
+            "source": {
+              "const": "contract_input"
+            },
+            "input_id": {
+              "$ref": "#/$defs/nonemptyString"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "step_id",
+            "output_slot"
+          ],
+          "properties": {
+            "source": {
+              "const": "step_output"
+            },
+            "step_id": {
+              "$ref": "#/$defs/nonemptyString"
+            },
+            "output_slot": {
+              "$ref": "#/$defs/nonemptyString"
+            }
+          }
+        }
+      ]
+    },
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement_id",
+        "statement",
+        "comparison",
+        "limit",
+        "basis"
+      ],
+      "properties": {
+        "requirement_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "statement": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "metric": {
+          "$ref": "#/$defs/sourceRef"
+        },
+        "comparison": {
+          "enum": [
+            "less_than",
+            "less_than_or_equal",
+            "greater_than",
+            "greater_than_or_equal",
+            "equal"
+          ]
+        },
+        "limit": {
+          "$ref": "#/$defs/typedQuantity"
+        },
+        "basis": {
+          "$ref": "#/$defs/requirementBasis"
+        }
+      }
+    },
+    "typedQuantity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "value",
+        "unit"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "value": {
+          "$ref": "#/$defs/exactNumber"
+        },
+        "unit": {
+          "$ref": "#/$defs/nonemptyString"
+        }
+      }
+    },
+    "exactNumber": {
+      "type": "string",
+      "description": "Canonical plain decimal or reduced rational. Reduction is enforced by the semantic kernel, not this regular expression.",
+      "pattern": "^(?:(?:0|-?[1-9][0-9]*)(?:\\.[0-9]*[1-9])?|-?[1-9][0-9]*/[1-9][0-9]*)$"
+    },
+    "requirementBasis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "bounded",
+            "enclosure",
+            "nominal"
+          ]
+        },
+        "coverage": {
+          "$ref": "#/$defs/exactNumber"
+        }
+      }
+    }
+  }
+}

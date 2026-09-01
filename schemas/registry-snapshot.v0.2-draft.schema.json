@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/registry-snapshot/v0.2-draft.schema.json",
+  "title": "Avila Core Registry Snapshot v0.2 draft compiler subset",
+  "description": "An explicit, immutable semantic registry input for the current compiler subset. It is not a live provider registry or an admission record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "semantic_profile",
+    "registry_id",
+    "revision",
+    "kinds",
+    "roles",
+    "capability_types"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/registry-snapshot/v0.2-draft"
+    },
+    "semantic_profile": {
+      "const": "avila.core/semantic/0.2-draft"
+    },
+    "registry_id": {
+      "$ref": "#/$defs/nonemptyString"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "kinds": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/kind"
+      }
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/role"
+      }
+    },
+    "capability_types": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/capabilityType"
+      }
+    }
+  },
+  "$defs": {
+    "nonemptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "versionedRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "major"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "major": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "exactNumber": {
+      "type": "string",
+      "description": "Canonical plain decimal or reduced rational. Reduction is enforced by the semantic kernel.",
+      "pattern": "^(?:(?:0|-?[1-9][0-9]*)(?:\\.[0-9]*[1-9])?|-?[1-9][0-9]*/[1-9][0-9]*)$"
+    },
+    "kind": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind_id",
+        "canonical_unit",
+        "unit_class",
+        "owner",
+        "units"
+      ],
+      "properties": {
+        "kind_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "canonical_unit": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "unit_class": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "owner": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "units": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/unit"
+          }
+        }
+      }
+    },
+    "unit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "symbol",
+        "factor"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "factor": {
+          "$ref": "#/$defs/exactNumber"
+        }
+      }
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "owner",
+        "validator",
+        "accepted_media_types"
+      ],
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/versionedRef"
+        },
+        "owner": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "validator": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "quantity_kind": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "unit_class": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "accepted_media_types": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonemptyString"
+          }
+        },
+        "non_claims": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonemptyString"
+          },
+          "default": []
+        }
+      }
+    },
+    "capabilityType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability_type",
+        "owner"
+      ],
+      "properties": {
+        "capability_type": {
+          "$ref": "#/$defs/versionedRef"
+        },
+        "owner": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inputSlot"
+          },
+          "default": []
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outputSlot"
+          },
+          "default": []
+        },
+        "non_claims": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonemptyString"
+          },
+          "default": []
+        }
+      }
+    },
+    "inputSlot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slot_id",
+        "role",
+        "accepted_media_types"
+      ],
+      "properties": {
+        "slot_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "role": {
+          "$ref": "#/$defs/versionedRef"
+        },
+        "accepted_media_types": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonemptyString"
+          }
+        },
+        "required": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "outputSlot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slot_id",
+        "role",
+        "media_type"
+      ],
+      "properties": {
+        "slot_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "role": {
+          "$ref": "#/$defs/versionedRef"
+        },
+        "media_type": {
+          "$ref": "#/$defs/nonemptyString"
+        }
+      }
+    }
+  }
+}

@@ -72,10 +72,11 @@ The scaffold deliberately implements only the shaded foundation implied below:
 avila-core-model
     ├── avila-core-runtime   (planning only)
     ├── avila-core-evidence  (record model + hashing only)
-    ├── avila-core-cli       (canonicalize, validate, and plan)
+    ├── avila-core-cli       (canonicalize, compile, validate, and plan)
     └── avila-core-app       (thin read-only specimen UI)
 
 avila-core-kernel            (first canonical-value authority slice)
+    └── avila-core-compiler  (v0.2-draft static compilation only)
 ```
 
 ### `avila-core-model`
@@ -104,6 +105,16 @@ specimens. Its conformance tests execute all 90 current vectors across the four
 pure vector sets. It does not yet compile whole contracts, admit evidence,
 invalidate dependencies, or verify packages.
 
+### `avila-core-compiler`
+
+Accepts a `v0.2-draft` contract and one explicit immutable registry snapshot,
+then returns deterministic structured findings or a content-identified compiled
+snapshot. The current slice resolves typed slots, derives and checks the
+dependency graph, validates nominal roles and media, and lowers requirement
+limits through exact kind/unit rules. It performs no package selection,
+execution, evidence admission, qualification decision, or verdict. See the
+[semantic compiler boundary](SEMANTIC_COMPILER.md).
+
 ### `avila-core-evidence`
 
 Defines draft evidence records and SHA-256 content identities. It has no package
@@ -112,9 +123,9 @@ writer, signature system, lineage validator, or independent verifier yet.
 ### `avila-core-cli`
 
 Provides authoritative JSON canonicalization, embedded semantic-profile and
-vector-set identities, headless contract validation, and plan rendering. All
-output explicitly distinguishes software conformance or structural validity
-from scientific validity.
+vector-set identities, `v0.2-draft` compilation, headless `v0.1` contract
+validation, and specimen plan rendering. All output explicitly distinguishes
+software conformance or structural validity from scientific validity.
 
 ### `avila-core-app`
 

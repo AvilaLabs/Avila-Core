@@ -5,6 +5,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
+use avila_core_compiler::compile_documents;
 use avila_core_evidence::sha256_hex;
 use avila_core_kernel::{SEMANTIC_PROFILE, canonicalize_json};
 use avila_core_model::{CapabilityManifest, EvidenceContract};
@@ -29,6 +30,13 @@ enum Command {
     SemanticProfile,
     /// Read authoritative JSON and emit its deterministic canonical bytes.
     Canonicalize { document: PathBuf },
+    /// Compile a v0.2-draft contract against one immutable registry snapshot.
+    Compile {
+        #[arg(long)]
+        contract: PathBuf,
+        #[arg(long)]
+        registry: PathBuf,
+    },
     /// Validate the structure of an evidence contract.
     ValidateContract { contract: PathBuf },
     /// Produce a deterministic campaign plan. This does not execute it.
@@ -54,6 +62,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             let mut stdout = io::stdout().lock();
             stdout.write_all(&canonical)?;
             stdout.write_all(b"\n")?;
+        }
+        Command::Compile { contract, registry } => {
+            let contract = fs::read(contract)?;
+            let registry = fs::read(registry)?;
+            let report = compile_documents(&contract, &registry)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
         }
         Command::ValidateContract { contract } => {
             let contract: EvidenceContract = read_json(&contract)?;

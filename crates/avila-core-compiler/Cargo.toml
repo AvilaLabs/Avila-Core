@@ -1,21 +1,17 @@
 [package]
-name = "avila-core-cli"
+name = "avila-core-compiler"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 publish.workspace = true
 
-[[bin]]
-name = "avila-core"
-path = "src/main.rs"
-
 [dependencies]
-avila-core-compiler.workspace = true
-avila-core-evidence.workspace = true
 avila-core-kernel.workspace = true
-avila-core-model.workspace = true
-avila-core-runtime.workspace = true
-clap.workspace = true
 serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
 serde_json.workspace = true

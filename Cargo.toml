@@ -2,6 +2,7 @@
 members = [
   "crates/avila-core-model",
   "crates/avila-core-kernel",
+  "crates/avila-core-compiler",
   "crates/avila-core-runtime",
   "crates/avila-core-evidence",
   "crates/avila-core-cli",
@@ -18,6 +19,7 @@ publish = false
 
 [workspace.dependencies]
 avila-core-evidence = { path = "crates/avila-core-evidence" }
+avila-core-compiler = { path = "crates/avila-core-compiler" }
 avila-core-kernel = { path = "crates/avila-core-kernel" }
 avila-core-model = { path = "crates/avila-core-model" }
 avila-core-runtime = { path = "crates/avila-core-runtime" }

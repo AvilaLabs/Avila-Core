@@ -1,0 +1,455 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/compile-report/v0.2-draft.schema.json",
+  "title": "Avila Core Compile Report v0.2 draft",
+  "description": "Deterministic findings and, when no blocking finding exists, one immutable compiled contract snapshot.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "semantic_profile",
+    "status",
+    "notice"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/compile-report/v0.2-draft"
+    },
+    "semantic_profile": {
+      "const": "avila.core/semantic/0.2-draft"
+    },
+    "status": {
+      "enum": [
+        "compiled",
+        "rejected"
+      ]
+    },
+    "source_identities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/documentIdentity"
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "compiled": {
+      "$ref": "#/$defs/compiledContract"
+    },
+    "notice": {
+      "$ref": "#/$defs/nonemptyString"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "compiled"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "compiled"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "compiled"
+          ]
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nonemptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "documentIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "document",
+        "sha256"
+      ],
+      "properties": {
+        "document": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "document",
+        "pointer"
+      ],
+      "properties": {
+        "document": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "pointer": {
+          "type": "string"
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "class",
+        "owner",
+        "primary",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^CORE-[A-Z][0-9]{4}$"
+        },
+        "class": {
+          "enum": [
+            "missing",
+            "invalid",
+            "unsatisfied",
+            "inadmissible",
+            "notice"
+          ]
+        },
+        "owner": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "primary": {
+          "$ref": "#/$defs/location"
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/location"
+          }
+        },
+        "repairs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/repair"
+          }
+        },
+        "message": {
+          "$ref": "#/$defs/nonemptyString"
+        }
+      }
+    },
+    "repair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applicability"
+      ],
+      "properties": {
+        "applicability": {
+          "enum": [
+            "mechanically_safe",
+            "constrained_choice",
+            "method_owner_judgment"
+          ]
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "versionedRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "major"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "major": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "sourceRef": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "input_id"
+          ],
+          "properties": {
+            "source": {
+              "const": "contract_input"
+            },
+            "input_id": {
+              "$ref": "#/$defs/nonemptyString"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "step_id",
+            "output_slot"
+          ],
+          "properties": {
+            "source": {
+              "const": "step_output"
+            },
+            "step_id": {
+              "$ref": "#/$defs/nonemptyString"
+            },
+            "output_slot": {
+              "$ref": "#/$defs/nonemptyString"
+            }
+          }
+        }
+      ]
+    },
+    "contractInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_id",
+        "role",
+        "media_type"
+      ],
+      "properties": {
+        "input_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "role": {
+          "$ref": "#/$defs/versionedRef"
+        },
+        "media_type": {
+          "$ref": "#/$defs/nonemptyString"
+        }
+      }
+    },
+    "resolvedBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_slot",
+        "source"
+      ],
+      "properties": {
+        "input_slot": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "source": {
+          "$ref": "#/$defs/sourceRef"
+        }
+      }
+    },
+    "compiledStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_id",
+        "capability_type",
+        "bindings",
+        "parameters"
+      ],
+      "properties": {
+        "step_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "capability_type": {
+          "$ref": "#/$defs/versionedRef"
+        },
+        "bindings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/resolvedBinding"
+          }
+        },
+        "parameters": {
+          "type": "object"
+        }
+      }
+    },
+    "compiledRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement_id",
+        "statement",
+        "metric",
+        "metric_role",
+        "comparison",
+        "limit",
+        "basis"
+      ],
+      "properties": {
+        "requirement_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "statement": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "metric": {
+          "$ref": "#/$defs/sourceRef"
+        },
+        "metric_role": {
+          "$ref": "#/$defs/versionedRef"
+        },
+        "comparison": {
+          "enum": [
+            "less_than",
+            "less_than_or_equal",
+            "greater_than",
+            "greater_than_or_equal",
+            "equal"
+          ]
+        },
+        "limit": {
+          "$ref": "#/$defs/canonicalQuantity"
+        },
+        "basis": {
+          "$ref": "#/$defs/basis"
+        }
+      }
+    },
+    "canonicalQuantity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "value",
+        "unit"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "value": {
+          "type": "string"
+        },
+        "unit": {
+          "$ref": "#/$defs/nonemptyString"
+        }
+      }
+    },
+    "basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "bounded",
+            "enclosure",
+            "nominal"
+          ]
+        },
+        "coverage": {
+          "type": "string"
+        }
+      }
+    },
+    "compiledContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "semantic_profile",
+        "compiler",
+        "contract_id",
+        "contract_revision",
+        "contract_sha256",
+        "registry_id",
+        "registry_revision",
+        "registry_sha256",
+        "inputs",
+        "workflow",
+        "requirements",
+        "snapshot_sha256"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "avila.core/compiled-contract/v0.2-draft"
+        },
+        "semantic_profile": {
+          "const": "avila.core/semantic/0.2-draft"
+        },
+        "compiler": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "contract_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "contract_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "contract_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "registry_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "registry_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "registry_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contractInput"
+          }
+        },
+        "workflow": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/compiledStep"
+          }
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/compiledRequirement"
+          }
+        },
+        "snapshot_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

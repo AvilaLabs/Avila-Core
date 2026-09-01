@@ -1,0 +1,148 @@
+{
+  "schema_version": "avila.core/registry-snapshot/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "registry_id": "fixtures.compiler.registry",
+  "revision": 1,
+  "kinds": [
+    {
+      "kind_id": "nuclear.dose_equivalent_rate",
+      "canonical_unit": "Sv/s",
+      "unit_class": "nuclear.dose_equivalent_rate.units@1",
+      "owner": "fixture.method_owner",
+      "units": [
+        {
+          "symbol": "Sv/s",
+          "factor": "1"
+        },
+        {
+          "symbol": "uSv/h",
+          "factor": "1/3600000000"
+        }
+      ]
+    },
+    {
+      "kind_id": "nuclear.absorbed_dose_rate",
+      "canonical_unit": "Gy/s",
+      "unit_class": "nuclear.absorbed_dose_rate.units@1",
+      "owner": "fixture.method_owner",
+      "units": [
+        {
+          "symbol": "Gy/s",
+          "factor": "1"
+        }
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "role": {
+        "id": "fixture.source_document",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "validator": "fixture.validate.source@1",
+      "accepted_media_types": [
+        "application/vnd.fixture.source+json"
+      ]
+    },
+    {
+      "role": {
+        "id": "fixture.alternate_source_document",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "validator": "fixture.validate.alternate-source@1",
+      "accepted_media_types": [
+        "application/vnd.fixture.source+json"
+      ]
+    },
+    {
+      "role": {
+        "id": "nuclear.shutdown_dose_rate",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "validator": "fixture.validate.dose-rate@1",
+      "quantity_kind": "nuclear.dose_equivalent_rate",
+      "unit_class": "nuclear.dose_equivalent_rate.units@1",
+      "accepted_media_types": [
+        "application/vnd.fixture.quantity+json"
+      ]
+    },
+    {
+      "role": {
+        "id": "nuclear.absorbed_dose_rate",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "validator": "fixture.validate.absorbed-dose-rate@1",
+      "quantity_kind": "nuclear.absorbed_dose_rate",
+      "unit_class": "nuclear.absorbed_dose_rate.units@1",
+      "accepted_media_types": [
+        "application/vnd.fixture.quantity+json"
+      ]
+    }
+  ],
+  "capability_types": [
+    {
+      "capability_type": {
+        "id": "fixture.calculate_dose",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "inputs": [
+        {
+          "slot_id": "source",
+          "role": {
+            "id": "fixture.source_document",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.fixture.source+json"
+          ],
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "slot_id": "dose_rate",
+          "role": {
+            "id": "nuclear.shutdown_dose_rate",
+            "major": 1
+          },
+          "media_type": "application/vnd.fixture.quantity+json"
+        }
+      ]
+    },
+    {
+      "capability_type": {
+        "id": "fixture.bound_dose",
+        "major": 1
+      },
+      "owner": "fixture.method_owner",
+      "inputs": [
+        {
+          "slot_id": "dose_rate",
+          "role": {
+            "id": "nuclear.shutdown_dose_rate",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.fixture.quantity+json"
+          ],
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "slot_id": "bounded_dose_rate",
+          "role": {
+            "id": "nuclear.shutdown_dose_rate",
+            "major": 1
+          },
+          "media_type": "application/vnd.fixture.quantity+json"
+        }
+      ]
+    }
+  ]
+}

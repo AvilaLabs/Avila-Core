@@ -47,4 +47,4 @@ jobs:
         run: |
           while IFS= read -r -d '' file; do
             jq empty "$file"
-          done < <(find schemas examples -type f -name '*.json' -print0)
+          done < <(find schemas examples fixtures -type f -name '*.json' -print0)

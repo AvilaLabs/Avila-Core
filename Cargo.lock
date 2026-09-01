@@ -482,6 +482,7 @@ dependencies = [
 name = "avila-core-cli"
 version = "0.1.0"
 dependencies = [
+ "avila-core-compiler",
  "avila-core-evidence",
  "avila-core-kernel",
  "avila-core-model",
@@ -489,6 +490,17 @@ dependencies = [
  "clap",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "avila-core-compiler"
+version = "0.1.0"
+dependencies = [
+ "avila-core-kernel",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.20",
 ]
 
 [[package]]

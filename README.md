@@ -21,6 +21,9 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   decimals, authoritative JSON, quantity kinds, exact unit scaling, and
   three-valued applicability predicates;
 - exact four-state verdict derivation over admitted claim specimens;
+- a first `v0.2-draft` semantic compiler that resolves typed dataflow,
+  diagnoses graph and binding failures, and emits an immutable compiled
+  snapshot with exact canonical requirement limits;
 - a deterministic dependency planner that fails closed;
 - a draft portable evidence model and SHA-256 utility;
 - JSON Schemas and deliberately non-executable specimen documents;
@@ -30,8 +33,9 @@ This repository is a **pre-alpha scaffold**. It currently provides:
 The repository also contains proposed `v0.2` semantic rules and an initial
 conformance-vector corpus. The Rust kernel executes all 90 current pure vectors:
 12 canonical-value, 10 unit-scaling, 19 scope-predicate, 41 requirement-verdict,
-and 8 aggregate-verdict cases. The wider compiler, admission, invalidation, and
-package semantics remain proposed and unimplemented.
+and 8 aggregate-verdict cases. The first compiler slice is implemented, but its
+remaining type rules and normative fixture families, along with admission,
+invalidation, and package semantics, remain proposed and incomplete.
 
 It does **not** run scientific software, calculate a physical quantity, admit
 real evidence, evaluate a scientifically qualified requirement, certify a
@@ -63,6 +67,10 @@ cargo run -p avila-core-cli -- semantic-profile
 
 cargo run -p avila-core-cli -- canonicalize path/to/authoritative.json
 
+cargo run -p avila-core-cli -- compile \
+  --contract fixtures/semantic-core/types/types.R1.resolved.pass.contract.json \
+  --registry fixtures/semantic-core/types/compiler.registry.v1.json
+
 cargo run -p avila-core-cli -- \
   validate-contract examples/contracts/shutdown-dose-specimen.json
 
@@ -86,6 +94,7 @@ only honest state of the included specimen.
 crates/
   avila-core-model/       contract, capability, requirement, and verdict types
   avila-core-kernel/      exact values, predicates, and verdict derivation
+  avila-core-compiler/    draft static compiler and immutable semantic IR
   avila-core-runtime/     deterministic campaign planning; no execution yet
   avila-core-evidence/    portable evidence records and hashing
   avila-core-cli/         headless local interface

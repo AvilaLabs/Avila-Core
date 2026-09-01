@@ -18,8 +18,8 @@ multiple historical profiles.
 - `verdict-calculus.v1.json`: 49 vectors: 41 requirement-evaluation vectors
   plus 8 aggregate-verdict vectors; and
 - `canon.v1.json`: 12 initial canonical-value and byte-reader vectors;
-- `types/compiler-cases.v1.json`: 28 executable compiler fixtures: 5 compiled
-  cases and 23 rejected cases covering the current R1–R6 subset, claim-model
+- `types/compiler-cases.v1.json`: 30 executable compiler fixtures: 5 compiled
+  cases and 25 rejected cases covering the current R1–R6 subset, claim-model
   sufficiency, coverage validity, equality tolerances, exact unit lowering,
   cascade suppression, independent findings, and source-layer refusals located
   by JSON Pointer; and
@@ -46,9 +46,9 @@ planned unless files exist for them.
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
 `scope-predicates.v1.json`, plus the 41 requirement and 8 aggregation vectors in
-`verdict-calculus.v1.json`. The compiler harness also executes all 61 cases in
+`verdict-calculus.v1.json`. The compiler harness also executes all 63 cases in
 the five compiler manifests and pins each registry digest plus all successful
-compiled-snapshot identities. Passing the 90 pure vectors and 61 compiler
+compiled-snapshot identities. Passing the 90 pure vectors and 63 compiler
 fixtures does not accept ADR-0006: package-level rule halves and other vector
 families in this coverage plan remain absent, and no result is scientifically
 qualified.
@@ -231,6 +231,7 @@ canonically.
 | `types.R5.self-dependency.fail` | `CORE-R3201` |
 | `types.R5.cycle.fail` | `CORE-R3202` |
 | `types.R5.unknown-step.fail` | `CORE-R3203` |
+| `types.R5.unknown-output-slot.fail` | a known step with no such output slot → `CORE-R3203` naming the declared outputs |
 | `types.R6.unbound-metric.fail` | `CORE-R3301` |
 | `types.R6.limit-kind.fail` | `CORE-T2102` |
 | `types.R6.limit-unit.fail` | `CORE-T2103` |
@@ -274,6 +275,7 @@ canonically.
 | `types.source.noncanonical-decimal.fail` | `"100.0"` refused at `/requirements/0/limit/value` → `CORE-S1102`; repair `mechanically_safe` = `"100"` |
 | `types.source.duplicate-key.fail` | repeated object key refused at the key → `CORE-S1103` |
 | `types.cascade-suppressed.pass` | consequence of a root error summarized under it |
+| `types.cascade.unknown-type-suppressed.pass` | a step of unknown capability type is reported once at its `capability_type`; bindings and metrics naming its outputs are suppressed, not reported as nonexistent |
 | `types.cascade-preserves-independent.pass` | dependency-blocked step with its own `CORE-P5101` reports both |
 | `types.conversion-capability.pass` | Gy→Sv via `core.convert.absorbed_dose_to_dose_equivalent@1` type-checks with weighting role bound |
 | `types.human-step.pass` | fulfilled, signed `core.review.decision@1` record is admitted under external organization policy; type-level obligation is now covered by the executable R9 fixtures |

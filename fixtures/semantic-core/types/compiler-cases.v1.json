@@ -768,6 +768,46 @@
           }
         ]
       }
+    },
+    {
+      "fixture_id": "types.cascade.unknown-type-suppressed.pass",
+      "clause": "SC-6 cascade suppression",
+      "contract": "types.cascade.unknown-type-suppressed.pass.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3101",
+            "class": "unsatisfied",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/0/capability_type"
+            },
+            "repairs": []
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R5.unknown-output-slot.fail",
+      "clause": "SC-6 R5",
+      "contract": "types.R5.unknown-output-slot.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-R3203",
+            "class": "missing",
+            "owner": "contract_author",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/1/bindings/0/source"
+            },
+            "repairs": []
+          }
+        ]
+      }
     }
   ]
 }

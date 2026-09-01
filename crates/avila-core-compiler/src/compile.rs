@@ -232,11 +232,22 @@ pub fn compile_documents(
     }
 
     let candidates = collect_sources(&contract, &registry_index);
+    let unknown_type_steps: BTreeSet<&str> = contract
+        .workflow
+        .iter()
+        .filter(|step| {
+            !registry_index
+                .capability_types
+                .contains_key(&step.capability_type)
+        })
+        .map(|step| step.step_id.as_str())
+        .collect();
     let resolution = resolve_workflow(
         &contract,
         &registry_index,
         &candidates,
         &invalid_sources,
+        &unknown_type_steps,
         &mut findings,
     );
     let compiled_reviews = compile_review_obligations(
@@ -251,6 +262,7 @@ pub fn compile_documents(
         &registry_index,
         &candidates,
         &invalid_sources,
+        &unknown_type_steps,
         &mut findings,
     );
 
@@ -1627,6 +1639,7 @@ fn resolve_workflow(
     registry: &RegistryIndex<'_>,
     candidates: &[Candidate],
     invalid_sources: &BTreeSet<SourceRef>,
+    unknown_type_steps: &BTreeSet<&str>,
     findings: &mut Vec<CoreDiagnostic>,
 ) -> WorkflowResolution {
     let mut result = WorkflowResolution::default();
@@ -1696,16 +1709,17 @@ fn resolve_workflow(
                     continue;
                 }
                 let Some(candidate) = find_exact_candidate(candidates, &binding.source) else {
-                    let code = match binding.source {
-                        SourceRef::StepOutput { .. } => CORE_R3203,
-                        SourceRef::ContractInput { .. } => CORE_R3101,
-                    };
+                    if produced_by_unknown_type(&binding.source, unknown_type_steps) {
+                        continue;
+                    }
+                    let (code, message) =
+                        missing_source_finding(contract, registry, &binding.source);
                     findings.push(CoreDiagnostic::new(
                         code,
                         FindingClass::Missing,
                         "contract_author",
                         contract_location(pointer),
-                        format!("source `{}` does not exist", binding.source.label()),
+                        message,
                     ));
                     continue;
                 };
@@ -1812,6 +1826,64 @@ fn resolve_workflow(
         result.bindings.insert(step.step_id.clone(), resolved);
     }
     result
+}
+
+/// A source is suppressed when it names an output of a step whose capability
+/// type is absent from the snapshot. That root cause is already reported at the
+/// step's `capability_type`; the reference would resolve once the type exists.
+fn produced_by_unknown_type(source: &SourceRef, unknown_type_steps: &BTreeSet<&str>) -> bool {
+    matches!(
+        source,
+        SourceRef::StepOutput { step_id, .. } if unknown_type_steps.contains(step_id.as_str())
+    )
+}
+
+/// Explains why a referenced source has no candidate, distinguishing an
+/// undeclared input, a nonexistent step, and a known step with no such output.
+fn missing_source_finding(
+    contract: &ContractSource,
+    registry: &RegistryIndex<'_>,
+    source: &SourceRef,
+) -> (&'static str, String) {
+    match source {
+        SourceRef::ContractInput { input_id } => (
+            CORE_R3101,
+            format!("contract input `{input_id}` is not declared"),
+        ),
+        SourceRef::StepOutput {
+            step_id,
+            output_slot,
+        } => {
+            let Some(step) = contract
+                .workflow
+                .iter()
+                .find(|step| &step.step_id == step_id)
+            else {
+                return (
+                    CORE_R3203,
+                    format!("workflow step `{step_id}` does not exist"),
+                );
+            };
+            let declared: Vec<_> = registry
+                .capability_types
+                .get(&step.capability_type)
+                .map(|capability| {
+                    capability
+                        .outputs
+                        .iter()
+                        .map(|output| output.slot_id.clone())
+                        .collect()
+                })
+                .unwrap_or_default();
+            (
+                CORE_R3203,
+                format!(
+                    "step `{step_id}` of capability type `{}@{}` declares no output slot `{output_slot}`; declared outputs: {declared:?}",
+                    step.capability_type.id, step.capability_type.major
+                ),
+            )
+        }
+    }
 }
 
 fn add_dependency(resolution: &mut WorkflowResolution, destination_step: &str, source: &SourceRef) {
@@ -2715,6 +2787,7 @@ fn compile_requirements(
     registry: &RegistryIndex<'_>,
     candidates: &[Candidate],
     invalid_sources: &BTreeSet<SourceRef>,
+    unknown_type_steps: &BTreeSet<&str>,
     findings: &mut Vec<CoreDiagnostic>,
 ) -> Vec<CompiledRequirement> {
     let mut compiled = Vec::new();
@@ -2735,12 +2808,19 @@ fn compile_requirements(
             continue;
         };
         let Some(candidate) = find_exact_candidate(candidates, metric) else {
+            if produced_by_unknown_type(metric, unknown_type_steps) {
+                continue;
+            }
+            let (_, message) = missing_source_finding(contract, registry, metric);
             findings.push(CoreDiagnostic::new(
                 CORE_R3301,
                 FindingClass::Missing,
                 "contract_author",
                 contract_location(format!("/requirements/{index}/metric")),
-                format!("metric source `{}` does not exist", metric.label()),
+                format!(
+                    "metric source `{}` cannot be resolved: {message}",
+                    metric.label()
+                ),
             ));
             continue;
         };
@@ -3847,6 +3927,50 @@ mod tests {
             output_slot: "bounded_dose_rate".into(),
         });
         assert!(codes(&compile_contract(&cycle)).contains(CORE_R3202));
+    }
+
+    #[test]
+    fn unknown_capability_types_are_reported_once_without_downstream_cascade() {
+        let mut source = contract();
+        source.workflow[0].capability_type.id = "fixture.does_not_exist".into();
+        source.workflow[1].bindings.push(AuthoredBinding {
+            input_slot: "dose_rate".into(),
+            source: SourceRef::StepOutput {
+                step_id: "calculate".into(),
+                output_slot: "dose_rate".into(),
+            },
+        });
+        let report = compile_contract(&source);
+        assert_eq!(report.status, CompilationStatus::Rejected);
+        assert_eq!(report.findings.len(), 1, "{:?}", report.findings);
+        assert_eq!(report.findings[0].code, CORE_R3101);
+        assert_eq!(
+            report.findings[0].primary.pointer,
+            "/workflow/0/capability_type"
+        );
+
+        let mut metric_on_unknown = contract();
+        metric_on_unknown.workflow[1].capability_type.id = "fixture.does_not_exist".into();
+        let report = compile_contract(&metric_on_unknown);
+        assert_eq!(report.findings.len(), 1, "{:?}", report.findings);
+        assert_eq!(report.findings[0].code, CORE_R3101);
+
+        let mut wrong_slot = contract();
+        wrong_slot.workflow[1].bindings.push(AuthoredBinding {
+            input_slot: "dose_rate".into(),
+            source: SourceRef::StepOutput {
+                step_id: "calculate".into(),
+                output_slot: "nonexistent".into(),
+            },
+        });
+        let report = compile_contract(&wrong_slot);
+        assert_eq!(report.findings.len(), 1, "{:?}", report.findings);
+        assert_eq!(report.findings[0].code, CORE_R3203);
+        assert!(
+            report.findings[0]
+                .message
+                .contains("declares no output slot")
+        );
     }
 
     #[test]

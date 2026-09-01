@@ -72,7 +72,12 @@ named contract input or a named step output. For each required input slot:
 
 Workflow order in the source file is presentational. Data bindings create the
 dependency graph. Self-bindings, unknown step outputs, and cycles are rejected;
-the compiler never repairs a graph by reordering or dropping work.
+the compiler never repairs a graph by reordering or dropping work. A step whose
+capability type is absent from the snapshot is reported once, at its
+`capability_type`; bindings and requirement metrics that name its outputs are
+suppressed rather than reported as nonexistent sources, because they would
+resolve as soon as the type is supplied. A reference to a known step names the
+outputs that step actually declares.
 
 Implicit resolution currently considers all declared contract inputs and step
 outputs in the supplied snapshot. That rule is intentionally simple and total.

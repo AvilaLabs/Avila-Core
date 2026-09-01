@@ -2,11 +2,11 @@
 
 > Internal codename: Project North Star
 
-Avila Core is an early research project exploring a neutral market and trust
+Avila Core is an early research project exploring a neutral semantic and trust
 layer for computational engineering. An organization states what it needs to
-establish as an **evidence contract**; qualified capabilities resolve the
-contract; Core returns a portable, independently reviewable technical
-conclusion.
+establish as an **evidence contract**; qualified capabilities contribute
+evidence; Core determines what follows under explicit rules and returns a
+portable, independently reviewable package.
 
 The long-term aim is not to sell another solver, workflow canvas, or block of
 compute. It is to shorten the path from an important technical question to an
@@ -23,6 +23,10 @@ This repository is a **pre-alpha scaffold**. It currently provides:
 - a local CLI for structural validation and planning; and
 - an egui product shell showing the intended question-first experience.
 
+The repository also contains proposed `v0.2` semantic rules and an initial
+conformance-vector corpus. Those documents describe a target architecture; the
+current Rust scaffold does not implement them.
+
 It does **not** run scientific software, calculate a physical quantity, verify a
 requirement, certify a design, or produce decision-grade evidence. The specimen
 campaign is blocked on purpose.
@@ -36,6 +40,10 @@ campaign is blocked on purpose.
 | Campaign | A planned or executed dependency graph resolving one contract. |
 | Evidence | Immutable records connecting inputs, capabilities, executions, outputs, reviews, and claims. |
 | Verdict | `PASS`, `FAIL`, `INCONCLUSIVE`, or `NOT_EVALUATED` for a specific requirement and boundary. |
+
+A verdict means that the recorded state follows from admitted evidence under a
+named semantic profile. It is not an unqualified claim that an external model is
+correct or a design is certified.
 
 ## Try the scaffold
 
@@ -79,12 +87,14 @@ docs/
 schemas/                  machine-readable interchange drafts
 examples/                 unqualified, non-executable software specimens
 assets/branding/          provisional Avila Core mark
+fixtures/semantic-core/   proposed semantic-profile coverage and initial vectors
 ```
 
 Start with the [project charter](PROJECT_CHARTER.md), then read the
 [north-star strategy](docs/strategy/NORTH_STAR.md),
 [product definition](docs/product/PRODUCT_DEFINITION.md), and
-[architecture](docs/architecture/ARCHITECTURE.md).
+[architecture](docs/architecture/ARCHITECTURE.md). The proposed language rules
+are in [ADR-0006](docs/adr/0006-semantic-core.md).
 
 ## Licensing and claims
 
@@ -93,4 +103,3 @@ this repository does not grant permission to copy, modify, or redistribute its
 contents. The provisional logo is separately reserved. See
 [DISCLAIMER.md](DISCLAIMER.md) for the project’s scientific and regulatory
 limits.
-

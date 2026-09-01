@@ -1,0 +1,219 @@
+{
+ "vector_set": "unit-scaling",
+ "version": 1,
+ "semantic_profile": "avila.core/semantic/0.2-draft",
+ "clause": "ADR-0006 SC-1, SC-2",
+ "kinds": {
+ "nuclear.dose_equivalent_rate@1": {
+   "canonical_unit": "Sv/s",
+   "unit_class": {
+    "Sv/s": "1",
+    "mSv/h": "1/3600000",
+    "uSv/h": "1/3600000000"
+   }
+  },
+  "nuclear.absorbed_dose@1": {
+   "canonical_unit": "Gy",
+   "unit_class": {
+    "Gy": "1",
+    "mGy": "1/1000"
+   }
+  },
+  "mech.stress@1": {
+   "canonical_unit": "Pa",
+   "unit_class": {
+    "Pa": "1",
+    "kPa": "1000",
+    "MPa": "1000000",
+    "GPa": "1000000000",
+    "psi": "8896443230521/1290320000"
+   }
+  },
+  "core.time.duration@1": {
+   "canonical_unit": "s",
+   "unit_class": {
+    "s": "1",
+    "min": "60",
+    "h": "3600",
+    "d": "86400",
+    "a": "31557600"
+   }
+  },
+  "core.energy@1": {
+   "canonical_unit": "J",
+   "unit_class": {
+    "J": "1",
+    "eV": "801088317/5000000000000000000000000000"
+   }
+  }
+ },
+ "vectors": [
+  {
+   "id": "dose-rate.uSv-per-h",
+   "input": {
+    "quantity": {
+     "value": "100",
+     "unit": "uSv/h"
+    },
+    "kind": "nuclear.dose_equivalent_rate@1"
+   },
+   "expected": {
+    "canonical_unit": "Sv/s",
+    "value": "1/36000000"
+   },
+   "note": "non-terminating decimal; carried as a rational"
+  },
+  {
+   "id": "dose-rate.mSv-per-h",
+   "input": {
+    "quantity": {
+     "value": "0.1",
+     "unit": "mSv/h"
+    },
+    "kind": "nuclear.dose_equivalent_rate@1"
+   },
+   "expected": {
+    "canonical_unit": "Sv/s",
+    "value": "1/36000000"
+   },
+   "note": "equal to 100 uSv/h -> identical canonical rational"
+  },
+  {
+   "id": "stress.MPa",
+   "input": {
+    "quantity": {
+     "value": "25",
+     "unit": "MPa"
+    },
+    "kind": "mech.stress@1"
+   },
+   "expected": {
+    "canonical_unit": "Pa",
+    "value": "25000000"
+   }
+  },
+  {
+   "id": "stress.psi",
+   "input": {
+    "quantity": {
+     "value": "1000",
+     "unit": "psi"
+    },
+    "kind": "mech.stress@1"
+   },
+   "expected": {
+    "canonical_unit": "Pa",
+    "value": "8896443230521/1290320"
+   },
+   "note": "psi is an exact rational via legal lbf and inch definitions"
+  },
+  {
+   "id": "time.h",
+   "input": {
+    "quantity": {
+     "value": "24",
+     "unit": "h"
+    },
+    "kind": "core.time.duration@1"
+   },
+   "expected": {
+    "canonical_unit": "s",
+    "value": "86400"
+   }
+  },
+  {
+   "id": "time.min",
+   "input": {
+    "quantity": {
+     "value": "1440",
+     "unit": "min"
+    },
+    "kind": "core.time.duration@1"
+   },
+   "expected": {
+    "canonical_unit": "s",
+    "value": "86400"
+   }
+  },
+  {
+   "id": "energy.eV",
+   "input": {
+    "quantity": {
+     "value": "1",
+     "unit": "eV"
+    },
+    "kind": "core.energy@1"
+   },
+   "expected": {
+    "canonical_unit": "J",
+    "value": "801088317/5000000000000000000000000000"
+   },
+   "note": "exact since the 2019 SI redefinition"
+  },
+  {
+   "id": "unit.not-in-class",
+   "input": {
+    "quantity": {
+     "value": "1",
+     "unit": "rem"
+    },
+    "kind": "nuclear.dose_equivalent_rate@1"
+   },
+   "expected": {
+    "error": "CORE-T2001",
+    "repair": {
+     "applicability": "constrained_choice",
+     "candidates": [
+      "Sv/s",
+      "mSv/h",
+      "uSv/h"
+     ]
+    }
+   }
+  },
+  {
+   "id": "unit.unknown-symbol",
+   "input": {
+    "quantity": {
+     "value": "25",
+     "unit": "Mpa"
+    },
+    "kind": "mech.stress@1"
+   },
+   "expected": {
+    "error": "CORE-T2001",
+    "repair": {
+     "applicability": "constrained_choice",
+     "candidates": [
+      "Pa",
+      "kPa",
+      "MPa",
+      "GPa",
+      "psi"
+     ]
+    }
+   },
+   "note": "unit case can change scale; Core does not infer the intended symbol without a governed typo alias"
+  },
+  {
+   "id": "unit.cross-kind-refused",
+   "input": {
+    "quantity": {
+     "value": "1",
+     "unit": "Gy"
+    },
+    "kind": "nuclear.dose_equivalent_rate@1"
+   },
+   "expected": {
+    "error": "CORE-T2102",
+    "repair": {
+     "applicability": "method_owner_judgment",
+     "candidates": [
+      "core.convert.absorbed_dose_to_dose_equivalent@1"
+     ]
+    }
+   },
+   "note": "Gy is known as nuclear.absorbed_dose@1, has the same dimension as Sv, and is still a different kind"
+  }
+ ]
+}

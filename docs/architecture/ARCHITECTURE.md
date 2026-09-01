@@ -2,16 +2,18 @@
 
 ## Architectural goal
 
-Core must separate four kinds of authority:
+Core must separate five kinds of authority:
 
 1. **Contract authority:** what question and policy were approved.
-2. **Method authority:** which professional-owned capability is admissible for
+2. **Semantic authority:** which versioned language rules give the records and
+   derivations their meaning.
+3. **Method authority:** which professional-owned capability is admissible for
    that context.
-3. **Execution authority:** what inputs, software, data, environment, and process
+4. **Execution authority:** what inputs, software, data, environment, and process
    actually ran.
-4. **Verdict authority:** how admitted evidence maps to a requirement state.
+5. **Verdict authority:** how admitted evidence maps to a requirement state.
 
-No single interface, provider, or process should be able to impersonate all four.
+No single interface, provider, or process should be able to impersonate all five.
 
 ## Target system context
 
@@ -27,6 +29,11 @@ No single interface, provider, or process should be able to impersonate all four
                          │                            │
                          ▼                            │ independent
               ┌─────────────────────┐                 │ verification
+              │ Semantic compiler   │                 │
+              │ + canonical profile │                 │
+              └──────────┬──────────┘                 │
+                         ▼                            │
+              ┌─────────────────────┐                 │
               │ Contract & policy   │                 │
               │   control plane     │                 │
               └──────────┬──────────┘                 │
@@ -100,13 +107,19 @@ and must never grow a separate scientific state model.
 
 Future components should be added only behind acceptance gates:
 
-- `core-units`: canonical quantity, dimensional, precision, and conversion rules;
+- `core-semantics`: canonical values, nominal quantity kinds, evidence roles,
+  predicate evaluation, and semantic-profile compatibility;
+- `core-compiler`: authored-document lowering, static checks, deterministic
+  findings, and impact analysis without authority to admit evidence or emit a
+  verdict;
 - `core-contracts`: template lifecycle, instantiation, approval, and amendments;
 - `core-registry`: local and organization capability discovery and policy matching;
 - `core-runner`: isolated lifecycle execution with immutable receipts;
 - `core-artifacts`: content-addressed storage, packaging, and retention;
 - `core-policy`: admissibility and separation-of-duties evaluation;
-- `core-verdict`: requirement-specific evaluation over admitted evidence;
+- `core-admission`: I/O-free package-level admissibility over immutable
+  snapshots;
+- `core-verdict`: I/O-free requirement evaluation over admitted evidence;
 - `core-invalidation`: dependency and semantic change-impact engine;
 - `core-signing`: identities, signatures, timestamps, and trust roots;
 - `core-verify`: independent evidence-package verification;
@@ -117,26 +130,39 @@ Future components should be added only behind acceptance gates:
 Names are provisional. Separate crates are appropriate only when they enforce a
 real dependency or trust boundary.
 
+The compiler, admission engine, and verdict evaluator are conceptual authority
+boundaries even if an early implementation keeps them in fewer crates. Front
+ends may author and explain records; only the kernel boundaries may construct
+admissions and verdicts.
+
 ## Data flow
 
-1. A client submits a contract document and input descriptors.
-2. Structural and semantic validators return typed issues; they do not modify the
-   contract.
-3. Policy resolves capability requirements against an allowed registry snapshot.
-4. The planner emits an immutable campaign plan with exact capability identities,
+1. A client submits an authored contract and input descriptors.
+2. The compiler parses and lowers it under a named semantic profile, returning
+   canonical records and typed findings without silently modifying the source.
+3. Generic validators establish structural properties. Domain validators and
+   capability packages make separately attributed method claims.
+4. The planner determines type-level satisfiability against immutable registry
+   and policy snapshots.
+5. Admission separates organization policy, contract policy, qualification,
+   applicability facts, and implementation constraints before any optimization.
+6. Selection ranks only admitted candidates using an explicit ordered policy.
+7. The planner emits an immutable campaign plan with exact capability identities,
    dependencies, expected artifacts, environment policy, and cost estimate.
-5. Required people approve and sign the plan.
-6. The runner stages each step into a fresh controlled workspace, verifies all
+8. Required people approve and sign the plan.
+9. The runner stages each step into a fresh controlled workspace, verifies all
    input hashes, invokes the adapter, and captures an execution receipt.
-7. Output validators reject artifacts that do not satisfy the capability contract.
-8. Evidence records connect outputs to inputs, process receipts, method and data
+10. Output validators reject artifacts that do not satisfy the capability contract.
+11. Admission A1–A10 decides whether each produced claim can enter the campaign
+    evidence graph.
+12. Evidence records connect outputs to inputs, process receipts, method and data
    versions, validation evidence, and reviews.
-9. Verdict logic evaluates only admitted evidence and produces requirement-level
-   states and rationales.
-10. The packager writes a human-readable and machine-readable evidence package;
+13. Verdict logic evaluates only admitted evidence, compares exact canonical
+    values, and produces requirement-level states and boundary statements.
+14. The packager writes a human-readable and machine-readable evidence package;
     the independent verifier checks it from the package root.
 
-Any failure before step 9 yields no verdict. A completed method that cannot decide
+Any failure before step 13 yields no verdict. A completed method that cannot decide
 the requirement may yield `INCONCLUSIVE` when the contract permits it.
 
 ## Execution neutrality
@@ -174,6 +200,7 @@ customer evidence.
 
 Core must distinguish:
 
+- deterministic compilation under a named semantic profile;
 - deterministic planning and document canonicalization;
 - bitwise-reproducible execution where attainable;
 - numerically reproducible results within declared tolerances; and
@@ -201,15 +228,22 @@ boundaries are:
 Parsing success, process exit code zero, and a valid signature each establish
 only their narrow claim.
 
+The trusted computing base should remain small, I/O-free where practical, and
+covered by normative semantics plus adversarial conformance vectors. A semantic
+profile and a kernel implementation have separate identities: archived packages
+name both, and a verifier must report when it cannot replay the historical
+profile.
+
 ## Non-negotiable failure behavior
 
 - Unknown schema fields are rejected at authoritative boundaries.
 - Missing capability, dependency, qualification, evidence, or review blocks the
   affected claim.
 - No capability can directly set the final verdict badge.
+- No interface, agent, or provider can construct an admission or verdict record
+  outside the authority kernel.
 - A changed input or method cannot preserve a downstream conclusion without an
   explicit reuse rule.
 - The UI cannot invent placeholder numbers.
 - Every external process is assumed hostile or faulty until isolated and checked.
 - A verifier reports what it checked and what it did not check.
-

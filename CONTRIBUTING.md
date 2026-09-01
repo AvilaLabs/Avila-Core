@@ -16,6 +16,14 @@ security, and test boundaries without widening the claimed scope.
 - Do not commit customer data, controlled information, credentials, proprietary
   solver files, or exported campaign evidence.
 - Add tests for every state transition and invalidation rule.
+- Compare authoritative quantities exactly; presentation rounding must never
+  alter a verdict.
+- Treat provider-reported facts as assertions with provenance, not as truth
+  promoted by a runner signature.
+- Do not call a finite vector corpus the complete specification; update written
+  semantics, schemas, and fixtures together.
+- Flag a new enabling technical mechanism for IP review before placing it in a
+  public issue, pull request, release, or design document.
 
 Before submitting a change:
 
@@ -28,4 +36,3 @@ cargo test --workspace --all-targets
 Changes to schemas or core semantics require an ADR. Changes that could be
 interpreted as a scientific, safety, or regulatory claim also require review by
 the appropriate domain professional.
-

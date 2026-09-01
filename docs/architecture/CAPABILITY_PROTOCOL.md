@@ -4,10 +4,11 @@
 
 ## Purpose
 
-A Core capability is a versioned, provider-owned contribution that accepts
-defined evidence roles and produces defined evidence roles under an explicit
-method and qualification boundary. It may wrap software, data access, a
-calculation, a verification method, or a professional review.
+A Core capability is a versioned, provider-owned contribution with named input
+and output slots. Each slot has a nominal evidence-role type and slot-scoped
+cardinality. The capability operates under an explicit method and qualification
+boundary. It may wrap software, data access, a calculation, a verification
+method, or a professional review.
 
 The protocol must allow different providers to implement the same semantic
 capability type without requiring Core to understand their internal algorithms.
@@ -23,7 +24,7 @@ The draft manifest currently records:
 - semantic capability type;
 - name, provider, and implementation version;
 - maturity and qualification record;
-- accepted and produced evidence roles;
+- named accepted and produced slots with nominal evidence roles and cardinality;
 - process execution declaration or a fail-closed unavailable reason; and
 - metadata.
 
@@ -47,6 +48,7 @@ A capability type is a semantic contract, not an executable name. It defines:
 
 - meaning of every accepted input role;
 - meaning and units of every produced output role;
+- names and cardinality of the slots in which those roles occur;
 - required uncertainty and numerical-error metadata;
 - failure and partial-result semantics;
 - compatibility and conformance fixtures; and
@@ -72,7 +74,8 @@ evidence.
 ### Verify package
 
 Core checks schema, content digest, signature, compatibility, revocation,
-qualification scope, and requested permissions before unpacking or executing.
+qualification scope, applicability facts and their required sources, and
+requested permissions before unpacking or executing.
 
 ### Stage
 
@@ -136,7 +139,10 @@ This is illustrative and not a released schema.
 ## Provider selection
 
 Selection must be deterministic for a given contract, policy, registry snapshot,
-and cost/availability snapshot. Policy may consider:
+signed evaluation-time record, fact set, and cost/availability snapshot.
+Admissibility is evaluated first. Optimization cannot rescue an inadmissible
+candidate. Selection among admitted candidates then follows an explicit ordered
+list of objectives and tie-breakers. Policy may consider:
 
 - qualification scope and validation evidence;
 - customer allow/deny lists;
@@ -147,8 +153,10 @@ and cost/availability snapshot. Policy may consider:
 - reproducibility and service history; and
 - independence or diversity requirements.
 
-Commercial payment cannot silently improve rank. Any paid preference must be
-prohibited or visible as an inadmissible policy dimension.
+Commercial payment cannot silently improve rank. A commercial objective, when
+permitted at all, must be declared in the selection policy and visible in the
+candidate decisions and resulting plan. Scientific margin is never a hidden
+commercial optimization dimension.
 
 ## Qualification
 
@@ -167,6 +175,12 @@ record must state:
 Core can enforce and preserve this record. It cannot create domain credibility
 merely by storing it.
 
+Applicability predicates address named input slots, not an ambiguous role name.
+Every non-input fact used by a predicate is typed and names its provider and
+provenance requirement. A runner signature establishes who recorded a fact; it
+does not grant that provider authority to assert it. Missing, stale, mismatched,
+or unauthorized facts evaluate to `unknown` and fail closed.
+
 ## Human capabilities
 
 Review, data approval, or professional judgment can be capability steps when the
@@ -180,4 +194,6 @@ contract defines:
 - timeout, rejection, and escalation semantics.
 
 Human input is evidence, not an undocumented exception to the workflow.
-
+Core can enforce keys, signed role assertions, presented evidence, allowed
+decisions, and separation-of-duties policy. It cannot prove a person's internal
+independence, attention, expertise, or reasoning merely from a signature.

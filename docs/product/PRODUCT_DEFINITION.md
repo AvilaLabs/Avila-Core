@@ -17,17 +17,26 @@ A requester should be able to state:
 Core should then:
 
 1. reject missing or structurally invalid information;
-2. show an admissible plan before expensive work begins;
-3. select approved implementations of the needed capability types;
-4. execute them in dependency order in the permitted environment;
-5. preserve input identity, configuration, software, data, logs, outputs, and
+2. compile the contract into canonical, typed records and report semantic or
+   policy findings without silently repairing the source;
+3. show an admissible plan before expensive work begins;
+4. select approved implementations of the needed capability types;
+5. execute them in dependency order in the permitted environment;
+6. preserve input identity, configuration, software, data, logs, outputs, and
    lineage;
-6. apply the declared evidence policy and requirement semantics;
-7. return `PASS`, `FAIL`, or `INCONCLUSIVE`; and
-8. export a package another party can inspect and independently verify.
+7. admit only evidence that satisfies the declared policy and applicability
+   boundary;
+8. apply the named requirement semantics;
+9. return `PASS`, `FAIL`, `INCONCLUSIVE`, or `NOT_EVALUATED`; and
+10. export a package another party can inspect and independently verify.
 
 The requester receives an answer boundary and evidence, not merely a successful
 job or a polished report.
+
+A Core verdict is a deterministic derivation from admitted records under a
+named semantic profile. It is not, by itself, proof that every premise is true,
+that a model is adequate outside its qualification, or that a regulator or
+professional must accept the conclusion.
 
 ## Core 1.0 target
 
@@ -37,8 +46,12 @@ expected to require a narrow, named domain and all of the following:
 ### Contracting
 
 - versioned contract schema and migration policy;
-- units, parameter domains, tolerances, uncertainty sets, assumptions, and
-  requirement semantics that cannot be interpreted ambiguously;
+- versioned semantic profiles replayable for the evidence-retention period;
+- exact canonical quantities, nominal quantity kinds, parameter domains,
+  tolerances, uncertainty claims, assumptions, and requirement semantics that
+  cannot be interpreted ambiguously;
+- typed facts with named providers and source requirements;
+- contract lifecycle separated from campaign execution state;
 - reusable contract templates governed by owners;
 - draft, review, approval, retirement, and amendment workflows; and
 - preflight checks that distinguish missing inputs from scientific
@@ -71,8 +84,12 @@ expected to require a narrow, named domain and all of the following:
 - independently usable verifier that does not require an Avila account;
 - signed manifests, receipts, reviews, and package roots;
 - explicit numerical error and modeled uncertainty treatment;
+- package-level admissibility that distinguishes a well-typed method from a
+  sufficiently qualified method for this contract;
 - `PASS`, `FAIL`, `INCONCLUSIVE`, and `NOT_EVALUATED` semantics tested against
   adversarial boundary cases;
+- exact comparison in authoritative evaluation, with presentation rounding
+  unable to change a verdict;
 - change-impact analysis that invalidates every affected claim; and
 - no implicit claim of regulatory acceptance.
 
@@ -147,4 +164,3 @@ Core is valuable only when a professional can say:
 
 Ease of use without that sentence is insufficient. Rigor without improved cycle
 time is also insufficient.
-

@@ -1,0 +1,588 @@
+{
+ "vector_set": "scope-predicates",
+ "version": 1,
+ "semantic_profile": "avila.core/semantic/0.2-draft",
+ "clause": "ADR-0006 SC-7",
+ "logic": "Kleene three-valued: true/false/unknown; unknown never satisfies",
+ "vectors": [
+  {
+   "id": "param_in_range.true",
+   "input": {
+    "predicate": {
+     "param_in_range": {
+      "param": "cooling_time",
+      "min": {
+       "value": "24",
+       "unit": "h"
+      },
+      "min_inclusive": true,
+      "max_inclusive": true
+     }
+    },
+    "context": {
+     "params": {
+      "cooling_time": {
+       "value": "30",
+       "unit": "h"
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "true"
+   }
+  },
+  {
+   "id": "param_in_range.boundary-inclusive.true",
+   "input": {
+    "predicate": {
+     "param_in_range": {
+      "param": "cooling_time",
+      "min": {
+       "value": "24",
+       "unit": "h"
+      },
+      "min_inclusive": true,
+      "max_inclusive": true
+     }
+    },
+    "context": {
+     "params": {
+      "cooling_time": {
+       "value": "24",
+       "unit": "h"
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "true"
+   }
+  },
+  {
+   "id": "param_in_range.boundary-exclusive.false",
+   "input": {
+    "predicate": {
+     "param_in_range": {
+      "param": "cooling_time",
+      "min": {
+       "value": "24",
+       "unit": "h"
+      },
+      "min_inclusive": false,
+      "max_inclusive": true
+     }
+    },
+    "context": {
+     "params": {
+      "cooling_time": {
+       "value": "24",
+       "unit": "h"
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "false"
+   }
+  },
+  {
+   "id": "param_in_range.false",
+   "input": {
+    "predicate": {
+     "param_in_range": {
+      "param": "cooling_time",
+      "min": {
+       "value": "24",
+       "unit": "h"
+      },
+      "min_inclusive": true,
+      "max_inclusive": true
+     }
+    },
+    "context": {
+     "params": {
+      "cooling_time": {
+       "value": "6",
+       "unit": "h"
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "false"
+   },
+   "note": "qualification narrowed to cooling time >= 24 h; campaign ran at 6 h"
+  },
+  {
+   "id": "param_in_range.unit-scaled.true",
+   "input": {
+    "predicate": {
+     "param_in_range": {
+      "param": "cooling_time",
+      "min": {
+       "value": "24",
+       "unit": "h"
+      },
+      "min_inclusive": true,
+      "max_inclusive": true
+     }
+    },
+    "context": {
+     "params": {
+      "cooling_time": {
+       "value": "1440",
+       "unit": "min"
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "true"
+   },
+   "note": "24 h = 86400 s = 1440 min; exact rational scaling within core.time.duration"
+  },
+  {
+   "id": "param_in_range.unknown",
+   "input": {
+    "predicate": {
+     "param_in_range": {
+      "param": "cooling_time",
+      "min": {
+       "value": "24",
+       "unit": "h"
+      },
+      "min_inclusive": true,
+      "max_inclusive": true
+     }
+    },
+    "context": {
+     "params": {}
+    }
+   },
+   "expected": {
+    "result": "unknown"
+   },
+   "note": "fact absent -> CORE-A4105; never treated as true"
+  },
+  {
+   "id": "input_attribute_in.true",
+   "input": {
+    "predicate": {
+     "input_attribute_in": {
+      "attribute": "material_class",
+      "values": [
+       "steel",
+       "copper_alloy"
+      ],
+      "slot": "material"
+     }
+    },
+    "context": {
+     "inputs": {
+      "material": {
+       "attributes": {
+        "material_class": "steel"
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "true"
+   }
+  },
+  {
+   "id": "input_attribute_in.false",
+   "input": {
+    "predicate": {
+     "input_attribute_in": {
+      "attribute": "material_class",
+      "values": [
+       "steel",
+       "copper_alloy"
+      ],
+      "slot": "material"
+     }
+    },
+    "context": {
+     "inputs": {
+      "material": {
+       "attributes": {
+        "material_class": "aluminium"
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "false"
+   }
+  },
+  {
+   "id": "input_attribute_in.unknown",
+   "input": {
+    "predicate": {
+     "input_attribute_in": {
+      "attribute": "material_class",
+      "values": [
+       "steel"
+      ],
+      "slot": "material"
+     }
+    },
+    "context": {
+     "inputs": {
+      "material": {
+       "attributes": {}
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "unknown"
+   }
+  },
+  {
+   "id": "not.unknown-stays-unknown",
+   "input": {
+    "predicate": {
+     "not": {
+      "param_in_range": {
+       "param": "cooling_time",
+       "min": {
+        "value": "24",
+        "unit": "h"
+       },
+       "min_inclusive": true,
+       "max_inclusive": true
+      }
+     }
+    },
+    "context": {
+     "params": {}
+    }
+   },
+   "expected": {
+    "result": "unknown"
+   },
+   "note": "three-valued: not(unknown) = unknown"
+  },
+  {
+   "id": "all.false-dominates-unknown",
+   "input": {
+    "predicate": {
+     "all": [
+      {
+       "param_in_range": {
+        "param": "cooling_time",
+        "min": {
+         "value": "24",
+         "unit": "h"
+        },
+        "min_inclusive": true,
+        "max_inclusive": true
+       }
+      },
+      {
+       "fact": {
+        "name": "nuclear_data_library",
+        "op": "eq",
+        "value": "TENDL-2023",
+        "source_requirement": {
+         "class": "validated_input",
+         "validator": "kernel:string@1"
+        }
+       }
+      }
+     ]
+    },
+    "context": {
+     "params": {
+      "cooling_time": {
+       "value": "6",
+       "unit": "h"
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "false"
+   },
+   "note": "Kleene: false AND unknown = false"
+  },
+  {
+   "id": "all.true-and-unknown",
+   "input": {
+    "predicate": {
+     "all": [
+      {
+       "param_in_range": {
+        "param": "cooling_time",
+        "min": {
+         "value": "24",
+         "unit": "h"
+        },
+        "min_inclusive": true,
+        "max_inclusive": true
+       }
+      },
+      {
+       "fact": {
+        "name": "nuclear_data_library",
+        "op": "eq",
+        "value": "TENDL-2023",
+        "source_requirement": {
+         "class": "validated_input",
+         "validator": "kernel:string@1"
+        }
+       }
+      }
+     ]
+    },
+    "context": {
+     "params": {
+      "cooling_time": {
+       "value": "30",
+       "unit": "h"
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "unknown"
+   },
+   "note": "true AND unknown = unknown"
+  },
+  {
+   "id": "any.true-dominates-unknown",
+   "input": {
+    "predicate": {
+     "any": [
+      {
+       "param_in_range": {
+        "param": "cooling_time",
+        "min": {
+         "value": "24",
+         "unit": "h"
+        },
+        "min_inclusive": true,
+        "max_inclusive": true
+       }
+      },
+      {
+       "fact": {
+        "name": "nuclear_data_library",
+        "op": "eq",
+        "value": "TENDL-2023",
+        "source_requirement": {
+         "class": "validated_input",
+         "validator": "kernel:string@1"
+        }
+       }
+      }
+     ]
+    },
+    "context": {
+     "params": {
+      "cooling_time": {
+       "value": "30",
+       "unit": "h"
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "true"
+   }
+  },
+  {
+   "id": "environment_image_in.true",
+   "input": {
+    "predicate": {
+     "environment_image_in": [
+      "sha256:aaaa"
+     ]
+    },
+    "context": {
+     "environment": {
+      "image_digest": "sha256:aaaa"
+     }
+    }
+   },
+   "expected": {
+    "result": "true"
+   }
+  },
+  {
+   "id": "environment_image_in.false",
+   "input": {
+    "predicate": {
+     "environment_image_in": [
+      "sha256:aaaa"
+     ]
+    },
+    "context": {
+     "environment": {
+      "image_digest": "sha256:bbbb"
+     }
+    }
+   },
+   "expected": {
+    "result": "false"
+   }
+  },
+  {
+   "id": "fact.le.true",
+   "input": {
+    "predicate": {
+     "fact": {
+      "name": "time_step",
+      "op": "le",
+      "value": {
+       "value": "3600",
+       "unit": "s"
+      },
+      "source_requirement": {
+       "class": "runner_measured",
+       "validator": "kernel:duration@1"
+      }
+     }
+    },
+    "context": {
+     "facts": {
+      "time_step": {
+       "value": {
+        "value": "600",
+        "unit": "s"
+       },
+       "source": {
+        "class": "runner_measured",
+        "identity": "runner:local",
+        "validator": "kernel:duration@1",
+        "receipt": "sha256:receipt"
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "true"
+   },
+   "note": "Listing 5 numerical_limits"
+  },
+  {
+   "id": "fact.le.false",
+   "input": {
+    "predicate": {
+     "fact": {
+      "name": "time_step",
+      "op": "le",
+      "value": {
+       "value": "3600",
+       "unit": "s"
+      },
+      "source_requirement": {
+       "class": "runner_measured",
+       "validator": "kernel:duration@1"
+      }
+     }
+    },
+    "context": {
+     "facts": {
+      "time_step": {
+       "value": {
+        "value": "2",
+        "unit": "h"
+       },
+       "source": {
+        "class": "runner_measured",
+        "identity": "runner:local",
+        "validator": "kernel:duration@1",
+        "receipt": "sha256:receipt"
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "false"
+   }
+  },
+  {
+   "id": "exclusion.matches.false",
+   "input": {
+    "predicate": {
+     "all": [
+      {
+       "always": true
+      },
+      {
+       "not": {
+        "input_attribute_in": {
+         "attribute": "contains",
+         "values": [
+          "Li",
+          "Be"
+         ],
+         "slot": "material"
+        }
+       }
+      }
+     ]
+    },
+    "context": {
+     "inputs": {
+      "material": {
+       "attributes": {
+        "contains": "Li"
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "false"
+   }
+  },
+  {
+   "id": "fact.source-mismatch.unknown",
+   "input": {
+    "predicate": {
+     "fact": {
+      "name": "time_step",
+      "op": "le",
+      "value": {
+       "value": "3600",
+       "unit": "s"
+      },
+      "source_requirement": {
+       "class": "runner_measured",
+       "validator": "kernel:duration@1"
+      }
+     }
+    },
+    "context": {
+     "facts": {
+      "time_step": {
+       "value": {
+        "value": "600",
+        "unit": "s"
+       },
+       "source": {
+        "class": "provider_asserted",
+        "identity": "provider:example",
+        "validator": "kernel:duration@1",
+        "receipt": "sha256:receipt"
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "unknown"
+   },
+   "note": "the value exists, but no fact from an acceptable source exists; runner signature does not elevate a provider assertion"
+  }
+ ]
+}

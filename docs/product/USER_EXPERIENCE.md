@@ -26,19 +26,25 @@ screen asks for:
 - the intended decision context.
 
 Core uses ordinary language alongside precise fields. It explains why a field is
-needed and who owns it.
+needed and who owns it. GUI fields, imported JSON, CLI input, and any future
+textual syntax lower to the same canonical records; no front end has separate
+verdict semantics.
 
 ### 2. Complete preflight
 
-Core separates three kinds of problem:
+Core separates four kinds of problem:
 
 - **missing:** a required item was not supplied;
 - **invalid:** a document violates a schema or semantic rule; and
+- **unsatisfied:** the requested capability graph has no well-typed composition;
+  and
 - **inadmissible:** the evidence policy does not permit the available method,
   data, environment, or reviewer.
 
-The interface never reduces all three to “error.” It shows the owner and next
-action for each blocker.
+The interface never reduces all four to “error.” It shows the source location,
+stable finding code, owner, and next action for each blocker. Suggested fixes are
+explicit edits; the compiler does not silently change units, kinds, facts, or
+policy.
 
 ### 3. Review the campaign plan
 
@@ -78,8 +84,10 @@ Next action  reduce uncertainty in material B or modify the design margin
 ```
 
 Every value links to its producing capability, configuration, inputs, numerical
-error, uncertainty treatment, and reviews. A simple badge is a summary, never the
-evidence.
+error, uncertainty treatment, and reviews. Display formatting never changes the
+exact canonical comparison. The result also names the semantic profile, policy,
+fact providers, and rule that produced it. A simple badge is a summary, never
+the evidence or an unqualified claim of physical truth.
 
 ### 6. Review and export evidence
 
@@ -157,4 +165,3 @@ The initial desktop shell demonstrates five workspaces:
 
 It is a product-language prototype, not an execution application. The UI remains
 thin over the headless Rust model and planner.
-

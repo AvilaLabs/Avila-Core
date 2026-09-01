@@ -13,7 +13,12 @@ definition.
 Build:
 
 - authoritative contract, capability, plan, evidence, and verdict models;
-- schemas, fixtures, canonical issue reporting, and CLI validation;
+- normative semantic profile covering canonical values, quantity kinds, roles,
+  facts, policy, admission, verdicts, and reuse;
+- schemas, adversarial conformance fixtures, canonical issue reporting, and CLI
+  validation;
+- an intellectual-property and prior-art review before publishing enabling
+  details of mechanisms that may warrant protection;
 - question-first egui workbench;
 - deterministic planning and explicit blocked states;
 - capability protocol threat model and conformance design;
@@ -32,6 +37,10 @@ Exit gate:
 > One organization commits real people, representative non-sensitive data, a
 > method owner, and a reviewer to a bounded design-partner pilot.
 
+ADR-0006 remains proposed until its written semantics and fixture coverage pass
+the acceptance conditions in that decision. A draft profile is not a scientific
+qualification.
+
 The current repository is at the beginning of this stage.
 
 ## Stage 1 — vertical reference prototype
@@ -40,7 +49,8 @@ The current repository is at the beginning of this stage.
 
 Build only the chosen evidence chain:
 
-- contract editor and semantic preflight for the selected question;
+- canonical semantic kernel and contract compiler for the selected question;
+- contract editor and semantic preflight over that same headless authority;
 - controlled local runner with sandbox strategy;
 - two or more real adapters needed for the chain;
 - immutable artifact store and execution receipts;
@@ -92,6 +102,8 @@ Exit gate:
 Build:
 
 - stable capability SDK, compatibility rules, and conformance suite;
+- a second independent implementation that reproduces normative semantic
+  vectors without sharing the production kernel;
 - governed contract templates and migrations;
 - signed capability packages, receipts, reviews, and package roots;
 - organization policy engine and separation of duties;
@@ -163,13 +175,13 @@ launch an empty marketplace or claim a universal engineering platform.
 ## Release naming before 1.0
 
 - `0.1`: contract and planner scaffold;
-- `0.2`: controlled runner and artifact receipts;
-- `0.3`: first experimental end-to-end reference campaign;
-- `0.4`: evidence package and offline verifier;
-- `0.5`: design-partner alpha and review workflow;
+- `0.2`: accepted semantic profile, compiler/checker, and normative fixtures;
+- `0.3`: controlled runner and artifact receipts;
+- `0.4`: first experimental end-to-end reference campaign;
+- `0.5`: evidence package and offline verifier;
+- `0.6`: design-partner alpha and review workflow;
 - later `0.x`: invalidation, SDK, qualification, security, enterprise policy,
   remote execution, and provider routing as they pass gates.
 
 These labels are illustrative. Scientific maturity must be shown separately from
 software version.
-

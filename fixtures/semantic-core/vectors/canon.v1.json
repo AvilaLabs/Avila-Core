@@ -1,0 +1,81 @@
+{
+ "vector_set": "canonicalization",
+ "version": 1,
+ "semantic_profile": "avila.core/semantic/0.2-draft",
+ "clause": "ADR-0006 SC-2",
+ "vectors": [
+  {
+   "id": "json.key-order",
+   "operation": "canonicalize_json",
+   "input_bytes": "{\"z\":1,\"a\":2}",
+   "expected_bytes": "{\"a\":2,\"z\":1}"
+  },
+  {
+   "id": "decimal.canonical",
+   "operation": "read_authoritative_decimal",
+   "input": "9.41",
+   "expected": "9.41"
+  },
+  {
+   "id": "decimal.trailing-zero-rejected",
+   "operation": "read_authoritative_decimal",
+   "input": "9.410",
+   "expected_error": "CORE-S1102"
+  },
+  {
+   "id": "decimal.exponent-authored-lowering",
+   "operation": "lower_authored_decimal",
+   "input": "9.410E+1",
+   "expected": "94.1"
+  },
+  {
+   "id": "decimal.negative-zero-authored-lowering",
+   "operation": "lower_authored_decimal",
+   "input": "-0.0",
+   "expected": "0"
+  },
+  {
+   "id": "rational.canonical",
+   "operation": "read_authoritative_rational",
+   "input": "1/3600",
+   "expected": "1/3600"
+  },
+  {
+   "id": "rational.reducible-rejected",
+   "operation": "read_authoritative_rational",
+   "input": "2/7200",
+   "expected_error": "CORE-S1102"
+  },
+  {
+   "id": "rational.negative-denominator-rejected",
+   "operation": "read_authoritative_rational",
+   "input": "1/-3600",
+   "expected_error": "CORE-S1102"
+  },
+  {
+   "id": "json.null-as-absence-rejected",
+   "operation": "read_authoritative_json",
+   "input_bytes": "{\"optional\":null}",
+   "expected_error": "CORE-S1102"
+  },
+  {
+   "id": "json.float-number-rejected",
+   "operation": "read_authoritative_json",
+   "input_bytes": "{\"value\":25.0}",
+   "expected_error": "CORE-S1102"
+  },
+  {
+   "id": "json.duplicate-key-rejected",
+   "operation": "read_authoritative_json",
+   "input_bytes": "{\"a\":1,\"a\":2}",
+   "expected_error": "CORE-S1103"
+  },
+  {
+   "id": "json.non-nfc-string-rejected",
+   "operation": "read_authoritative_json",
+   "input_bytes": "{\"name\":\"e\\u0301\"}",
+   "expected_error": "CORE-S1102",
+   "note": "authoritative canonical content requires precomposed NFC; the reader does not silently rewrite signed bytes"
+  }
+ ]
+}

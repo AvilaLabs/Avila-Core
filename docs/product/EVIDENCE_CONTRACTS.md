@@ -22,10 +22,13 @@ A production contract must identify at least:
 2. **Context of use:** the decision the evidence supports and its consequence.
 3. **System boundary:** configurations, populations, geometries, time periods, or
    operating regimes included and excluded.
-4. **Requirements:** metrics, comparison semantics, limits, units, rounding, and
-   aggregation rules.
+4. **Requirements:** metrics, comparison semantics, limits, nominal quantity
+   kinds, exact unit scaling, aggregation rules, and any authority-required
+   decision transformation. Display rounding is never requirement logic.
 5. **Inputs:** roles, immutable identities, allowed transformations, and owners.
-6. **Assumptions:** conditions accepted without being established by the campaign.
+6. **Assumptions and facts:** conditions accepted without being established by
+   the campaign, typed facts used by applicability predicates, their providers,
+   and required provenance.
 7. **Uncertainty:** variable domains, dependencies, data uncertainty, numerical
    error, model-form treatment, and coverage policy.
 8. **Capability needs:** semantic types and any required implementation or
@@ -37,17 +40,24 @@ A production contract must identify at least:
 
 The current `v0.1` schema represents only a small structural subset.
 
-## Contract lifecycle
+## Contract and campaign lifecycles
 
 ```text
-draft → in review → approved → instantiated → planned → executed → reviewed
-  │          │          │             │           │          │          │
-  └ reject ──┴ amend ───┴ retire ─────┴ cancel ───┴ block ───┴ invalidate
+contract:  draft → in_review → approved → retired
+              │         │          │
+              └ reject ─┴ amend ───┘
+
+campaign: planned → approved → running → reviewed → complete
+             │          │          │          │
+             └ cancel ──┴ block ───┴ fail ────┴ invalidate
 ```
 
-An amendment creates a new version and preserves the old one. An instantiated
-contract points to an immutable approved template version plus case-specific
-inputs. Execution never silently changes either.
+Contract status describes the governed document only. Template instantiation is
+immutable campaign origin metadata, not an additional contract or campaign
+status. An amendment to a non-draft contract creates a new draft version and
+preserves the old one. An instantiated campaign points to an immutable approved
+contract or template version plus case-specific inputs. Execution never
+silently changes either.
 
 ## Completion versus verdict
 
@@ -68,13 +78,15 @@ below a limit is not `PASS` when the contract requires a worst-case bound.
 
 ### PASS
 
-All required evidence exists and is admissible, every applicable review gate is
-satisfied, and the encoded requirement follows within the declared boundary.
+All evidence required to establish satisfaction exists and is admissible, every
+applicable satisfaction review gate is met, and the encoded requirement follows
+within the declared boundary.
 
 ### FAIL
 
 All evidence required to establish contradiction exists and is admissible, and
-the encoded requirement is contradicted within the declared boundary.
+the encoded requirement is contradicted within the declared boundary. Other
+campaign review obligations may still prevent commercial completion.
 
 ### INCONCLUSIVE
 
@@ -87,6 +99,11 @@ contractually accepted limit of resolution.
 
 No verdict was attempted or the prerequisites for evaluation were not met. This
 is the only result in the current scaffold.
+
+Every verdict names the semantic profile, requirement, policy, admitted evidence,
+authorities, assumptions, limitations, and exact comparison rule that produced
+it. It states a conditional result inside that boundary; it is not a standalone
+claim of scientific truth or certification.
 
 ## Contract templates as product capital
 
@@ -110,4 +127,3 @@ Before execution, the contract should state:
 - liability and regulatory limitations.
 
 None of those commercial terms exist in the `v0.1` software schema yet.
-

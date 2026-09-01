@@ -17,6 +17,9 @@ decision records (ADRs). “Proposed” items are intentionally reversible.
 | S-010 | Accepted | Specimen and unavailable capabilities must fail closed and never create cosmetic success states. |
 | S-011 | Proposed | A free/open local runtime and verifier become the adoption surface; enterprise policy and provider routing are commercial layers. Final licensing remains unresolved. |
 | S-012 | Proposed | The first vertical proof composes transport, activation, shutdown dose, uncertainty treatment, and requirement evaluation. Domain professionals must confirm it before implementation. |
+| S-013 | Proposed | The semantic profiles, conformance vectors, package format, and verifier interface should be independently auditable and reimplementable; licensing and publication follow an IP review so public disclosure does not accidentally waive protection options. |
+| S-014 | Proposed | JSON remains the canonical interchange. A textual `.acore` front end is built only after semantic fixtures stabilize and measured authoring evidence justifies it. |
+| S-015 | Accepted | A Core verdict is a conditional derivation from admitted records under named rules and authorities. It is not, by itself, scientific truth, certification, or regulatory approval. |
 
 Architecture records:
 
@@ -25,4 +28,4 @@ Architecture records:
 - [ADR-0003: Headless Rust authority and thin egui client](docs/adr/0003-headless-rust-authority.md)
 - [ADR-0004: Four-state verdict model](docs/adr/0004-four-state-verdict-model.md)
 - [ADR-0005: Portable evidence boundary](docs/adr/0005-portable-evidence-boundary.md)
-
+- [ADR-0006: Semantic core and evidence-contract language](docs/adr/0006-semantic-core.md)

@@ -7,6 +7,13 @@ it damages the incumbent’s existing economics, control, or channel.
 The positions below are hypotheses. They become real only through public
 commitments and product behavior.
 
+The semantic compiler is not itself counter-positioning. A capable incumbent
+can copy a language, validator, or verdict engine. The defensible position is the
+business model around it: separate judgment from execution, make prior evidence
+portable, let external providers compete, minimize billable compute, and permit
+independent verification. An incumbent may be technically able to copy that
+system while being economically reluctant to copy all of those sacrifices.
+
 ## The proposed position
 
 | Core commitment | Customer value | Why an incumbent may resist |
@@ -18,7 +25,7 @@ commitments and product behavior.
 | Independent local verifier | Evidence consumers do not have to trust Avila’s screen | Relinquishes control over interpretation and ongoing access |
 | Free local execution boundary | Bottom-up use and air-gapped compatibility | Cannibalizes seat, platform, or hosted-access models |
 | External professionals own and monetize methods | Broader specialist supply; authority remains visible | Shares economics and control with small providers |
-| Public qualification scope and limitations | Buyers can compare admissibility, not brand alone | Exposes method boundaries vendors may prefer to package opaquely |
+| Inspectable qualification scope and limitations | Authorized buyers and reviewers can compare admissibility, not brand alone | Exposes method boundaries vendors may prefer to package opaquely |
 
 Any commitment Avila routinely waives for a large customer is not a strategic
 position.
@@ -33,7 +40,8 @@ Avila must be willing to:
 - charge the same completion fee for `PASS`, `FAIL`, and `INCONCLUSIVE`;
 - publish limitations that may reduce short-term sales;
 - minimize runs even when more jobs would create more revenue elsewhere;
-- make the viewer/verifier independently implementable;
+- make the semantic profile, package boundary, and viewer/verifier independently
+  implementable after appropriate intellectual-property review;
 - give capability authors meaningful economics; and
 - refuse unsupported work instead of disguising custom consulting as platform
   coverage.
@@ -47,7 +55,9 @@ make replication costly.
 
 Therefore it can be a neutral referee. The architecture should make it technically
 obvious when an Avila implementation is selected and allow a policy to forbid
-self-preference.
+self-preference. If Avila sells capabilities as well as operating Core, those
+roles must be separately identified and selection must remain independently
+auditable.
 
 ### Avila does not own a cloud
 
@@ -81,11 +91,21 @@ Therefore it cannot ask users to “trust Avila.” It must make evidence portab
 signed, inspectable, reproducible, and countersignable by people the customer
 already trusts.
 
+### Avila can publish the judgment boundary
+
+Therefore it can seek adoption as a protocol steward rather than monetizing a
+secret badge. This gives customers and evidence consumers a credible exit path.
+It also raises the burden on Avila: open semantics do not create a moat by
+themselves, so the provider ecosystem, professional governance, qualification
+coverage, conformance corpus, and operational reliability must compound faster
+than a competitor can reproduce them.
+
 ## What would destroy the position
 
 - making the best experience require Avila-hosted execution;
 - hiding evidence behind a paid viewer;
 - creating a proprietary evidence format with no independent verifier;
+- confusing an open specification with a complete commercial advantage;
 - ranking providers by commercial payments instead of declared policy;
 - allowing an interface status to outrun its evidence;
 - making professional services the permanent path for every contract;
@@ -106,4 +126,3 @@ Ask:
 
 If the answer to all four is no, the feature is unlikely to build the intended
 advantage.
-

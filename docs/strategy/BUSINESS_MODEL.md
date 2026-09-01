@@ -24,12 +24,15 @@ screening phase.
 Candidate contents:
 
 - local/headless contract runner;
+- semantic compiler, canonical profiles, and conformance tooling;
 - contract and capability SDK;
 - schema validator;
 - evidence viewer and independent verifier;
 - a small set of public specimen and reference capabilities.
 
-Likely price: free. The final license remains open. The purpose is bottom-up
+Likely price: free. The final license remains open. Publication and licensing of
+new semantic mechanisms follow an intellectual-property review; that review must
+occur before enabling public disclosure, not after it. The purpose is bottom-up
 adoption, provider development, transparent evaluation, and protection against
 evidence lock-in.
 
@@ -112,6 +115,12 @@ become reusable capital:
 Core can therefore become faster and cheaper without making its service less
 rigorous. That is the central economic hypothesis.
 
+An auditable semantic profile does not mean the entire commercial system is
+free or trivial to reproduce. Revenue attaches to governed private operation,
+qualified supply, maintained integrations, policy and identity controls,
+selective rerun infrastructure, support, and transaction coordination—not to
+making historical evidence unreadable without a subscription.
+
 ## Early revenue sequence
 
 1. **Paid design-partner pilot:** charge for resolving one tightly bounded
@@ -143,4 +152,3 @@ contract is valuable.
 - gross margin excluding one-time capability development.
 
 Core has not reached product economics if margin depends on hidden founder labor.
-

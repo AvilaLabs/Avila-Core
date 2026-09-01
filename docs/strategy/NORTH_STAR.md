@@ -2,10 +2,11 @@
 
 ## The destination
 
-Avila Core should become the neutral market and trust layer for computational
-engineering. Organizations submit evidence contracts; qualified capabilities
-compete and compose to resolve them; Core returns portable, independently
-reviewable technical conclusions.
+Avila Core should become a neutral semantic, market, and trust layer for
+computational engineering. Organizations submit evidence contracts; qualified
+capabilities compete and compose to contribute evidence; Core applies an
+explicit rulebook and returns portable, independently reviewable conclusions
+about what follows from that admitted evidence.
 
 This is deliberately more ambitious than a workflow orchestrator. Orchestration
 is necessary plumbing. The durable product is a mechanism through which:
@@ -17,6 +18,12 @@ is necessary plumbing. The durable product is a mechanism through which:
 - every important claim is connected to reviewable evidence; and
 - an evidence consumer can verify the package without trusting an Avila-hosted
   screen.
+
+The conclusion is deliberately conditional. Core can establish that a verdict
+follows from named records, authorities, policies, and semantic rules. It cannot
+establish that every premise corresponds to physical reality, that a model is
+scientifically adequate outside its qualification, or that a regulator will
+accept the result. That boundary is part of the product, not disclaimer text.
 
 If this works, Core becomes infrastructure beneath research and engineering
 organizations—not the organization pretending to possess every specialty above
@@ -90,6 +97,30 @@ That compounding reuse is the adoption thesis. It must be demonstrated with
 measured cycle time, cost, review burden, and defect escape—not asserted in
 marketing.
 
+## What compounds and what can be copied
+
+The semantic specification and independent verifier should become auditable and
+reimplementable after appropriate intellectual-property review. A closed
+verdict algorithm would weaken the very neutrality Core needs. Consequently,
+the specification by itself cannot be treated as the moat.
+
+The compounding assets are:
+
+- governed quantity kinds, evidence roles, and capability-type definitions;
+- professionally owned qualifications and applicability boundaries;
+- adapters, conformance suites, and negative-case corpora;
+- reviewed contract templates and authority-specific policy mappings;
+- dependency and reuse rules that safely avoid unnecessary reruns;
+- portable evidence history recognized by reviewers and customers; and
+- enterprise operation across local, air-gapped, HPC, and organization
+  environments.
+
+The strategic objective is therefore not to make the judgment layer impossible
+to copy. It is to make Core the best-supported implementation and the common
+protocol through which professionals, tools, and evidence consumers interoperate.
+That position is earned through governance, coverage, and use—not declared by
+publishing a schema.
+
 ## The flywheel hypothesis
 
 ```text
@@ -133,6 +164,11 @@ Core must preserve these properties while it grows:
    assumptions, methods, uncertainty treatment, and review policy.
 8. **Independent review:** evidence must be useful to people who did not run the
    campaign and do not trust Core by default.
+9. **Conditional claims:** a Core verdict says what follows inside a recorded
+   boundary; it never silently expands into scientific truth, certification, or
+   regulatory approval.
+10. **Semantic transparency:** admissibility and verdict rules are versioned,
+    testable, and separable from commercial provider ranking.
 
 ## What Core is not
 
@@ -152,8 +188,7 @@ leading authority in every field. Avila investigates neglected computational
 gaps, builds rigorous reusable mechanisms with professionals, and creates the
 infrastructure through which their expertise can do more work.
 
-The company’s role is servant, mechanism builder, and steward of the trust
-boundary. That is a demanding technical role in its own right. It requires
-humility about domain authority and unusual rigor about what the software is
-allowed to claim.
-
+The company’s role is servant, mechanism builder, specification steward, and
+operator of the trust boundary. That is a demanding technical role in its own
+right. It requires humility about domain authority and unusual rigor about what
+the software is allowed to claim.

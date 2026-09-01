@@ -1,0 +1,2052 @@
+{
+ "vector_set": "verdict-calculus",
+ "version": 1,
+ "semantic_profile": "avila.core/semantic/0.2-draft",
+ "clause": "ADR-0006 SC-10",
+ "conventions": {
+  "numbers": "Decimal strings; canonical values are Rational strings (numerator/denominator) or integers",
+  "comparison": "performed in exact rationals after scaling evidence and limit to the kind's canonical unit; display rounding never changes the verdict",
+  "rule_ids": "<basis>.<cmp>.<outcome> | nominal.<cmp>.<outcome> | equal.<outcome> | not_evaluated.<reason>"
+ },
+ "kinds": {
+  "nuclear.dose_equivalent_rate@1": {
+   "canonical_unit": "Sv/s",
+   "unit_class": {
+    "Sv/s": "1",
+    "mSv/h": "1/3600000",
+    "uSv/h": "1/3600000000"
+   }
+  },
+  "mech.stress@1": {
+   "canonical_unit": "Pa",
+   "unit_class": {
+    "Pa": "1",
+    "kPa": "1000",
+    "MPa": "1000000",
+    "GPa": "1000000000",
+    "psi": "8896443230521/1290320000"
+   }
+  },
+  "core.time.duration@1": {
+   "canonical_unit": "s",
+   "unit_class": {
+    "s": "1",
+    "min": "60",
+    "h": "3600",
+    "d": "86400",
+    "a": "31557600"
+   }
+  },
+  "core.energy@1": {
+   "canonical_unit": "J",
+   "unit_class": {
+    "J": "1",
+    "eV": "801088317/5000000000000000000000000000"
+   }
+  }
+ },
+ "vectors": [
+  {
+   "id": "le.bounded.crossing",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.bound.0041",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "94",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "103",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "98.2",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "bounded.le.crossing",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "47/1800000000",
+    "upper_canonical": "103/3600000000",
+    "nominal_canonical": "491/18000000000"
+   },
+   "note": "coverage interval straddles the limit"
+  },
+  {
+   "id": "le.bounded.within",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "61",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "88",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "74",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "bounded.le.within",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "61/3600000000",
+    "upper_canonical": "11/450000000",
+    "nominal_canonical": "37/1800000000"
+   }
+  },
+  {
+   "id": "le.bounded.within.boundary",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "90",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "100",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "95",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "bounded.le.within",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "1/40000000",
+    "upper_canonical": "1/36000000",
+    "nominal_canonical": "19/720000000"
+   },
+   "note": "hi == L satisfies <="
+  },
+  {
+   "id": "le.bounded.exceeds",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "104",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "131",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "117",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "fail",
+    "rule": "bounded.le.exceeds",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "13/450000000",
+    "upper_canonical": "131/3600000000",
+    "nominal_canonical": "13/400000000"
+   }
+  },
+  {
+   "id": "le.bounded.exceeds.boundary-crossing",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "100",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "131",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "117",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "bounded.le.crossing",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "1/36000000",
+    "upper_canonical": "131/3600000000",
+    "nominal_canonical": "13/400000000"
+   },
+   "note": "lo == L is not > L; not FAIL"
+  },
+  {
+   "id": "le.bounded.one_sided",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "worst_case",
+      "upper": {
+       "value": "118",
+       "unit": "uSv/h"
+      },
+      "basis": "bounding calculation"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "bounded.le.one_sided",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "upper_canonical": "59/1800000000"
+   },
+   "note": "worst_case upper only; no lower bound to establish contradiction"
+  },
+  {
+   "id": "le.bounded.one_sided.within",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "worst_case",
+      "upper": {
+       "value": "97",
+       "unit": "uSv/h"
+      },
+      "basis": "bounding calculation"
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "bounded.le.within",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "upper_canonical": "97/3600000000"
+   }
+  },
+  {
+   "id": "le.bounded.coverage-higher-than-required",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "94",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "103",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "98.2",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.99"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "bounded.le.crossing",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "47/1800000000",
+    "upper_canonical": "103/3600000000",
+    "nominal_canonical": "491/18000000000",
+    "coverage": "0.99"
+   },
+   "note": "coverage above the basis is accepted; recorded"
+  },
+  {
+   "id": "le.bounded.unit-mixed",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "0.1",
+      "unit": "mSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "94",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "103",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "98.2",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "bounded.le.crossing",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "47/1800000000",
+    "upper_canonical": "103/3600000000",
+    "nominal_canonical": "491/18000000000"
+   },
+   "note": "limit in mSv/h, evidence in uSv/h; both scaled exactly to Sv/s before comparison"
+  },
+  {
+   "id": "lt.bounded.boundary",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "90",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "100",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "95",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "bounded.lt.crossing",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "1/40000000",
+    "upper_canonical": "1/36000000",
+    "nominal_canonical": "19/720000000"
+   },
+   "note": "strict: hi == L is not < L"
+  },
+  {
+   "id": "lt.bounded.exceeds.boundary",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "100",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "131",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "117",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "fail",
+    "rule": "bounded.lt.exceeds",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "1/36000000",
+    "upper_canonical": "131/3600000000",
+    "nominal_canonical": "13/400000000"
+   },
+   "note": "strict: lo == L means lo >= L, contradiction established"
+  },
+  {
+   "id": "ge.bounded.within",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "greater_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "104",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "131",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "117",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "bounded.ge.within",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "13/450000000",
+    "upper_canonical": "131/3600000000",
+    "nominal_canonical": "13/400000000"
+   }
+  },
+  {
+   "id": "ge.bounded.below",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "greater_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "61",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "88",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "74",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "fail",
+    "rule": "bounded.ge.below",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "61/3600000000",
+    "upper_canonical": "11/450000000",
+    "nominal_canonical": "37/1800000000"
+   }
+  },
+  {
+   "id": "ge.bounded.crossing",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "greater_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "94",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "103",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "98.2",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "bounded.ge.crossing",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "47/1800000000",
+    "upper_canonical": "103/3600000000",
+    "nominal_canonical": "491/18000000000"
+   }
+  },
+  {
+   "id": "le.enclosure.within",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "enclosure"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "interval",
+      "lower": {
+       "value": "70",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "99",
+       "unit": "uSv/h"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "enclosure.le.within",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "7/360000000",
+    "upper_canonical": "11/400000000"
+   }
+  },
+  {
+   "id": "le.enclosure.crossing",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "enclosure"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "interval",
+      "lower": {
+       "value": "70",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "101",
+       "unit": "uSv/h"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "enclosure.le.crossing",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "7/360000000",
+    "upper_canonical": "101/3600000000"
+   }
+  },
+  {
+   "id": "le.nominal.within",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "nominal"
+     },
+     "policy": {
+      "permit_nominal_basis": true
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "unquantified",
+      "nominal": {
+       "value": "21.7",
+       "unit": "MPa"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "nominal.le.within",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "nominal_canonical": "21700000",
+    "basis_visible": "nominal"
+   },
+   "note": "illustrative bike-hook nominal-basis example"
+  },
+  {
+   "id": "le.nominal.within.ignores-interval",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "nominal"
+     },
+     "policy": {
+      "permit_nominal_basis": true
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "23.9",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "26.4",
+       "unit": "MPa"
+      },
+      "nominal": {
+       "value": "24.7",
+       "unit": "MPa"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "nominal.le.within",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "nominal_canonical": "24700000",
+    "basis_visible": "nominal"
+   },
+   "note": "the same evidence is INCONCLUSIVE under bounded coverage 0.95"
+  },
+  {
+   "id": "le.bounded.bike-hook.first-run",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "23.9",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "26.4",
+       "unit": "MPa"
+      },
+      "nominal": {
+       "value": "24.7",
+       "unit": "MPa"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "bounded.le.crossing",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "lower_canonical": "23900000",
+    "upper_canonical": "26400000",
+    "nominal_canonical": "24700000"
+   }
+  },
+  {
+   "id": "le.bounded.bike-hook.second-run",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "16.2",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "17.5",
+       "unit": "MPa"
+      },
+      "nominal": {
+       "value": "16.8",
+       "unit": "MPa"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "bounded.le.within",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "lower_canonical": "16200000",
+    "upper_canonical": "17500000",
+    "nominal_canonical": "16800000"
+   }
+  },
+  {
+   "id": "le.nominal.exceeds",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "nominal"
+     },
+     "policy": {
+      "permit_nominal_basis": true
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "unquantified",
+      "nominal": {
+       "value": "27.3",
+       "unit": "MPa"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "status": "fail",
+    "rule": "nominal.le.exceeds",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "nominal_canonical": "27300000",
+    "basis_visible": "nominal"
+   }
+  },
+  {
+   "id": "equal.within",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "equal",
+     "limit": {
+      "value": "50",
+      "unit": "MPa"
+     },
+     "tolerance": {
+      "value": "2",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "49",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "51.5",
+       "unit": "MPa"
+      },
+      "nominal": {
+       "value": "50.2",
+       "unit": "MPa"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "equal.within",
+    "canonical_unit": "Pa",
+    "limit_canonical": "50000000",
+    "lower_canonical": "49000000",
+    "upper_canonical": "51500000",
+    "nominal_canonical": "50200000",
+    "tolerance_canonical": "2000000"
+   }
+  },
+  {
+   "id": "equal.outside",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "equal",
+     "limit": {
+      "value": "50",
+      "unit": "MPa"
+     },
+     "tolerance": {
+      "value": "2",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "53",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "55",
+       "unit": "MPa"
+      },
+      "nominal": {
+       "value": "54",
+       "unit": "MPa"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "fail",
+    "rule": "equal.outside",
+    "canonical_unit": "Pa",
+    "limit_canonical": "50000000",
+    "lower_canonical": "53000000",
+    "upper_canonical": "55000000",
+    "nominal_canonical": "54000000",
+    "tolerance_canonical": "2000000"
+   }
+  },
+  {
+   "id": "equal.partial",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "equal",
+     "limit": {
+      "value": "50",
+      "unit": "MPa"
+     },
+     "tolerance": {
+      "value": "2",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "51",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "53",
+       "unit": "MPa"
+      },
+      "nominal": {
+       "value": "52",
+       "unit": "MPa"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "equal.partial",
+    "canonical_unit": "Pa",
+    "limit_canonical": "50000000",
+    "lower_canonical": "51000000",
+    "upper_canonical": "53000000",
+    "nominal_canonical": "52000000",
+    "tolerance_canonical": "2000000"
+   }
+  },
+  {
+   "id": "not_evaluated.missing",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": []
+   },
+   "expected": {
+    "status": "not_evaluated",
+    "rule": "not_evaluated.missing",
+    "reasons": [
+     {
+      "code": "CORE-R3301",
+      "owner": "requester"
+     }
+    ],
+    "numbers_present": false
+   }
+  },
+  {
+   "id": "not_evaluated.quarantined",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "quarantined",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "94",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "103",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "98.2",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "not_evaluated",
+    "rule": "not_evaluated.quarantined",
+    "reasons": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "quarantined"
+     }
+    ],
+    "numbers_present": false
+   }
+  },
+  {
+   "id": "not_evaluated.invalidated",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "invalidated",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "94",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "103",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "98.2",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "not_evaluated",
+    "rule": "not_evaluated.invalidated",
+    "reasons": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "invalidated"
+     }
+    ],
+    "numbers_present": false
+   }
+  },
+  {
+   "id": "not_evaluated.duplicate-claim",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "94",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "103",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "98.2",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     },
+     {
+      "evidence_id": "ev.0002",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "60",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "70",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "65",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "not_evaluated",
+    "rule": "not_evaluated.duplicate_claim",
+    "reasons": [
+     {
+      "code": "CORE-E7301",
+      "evidence_ids": [
+       "ev.0001",
+       "ev.0002"
+      ]
+     }
+    ],
+    "numbers_present": false
+   },
+   "note": "cardinality-one slot with two admitted records: Core never picks"
+  },
+  {
+   "id": "reviews.pass-withheld",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "61",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "88",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "74",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ],
+    "reviews": {
+     "required": [
+      "independent_reviewer"
+     ],
+     "present": []
+    }
+   },
+   "expected": {
+    "status": "not_evaluated",
+    "rule": "not_evaluated.review_pending",
+    "reasons": [
+     {
+      "review_role": "independent_reviewer",
+      "state": "pending"
+     }
+    ],
+    "numbers_present": false
+   }
+  },
+  {
+   "id": "reviews.fail-emitted-with-outstanding",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "104",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "131",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "117",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ],
+    "reviews": {
+     "required": [
+      "independent_reviewer"
+     ],
+     "present": []
+    }
+   },
+   "expected": {
+    "status": "fail",
+    "rule": "bounded.le.exceeds",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "13/450000000",
+    "upper_canonical": "131/3600000000",
+    "nominal_canonical": "13/400000000",
+    "reviews_outstanding": [
+     "independent_reviewer"
+    ]
+   },
+   "note": "ADR-0004 asymmetry: contradiction can be stated; completion cannot"
+  },
+  {
+   "id": "display_rounding.does-not-change-verdict",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     },
+     "display_rounding": {
+      "quantum": {
+       "value": "0.1",
+       "unit": "MPa"
+      },
+      "mode": "half_even"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.display.1",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "23",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "25.05",
+       "unit": "MPa"
+      },
+      "nominal": {
+       "value": "24",
+       "unit": "MPa"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "bounded.le.crossing",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "lower_canonical": "23000000",
+    "upper_canonical": "25050000",
+    "nominal_canonical": "24000000",
+    "display_upper_text": "25.0 MPa"
+   },
+   "note": "the rendered value may be rounded, but exact 25.05 MPa remains above the limit"
+  },
+  {
+   "id": "le.bounded.lower_only.exceeds",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.lower.1",
+      "state": "admitted",
+      "model": "worst_case",
+      "lower": {
+       "value": "26",
+       "unit": "MPa"
+      },
+      "basis": "one-sided lower bound"
+     }
+    ]
+   },
+   "expected": {
+    "status": "fail",
+    "rule": "bounded.le.exceeds",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "lower_canonical": "26000000"
+   }
+  },
+  {
+   "id": "le.bounded.lower_only.inconclusive",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.lower.2",
+      "state": "admitted",
+      "model": "worst_case",
+      "lower": {
+       "value": "24",
+       "unit": "MPa"
+      },
+      "basis": "one-sided lower bound"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "bounded.le.lower_only",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "lower_canonical": "24000000"
+   }
+  },
+  {
+   "id": "ge.bounded.upper_only.below",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "greater_than_or_equal",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.upper.1",
+      "state": "admitted",
+      "model": "worst_case",
+      "upper": {
+       "value": "24",
+       "unit": "MPa"
+      },
+      "basis": "one-sided upper bound"
+     }
+    ]
+   },
+   "expected": {
+    "status": "fail",
+    "rule": "bounded.ge.below",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "upper_canonical": "24000000"
+   }
+  },
+  {
+   "id": "ge.bounded.upper_only.inconclusive",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "greater_than_or_equal",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.upper.2",
+      "state": "admitted",
+      "model": "worst_case",
+      "upper": {
+       "value": "26",
+       "unit": "MPa"
+      },
+      "basis": "one-sided upper bound"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "bounded.ge.upper_only",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "upper_canonical": "26000000"
+   }
+  },
+  {
+   "id": "equal.nominal.within",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "equal",
+     "limit": {
+      "value": "50",
+      "unit": "MPa"
+     },
+     "tolerance": {
+      "value": "2",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "nominal"
+     },
+     "policy": {
+      "permit_nominal_basis": true
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.equal.nominal",
+      "state": "admitted",
+      "model": "unquantified",
+      "nominal": {
+       "value": "51",
+       "unit": "MPa"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "nominal.equal.within",
+    "canonical_unit": "Pa",
+    "limit_canonical": "50000000",
+    "nominal_canonical": "51000000",
+    "tolerance_canonical": "2000000",
+    "basis_visible": "nominal"
+   }
+  },
+  {
+   "id": "equal.one_sided.outside",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "equal",
+     "limit": {
+      "value": "50",
+      "unit": "MPa"
+     },
+     "tolerance": {
+      "value": "2",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.equal.lower",
+      "state": "admitted",
+      "model": "worst_case",
+      "lower": {
+       "value": "53",
+       "unit": "MPa"
+      },
+      "basis": "one-sided lower bound"
+     }
+    ]
+   },
+   "expected": {
+    "status": "fail",
+    "rule": "equal.outside",
+    "canonical_unit": "Pa",
+    "limit_canonical": "50000000",
+    "lower_canonical": "53000000",
+    "tolerance_canonical": "2000000"
+   }
+  },
+  {
+   "id": "equal.one_sided.partial",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "equal",
+     "limit": {
+      "value": "50",
+      "unit": "MPa"
+     },
+     "tolerance": {
+      "value": "2",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.equal.lower.2",
+      "state": "admitted",
+      "model": "worst_case",
+      "lower": {
+       "value": "51",
+       "unit": "MPa"
+      },
+      "basis": "one-sided lower bound"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "equal.partial",
+    "canonical_unit": "Pa",
+    "limit_canonical": "50000000",
+    "lower_canonical": "51000000",
+    "tolerance_canonical": "2000000"
+   }
+  },
+  {
+   "id": "aggregation.max.enclosure",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "enclosure"
+     },
+     "aggregation": "max"
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.case.1",
+      "aggregation_instance": "case-1",
+      "state": "admitted",
+      "model": "interval",
+      "lower": {
+       "value": "10",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "15",
+       "unit": "MPa"
+      }
+     },
+     {
+      "evidence_id": "ev.case.2",
+      "aggregation_instance": "case-2",
+      "state": "admitted",
+      "model": "interval",
+      "lower": {
+       "value": "20",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "24",
+       "unit": "MPa"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "enclosure.le.within",
+    "aggregation": "max",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "lower_canonical": "20000000",
+    "upper_canonical": "24000000"
+   }
+  },
+  {
+   "id": "aggregation.min.enclosure",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "greater_than_or_equal",
+     "limit": {
+      "value": "10",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "enclosure"
+     },
+     "aggregation": "min"
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.case.1",
+      "aggregation_instance": "case-1",
+      "state": "admitted",
+      "model": "interval",
+      "lower": {
+       "value": "12",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "15",
+       "unit": "MPa"
+      }
+     },
+     {
+      "evidence_id": "ev.case.2",
+      "aggregation_instance": "case-2",
+      "state": "admitted",
+      "model": "interval",
+      "lower": {
+       "value": "11",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "14",
+       "unit": "MPa"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "enclosure.ge.within",
+    "aggregation": "min",
+    "canonical_unit": "Pa",
+    "limit_canonical": "10000000",
+    "lower_canonical": "11000000",
+    "upper_canonical": "14000000"
+   }
+  },
+  {
+   "id": "aggregation.coverage.requires-capability",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     },
+     "aggregation": "max"
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.coverage.1",
+      "aggregation_instance": "case-1",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "10",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "15",
+       "unit": "MPa"
+      },
+      "nominal": {
+       "value": "12",
+       "unit": "MPa"
+      },
+      "coverage": "0.95"
+     },
+     {
+      "evidence_id": "ev.coverage.2",
+      "aggregation_instance": "case-2",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "20",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "24",
+       "unit": "MPa"
+      },
+      "nominal": {
+       "value": "22",
+       "unit": "MPa"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "not_evaluated",
+    "rule": "not_evaluated.coverage_aggregation_requires_capability",
+    "reasons": [
+     {
+      "code": "CORE-T2203",
+      "owner": "method_owner"
+     }
+    ],
+    "numbers_present": false
+   },
+   "note": "two marginal 0.95 intervals do not automatically form a 0.95 interval for their maximum"
+  }
+ ],
+ "aggregation_vectors": [
+  {
+   "id": "aggregation.all.pass",
+   "input": {
+    "aggregation": "all",
+    "verdicts": [
+     "pass",
+     "pass"
+    ]
+   },
+   "expected": {
+    "status": "pass"
+   }
+  },
+  {
+   "id": "aggregation.all.inconclusive",
+   "input": {
+    "aggregation": "all",
+    "verdicts": [
+     "pass",
+     "inconclusive"
+    ]
+   },
+   "expected": {
+    "status": "inconclusive"
+   }
+  },
+  {
+   "id": "aggregation.all.fail-dominates",
+   "input": {
+    "aggregation": "all",
+    "verdicts": [
+     "pass",
+     "fail",
+     "not_evaluated",
+     "inconclusive"
+    ]
+   },
+   "expected": {
+    "status": "fail"
+   }
+  },
+  {
+   "id": "aggregation.all.not_evaluated-over-inconclusive",
+   "input": {
+    "aggregation": "all",
+    "verdicts": [
+     "pass",
+     "not_evaluated",
+     "inconclusive"
+    ]
+   },
+   "expected": {
+    "status": "not_evaluated"
+   }
+  },
+  {
+   "id": "aggregation.any.pass-dominates",
+   "input": {
+    "aggregation": "any",
+    "verdicts": [
+     "fail",
+     "pass",
+     "not_evaluated"
+    ]
+   },
+   "expected": {
+    "status": "pass"
+   }
+  },
+  {
+   "id": "aggregation.any.all-fail",
+   "input": {
+    "aggregation": "any",
+    "verdicts": [
+     "fail",
+     "fail"
+    ]
+   },
+   "expected": {
+    "status": "fail"
+   }
+  },
+  {
+   "id": "aggregation.any.inconclusive",
+   "input": {
+    "aggregation": "any",
+    "verdicts": [
+     "fail",
+     "inconclusive"
+    ]
+   },
+   "expected": {
+    "status": "inconclusive"
+   }
+  },
+  {
+   "id": "aggregation.any.not_evaluated",
+   "input": {
+    "aggregation": "any",
+    "verdicts": [
+     "fail",
+     "not_evaluated"
+    ]
+   },
+   "expected": {
+    "status": "not_evaluated"
+   }
+  }
+ ]
+}

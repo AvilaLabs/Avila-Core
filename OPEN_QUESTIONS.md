@@ -16,6 +16,10 @@ contracts. Architecture should not silently answer them by accident.
    proposed capability?
 8. What invalidates a prior result after an input, method, dataset, policy, or
    review changes?
+9. Which preflight and applicability facts are provider assertions, runner
+   measurements, validated input facts, or independently reviewed records?
+10. Which policy combinations have a formally decidable “tightens” relation and
+    which require a new authorized policy record?
 
 ## Must answer before commercial beta
 
@@ -34,6 +38,8 @@ contracts. Architecture should not silently answer them by accident.
    drift?
 8. What security, identity, signing, export-control, and retention controls are
    required?
+9. What semantic profiles must remain replayable for the intended evidence
+   retention period, and how are historical kernels distributed safely?
 
 ## Must answer before 1.0
 
@@ -54,4 +60,10 @@ contracts. Architecture should not silently answer them by accident.
 - The source, schema, SDK, and brand licenses have not been selected.
 - Terms governing scientific claims, provider responsibility, evidence
   ownership, and limitation of liability do not exist yet.
-
+- Patent counsel has not assessed the semantic compiler, admission kernel,
+  signed reuse, or selective-recomputation mechanisms for eligibility,
+  novelty, non-obviousness, inventorship, or freedom to operate.
+- The date and exact content of every public disclosure relevant to a possible
+  invention must be preserved. New enabling technical disclosures should not
+  be published until Avila has consciously chosen patent, defensive
+  publication, trade-secret, or open-standard treatment.

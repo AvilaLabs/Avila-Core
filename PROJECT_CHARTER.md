@@ -12,12 +12,12 @@ professionals responsible for it. It should help them translate a technical
 question into a reproducible chain of methods, evidence, review, and an explicit
 decision state without replacing their scientific authority.
 
-The north-star product is a neutral market and trust layer for computational
-engineering:
+The north-star product is a neutral semantic, market, and trust layer for
+computational engineering:
 
 > Organizations submit evidence contracts; qualified capabilities compete and
-> compose to resolve them; Core returns portable, independently reviewable
-> technical conclusions.
+> compose to contribute evidence; Core returns portable, independently
+> reviewable conclusions about what follows under the declared rules.
 
 ## Problem
 
@@ -61,6 +61,7 @@ Core may:
 Core may not, by itself:
 
 - invent scientific authority;
+- convert a valid derivation into an unqualified claim about physical truth;
 - turn an unqualified method into a qualified one;
 - imply certification, regulatory acceptance, or safety approval;
 - conceal model limitations behind a simple status badge;
@@ -78,6 +79,8 @@ Core may not, by itself:
   boundaries even if their final license is not yet decided.
 - Scientific authority stays with named method owners, reviewers, and evidence
   policy—not with the graphical interface.
+- Every Core verdict remains conditional on the exact records, authorities,
+  policy, semantic profile, and limitations named in it.
 - Core should minimize redundant compute rather than benefit from its growth.
 - Qualification scope and limitations must be explicit and inspectable.
 
@@ -93,4 +96,3 @@ a supported contract using multiple interchangeable capability providers. The
 exact supported domain will be narrow and named.
 
 Scale, revenue, or number of integrations cannot substitute for those proofs.
-

@@ -72,9 +72,13 @@ countersignature, and package manifest.
 Core needs deterministic canonicalization before signatures and package roots.
 Rules must define:
 
-- JSON canonical form and Unicode handling;
-- floating-point, decimal, and non-finite value representation;
-- quantity units and conversion provenance;
+- a named semantic profile separate from the verifier implementation version;
+- JCS-derived JSON key ordering and escaping, plus strict Unicode normalization;
+- exact integer, canonical decimal, and reduced rational representation, with no
+  authoritative binary floating point or non-finite values;
+- omitted optional fields rather than semantically ambiguous `null` values;
+- nominal quantity kinds, exact within-kind unit scaling, and explicit
+  cross-kind conversion provenance;
 - path and URI normalization;
 - archive entry ordering and metadata;
 - large or confidential artifact references; and
@@ -88,6 +92,7 @@ canonicalization or package identity.
 A verdict record must name:
 
 - exact requirement and contract digests;
+- semantic profile and evaluator implementation identity;
 - status;
 - observed value or admitted bound where applicable;
 - units and comparison semantics;
@@ -100,6 +105,11 @@ A verdict record must name:
 
 No provider output is itself the final verdict. The evaluator consumes admitted
 evidence under the contract’s encoded semantics.
+
+The verdict establishes only that its state follows from the admitted records
+under the named authorities, policy, semantic profile, and rules. It does not
+turn those premises into physical truth or confer certification. Its complete
+boundary statement is authoritative; a badge or summary is not.
 
 ## Invalidation
 
@@ -150,6 +160,7 @@ An offline verifier should report, separately:
 - lineage completeness;
 - policy and qualification references;
 - requirement-evaluation reproducibility where the evaluator is available;
+- semantic-profile support and historical rule replay;
 - missing or redacted content; and
 - checks not performed.
 
@@ -163,4 +174,3 @@ support encrypted or externally retained artifacts, disclosed metadata, policy-
 permitted redaction, and proofs of exact identity. Reviewers need enough access
 to evaluate the claim; a digest of inaccessible data may preserve identity but
 does not establish credibility.
-

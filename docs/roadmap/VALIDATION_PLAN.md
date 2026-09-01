@@ -78,6 +78,24 @@ Evidence required:
 - gross-margin model across verdict states; and
 - no pressure to disguise failure or inconclusiveness.
 
+### H7 — semantic compilation prevents material rework
+
+The compiler catches consequential ambiguity, type mismatch, inadmissibility,
+and stale-dependency errors before expensive execution, while two conforming
+implementations reach the same result from the same immutable snapshot.
+
+Evidence required:
+
+- a defect corpus drawn from real contracts rather than invented syntax cases
+  alone;
+- measured failures caught before execution and reviewer clarification avoided;
+- complete boundary vectors for exact quantities, predicates, admission, verdict
+  calculus, and invalidation;
+- an independent implementation of the written rules that passes the normative
+  vectors; and
+- explicit separation between compiler correctness and scientific adequacy of
+  the admitted methods.
+
 ## Interview groups
 
 Interview each role separately before proposing the product:
@@ -114,7 +132,10 @@ The reference suite must include:
 - known acceptable and known unacceptable cases;
 - a deliberately inconclusive boundary case;
 - malformed and missing inputs;
-- incompatible units and parameter domains;
+- incompatible nominal quantity kinds, exact unit-scaling boundaries, malformed
+  canonical decimals/rationals, duplicate keys, and non-normalized Unicode;
+- applicability facts with missing, stale, and unauthorized sources;
+- policy conflicts, inadmissible candidates, and deterministic selection ties;
 - unqualified, expired, revoked, and substituted capabilities;
 - stochastic repeatability and convergence cases where applicable;
 - corrupted artifacts and invalid signatures;
@@ -129,6 +150,7 @@ Core fails validation if only the happy path works.
 Primary:
 
 - question-to-reviewed-verdict elapsed time;
+- expensive runs prevented by semantic preflight and their false-block rate;
 - total cost of resolution;
 - professional labor hours;
 - reviewer time and clarification loops;
@@ -139,6 +161,7 @@ Primary:
 Guardrails:
 
 - false `PASS` or `FAIL` count;
+- disagreement between conforming implementations for the same semantic profile;
 - stale verdicts after invalidating changes;
 - policy bypasses;
 - claims lacking complete lineage;
@@ -147,8 +170,11 @@ Guardrails:
 - user interpretation of Core as certification or replacement for professional
   responsibility.
 
-Any false authoritative verdict is a release-stopping event for the affected
-scope.
+Any verdict that does not follow from its recorded semantic profile and admitted
+evidence is a release-stopping event for the affected scope. A scientifically
+inadequate premise that passed its declared policy is a separate, equally
+serious qualification or governance failure; the distinction must be preserved
+in the incident record rather than hidden by the compiler's correctness.
 
 ## Kill or pivot criteria
 
@@ -166,4 +192,3 @@ Reconsider the first vertical if:
 
 These findings would not necessarily invalidate the Core mechanism. They would
 invalidate the selected wedge or business model.
-

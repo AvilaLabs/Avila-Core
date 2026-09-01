@@ -146,7 +146,7 @@ pub(super) fn compile_review_obligations(
     compiled
 }
 
-pub(super) fn is_sha256_identity(value: &str) -> bool {
+pub(crate) fn is_sha256_identity(value: &str) -> bool {
     let Some(hex) = value.strip_prefix("sha256:") else {
         return false;
     };

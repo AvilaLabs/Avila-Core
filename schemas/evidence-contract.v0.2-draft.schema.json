@@ -171,6 +171,11 @@
             "$ref": "#/$defs/versionedRef"
           },
           "default": []
+        },
+        "permit_nominal_basis": {
+          "description": "Permits requirements whose basis is `nominal`. The weakening must be explicit; its absence is CORE-A4201.",
+          "type": "boolean",
+          "default": false
         }
       }
     },

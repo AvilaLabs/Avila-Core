@@ -123,7 +123,7 @@ fn compiler_type_fixtures_are_executable() {
     ] {
         fixture_count += execute_suite(&fixture_root, suite_name);
     }
-    assert_eq!(fixture_count, 66);
+    assert_eq!(fixture_count, 68);
 }
 
 fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {

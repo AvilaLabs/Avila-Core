@@ -30,6 +30,8 @@ const CONTRACT_SCHEMA: &str =
     include_str!("../../../../schemas/evidence-contract.v0.2-draft.schema.json");
 const REGISTRY_SCHEMA: &str =
     include_str!("../../../../schemas/registry-snapshot.v0.2-draft.schema.json");
+const CLAIMS_SCHEMA: &str =
+    include_str!("../../../../schemas/evidence-claims.v0.2-draft.schema.json");
 
 /// Regular expressions in the schemas are bound to an exact native check or
 /// to a semantic pass, so the validator carries no regex engine. The exact
@@ -41,15 +43,19 @@ const EXACT_NUMBER_PATTERN: &str =
 const SHA256_PATTERN: &str = "^sha256:[a-f0-9]{64}$";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum SchemaDocument {
+pub(crate) enum SchemaDocument {
     Contract,
     Registry,
+    Claims,
 }
 
 pub(super) fn schema(document: SchemaDocument) -> &'static Value {
     static CONTRACT: OnceLock<Value> = OnceLock::new();
     static REGISTRY: OnceLock<Value> = OnceLock::new();
+    static CLAIMS: OnceLock<Value> = OnceLock::new();
     match document {
+        SchemaDocument::Claims => CLAIMS
+            .get_or_init(|| serde_json::from_str(CLAIMS_SCHEMA).expect("embedded claims schema")),
         SchemaDocument::Contract => CONTRACT.get_or_init(|| {
             serde_json::from_str(CONTRACT_SCHEMA).expect("embedded contract schema")
         }),
@@ -508,6 +514,7 @@ mod tests {
         let mut used = BTreeSet::new();
         keywords(schema(SchemaDocument::Contract), &mut used);
         keywords(schema(SchemaDocument::Registry), &mut used);
+        keywords(schema(SchemaDocument::Claims), &mut used);
         let known: BTreeSet<_> = ENFORCED_KEYWORDS
             .iter()
             .chain(ANNOTATION_KEYWORDS)
@@ -535,6 +542,7 @@ mod tests {
         let mut used = BTreeSet::new();
         patterns(schema(SchemaDocument::Contract), &mut used);
         patterns(schema(SchemaDocument::Registry), &mut used);
+        patterns(schema(SchemaDocument::Claims), &mut used);
         let known: BTreeSet<String> = [EXACT_NUMBER_PATTERN, SHA256_PATTERN]
             .into_iter()
             .map(str::to_owned)

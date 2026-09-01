@@ -1,0 +1,40 @@
+{
+  "schema_version": "avila.core/evidence-claims/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "compiled_snapshot_sha256": "sha256:38964a6a9a2197d10fe4b9ab52fde3148fbcdb1807b4d3c16799eac8a4e40fe4",
+  "claims": [
+    {
+      "claim_id": "dose",
+      "step_id": "analyze",
+      "output_slot": "dose_rate",
+      "artifact": {
+        "sha256": "sha256:abababababababababababababababababababababababababababababababab",
+        "media_type": "application/vnd.fixture.quantity+json"
+      },
+      "claim": {
+        "model": "interval",
+        "lower": {
+          "value": "101",
+          "unit": "uSv/h"
+        },
+        "upper": {
+          "value": "120",
+          "unit": "uSv/h"
+        }
+      }
+    },
+    {
+      "claim_id": "trace",
+      "step_id": "analyze",
+      "output_slot": "trace",
+      "artifact": {
+        "sha256": "sha256:abababababababababababababababababababababababababababababababab",
+        "media_type": "application/vnd.fixture.analysis-trace+json"
+      },
+      "claim": {
+        "model": "unquantified"
+      }
+    }
+  ],
+  "decisions": []
+}

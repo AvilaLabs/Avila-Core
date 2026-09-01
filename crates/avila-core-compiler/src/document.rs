@@ -30,6 +30,10 @@ pub enum ContractStatus {
 pub struct ExecutionPolicy {
     #[serde(default)]
     pub permitted_nondeterministic_roles: Vec<VersionedRef>,
+    /// Permits requirements whose basis is `nominal`, which compare a nominal
+    /// value and use no uncertainty. The weakening must be explicit here.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub permit_nominal_basis: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

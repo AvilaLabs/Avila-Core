@@ -6,11 +6,18 @@
 
 #![forbid(unsafe_code)]
 
+mod campaign;
 mod catalog;
 mod compile;
 mod diagnostic;
 mod document;
 
+pub use campaign::{
+    AdmissionReason, AdmissionRecord, AdmissionState, ArtifactIdentity, Attestation,
+    CAMPAIGN_NOTICE, CAMPAIGN_REPORT_SCHEMA_VERSION, CLAIMS_SCHEMA_VERSION, CampaignReport,
+    CampaignStatus, ClaimValue, ClaimsDocument, InputAttestation, OutputClaim, ProducerIdentity,
+    ReviewDecision, ReviewerIdentity, VerdictBoundary, VerdictRecord, evaluate_campaign,
+};
 pub use catalog::{DIAGNOSTIC_CATALOG, DiagnosticExplanation, explain};
 pub use compile::{
     COMPILE_NOTICE, CanonicalTypedQuantity, CompilationStatus, CompileReport, CompiledContract,
@@ -19,7 +26,8 @@ pub use compile::{
     compile_documents,
 };
 pub use diagnostic::{
-    COMPILER_FINDING_CODES, CORE_A4301, CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203,
+    COMPILER_FINDING_CODES, CORE_A4201, CORE_A4301, CORE_E7001, CORE_E7002, CORE_E7101, CORE_E7103,
+    CORE_E7201, CORE_E7301, CORE_E7401, CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203,
     CORE_R3301, CORE_R3401, CORE_R3501, CORE_R3601, CORE_R3602, CORE_S1101, CORE_S1102, CORE_S1103,
     CORE_S1301, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103, CORE_T2104, CORE_T2201, CORE_T2203,
     CORE_T2301, CORE_T2401, CORE_T2402, CORE_T2501, CORE_T2601, CoreDiagnostic, DiagnosticRepair,

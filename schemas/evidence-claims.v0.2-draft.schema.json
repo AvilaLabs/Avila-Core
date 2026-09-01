@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/evidence-claims/v0.2-draft.schema.json",
+  "title": "Avila Core Evidence Claims v0.2 draft",
+  "description": "Claims produced by executing the steps of one compiled contract, plus attested contract inputs and unverified review decisions. Admission checks the executable subset of ADR-0006 SC-11; artifact bytes, receipts, package identities, signatures, qualification, and invalidation are not checked.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "semantic_profile", "compiled_snapshot_sha256"],
+  "properties": {
+    "schema_version": { "const": "avila.core/evidence-claims/v0.2-draft" },
+    "semantic_profile": { "const": "avila.core/semantic/0.2-draft" },
+    "compiled_snapshot_sha256": {
+      "description": "Identity of the compiled contract these claims were produced for. A mismatch rejects the whole document (CORE-E7001).",
+      "$ref": "#/$defs/sha256"
+    },
+    "inputs": { "type": "array", "items": { "$ref": "#/$defs/inputAttestation" }, "default": [] },
+    "claims": { "type": "array", "items": { "$ref": "#/$defs/outputClaim" }, "default": [] },
+    "decisions": { "type": "array", "items": { "$ref": "#/$defs/reviewDecision" }, "default": [] }
+  },
+  "$defs": {
+    "nonemptyString": { "type": "string", "minLength": 1 },
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "exactNumber": {
+      "type": "string",
+      "description": "Canonical plain decimal or reduced rational.",
+      "pattern": "^(?:(?:0|-?[1-9][0-9]*)(?:\\.[0-9]*[1-9])?|-?[1-9][0-9]*/[1-9][0-9]*)$"
+    },
+    "quantityValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit"],
+      "properties": { "value": { "$ref": "#/$defs/exactNumber" }, "unit": { "$ref": "#/$defs/nonemptyString" } }
+    },
+    "artifactIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "media_type"],
+      "properties": { "sha256": { "$ref": "#/$defs/sha256" }, "media_type": { "$ref": "#/$defs/nonemptyString" } }
+    },
+    "inputAttestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_id", "artifact"],
+      "properties": { "input_id": { "$ref": "#/$defs/nonemptyString" }, "artifact": { "$ref": "#/$defs/artifactIdentity" } }
+    },
+    "producerIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package_id", "sha256"],
+      "properties": { "package_id": { "$ref": "#/$defs/nonemptyString" }, "sha256": { "$ref": "#/$defs/sha256" } }
+    },
+    "outputClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_id", "step_id", "output_slot", "artifact", "claim"],
+      "properties": {
+        "claim_id": { "$ref": "#/$defs/nonemptyString" },
+        "step_id": { "$ref": "#/$defs/nonemptyString" },
+        "output_slot": { "$ref": "#/$defs/nonemptyString" },
+        "artifact": { "$ref": "#/$defs/artifactIdentity" },
+        "producer": { "$ref": "#/$defs/producerIdentity" },
+        "claim": { "$ref": "#/$defs/claimValue" }
+      }
+    },
+    "claimValue": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["model", "nominal"],
+          "properties": { "model": { "const": "exact" }, "nominal": { "$ref": "#/$defs/quantityValue" } } },
+        { "type": "object", "additionalProperties": false, "required": ["model", "lower", "upper"],
+          "properties": { "model": { "const": "interval" }, "lower": { "$ref": "#/$defs/quantityValue" }, "upper": { "$ref": "#/$defs/quantityValue" }, "nominal": { "$ref": "#/$defs/quantityValue" } } },
+        { "type": "object", "additionalProperties": false, "required": ["model", "lower", "upper", "nominal", "coverage"],
+          "properties": { "model": { "const": "coverage_interval" }, "lower": { "$ref": "#/$defs/quantityValue" }, "upper": { "$ref": "#/$defs/quantityValue" }, "nominal": { "$ref": "#/$defs/quantityValue" }, "coverage": { "$ref": "#/$defs/exactNumber" } } },
+        { "type": "object", "additionalProperties": false, "required": ["model"],
+          "properties": { "model": { "const": "worst_case" }, "lower": { "$ref": "#/$defs/quantityValue" }, "upper": { "$ref": "#/$defs/quantityValue" }, "nominal": { "$ref": "#/$defs/quantityValue" } } },
+        { "type": "object", "additionalProperties": false, "required": ["model"],
+          "properties": { "model": { "const": "unquantified" }, "nominal": { "$ref": "#/$defs/quantityValue" } } }
+      ]
+    },
+    "reviewDecision": {
+      "type": "object",
+      "description": "An asserted review decision. Nothing here is signed or verified; admission records it as unverified.",
+      "additionalProperties": false,
+      "required": ["step_id", "disposition", "rationale", "reviewer", "attestation"],
+      "properties": {
+        "step_id": { "$ref": "#/$defs/nonemptyString" },
+        "disposition": { "enum": ["approve_for_use", "reject_for_use", "request_changes", "abstain"] },
+        "rationale": { "$ref": "#/$defs/nonemptyString" },
+        "reviewer": { "type": "object", "additionalProperties": false, "required": ["identity"], "properties": { "identity": { "$ref": "#/$defs/nonemptyString" } } },
+        "attestation": { "const": "unverified" }
+      }
+    }
+  }
+}

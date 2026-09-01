@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/campaign-report/v0.2-draft.schema.json",
+  "title": "Avila Core Campaign Report v0.2 draft",
+  "description": "Admission states for every attested input and claim, one four-state verdict per requirement, and a content identity over the whole report. Every verdict is a conditional derivation under the boundary it names.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "semantic_profile", "status", "notice"],
+  "properties": {
+    "schema_version": { "const": "avila.core/campaign-report/v0.2-draft" },
+    "semantic_profile": { "const": "avila.core/semantic/0.2-draft" },
+    "status": { "enum": ["evaluated", "rejected"] },
+    "compiled_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+    "claims_sha256": { "$ref": "#/$defs/sha256" },
+    "findings": { "type": "array", "items": { "$ref": "compile-report.v0.2-draft.schema.json#/$defs/finding" } },
+    "admissions": { "type": "array", "items": { "$ref": "#/$defs/admissionRecord" } },
+    "verdicts": { "type": "array", "items": { "$ref": "#/$defs/verdictRecord" } },
+    "campaign_sha256": { "$ref": "#/$defs/sha256" },
+    "notice": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "nonemptyString": { "type": "string", "minLength": 1 },
+    "admissionRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_id", "source", "state"],
+      "properties": {
+        "evidence_id": { "$ref": "#/$defs/nonemptyString" },
+        "source": { "$ref": "compile-report.v0.2-draft.schema.json#/$defs/sourceRef" },
+        "state": { "enum": ["admitted", "quarantined", "missing"] },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "detail"],
+            "properties": { "code": { "type": "string", "pattern": "^CORE-[A-Z][0-9]{4}$" }, "detail": { "$ref": "#/$defs/nonemptyString" } }
+          }
+        }
+      }
+    },
+    "verdictRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirement_id", "statement", "metric", "verdict", "boundary"],
+      "properties": {
+        "requirement_id": { "$ref": "#/$defs/nonemptyString" },
+        "statement": { "$ref": "#/$defs/nonemptyString" },
+        "metric": { "$ref": "compile-report.v0.2-draft.schema.json#/$defs/sourceRef" },
+        "evidence_ids": { "type": "array", "items": { "$ref": "#/$defs/nonemptyString" } },
+        "verdict": {
+          "type": "object",
+          "description": "The kernel's verdict output: status, rule identifier, canonical values used, reasons, and outstanding reviews.",
+          "required": ["status", "rule"],
+          "properties": {
+            "status": { "enum": ["pass", "fail", "inconclusive", "not_evaluated"] },
+            "rule": { "$ref": "#/$defs/nonemptyString" }
+          }
+        },
+        "boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["semantic_profile", "compiler", "evaluator", "compiled_snapshot_sha256", "claims_sha256", "review_attestation"],
+          "properties": {
+            "semantic_profile": { "const": "avila.core/semantic/0.2-draft" },
+            "compiler": { "$ref": "#/$defs/nonemptyString" },
+            "evaluator": { "$ref": "#/$defs/nonemptyString" },
+            "compiled_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+            "claims_sha256": { "$ref": "#/$defs/sha256" },
+            "review_attestation": { "const": "unverified" }
+          }
+        }
+      }
+    }
+  }
+}

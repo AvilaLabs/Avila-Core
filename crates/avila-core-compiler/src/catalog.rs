@@ -21,11 +21,67 @@ pub struct DiagnosticExplanation {
 /// Every explained code, sorted by code.
 pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
     DiagnosticExplanation {
+        code: "CORE-A4201",
+        title: "Nominal basis not permitted",
+        rule: "SC-8 and SC-10",
+        meaning: "A requirement's basis is `nominal`, which compares a nominal value and uses no uncertainty, but the contract execution policy does not permit that weakening. Every weakening is explicit in the contract.",
+        next_action: "Set `permit_nominal_basis` to true in the execution policy, accepting that the verdict will visibly state that uncertainty was not used, or use a `bounded` or `enclosure` basis. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
         code: "CORE-A4301",
         title: "Nondeterminism not permitted",
         rule: "SC-5 and SC-6 R8",
         meaning: "A step uses a nondeterministic capability type, but the contract execution policy does not list every role that type produces under `permitted_nondeterministic_roles`. Permission is scoped by role and makes the type neither deterministic nor qualified.",
         next_action: "Add each produced role to the execution policy, accepting that execution memoization stays disabled for the step, or choose a deterministic or seeded-stochastic type. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
+        code: "CORE-E7001",
+        title: "Claims bind a different snapshot",
+        rule: "SC-11",
+        meaning: "The claims document names a compiled snapshot identity that differs from what the supplied contract and registry compile to, so nothing in it can be attributed to this campaign.",
+        next_action: "Regenerate the claims against these documents, or supply the contract and registry the claims were produced for. The owner is the executor.",
+    },
+    DiagnosticExplanation {
+        code: "CORE-E7002",
+        title: "Claim names nothing in the snapshot",
+        rule: "SC-11",
+        meaning: "An attestation or claim names a contract input, workflow step, or output slot that the compiled snapshot does not have.",
+        next_action: "Correct the identifier to one the compiled snapshot declares.",
+    },
+    DiagnosticExplanation {
+        code: "CORE-E7101",
+        title: "Artifact identity missing or malformed",
+        rule: "SC-11 A1",
+        meaning: "A contract input has no attested artifact, or an artifact identity is not a lowercase `sha256:` digest of 64 hex digits. Artifact bytes are not read in this slice; the identity is what later verification binds.",
+        next_action: "Attest every contract input and give every artifact its exact digest.",
+    },
+    DiagnosticExplanation {
+        code: "CORE-E7103",
+        title: "Parent not admitted",
+        rule: "SC-11 A3",
+        meaning: "A claim was produced from a parent that is missing or quarantined. Admission is fail closed along the bound dataflow, so the claim is quarantined even when its own values are well formed.",
+        next_action: "Admit the parent first: attest the missing input or repair the quarantined parent claim, then re-evaluate.",
+    },
+    DiagnosticExplanation {
+        code: "CORE-E7201",
+        title: "Claim rejected by type-level validation",
+        rule: "SC-3 and SC-11 A6",
+        meaning: "The claim's model is not permitted by the output slot, its shape does not satisfy its model, a quantity does not scale in the role's kind, a bound is inverted, a nominal lies outside its interval, a coverage is outside (0, 1], or the artifact media type differs from the declared one.",
+        next_action: "Produce a claim in a model the output permits, with quantities in admitted units of the role's kind.",
+    },
+    DiagnosticExplanation {
+        code: "CORE-E7301",
+        title: "Duplicate claim for one output",
+        rule: "SC-15",
+        meaning: "More than one claim or attestation exists for a single output slot or contract input. A slot admits exactly one; every claim for it is quarantined rather than one being chosen.",
+        next_action: "Keep exactly one claim per output slot; a rerun creates a new claim only after the previous one is withdrawn.",
+    },
+    DiagnosticExplanation {
+        code: "CORE-E7401",
+        title: "Review decision not admissible",
+        rule: "SC-9 and SC-11 A9",
+        meaning: "A decision names a step with no compiled review obligation, carries a disposition the review type does not allow, or repeats a step's decision. Decisions are unverified assertions in this slice; they withhold `PASS` until present and never become a technical verdict.",
+        next_action: "Record one allowed disposition per review step. Signature and eligibility verification are later admission checks.",
     },
     DiagnosticExplanation {
         code: "CORE-R3101",
@@ -268,6 +324,9 @@ mod tests {
             include_str!("compile/shape.rs"),
             include_str!("compile/source.rs"),
             include_str!("compile/values.rs"),
+            include_str!("campaign/mod.rs"),
+            include_str!("campaign/admission.rs"),
+            include_str!("campaign/verdicts.rs"),
         ]
         .concat();
         let mut referenced = BTreeSet::new();

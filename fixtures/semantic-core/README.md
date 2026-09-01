@@ -18,8 +18,8 @@ multiple historical profiles.
 - `verdict-calculus.v1.json`: 49 vectors: 41 requirement-evaluation vectors
   plus 8 aggregate-verdict vectors; and
 - `canon.v1.json`: 12 initial canonical-value and byte-reader vectors;
-- `types/compiler-cases.v1.json`: 33 executable compiler fixtures: 7 compiled
-  cases and 26 rejected cases covering the current R1–R6 subset, claim-model
+- `types/compiler-cases.v1.json`: 35 executable compiler fixtures: 8 compiled
+  cases and 27 rejected cases covering the current R1–R6 subset, claim-model
   sufficiency, coverage validity, equality tolerances, exact unit lowering,
   cascade suppression, independent findings, and source-layer refusals located
   by JSON Pointer; and
@@ -46,9 +46,9 @@ planned unless files exist for them.
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
 `scope-predicates.v1.json`, plus the 41 requirement and 8 aggregation vectors in
-`verdict-calculus.v1.json`. The compiler harness also executes all 66 cases in
+`verdict-calculus.v1.json`. The compiler harness also executes all 68 cases in
 the five compiler manifests and pins each registry digest plus all successful
-compiled-snapshot identities. Passing the 90 pure vectors and 66 compiler
+compiled-snapshot identities. Passing the 90 pure vectors and 68 compiler
 fixtures does not accept ADR-0006: package-level rule halves and other vector
 families in this coverage plan remain absent, and no result is scientifically
 qualified.
@@ -83,6 +83,9 @@ fixtures/semantic-core/
   types/compiler-purpose-cases.v1.json
                              executable manifest for nominal SC-6 R10
   types/*.contract.json     exact contract inputs named by that manifest
+  campaigns/campaign-cases.v1.json
+                             executable manifest for campaign evaluation (SC-10, SC-11)
+  campaigns/*.claims.json    exact claims documents named by that manifest
   types/compiler.registry.v1.json
                              exact shared registry input pinned by the manifest
   types/compiler.parameters.registry.v1.json
@@ -237,7 +240,9 @@ canonically.
 | `types.R6.limit-unit.fail` | `CORE-T2103` |
 | `types.R6.equal-tolerance.pass` | `equal` with a nonnegative tolerance of the metric kind lowers the tolerance to the canonical unit |
 | `types.R6.equal-no-tolerance.fail` | `equal` without a tolerance → `CORE-T2104` `missing`; the kernel could never evaluate it |
-| `types.R6.tolerance-without-equality.fail` | a tolerance on an inequality → `CORE-T2104` `invalid` |
+| `types.R6.tolerance-without-equality.fail` | a tolerance on an inequality → `CORE-T2104` `invalid`, with a mechanically safe removal |
+| `types.R6.nominal-basis-unpermitted.fail` | a `nominal` basis without `permit_nominal_basis` → `CORE-A4201`; the edit that permits it is offered |
+| `types.R6.nominal-basis-permitted.pass` | the same requirement compiles once the execution policy permits the weakening |
 | `types.R7.param-kind.fail` | `CORE-T2401` |
 | `types.R7.param-domain.fail` | negative cooling time → `CORE-T2402` |
 | `types.R7.parameters.pass` | booleans, integers, exact numbers, text, and quantities lower to tagged canonical IR |
@@ -481,6 +486,17 @@ canonically.
 | `scenarios.review-rejects-upstream` | descendants invalidated; nothing reused; owners named |
 | `scenarios.verify-without-evaluator` | obligations report uses the four verifier categories in SC-17 |
 | `scenarios.bike-hook` | three findings → plan with rejected Elmer → INCONCLUSIVE → geometry change → memo reuse of `fdm_properties` → PASS → obligations report |
+
+## Campaign corpus
+
+`campaigns/campaign-cases.v1.json` pins twelve campaign-evaluation cases over
+the type fixtures' contracts and registries: a claims document in, and the
+expected status, findings, admission states, verdicts, and campaign identity
+out. `crates/avila-core-compiler/tests/campaign_fixtures.rs` executes them.
+They cover the three bounded outcomes, exact unit scaling, a missing parent,
+a model the output does not permit, inverted bounds, a duplicate claim, a
+snapshot mismatch, and the three review states; see
+`docs/architecture/CAMPAIGN_EVALUATION.md`.
 
 ## Mutation harness
 

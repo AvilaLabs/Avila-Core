@@ -127,7 +127,9 @@ comparison is `CORE-T2104` as `invalid`, because it would silently mean
 nothing. A negative tolerance is refused. A `coverage` basis must be a
 canonical decimal in `(0, 1]` and may appear only on a `bounded` basis; the
 kernel repeats that check at verdict time, but a requirement that can never be
-evaluated must not compile.
+evaluated must not compile. A `nominal` basis is a visible weakening: it
+compiles only when the execution policy sets `permit_nominal_basis`, and the
+finding `CORE-A4201` otherwise carries the edit that would permit it.
 
 ## Type-level reproducibility
 

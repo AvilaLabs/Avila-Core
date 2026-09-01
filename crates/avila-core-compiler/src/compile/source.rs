@@ -26,7 +26,7 @@ use crate::document::{
 
 pub(super) const MAX_DOCUMENT_BYTES: usize = 16 * 1024 * 1024;
 
-pub(super) fn read_document<T: serde::de::DeserializeOwned>(
+pub(crate) fn read_document<T: serde::de::DeserializeOwned>(
     document: &str,
     which: SchemaDocument,
     bytes: &[u8],

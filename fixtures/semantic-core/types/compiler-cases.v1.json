@@ -1069,6 +1069,98 @@
           }
         ]
       }
+    },
+    {
+      "fixture_id": "types.R6.nominal-basis-unpermitted.fail",
+      "clause": "SC-8 and SC-10",
+      "contract": "types.R6.nominal-basis-unpermitted.fail.contract.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-A4201",
+            "class": "inadmissible",
+            "owner": "policy_owner",
+            "primary": {
+              "document": "contract",
+              "pointer": "/requirements/0/basis"
+            },
+            "repairs": [
+              "constrained_choice"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fixture_id": "types.R6.nominal-basis-permitted.pass",
+      "clause": "SC-8 and SC-10",
+      "contract": "types.R6.nominal-basis-permitted.pass.contract.json",
+      "expected": {
+        "status": "compiled",
+        "findings": [
+          {
+            "code": "CORE-R3602",
+            "class": "notice",
+            "owner": "requester",
+            "primary": {
+              "document": "contract",
+              "pointer": "/workflow/1"
+            },
+            "repairs": [
+              "constrained_choice"
+            ]
+          }
+        ],
+        "compiled": {
+          "snapshot_sha256": "sha256:d5b3cefccdd31328b19af29bb009ab045bfb03c9f9e0d4436dd1e09eb98b0a08",
+          "execution_policy": {
+            "permitted_nondeterministic_roles": [],
+            "permit_nominal_basis": true
+          },
+          "step_order": [
+            "calculate",
+            "bound"
+          ],
+          "bindings": [
+            {
+              "step_id": "calculate",
+              "input_slot": "source",
+              "source": "input:case"
+            },
+            {
+              "step_id": "bound",
+              "input_slot": "dose_rate",
+              "source": "step:calculate/dose_rate"
+            }
+          ],
+          "reproducibility": [
+            {
+              "step_id": "calculate",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            },
+            {
+              "step_id": "bound",
+              "value": {
+                "determinism": "deterministic",
+                "material_factors": {}
+              }
+            }
+          ],
+          "limits": [
+            {
+              "requirement_id": "R-001",
+              "kind": "nuclear.dose_equivalent_rate",
+              "value": "1/36000000",
+              "unit": "Sv/s",
+              "purpose": "fixture.requirement_evaluation@1"
+            }
+          ]
+        }
+      }
     }
   ]
 }

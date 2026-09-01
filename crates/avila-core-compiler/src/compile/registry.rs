@@ -14,16 +14,16 @@ use avila_core_kernel::{ExactNumber, KindDefinition, KindRegistry, UnitDefinitio
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 
-pub(super) struct RegistryIndex<'a> {
-    pub(super) kinds: KindRegistry,
-    pub(super) kind_classes: BTreeMap<&'a str, &'a str>,
-    pub(super) purposes: BTreeMap<VersionedRef, &'a PurposeDefinition>,
-    pub(super) roles: BTreeMap<VersionedRef, &'a RoleDefinition>,
-    pub(super) capability_types: BTreeMap<VersionedRef, &'a CapabilityTypeDefinition>,
+pub(crate) struct RegistryIndex<'a> {
+    pub(crate) kinds: KindRegistry,
+    pub(crate) kind_classes: BTreeMap<&'a str, &'a str>,
+    pub(crate) purposes: BTreeMap<VersionedRef, &'a PurposeDefinition>,
+    pub(crate) roles: BTreeMap<VersionedRef, &'a RoleDefinition>,
+    pub(crate) capability_types: BTreeMap<VersionedRef, &'a CapabilityTypeDefinition>,
 }
 
 impl<'a> RegistryIndex<'a> {
-    pub(super) fn build(
+    pub(crate) fn build(
         registry: &'a RegistrySnapshot,
         findings: &mut Vec<CoreDiagnostic>,
     ) -> Self {

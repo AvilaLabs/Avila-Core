@@ -8,8 +8,9 @@ use super::resolve::{
 };
 use super::values::compiler_repair;
 use crate::diagnostic::{
-    CORE_R3301, CORE_S1102, CORE_T2001, CORE_T2102, CORE_T2103, CORE_T2104, CORE_T2201, CORE_T2203,
-    CORE_T2601, CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability,
+    CORE_A4201, CORE_R3301, CORE_S1102, CORE_T2001, CORE_T2102, CORE_T2103, CORE_T2104, CORE_T2201,
+    CORE_T2203, CORE_T2601, CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability,
+    RepairEdit,
 };
 use crate::document::{
     BasisKind, BoundSide, ClaimModelDeclaration, Comparison, ContractSource, RequirementBasis,
@@ -29,6 +30,32 @@ pub(super) fn compile_requirements(
 ) -> Vec<CompiledRequirement> {
     let mut compiled = Vec::new();
     for (index, requirement) in contract.requirements.iter().enumerate() {
+        if requirement.basis.kind == BasisKind::Nominal
+            && !contract.execution_policy.permit_nominal_basis
+        {
+            findings.push(
+                CoreDiagnostic::new(
+                    CORE_A4201,
+                    FindingClass::Inadmissible,
+                    "policy_owner",
+                    contract_location(format!("/requirements/{index}/basis")),
+                    "a nominal basis compares a nominal value and uses no uncertainty; the contract execution policy must permit that weakening explicitly",
+                )
+                .with_related(vec![contract_location(
+                    "/execution_policy/permit_nominal_basis",
+                )])
+                .with_repair(
+                    DiagnosticRepair::labels(RepairApplicability::ConstrainedChoice, Vec::new())
+                        .alternative(
+                            "permit the nominal basis in the execution policy",
+                            vec![RepairEdit::Add {
+                                path: "/execution_policy/permit_nominal_basis".into(),
+                                value: serde_json::Value::Bool(true),
+                            }],
+                        ),
+                ),
+            );
+        }
         let coverage_valid = validate_basis_coverage(index, requirement, findings);
         let tolerance_present_correctly = validate_tolerance_presence(index, requirement, findings);
         let Some(metric) = &requirement.metric else {

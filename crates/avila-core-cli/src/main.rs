@@ -6,7 +6,10 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use avila_core_compiler::{CompilationStatus, DIAGNOSTIC_CATALOG, compile_documents, explain};
+use avila_core_compiler::{
+    CampaignStatus, CompilationStatus, DIAGNOSTIC_CATALOG, compile_documents, evaluate_campaign,
+    explain,
+};
 use avila_core_evidence::sha256_hex;
 use avila_core_kernel::{SEMANTIC_PROFILE, canonicalize_json};
 use clap::{Parser, Subcommand};
@@ -38,6 +41,20 @@ enum Command {
         contract: PathBuf,
         #[arg(long)]
         registry: PathBuf,
+    },
+    /// Evaluate a campaign: admit the claims produced for a compiled contract
+    /// and derive one four-state verdict per requirement.
+    ///
+    /// Prints the campaign report as JSON. Exits 0 when the campaign was
+    /// evaluated, whatever the verdicts; 1 when the documents were rejected;
+    /// and 2 when the tool could not run.
+    Evaluate {
+        #[arg(long)]
+        contract: PathBuf,
+        #[arg(long)]
+        registry: PathBuf,
+        #[arg(long)]
+        claims: PathBuf,
     },
     /// Explain a stable finding code from the diagnostic catalog.
     Explain {
@@ -83,6 +100,20 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 return Ok(ExitCode::from(1));
             }
         }
+        Command::Evaluate {
+            contract,
+            registry,
+            claims,
+        } => {
+            let contract = fs::read(contract)?;
+            let registry = fs::read(registry)?;
+            let claims = fs::read(claims)?;
+            let report = evaluate_campaign(&contract, &registry, &claims)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+            if report.status == CampaignStatus::Rejected {
+                return Ok(ExitCode::from(1));
+            }
+        }
         Command::Explain { code, all } => match (code, all) {
             (None, true) => println!("{}", serde_json::to_string_pretty(DIAGNOSTIC_CATALOG)?),
             (Some(code), false) => match explain(&code) {
@@ -109,6 +140,8 @@ struct SemanticProfileReport {
     total_vectors: usize,
     implemented_compiler_fixture_sets: Vec<CompilerFixtureSetReport>,
     total_compiler_fixtures: usize,
+    implemented_campaign_fixture_sets: Vec<CompilerFixtureSetReport>,
+    total_campaign_fixtures: usize,
     notice: &'static str,
 }
 
@@ -142,6 +175,10 @@ const EMBEDDED_COMPILER_FIXTURE_SETS: [&[u8]; 5] = [
     include_bytes!("../../../fixtures/semantic-core/types/compiler-review-cases.v1.json"),
     include_bytes!("../../../fixtures/semantic-core/types/compiler-purpose-cases.v1.json"),
 ];
+
+const EMBEDDED_CAMPAIGN_FIXTURE_SETS: [&[u8]; 1] = [include_bytes!(
+    "../../../fixtures/semantic-core/campaigns/campaign-cases.v1.json"
+)];
 
 fn semantic_profile_report() -> Result<SemanticProfileReport, Box<dyn Error>> {
     let mut implemented_vector_sets = Vec::with_capacity(EMBEDDED_VECTOR_SETS.len());
@@ -196,6 +233,29 @@ fn semantic_profile_report() -> Result<SemanticProfileReport, Box<dyn Error>> {
         });
     }
 
+    let mut implemented_campaign_fixture_sets = Vec::new();
+    let mut total_campaign_fixtures = 0;
+    for bytes in EMBEDDED_CAMPAIGN_FIXTURE_SETS {
+        let document: serde_json::Value = serde_json::from_slice(bytes)?;
+        let fixture_set = required_string(&document, "fixture_set")?;
+        let version = document
+            .get("version")
+            .and_then(serde_json::Value::as_u64)
+            .ok_or("embedded campaign fixture set is missing an integer version")?;
+        let fixtures = document
+            .get("fixtures")
+            .and_then(serde_json::Value::as_array)
+            .ok_or("embedded campaign fixture set is missing fixtures")?
+            .len();
+        total_campaign_fixtures += fixtures;
+        implemented_campaign_fixture_sets.push(CompilerFixtureSetReport {
+            fixture_set: fixture_set.into(),
+            version,
+            fixtures,
+            sha256: format!("sha256:{}", sha256_hex(bytes)),
+        });
+    }
+
     Ok(SemanticProfileReport {
         semantic_profile: SEMANTIC_PROFILE,
         kernel_version: env!("CARGO_PKG_VERSION"),
@@ -204,6 +264,8 @@ fn semantic_profile_report() -> Result<SemanticProfileReport, Box<dyn Error>> {
         total_vectors,
         implemented_compiler_fixture_sets,
         total_compiler_fixtures,
+        implemented_campaign_fixture_sets,
+        total_campaign_fixtures,
         notice: "Conformance to these software vectors is not scientific qualification, evidence admission, or certification.",
     })
 }
@@ -229,8 +291,9 @@ mod tests {
         assert_eq!(report.status, "draft");
         assert_eq!(report.total_vectors, 90);
         assert_eq!(report.implemented_vector_sets.len(), 4);
-        assert_eq!(report.total_compiler_fixtures, 66);
+        assert_eq!(report.total_compiler_fixtures, 68);
         assert_eq!(report.implemented_compiler_fixture_sets.len(), 5);
+        assert_eq!(report.total_campaign_fixtures, 12);
         assert!(
             report
                 .implemented_vector_sets

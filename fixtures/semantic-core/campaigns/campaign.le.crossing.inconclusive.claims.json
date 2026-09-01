@@ -1,0 +1,52 @@
+{
+  "schema_version": "avila.core/evidence-claims/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "compiled_snapshot_sha256": "sha256:cc802164995a2a326855de6414b175e2fb750072711fcebc175957540904bd3d",
+  "inputs": [
+    {
+      "input_id": "case",
+      "artifact": {
+        "sha256": "sha256:abababababababababababababababababababababababababababababababab",
+        "media_type": "application/vnd.fixture.source+json"
+      }
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "calculated",
+      "step_id": "calculate",
+      "output_slot": "dose_rate",
+      "artifact": {
+        "sha256": "sha256:abababababababababababababababababababababababababababababababab",
+        "media_type": "application/vnd.fixture.quantity+json"
+      },
+      "claim": {
+        "model": "unquantified",
+        "nominal": {
+          "value": "95",
+          "unit": "uSv/h"
+        }
+      }
+    },
+    {
+      "claim_id": "bounded",
+      "step_id": "bound",
+      "output_slot": "bounded_dose_rate",
+      "artifact": {
+        "sha256": "sha256:abababababababababababababababababababababababababababababababab",
+        "media_type": "application/vnd.fixture.quantity+json"
+      },
+      "claim": {
+        "model": "interval",
+        "lower": {
+          "value": "90",
+          "unit": "uSv/h"
+        },
+        "upper": {
+          "value": "110",
+          "unit": "uSv/h"
+        }
+      }
+    }
+  ]
+}

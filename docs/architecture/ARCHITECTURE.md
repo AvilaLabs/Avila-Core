@@ -74,7 +74,7 @@ The scaffold deliberately implements only the shaded foundation implied below:
 avila-core-kernel            (first canonical-value semantic slice)
     └── avila-core-compiler  (v0.2-draft document types, static compilation,
         │                     semantic IR, and the diagnostic catalog)
-        ├── avila-core-cli   (canonicalize, compile, explain)
+        ├── avila-core-cli   (canonicalize, compile, evaluate, explain)
         └── avila-core-app   (thin client rendering compile reports)
 
 avila-core-evidence          (record model + hashing only)
@@ -118,9 +118,12 @@ governance dispositions, digest-pinned external eligibility policy, and
 explicit independence constraints. The compiler neither evaluates that policy
 nor fulfills the review. Governed nominal requirement purposes are checked
 against output-level explicit exclusions without interpreting prose or inferring
-purpose hierarchies. It performs no package selection, execution, evidence
-admission, qualification decision, or verdict. See the
-[semantic compiler boundary](SEMANTIC_COMPILER.md).
+purpose hierarchies. It performs no package selection, execution, qualification decision, or
+verdict during compilation. A separate campaign entry point admits an
+evidence-claims document against the compiled snapshot under the type-level
+admission conditions and derives verdicts with the kernel; see the
+[semantic compiler boundary](SEMANTIC_COMPILER.md) and
+[campaign evaluation](CAMPAIGN_EVALUATION.md).
 
 ### `avila-core-evidence`
 
@@ -131,7 +134,8 @@ writer, signature system, lineage validator, or independent verifier yet.
 
 Provides authoritative JSON canonicalization, embedded semantic-profile and
 vector-set identities, `v0.2-draft` compilation with a nonzero exit status for
-a rejected contract, and the diagnostic catalog through `explain`. All output
+a rejected contract, campaign evaluation over a claims document, and the
+diagnostic catalog through `explain`. All output
 explicitly distinguishes software conformance or structural validity from
 scientific validity.
 
@@ -202,7 +206,9 @@ construct admissions and verdicts.
 14. The packager writes a human-readable and machine-readable evidence package;
     the independent verifier checks it from the package root.
 
-Any failure before step 13 yields no verdict. A completed method that cannot decide
+Steps 11 and 13 have a first executable slice: type-level admission over a
+claims document and kernel verdicts with review asymmetry. Steps 4 to 10 and
+14 do not exist yet. Any failure before step 13 yields no verdict. A completed method that cannot decide
 the requirement may yield `INCONCLUSIVE` when the contract permits it.
 
 ## Execution neutrality

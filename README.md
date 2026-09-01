@@ -34,6 +34,11 @@ This repository is a **pre-alpha scaffold**. It currently provides:
 - a diagnostic catalog explaining every finding code, with typed repair
   candidates and accountable owners on every finding, and a mutation harness
   that proves every finding is anchored and every mechanical repair works;
+- the first executable campaign slice: an evidence-claims document is admitted
+  against the compiled snapshot under the type-level admission conditions, and
+  the kernel derives one `PASS`, `FAIL`, `INCONCLUSIVE`, or `NOT_EVALUATED`
+  verdict per requirement, with review asymmetry and a content-identified
+  report;
 - a draft portable evidence model and SHA-256 utility;
 - JSON Schemas that the compiler embeds and enforces as its source layer, and
   a deliberately non-executable specimen contract and registry snapshot;
@@ -44,16 +49,17 @@ This repository is a **pre-alpha scaffold**. It currently provides:
 The repository also contains proposed `v0.2` semantic rules and an initial
 conformance-vector corpus. The Rust kernel executes all 90 current pure vectors:
 12 canonical-value, 10 unit-scaling, 19 scope-predicate, 41 requirement-verdict,
-and 8 aggregate-verdict cases. A separate compiler harness executes 66 current
+and 8 aggregate-verdict cases. A separate compiler harness executes 68 current
 type fixtures across five pinned registry snapshots. The first R1–R10 static
 compiler frontier is implemented, but package-level rule halves, other
 normative fixture families, admission, invalidation, and package semantics
 remain proposed and incomplete.
 
 It does **not** run scientific software, calculate a physical quantity, select
-or bind capability packages, admit real evidence, evaluate a scientifically
-qualified requirement, certify a design, or produce decision-grade evidence.
-The specimen contract is an incomplete draft on purpose.
+or bind capability packages, read artifact bytes, verify receipts or
+signatures, evaluate a scientifically qualified requirement, certify a
+design, or produce decision-grade evidence. The specimen contract is an
+incomplete draft on purpose.
 
 ## Core objects
 
@@ -86,6 +92,11 @@ cargo run -p avila-core-cli -- compile \
 
 cargo run -p avila-core-cli -- explain CORE-R3102
 
+cargo run -p avila-core-cli -- evaluate \
+  --contract fixtures/semantic-core/types/types.R1.resolved.pass.contract.json \
+  --registry fixtures/semantic-core/types/compiler.registry.v1.json \
+  --claims fixtures/semantic-core/campaigns/campaign.le.within.pass.claims.json
+
 cargo run -p avila-core-cli -- compile \
   --contract examples/contracts/shutdown-dose-specimen.json \
   --registry examples/registry/shutdown-dose-specimen.registry.json
@@ -103,7 +114,9 @@ compiled, possibly with notices; 1 when it was rejected; and 2 when the tool
 could not run. Every finding carries a stable code, a class, an owner, a JSON
 Pointer location, and typed repair candidates where a bounded repair exists;
 `explain` prints the [catalog entry](docs/architecture/DIAGNOSTICS.md) for a
-code, or the whole catalog with `--all`.
+code, or the whole catalog with `--all`. The evaluate command admits a claims
+document against the compiled snapshot and prints one verdict per requirement;
+see the [campaign evaluation boundary](docs/architecture/CAMPAIGN_EVALUATION.md).
 
 ## Repository map
 
@@ -124,7 +137,7 @@ docs/
 schemas/                  machine-readable interchange drafts
 examples/                 an unqualified specimen contract and registry snapshot
 assets/branding/          provisional Avila Core mark
-fixtures/semantic-core/   proposed semantic-profile coverage and initial vectors
+fixtures/semantic-core/   proposed semantic-profile coverage, vectors, and campaigns
 ```
 
 Start with the [project charter](PROJECT_CHARTER.md), then read the

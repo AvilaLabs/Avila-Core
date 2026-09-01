@@ -129,9 +129,10 @@ pub(super) fn registry_location(pointer: impl Into<String>) -> SourceLocation {
     SourceLocation::new("registry", pointer)
 }
 
-pub(super) fn owner_for(document: &str) -> &'static str {
+pub(crate) fn owner_for(document: &str) -> &'static str {
     match document {
         "registry" => "registry_owner",
+        "claims" => "executor",
         _ => "requester",
     }
 }

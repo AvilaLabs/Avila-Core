@@ -1,0 +1,510 @@
+{
+  "fixture_set": "campaign-evaluation",
+  "version": 1,
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "fixtures": [
+    {
+      "fixture_id": "campaign.le.within.pass",
+      "clause": "SC-10 and SC-11",
+      "contract": "../types/types.R1.resolved.pass.contract.json",
+      "registry": "../types/compiler.registry.v1.json",
+      "claims": "campaign.le.within.pass.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [],
+        "admissions": [
+          {
+            "evidence_id": "input:case",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "calculated",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "bounded",
+            "state": "admitted",
+            "reasons": []
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "pass",
+            "rule": "bounded.le.within",
+            "reviews_outstanding": []
+          }
+        ],
+        "campaign_sha256": "sha256:da43cf3558f1b2c88493f9204fadb4f3fcfd30c5b41c59a5ddd39f328dfa1170"
+      }
+    },
+    {
+      "fixture_id": "campaign.le.crossing.inconclusive",
+      "clause": "SC-10 and SC-11",
+      "contract": "../types/types.R1.resolved.pass.contract.json",
+      "registry": "../types/compiler.registry.v1.json",
+      "claims": "campaign.le.crossing.inconclusive.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [],
+        "admissions": [
+          {
+            "evidence_id": "input:case",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "calculated",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "bounded",
+            "state": "admitted",
+            "reasons": []
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "inconclusive",
+            "rule": "bounded.le.crossing",
+            "reviews_outstanding": []
+          }
+        ],
+        "campaign_sha256": "sha256:44a61d9dd7198d7c54a20d83495444b51f99ccb36bb77f48dd91ec1d008af409"
+      }
+    },
+    {
+      "fixture_id": "campaign.le.exceeds.fail",
+      "clause": "SC-10 and SC-11",
+      "contract": "../types/types.R1.resolved.pass.contract.json",
+      "registry": "../types/compiler.registry.v1.json",
+      "claims": "campaign.le.exceeds.fail.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [],
+        "admissions": [
+          {
+            "evidence_id": "input:case",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "calculated",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "bounded",
+            "state": "admitted",
+            "reasons": []
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "fail",
+            "rule": "bounded.le.exceeds",
+            "reviews_outstanding": []
+          }
+        ],
+        "campaign_sha256": "sha256:b91a011b3a4ae0e4c92372dd995d2c003b79f611af50ce576134f781ef9dae2a"
+      }
+    },
+    {
+      "fixture_id": "campaign.unit-scaled.pass",
+      "clause": "SC-10 and SC-11",
+      "contract": "../types/types.R1.resolved.pass.contract.json",
+      "registry": "../types/compiler.registry.v1.json",
+      "claims": "campaign.unit-scaled.pass.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [],
+        "admissions": [
+          {
+            "evidence_id": "input:case",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "calculated",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "bounded",
+            "state": "admitted",
+            "reasons": []
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "pass",
+            "rule": "bounded.le.within",
+            "reviews_outstanding": []
+          }
+        ],
+        "campaign_sha256": "sha256:59a76833e6a6ed17c37e9aa428a187c59b3cd1911b826879e7b4830e672b31dd"
+      }
+    },
+    {
+      "fixture_id": "campaign.parent-missing.not_evaluated",
+      "clause": "SC-10 and SC-11",
+      "contract": "../types/types.R1.resolved.pass.contract.json",
+      "registry": "../types/compiler.registry.v1.json",
+      "claims": "campaign.parent-missing.not_evaluated.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [
+          {
+            "code": "CORE-E7103",
+            "class": "inadmissible",
+            "owner": "executor",
+            "primary": {
+              "document": "claims",
+              "pointer": "/claims/0"
+            }
+          },
+          {
+            "code": "CORE-E7103",
+            "class": "inadmissible",
+            "owner": "executor",
+            "primary": {
+              "document": "claims",
+              "pointer": "/claims/1"
+            }
+          },
+          {
+            "code": "CORE-E7101",
+            "class": "missing",
+            "owner": "executor",
+            "primary": {
+              "document": "claims",
+              "pointer": "/inputs"
+            }
+          }
+        ],
+        "admissions": [
+          {
+            "evidence_id": "input:case",
+            "state": "missing",
+            "reasons": [
+              "CORE-E7101"
+            ]
+          },
+          {
+            "evidence_id": "calculated",
+            "state": "quarantined",
+            "reasons": [
+              "CORE-E7103"
+            ]
+          },
+          {
+            "evidence_id": "bounded",
+            "state": "quarantined",
+            "reasons": [
+              "CORE-E7103"
+            ]
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "not_evaluated",
+            "rule": "not_evaluated.quarantined",
+            "reviews_outstanding": []
+          }
+        ],
+        "campaign_sha256": "sha256:ce831662c5066c3a0b5e703751a1396315a9c55de192cc2f38fe03d89a85d26b"
+      }
+    },
+    {
+      "fixture_id": "campaign.model-not-permitted.quarantine",
+      "clause": "SC-10 and SC-11",
+      "contract": "../types/types.R1.resolved.pass.contract.json",
+      "registry": "../types/compiler.registry.v1.json",
+      "claims": "campaign.model-not-permitted.quarantine.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [
+          {
+            "code": "CORE-E7201",
+            "class": "inadmissible",
+            "owner": "executor",
+            "primary": {
+              "document": "claims",
+              "pointer": "/claims/1/claim"
+            }
+          }
+        ],
+        "admissions": [
+          {
+            "evidence_id": "input:case",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "calculated",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "bounded",
+            "state": "quarantined",
+            "reasons": [
+              "CORE-E7201"
+            ]
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "not_evaluated",
+            "rule": "not_evaluated.quarantined",
+            "reviews_outstanding": []
+          }
+        ],
+        "campaign_sha256": "sha256:e3ec410f42496627b1f6ae5f29cf12a0b7592461a81904e30ebdeeae9af26ba7"
+      }
+    },
+    {
+      "fixture_id": "campaign.inverted-bounds.quarantine",
+      "clause": "SC-10 and SC-11",
+      "contract": "../types/types.R1.resolved.pass.contract.json",
+      "registry": "../types/compiler.registry.v1.json",
+      "claims": "campaign.inverted-bounds.quarantine.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [
+          {
+            "code": "CORE-E7201",
+            "class": "inadmissible",
+            "owner": "executor",
+            "primary": {
+              "document": "claims",
+              "pointer": "/claims/1/claim"
+            }
+          }
+        ],
+        "admissions": [
+          {
+            "evidence_id": "input:case",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "calculated",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "bounded",
+            "state": "quarantined",
+            "reasons": [
+              "CORE-E7201"
+            ]
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "not_evaluated",
+            "rule": "not_evaluated.quarantined",
+            "reviews_outstanding": []
+          }
+        ],
+        "campaign_sha256": "sha256:fdb94c86030c5132ba965d5b77101bfa0ce7f48681f729ed0ea47e85cf20b4dc"
+      }
+    },
+    {
+      "fixture_id": "campaign.duplicate-claim.quarantine",
+      "clause": "SC-10 and SC-11",
+      "contract": "../types/types.R1.resolved.pass.contract.json",
+      "registry": "../types/compiler.registry.v1.json",
+      "claims": "campaign.duplicate-claim.quarantine.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [
+          {
+            "code": "CORE-E7301",
+            "class": "inadmissible",
+            "owner": "executor",
+            "primary": {
+              "document": "claims",
+              "pointer": "/claims/1"
+            }
+          },
+          {
+            "code": "CORE-E7301",
+            "class": "inadmissible",
+            "owner": "executor",
+            "primary": {
+              "document": "claims",
+              "pointer": "/claims/2"
+            }
+          }
+        ],
+        "admissions": [
+          {
+            "evidence_id": "input:case",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "calculated",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "bounded",
+            "state": "quarantined",
+            "reasons": [
+              "CORE-E7301"
+            ]
+          },
+          {
+            "evidence_id": "bounded-again",
+            "state": "quarantined",
+            "reasons": [
+              "CORE-E7301"
+            ]
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "not_evaluated",
+            "rule": "not_evaluated.quarantined",
+            "reviews_outstanding": []
+          }
+        ],
+        "campaign_sha256": "sha256:72a3bf118f3596e1d9e25bb3857f4cbf68b9156f242fcf97c9170ea8fb36565c"
+      }
+    },
+    {
+      "fixture_id": "campaign.snapshot-mismatch.rejected",
+      "clause": "SC-10 and SC-11",
+      "contract": "../types/types.R1.resolved.pass.contract.json",
+      "registry": "../types/compiler.registry.v1.json",
+      "claims": "campaign.snapshot-mismatch.rejected.claims.json",
+      "expected": {
+        "status": "rejected",
+        "findings": [
+          {
+            "code": "CORE-E7001",
+            "class": "inadmissible",
+            "owner": "executor",
+            "primary": {
+              "document": "claims",
+              "pointer": "/compiled_snapshot_sha256"
+            }
+          }
+        ],
+        "admissions": [],
+        "verdicts": []
+      }
+    },
+    {
+      "fixture_id": "campaign.review-pending.not_evaluated",
+      "clause": "SC-10 and SC-11",
+      "contract": "../types/types.R9.review-bound.pass.contract.json",
+      "registry": "../types/compiler.review.registry.v1.json",
+      "claims": "campaign.review-pending.not_evaluated.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [],
+        "admissions": [
+          {
+            "evidence_id": "dose",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "trace",
+            "state": "admitted",
+            "reasons": []
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "not_evaluated",
+            "rule": "not_evaluated.review_pending",
+            "reviews_outstanding": []
+          }
+        ],
+        "campaign_sha256": "sha256:66feb2d309a21271b56ecd117462cbbbfc76e579c98d1d20b063dd9489bf5aaa"
+      }
+    },
+    {
+      "fixture_id": "campaign.review-approved.pass",
+      "clause": "SC-10 and SC-11",
+      "contract": "../types/types.R9.review-bound.pass.contract.json",
+      "registry": "../types/compiler.review.registry.v1.json",
+      "claims": "campaign.review-approved.pass.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [],
+        "admissions": [
+          {
+            "evidence_id": "dose",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "trace",
+            "state": "admitted",
+            "reasons": []
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "pass",
+            "rule": "bounded.le.within",
+            "reviews_outstanding": []
+          }
+        ],
+        "campaign_sha256": "sha256:23fe232e4b7a8eed1d1cd86f56bb7cc9b148f5dab7878bc4731980516d11ebec"
+      }
+    },
+    {
+      "fixture_id": "campaign.review-fail-with-review-outstanding.fail",
+      "clause": "SC-10 and SC-11",
+      "contract": "../types/types.R9.review-bound.pass.contract.json",
+      "registry": "../types/compiler.review.registry.v1.json",
+      "claims": "campaign.review-fail-with-review-outstanding.fail.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [],
+        "admissions": [
+          {
+            "evidence_id": "dose",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "trace",
+            "state": "admitted",
+            "reasons": []
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "fail",
+            "rule": "bounded.le.exceeds",
+            "reviews_outstanding": [
+              "review"
+            ]
+          }
+        ],
+        "campaign_sha256": "sha256:1fee0dda16fa6275c95fe0be4113a990506dd4b0d35efaa2e92bdbee42f887ad"
+      }
+    }
+  ]
+}

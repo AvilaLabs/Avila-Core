@@ -3,17 +3,17 @@
 //! `compile_documents` is the only entry point. Each pass lives in its own
 //! module, reports independent findings, and never repairs a source document.
 
-mod findings;
+pub(crate) mod findings;
 mod ir;
 mod notices;
-mod registry;
+pub(crate) mod registry;
 mod reproducibility;
 mod requirements;
 mod resolve;
-mod review;
-mod schema;
+pub(crate) mod review;
+pub(crate) mod schema;
 mod shape;
-mod source;
+pub(crate) mod source;
 mod values;
 
 #[cfg(test)]
@@ -314,7 +314,7 @@ fn rejected_report(
     }
 }
 
-fn sort_findings(findings: &mut [CoreDiagnostic]) {
+pub(crate) fn sort_findings(findings: &mut [CoreDiagnostic]) {
     findings.sort_by(|left, right| {
         left.primary
             .cmp(&right.primary)

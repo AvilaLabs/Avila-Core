@@ -333,7 +333,9 @@ but requires an admitted enclosure claim.
 
 For a nominal basis, the nominal value is compared exactly and the verdict
 visibly states that uncertainty was not used. Nominal basis requires explicit
-policy permission.
+policy permission; in `v0.2-draft` that permission is the contract execution
+policy's `permit_nominal_basis`, and its absence is `CORE-A4201` at compile
+time.
 
 For equality, tolerance is a quantity of the metric kind. Under a two-sided
 bound, containment in `[L-t, L+t]` is PASS, disjointness is FAIL, and partial
@@ -375,6 +377,12 @@ invalidation state, and replayability. Its statement must read as a conditional
 derivation, never as unqualified certification or physical truth.
 
 ### SC-11 Admission: artifact to evidence
+
+The first executable slice checks the identity, A3, A5, A6 type-level, and
+slot-cardinality conditions over an evidence-claims document bound to a
+compiled snapshot; see `docs/architecture/CAMPAIGN_EVALUATION.md`. Artifact
+bytes, receipts, package identities, signatures, qualification, policy
+snapshots, and invalidation remain unimplemented.
 
 An artifact is admitted for role `r` at step `s` only if all conditions hold:
 

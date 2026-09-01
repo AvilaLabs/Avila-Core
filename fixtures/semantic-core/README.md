@@ -38,7 +38,11 @@ multiple historical profiles.
 - `types/compiler-purpose-cases.v1.json`: 6 executable R10 fixtures: 3 compiled
   cases and 3 rejected cases covering governed purpose resolution, exact nominal
   exclusions, unrelated and similarly named purposes, and major-version
-  mismatch.
+  mismatch; and
+- `campaigns/campaign-cases.v1.json`: 12 executable campaign fixtures covering
+  the first SC-10/SC-11 claim-admission and verdict slice, including bounded
+  outcomes, exact unit scaling, quarantine paths, snapshot mismatch, and review
+  asymmetry.
 
 All other fixtures below are required before ADR acceptance and are currently
 planned unless files exist for them.
@@ -48,8 +52,10 @@ The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `scope-predicates.v1.json`, plus the 41 requirement and 8 aggregation vectors in
 `verdict-calculus.v1.json`. The compiler harness also executes all 68 cases in
 the five compiler manifests and pins each registry digest plus all successful
-compiled-snapshot identities. Passing the 90 pure vectors and 68 compiler
-fixtures does not accept ADR-0006: package-level rule halves and other vector
+compiled-snapshot identities. The campaign harness executes all 12 cases in its
+manifest and pins every successful campaign identity. Passing the 90 pure
+vectors, 68 compiler fixtures, and 12 campaign fixtures does not accept
+ADR-0006: full package-level admission, package rule halves, and other vector
 families in this coverage plan remain absent, and no result is scientifically
 qualified.
 

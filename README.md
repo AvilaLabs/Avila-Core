@@ -42,7 +42,8 @@ This repository is a **pre-alpha scaffold**. It currently provides:
 - a draft portable evidence model and SHA-256 utility;
 - JSON Schemas that the compiler embeds and enforces as its source layer, and
   a deliberately non-executable specimen contract and registry snapshot;
-- a local CLI for canonicalization, compilation, and the catalog; and
+- a local CLI for canonicalization, compilation, campaign evaluation, and the
+  diagnostic catalog; and
 - an egui shell that compiles the embedded specimen through the same compiler
   and renders its findings, owners, and repairs.
 
@@ -50,10 +51,12 @@ The repository also contains proposed `v0.2` semantic rules and an initial
 conformance-vector corpus. The Rust kernel executes all 90 current pure vectors:
 12 canonical-value, 10 unit-scaling, 19 scope-predicate, 41 requirement-verdict,
 and 8 aggregate-verdict cases. A separate compiler harness executes 68 current
-type fixtures across five pinned registry snapshots. The first R1–R10 static
-compiler frontier is implemented, but package-level rule halves, other
-normative fixture families, admission, invalidation, and package semantics
-remain proposed and incomplete.
+type fixtures across five pinned registry snapshots, and a campaign harness
+executes 12 claim-admission and verdict fixtures. The first R1–R10 static
+compiler frontier and a type-level SC-10/SC-11 campaign slice are implemented,
+but package-level rule halves, other normative fixture families, full
+package-level admission, invalidation, and package semantics remain proposed
+and incomplete.
 
 It does **not** run scientific software, calculate a physical quantity, select
 or bind capability packages, read artifact bytes, verify receipts or
@@ -132,6 +135,7 @@ docs/
   product/                product definition, evidence contracts, and UX
   architecture/           boundaries, capability protocol, evidence model, and
                           the diagnostic catalog
+  discovery/              sanitized first-pilot discovery record and workflow map
   roadmap/                staged validation and 1.0 planning hypotheses
   adr/                    durable architectural decisions
 schemas/                  machine-readable interchange drafts
@@ -143,8 +147,11 @@ fixtures/semantic-core/   proposed semantic-profile coverage, vectors, and campa
 Start with the [project charter](PROJECT_CHARTER.md), then read the
 [north-star strategy](docs/strategy/NORTH_STAR.md),
 [product definition](docs/product/PRODUCT_DEFINITION.md), and
-[architecture](docs/architecture/ARCHITECTURE.md). The proposed language rules
-are in [ADR-0006](docs/adr/0006-semantic-core.md).
+[architecture](docs/architecture/ARCHITECTURE.md). The live milestone boundary
+is in the [Stage 0 status ledger](docs/roadmap/STAGE_0_STATUS.md), and the next
+validation work is captured in the
+[first-pilot discovery packet](docs/discovery/FIRST_PILOT_PACKET.md). The
+proposed language rules are in [ADR-0006](docs/adr/0006-semantic-core.md).
 
 ## Licensing and claims
 

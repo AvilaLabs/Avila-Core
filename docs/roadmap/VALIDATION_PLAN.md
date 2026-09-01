@@ -114,6 +114,11 @@ path. Avoid asking whether a hypothetical platform “sounds useful.”
 
 ## First-pilot discovery packet
 
+Use the active [first-pilot discovery packet](../discovery/FIRST_PILOT_PACKET.md)
+to record sanitized evidence for this section. Detailed interview notes,
+customer artifacts, controlled information, and personal data remain in their
+approved system of record rather than this repository.
+
 Capture:
 
 1. the exact decision and owner;

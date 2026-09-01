@@ -10,6 +10,11 @@ definition.
 
 **Planning range:** now through approximately month 3–4.
 
+Current gate evidence and unresolved work are maintained in the
+[Stage 0 status ledger](STAGE_0_STATUS.md). Executable fixture counts come from
+`avila-core semantic-profile`; the ledger interprets what those counts do and
+do not establish.
+
 Build:
 
 - authoritative contract, capability, plan, evidence, and verdict models;
@@ -23,7 +28,8 @@ Build:
 - deterministic planning and explicit blocked states;
 - capability protocol threat model and conformance design;
 - evidence-package spike mapped to provenance/package standards; and
-- interview materials and a concrete first-contract workflow map.
+- interview materials and a concrete first-contract workflow map, maintained in
+  the [first-pilot discovery packet](../discovery/FIRST_PILOT_PACKET.md).
 
 Validate:
 
@@ -42,14 +48,21 @@ the acceptance conditions in that decision. A draft profile is not a scientific
 qualification.
 
 The current repository remains in this stage. Its draft kernel executes 90 pure
-vectors, and its static compiler executes 68 fixtures through R10. That includes
-pending accountable-review obligations and typed purpose exclusions, but not
-package binding, identities, signatures, eligibility-policy evaluation, review
-fulfillment, or admission.
+vectors, its static compiler executes 68 fixtures through R10, and its campaign
+harness executes 12 fixtures over the first SC-10/SC-11 slice. That slice
+performs type-level claim admission and verdict derivation. It does not perform
+full package-level evidence admission: package binding, artifact-byte and
+receipt verification, signatures, qualification and eligibility-policy
+evaluation, review fulfillment, and invalidation remain absent.
 
 ## Stage 1 — vertical reference prototype
 
 **Planning range:** approximately months 2–6.
+
+Stage 1 implementation begins only after the Stage 0 exit gate identifies the
+organization, bounded question, method owner, reviewer, representative data,
+and deployment constraints. The selected vertical determines which runner,
+adapter, receipt, and package surfaces are built first.
 
 Build only the chosen evidence chain:
 

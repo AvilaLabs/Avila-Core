@@ -266,7 +266,7 @@ fn semantic_profile_report() -> Result<SemanticProfileReport, Box<dyn Error>> {
         total_compiler_fixtures,
         implemented_campaign_fixture_sets,
         total_campaign_fixtures,
-        notice: "Conformance to these software vectors is not scientific qualification, evidence admission, or certification.",
+        notice: "Conformance to these software fixtures is not scientific qualification, full package-level evidence admission, or certification.",
     })
 }
 
@@ -294,6 +294,7 @@ mod tests {
         assert_eq!(report.total_compiler_fixtures, 68);
         assert_eq!(report.implemented_compiler_fixture_sets.len(), 5);
         assert_eq!(report.total_campaign_fixtures, 12);
+        assert_eq!(report.implemented_campaign_fixture_sets.len(), 1);
         assert!(
             report
                 .implemented_vector_sets
@@ -303,6 +304,12 @@ mod tests {
         assert!(
             report
                 .implemented_compiler_fixture_sets
+                .iter()
+                .all(|set| set.sha256.starts_with("sha256:") && set.sha256.len() == 71)
+        );
+        assert!(
+            report
+                .implemented_campaign_fixture_sets
                 .iter()
                 .all(|set| set.sha256.starts_with("sha256:") && set.sha256.len() == 71)
         );

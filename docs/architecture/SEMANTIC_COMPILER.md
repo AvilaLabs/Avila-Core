@@ -361,7 +361,8 @@ It does not yet represent or decide:
 - actual reviewer identities, credentials, signatures, eligibility-policy
   evaluation, independence evaluation, and signed decision admission (the
   fulfillment half of R9);
-- capability packages, qualification, policy, admission, or selection; or
+- capability packages, qualification, policy, full package-level admission, or
+  selection; or
 - campaign execution and evidence lifecycle.
 
 Those are blockers on the path to an accepted `0.2` profile. The present

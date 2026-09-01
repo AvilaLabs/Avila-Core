@@ -3,6 +3,11 @@
 These questions must be answered through interviews, prototypes, and real
 contracts. Architecture should not silently answer them by accident.
 
+Answers and source evidence for the first candidate are tracked in the
+[first-pilot discovery packet](docs/discovery/FIRST_PILOT_PACKET.md). A field is
+not answered merely because the current shutdown-dose hypothesis suggests a
+plausible value.
+
 ## Must answer before the first pilot
 
 1. Which specific organization and professional owns the first painful question?

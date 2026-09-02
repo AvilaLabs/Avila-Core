@@ -297,14 +297,16 @@ fn show_header(
                         match logo {
                             Some(logo) => {
                                 // The asset is a square canvas with the wordmark in
-                                // its middle band; crop to the brackets exactly.
+                                // its middle band: crop to the brackets and show the
+                                // crop at its own proportions, not the canvas's.
                                 ui.add(
                                     egui::Image::from_texture(logo)
                                         .uv(egui::Rect::from_min_max(
                                             egui::pos2(0.04, 0.32),
                                             egui::pos2(0.96, 0.70),
                                         ))
-                                        .fit_to_exact_size(egui::vec2(206.0, 85.0))
+                                        .fit_to_exact_size(egui::vec2(218.0, 90.0))
+                                        .maintain_aspect_ratio(false)
                                         .corner_radius(6),
                                 );
                             }

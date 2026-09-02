@@ -217,7 +217,8 @@ assets/branding/          provisional Avila Core mark
 fixtures/semantic-core/   proposed semantic-profile coverage, vectors, and campaigns
 ```
 
-Start with the [project charter](PROJECT_CHARTER.md), then read the
+Start with the [project charter](PROJECT_CHARTER.md) and the
+[definitions](docs/DEFINITIONS.md) of the words this project uses, then read the
 [north-star strategy](docs/strategy/NORTH_STAR.md),
 [product definition](docs/product/PRODUCT_DEFINITION.md), and
 [architecture](docs/architecture/ARCHITECTURE.md). The live milestone boundary

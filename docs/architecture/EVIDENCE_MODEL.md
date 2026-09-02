@@ -102,7 +102,12 @@ promoted. The generated claims document is then bound to the manifest
 digests and review-policy identities before campaign evaluation. This is an
 integrity, execution, and replay spike, not the final portable evidence
 package: it has no archive canonicalization, signed root, trust store,
-redaction semantics, sandbox, or lineage-completeness proof.
+redaction semantics, sandbox, or lineage-completeness proof. Environment keys an adapter requires the operator to value are recorded
+by name inside the invocation identity and by value outside it; the content
+a locator names is bound as a staged input. A package may declare free
+inputs; a supplied one is hashed and attested, the steps it reaches have
+their committed claims withheld and bind fresh outputs by receipt, and
+replay is reported not applicable.
 
 ## Requirement verdict
 

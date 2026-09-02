@@ -454,6 +454,13 @@ impl<'a> VerdictEvaluator<'a> {
             .transpose()?;
 
         validate_claim_shape(claim, &lower, &upper, &nominal)?;
+        // ADR-0006: an `exact` claim is the degenerate interval
+        // `lo = hi = nominal = value`, so it satisfies a bounded basis.
+        let (lower, upper) = if claim.model == EvidenceModel::Exact {
+            (nominal.clone(), nominal.clone())
+        } else {
+            (lower, upper)
+        };
         if let (Some(lower), Some(upper)) = (&lower, &upper)
             && lower.value.checked_cmp(&upper.value)? == Ordering::Greater
         {

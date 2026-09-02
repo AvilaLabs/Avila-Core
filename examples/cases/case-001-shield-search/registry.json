@@ -1,0 +1,196 @@
+{
+  "schema_version": "avila.core/registry-snapshot/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "registry_id": "case-001.shield-search.registry",
+  "revision": 1,
+  "kinds": [
+    {
+      "kind_id": "nuclear.ambient-dose-equivalent-rate",
+      "canonical_unit": "uSv/h",
+      "unit_class": "nuclear.ambient-dose-equivalent-rate.units@1",
+      "owner": "avila-labs.shielding",
+      "units": [
+        { "symbol": "uSv/h", "factor": "1" },
+        { "symbol": "mSv/h", "factor": "1000" },
+        { "symbol": "Sv/h", "factor": "1000000" }
+      ]
+    },
+    {
+      "kind_id": "core.mass",
+      "canonical_unit": "kg",
+      "unit_class": "core.mass.units@1",
+      "owner": "avila-labs.core",
+      "units": [
+        { "symbol": "kg", "factor": "1" },
+        { "symbol": "g", "factor": "1/1000" },
+        { "symbol": "t", "factor": "1000" }
+      ]
+    },
+    {
+      "kind_id": "core.length",
+      "canonical_unit": "cm",
+      "unit_class": "core.length.units@1",
+      "owner": "avila-labs.core",
+      "units": [
+        { "symbol": "cm", "factor": "1" },
+        { "symbol": "mm", "factor": "1/10" },
+        { "symbol": "m", "factor": "100" }
+      ]
+    }
+  ],
+  "purposes": [
+    {
+      "purpose": { "id": "avila-labs.shielding.design-search", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "description": "Research-only search over synthetic shielding configurations inside Avila Labs."
+    },
+    {
+      "purpose": { "id": "nuclear.regulatory-or-operational-use", "major": 1 },
+      "owner": "external-responsible-authority",
+      "description": "Any regulatory, safety, licensing, or operational use; every output of this case excludes it."
+    }
+  ],
+  "roles": [
+    {
+      "role": { "id": "shielding.candidate", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.candidate@1",
+      "accepted_media_types": ["application/vnd.avila.shield-candidate+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "shielding.material-table", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.material-table@1",
+      "accepted_media_types": ["application/vnd.avila.shield-materials+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }],
+      "non_claims": ["Removal cross sections in the table are approximate screening values; nothing in it is qualified."]
+    },
+    {
+      "role": { "id": "shielding.source-spec", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.source-spec@1",
+      "accepted_media_types": ["application/vnd.avila.shield-source+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "shielding.screen-script", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.script@1",
+      "accepted_media_types": ["text/x-python"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "shielding.transport-script", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.script@1",
+      "accepted_media_types": ["text/x-python"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "nuclear.cross-section-index", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "validator": "nuclear.validate.cross-section-index@1",
+      "accepted_media_types": ["application/xml"],
+      "permitted_claim_models": [{ "model": "unquantified" }],
+      "non_claims": ["The index digest identifies the library's file list; the nuclide files it names are not re-hashed by this case."]
+    },
+    {
+      "role": { "id": "shielding.dose-rate-screen", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.dose-rate-screen@1",
+      "quantity_kind": "nuclear.ambient-dose-equivalent-rate",
+      "unit_class": "nuclear.ambient-dose-equivalent-rate.units@1",
+      "accepted_media_types": ["application/vnd.avila.shield-screen+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }],
+      "non_claims": ["A screening estimate with no bound; it can guide a search and can never establish a bounded verdict."]
+    },
+    {
+      "role": { "id": "shielding.dose-rate-bounded", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.dose-rate-bounded@1",
+      "quantity_kind": "nuclear.ambient-dose-equivalent-rate",
+      "unit_class": "nuclear.ambient-dose-equivalent-rate.units@1",
+      "accepted_media_types": ["application/vnd.avila.shield-transport+json"],
+      "permitted_claim_models": [{ "model": "coverage_interval" }],
+      "non_claims": ["The interval bounds Monte Carlo statistical error only; nuclear-data, geometry, and model uncertainty are not evaluated."]
+    },
+    {
+      "role": { "id": "shielding.mass", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.mass@1",
+      "quantity_kind": "core.mass",
+      "unit_class": "core.mass.units@1",
+      "accepted_media_types": ["application/vnd.avila.shield-screen+json"],
+      "permitted_claim_models": [{ "model": "exact" }]
+    },
+    {
+      "role": { "id": "shielding.thickness", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.thickness@1",
+      "quantity_kind": "core.length",
+      "unit_class": "core.length.units@1",
+      "accepted_media_types": ["application/vnd.avila.shield-screen+json"],
+      "permitted_claim_models": [{ "model": "exact" }]
+    },
+    {
+      "role": { "id": "shielding.screen-result", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.screen-result@1",
+      "accepted_media_types": ["application/vnd.avila.shield-screen+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "shielding.transport-result", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.transport-result@1",
+      "accepted_media_types": ["application/vnd.avila.shield-transport+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    }
+  ],
+  "capability_types": [
+    {
+      "capability_type": { "id": "shielding.attenuation-screen", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "reproducibility": { "determinism": "deterministic" },
+      "inputs": [
+        { "slot_id": "script", "role": { "id": "shielding.screen-script", "major": 1 }, "accepted_media_types": ["text/x-python"] },
+        { "slot_id": "candidate", "role": { "id": "shielding.candidate", "major": 1 }, "accepted_media_types": ["application/vnd.avila.shield-candidate+json"] },
+        { "slot_id": "materials", "role": { "id": "shielding.material-table", "major": 1 }, "accepted_media_types": ["application/vnd.avila.shield-materials+json"] },
+        { "slot_id": "source", "role": { "id": "shielding.source-spec", "major": 1 }, "accepted_media_types": ["application/vnd.avila.shield-source+json"] }
+      ],
+      "outputs": [
+        { "slot_id": "dose-rate", "role": { "id": "shielding.dose-rate-screen", "major": 1 }, "media_type": "application/vnd.avila.shield-screen+json", "permitted_claim_models": [{ "model": "unquantified" }], "excluded_purposes": [{ "id": "nuclear.regulatory-or-operational-use", "major": 1 }] },
+        { "slot_id": "mass", "role": { "id": "shielding.mass", "major": 1 }, "media_type": "application/vnd.avila.shield-screen+json", "permitted_claim_models": [{ "model": "exact" }], "excluded_purposes": [{ "id": "nuclear.regulatory-or-operational-use", "major": 1 }] },
+        { "slot_id": "thickness", "role": { "id": "shielding.thickness", "major": 1 }, "media_type": "application/vnd.avila.shield-screen+json", "permitted_claim_models": [{ "model": "exact" }], "excluded_purposes": [{ "id": "nuclear.regulatory-or-operational-use", "major": 1 }] },
+        { "slot_id": "screen-result", "role": { "id": "shielding.screen-result", "major": 1 }, "media_type": "application/vnd.avila.shield-screen+json", "permitted_claim_models": [{ "model": "unquantified" }], "excluded_purposes": [{ "id": "nuclear.regulatory-or-operational-use", "major": 1 }] }
+      ],
+      "non_claims": [
+        "The screen is a one-dimensional removal-cross-section estimate with no buildup; it is an unqualified guide for searching and is evaluated only on a nominal basis."
+      ]
+    },
+    {
+      "capability_type": { "id": "shielding.slab-transport", "major": 1 },
+      "owner": "avila-labs.shielding",
+      "reproducibility": { "determinism": "seeded_stochastic" },
+      "inputs": [
+        { "slot_id": "script", "role": { "id": "shielding.transport-script", "major": 1 }, "accepted_media_types": ["text/x-python"] },
+        { "slot_id": "candidate", "role": { "id": "shielding.candidate", "major": 1 }, "accepted_media_types": ["application/vnd.avila.shield-candidate+json"] },
+        { "slot_id": "materials", "role": { "id": "shielding.material-table", "major": 1 }, "accepted_media_types": ["application/vnd.avila.shield-materials+json"] },
+        { "slot_id": "source", "role": { "id": "shielding.source-spec", "major": 1 }, "accepted_media_types": ["application/vnd.avila.shield-source+json"] },
+        { "slot_id": "cross-section-index", "role": { "id": "nuclear.cross-section-index", "major": 1 }, "accepted_media_types": ["application/xml"] }
+      ],
+      "outputs": [
+        { "slot_id": "dose-rate", "role": { "id": "shielding.dose-rate-bounded", "major": 1 }, "media_type": "application/vnd.avila.shield-transport+json", "permitted_claim_models": [{ "model": "coverage_interval" }], "excluded_purposes": [{ "id": "nuclear.regulatory-or-operational-use", "major": 1 }] },
+        { "slot_id": "transport-result", "role": { "id": "shielding.transport-result", "major": 1 }, "media_type": "application/vnd.avila.shield-transport+json", "permitted_claim_models": [{ "model": "unquantified" }], "excluded_purposes": [{ "id": "nuclear.regulatory-or-operational-use", "major": 1 }] }
+      ],
+      "parameters": [
+        { "parameter_id": "particles", "required": true, "value_type": { "type": "integer", "min": { "value": 1000, "inclusive": true } } },
+        { "parameter_id": "batches", "required": true, "value_type": { "type": "integer", "min": { "value": 2, "inclusive": true } } }
+      ],
+      "non_claims": [
+        "Monte Carlo transport of a laterally infinite slab; the coverage interval is statistical only. Not qualified for any decision."
+      ]
+    }
+  ]
+}

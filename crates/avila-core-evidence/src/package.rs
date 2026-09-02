@@ -38,6 +38,11 @@ pub struct CasePackageManifest {
     /// layout and the evidence identifiers their outputs receive.
     #[serde(default)]
     pub executions: Vec<PackageExecution>,
+    /// Contract inputs a run may supply from outside the package. A supplied
+    /// value is hashed and attested for this run; the committed expectations
+    /// then describe a different candidate and are not replayed.
+    #[serde(default)]
+    pub free_inputs: Vec<String>,
     #[serde(default)]
     pub limitations: Vec<String>,
 }
@@ -90,6 +95,9 @@ pub struct PackageExecution {
     pub inputs: Vec<ExecutionInputStaging>,
     /// The evidence identifier each produced output slot's claim receives.
     pub outputs: Vec<ExecutionOutputBinding>,
+    /// Environment keys the adapter requires and the operator must value.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub environment: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -759,6 +767,7 @@ mod tests {
             }],
             capabilities: Vec::new(),
             executions: Vec::new(),
+            free_inputs: Vec::new(),
             limitations: vec!["fixture only".into()],
         })
         .unwrap()
@@ -809,6 +818,7 @@ mod tests {
                 output_slot: "result".into(),
                 claim_id: "step-result".into(),
             }],
+            environment: Vec::new(),
         });
         let bytes = serde_json::to_vec(&manifest).unwrap();
         let error = verify_case_package(&bytes, &root.0, &BTreeMap::new()).unwrap_err();

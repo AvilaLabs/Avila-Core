@@ -82,3 +82,35 @@ vary without re-freezing the package; margins and machine-readable reasons
 on every verdict; a campaign log per candidate; a scripted agent that drives
 the two-fidelity loop; coverage against a library requirement set; then
 qualification envelopes, physical evidence, and staged agent review.
+
+## What has landed (2026-09-02)
+
+The first four slices exist as [CASE-001](../../examples/cases/case-001-shield-search/README.md):
+
+- **Free inputs.** A package may declare inputs free; `run --input NAME=PATH`
+  supplies one, hashes it, and attests it in the claims. Every step the
+  supplied input reaches is invalidated: its committed claims are withheld,
+  it reruns if its executable is supplied and is reported `not_run` with the
+  claims withheld otherwise, and its fresh outputs bind by receipt rather
+  than by a package-declared identity. Replay against committed expectations
+  is reported `not applicable` rather than as a mismatch.
+- **Margins.** Every verdict with numbers carries the exact distance to the
+  limit on the decisive bound (upper for `≤`, lower for `≥`), in the kernel's
+  canonical unit; the human summary rounds, the report does not.
+- **Campaign log.** `--log FILE` appends one JSON line per run: supplied
+  inputs and their identities, step states, every verdict with its numbers
+  and margin, and the campaign identity. That file is the raw material of the
+  engineering constellation; nothing reads it yet.
+- **Scripted designer.** `examples/agents/shield_search.py` proposes layered
+  slabs, screens them, and sends the feasible candidates with the most screen
+  margin to transport. It reads reports and cannot construct a verdict.
+- **Two fidelities in one contract.** The screen's claim is `unquantified`
+  and can only satisfy the requirement whose basis the contract weakened to
+  nominal; the transport claim is a coverage interval and satisfies the
+  bounded one. The reference candidate passes the first and fails the
+  second, which is the loop's point.
+
+Not yet: coverage against a library requirement set, qualification
+envelopes, physical evidence as a capability, staged agent review, and any
+optimizer or constellation view over the log. The workbench does not yet
+expose free inputs or margins.

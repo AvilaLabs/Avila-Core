@@ -44,6 +44,9 @@ pub struct GeneratedClaims {
     pub executed_claims: usize,
     pub reused_claims: usize,
     pub recorded_claims: usize,
+    /// Committed claims that were not carried because a supplied input
+    /// reaches their step; they described a different candidate.
+    pub invalidated_claims: usize,
     pub decisions: usize,
 }
 
@@ -52,6 +55,7 @@ pub fn generate_claims(
     manifest: &CasePackageManifest,
     committed: &Value,
     executed: &[GeneratedClaim],
+    invalidated_steps: &BTreeSet<String>,
 ) -> Result<GeneratedClaims, Box<dyn Error>> {
     let artifact_by_evidence: BTreeMap<&str, &avila_core_evidence::PackageArtifact> = manifest
         .artifacts
@@ -109,6 +113,7 @@ pub fn generate_claims(
     let mut executed_count = 0;
     let mut reused_count = 0;
     let mut recorded_count = 0;
+    let mut invalidated_count = 0;
     for step in &compiled.workflow {
         if executed_steps.contains(step.step_id.as_str()) {
             for claim in executed
@@ -133,6 +138,10 @@ pub fn generate_claims(
             for claim in committed_claims.iter().filter(|claim| {
                 claim.get("step_id").and_then(Value::as_str) == Some(step.step_id.as_str())
             }) {
+                if invalidated_steps.contains(&step.step_id) {
+                    invalidated_count += 1;
+                    continue;
+                }
                 recorded_count += 1;
                 claims.push((*claim).clone());
             }
@@ -170,6 +179,7 @@ pub fn generate_claims(
         executed_claims: executed_count,
         reused_claims: reused_count,
         recorded_claims: recorded_count,
+        invalidated_claims: invalidated_count,
         decisions: value["decisions"].as_array().map_or(0, Vec::len),
         value,
         bytes,

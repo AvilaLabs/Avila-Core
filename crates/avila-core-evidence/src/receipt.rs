@@ -90,6 +90,17 @@ pub struct Invocation {
     pub working_directory: String,
     #[serde(default)]
     pub environment: BTreeMap<String, String>,
+    /// Keys the adapter requires the operator to value (for example the
+    /// path of a data-library index). The key names are invocation identity;
+    /// the values are not, because the content each one locates is bound as
+    /// a staged input whose digest the program checks, so a machine-specific
+    /// path does not change what was asked of the program.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub required_environment: Vec<String>,
+    /// The values the operator supplied for `required_environment` when the
+    /// step ran, recorded for provenance only.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub supplied_environment: BTreeMap<String, String>,
     pub timeout_ms: u64,
 }
 
@@ -182,6 +193,8 @@ pub fn invocation_identity(
         arguments: &'a [String],
         working_directory: &'a str,
         environment: &'a BTreeMap<String, String>,
+        #[serde(skip_serializing_if = "<[String]>::is_empty")]
+        required_environment: &'a [String],
         timeout_ms: u64,
     }
     #[derive(Serialize)]
@@ -201,6 +214,7 @@ pub fn invocation_identity(
             arguments: &invocation.arguments,
             working_directory: &invocation.working_directory,
             environment: &invocation.environment,
+            required_environment: &invocation.required_environment,
             timeout_ms: invocation.timeout_ms,
         },
     };
@@ -593,6 +607,8 @@ mod tests {
             arguments: vec!["--output".into(), "outputs/result.json".into()],
             working_directory: ".".into(),
             environment: BTreeMap::new(),
+            required_environment: Vec::new(),
+            supplied_environment: BTreeMap::new(),
             timeout_ms: 1_000,
         };
         let parameters = BTreeMap::new();

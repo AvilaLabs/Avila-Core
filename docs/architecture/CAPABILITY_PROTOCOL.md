@@ -115,7 +115,8 @@ The implemented slice of this lifecycle is deliberately narrow: a case package
 binds an exact executable by digest and declares which compiled step runs
 through which named adapter; the runner stages verified bytes at
 package-declared workspace paths, runs with a cleared environment and a
-timeout, collects only declared outputs, writes the receipt, and verifies it
+timeout (plus any locator keys the adapter requires, which are identity by
+name and provenance by value), collects only declared outputs, writes the receipt, and verifies it
 from bytes; the adapter extracts claims. Resolve, package verification beyond
 the digest, preflight, approval, and generic validators are not implemented.
 

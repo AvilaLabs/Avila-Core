@@ -1,0 +1,33 @@
+{
+  "schema": "avila.shielding/screen-result/v1",
+  "method": "plane-source removal-cross-section attenuation; no buildup; screening only",
+  "candidate_id": "reference-poly-90",
+  "layers": [
+    {
+      "material": "polyethylene",
+      "thickness_cm": "90"
+    }
+  ],
+  "unshielded_dose_rate": {
+    "value": "187200",
+    "unit": "uSv/h"
+  },
+  "attenuation_factor": "5.017468205617528e-05",
+  "dose_rate": {
+    "value": "9.392700480916012",
+    "unit": "uSv/h"
+  },
+  "mass": {
+    "value": "846",
+    "unit": "kg"
+  },
+  "thickness": {
+    "value": "90",
+    "unit": "cm"
+  },
+  "limitations": [
+    "Removal cross sections are approximate fission-spectrum values applied to a 14 MeV source; buildup and spectrum softening are ignored.",
+    "The dose coefficient is a single approximate value at the source energy.",
+    "This result cannot establish a bounded verdict; it guides a search."
+  ]
+}

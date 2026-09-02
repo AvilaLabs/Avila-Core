@@ -1,0 +1,48 @@
+{
+  "schema": "avila.shielding/transport-result/v1",
+  "candidate_id": "reference-poly-90",
+  "engine": {
+    "name": "openmc",
+    "version": "0.15.3",
+    "executable_sha256": "d939af8f885800c8727e687e628c2802138674e7f3b108371ef813a606939f51",
+    "python": "3.12.13"
+  },
+  "data_library": {
+    "index_sha256": "2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db",
+    "note": "identity of the index only; the nuclide files it names are not re-hashed"
+  },
+  "run": {
+    "particles": 1000000,
+    "batches": 10,
+    "seed": 1,
+    "threads": 8
+  },
+  "tally": {
+    "mean_pSv_cm_per_particle": "0.075317094",
+    "std_dev": "0.0024069316",
+    "significant_digits": 8,
+    "detector_volume_cm3": "10000.0"
+  },
+  "dose_rate": {
+    "nominal": {
+      "value": "27.11415384",
+      "unit": "uSv/h"
+    },
+    "lower": {
+      "value": "25.415854096873536",
+      "unit": "uSv/h"
+    },
+    "upper": {
+      "value": "28.812453583126464",
+      "unit": "uSv/h"
+    },
+    "coverage": "0.95",
+    "interpretation": "normal approximation of the tally statistics at the stated coverage; statistical error only"
+  },
+  "limitations": [
+    "The interval bounds Monte Carlo statistical error only; nuclear-data, geometry, and model uncertainty are not evaluated.",
+    "The slab is laterally infinite by reflection; a finite shield would leak around its edges.",
+    "Tally statistics are rounded to 8 significant digits so that the thread-dependent reduction order of the Monte Carlo sums does not change the output bytes; the discarded digits are far below the statistical uncertainty.",
+    "Not qualified for any regulatory, safety, or operational decision."
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "case-001.shield-search",
+  "revision": 1,
+  "status": "draft",
+  "question": "Does a candidate layered slab keep the ambient dose-equivalent rate behind it at or below 10 uSv/h for the synthetic 14.1 MeV plane source, within 1500 kg per square metre and 100 cm of thickness, as established by Monte Carlo transport rather than by the screening estimate?",
+  "assumptions": [
+    "The source is a synthetic isotropic plane source of 14.1 MeV neutrons at 1e9 neutrons per second over one square metre; no real generator, facility, or occupancy is represented.",
+    "The slab is laterally infinite by reflection; edge leakage, streaming paths, and secondary photons are not evaluated.",
+    "The screening estimate uses approximate removal cross sections without buildup and is evaluated on a nominal basis only; the transport interval bounds statistical error only.",
+    "Material compositions and densities are nominal literature values; no material is qualified.",
+    "This contract is a research-only design-search specimen and excludes every regulatory, safety, or operational purpose."
+  ],
+  "execution_policy": {
+    "permit_nominal_basis": true
+  },
+  "inputs": [
+    { "input_id": "candidate", "role": { "id": "shielding.candidate", "major": 1 }, "media_type": "application/vnd.avila.shield-candidate+json", "claim_model": { "model": "unquantified" } },
+    { "input_id": "materials", "role": { "id": "shielding.material-table", "major": 1 }, "media_type": "application/vnd.avila.shield-materials+json", "claim_model": { "model": "unquantified" } },
+    { "input_id": "source", "role": { "id": "shielding.source-spec", "major": 1 }, "media_type": "application/vnd.avila.shield-source+json", "claim_model": { "model": "unquantified" } },
+    { "input_id": "screen-script", "role": { "id": "shielding.screen-script", "major": 1 }, "media_type": "text/x-python", "claim_model": { "model": "unquantified" } },
+    { "input_id": "transport-script", "role": { "id": "shielding.transport-script", "major": 1 }, "media_type": "text/x-python", "claim_model": { "model": "unquantified" } },
+    { "input_id": "cross-section-index", "role": { "id": "nuclear.cross-section-index", "major": 1 }, "media_type": "application/xml", "claim_model": { "model": "unquantified" } }
+  ],
+  "workflow": [
+    {
+      "step_id": "screen",
+      "capability_type": { "id": "shielding.attenuation-screen", "major": 1 },
+      "bindings": [
+        { "input_slot": "script", "source": { "source": "contract_input", "input_id": "screen-script" } },
+        { "input_slot": "candidate", "source": { "source": "contract_input", "input_id": "candidate" } },
+        { "input_slot": "materials", "source": { "source": "contract_input", "input_id": "materials" } },
+        { "input_slot": "source", "source": { "source": "contract_input", "input_id": "source" } }
+      ]
+    },
+    {
+      "step_id": "transport",
+      "capability_type": { "id": "shielding.slab-transport", "major": 1 },
+      "bindings": [
+        { "input_slot": "script", "source": { "source": "contract_input", "input_id": "transport-script" } },
+        { "input_slot": "candidate", "source": { "source": "contract_input", "input_id": "candidate" } },
+        { "input_slot": "materials", "source": { "source": "contract_input", "input_id": "materials" } },
+        { "input_slot": "source", "source": { "source": "contract_input", "input_id": "source" } },
+        { "input_slot": "cross-section-index", "source": { "source": "contract_input", "input_id": "cross-section-index" } }
+      ],
+      "parameters": { "particles": 1000000, "batches": 10 },
+      "reproducibility": { "seed": "1" }
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "SHIELD-R1-screen",
+      "statement": "Screening estimate of the dose rate behind the slab is at or below 10 uSv/h (nominal basis; guides the search, establishes nothing).",
+      "purpose": { "id": "avila-labs.shielding.design-search", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "screen", "output_slot": "dose-rate" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "nuclear.ambient-dose-equivalent-rate", "value": "10", "unit": "uSv/h" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "SHIELD-R2-transport",
+      "statement": "Monte Carlo dose rate behind the slab is at or below 10 uSv/h within its statistical interval.",
+      "purpose": { "id": "avila-labs.shielding.design-search", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "transport", "output_slot": "dose-rate" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "nuclear.ambient-dose-equivalent-rate", "value": "10", "unit": "uSv/h" },
+      "basis": { "kind": "bounded" }
+    },
+    {
+      "requirement_id": "SHIELD-R3-mass",
+      "statement": "Areal mass of the slab is at or below 1500 kg per square metre.",
+      "purpose": { "id": "avila-labs.shielding.design-search", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "screen", "output_slot": "mass" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.mass", "value": "1500", "unit": "kg" },
+      "basis": { "kind": "bounded" }
+    },
+    {
+      "requirement_id": "SHIELD-R4-thickness",
+      "statement": "Total slab thickness is at or below 100 cm.",
+      "purpose": { "id": "avila-labs.shielding.design-search", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "screen", "output_slot": "thickness" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.length", "value": "100", "unit": "cm" },
+      "basis": { "kind": "bounded" }
+    }
+  ]
+}

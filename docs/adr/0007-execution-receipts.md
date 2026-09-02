@@ -110,6 +110,24 @@ extracts claims from the bytes that come back.
    executable must match, run to completion, and reproduce claims that bind,
    or the run is rejected.
 
+9. **Required environment is identity by name, provenance by value.** An
+   adapter may require the operator to value named environment keys that
+   locate content (a data-library index, for example). The receipt records
+   `required_environment` (names) inside the invocation identity and
+   `supplied_environment` (values) outside it, because the content a locator
+   points at is bound as a staged input whose digest the program checks. A
+   reuse or a `not_run` step needs no value; a rerun without one is refused.
+   Static adapter environment stays inside the identity.
+
+10. **A free input invalidates what it reaches.** A package may declare
+    inputs free. A supplied free input is hashed and attested; every step
+    it reaches has its committed claims withheld, reruns when its executable
+    is supplied, and binds its fresh outputs by receipt rather than by a
+    package-declared identity. Replay against committed expectations is
+    `not applicable`, not a mismatch. Byte stability of a seeded stochastic
+    step under its declared seed is the capability's obligation; Core binds
+    bytes and refuses when they differ.
+
 ## Boundary
 
 This is the first executable slice of SC-11 A1, A2, A4, and A5 and of
@@ -137,5 +155,9 @@ method into a qualified one.
   the ACTINV executables as hash-bound inputs; the interpreter is pinned by
   digest like any other executable, which is exact but machine-specific until
   reproducible builds or a package identity exist.
+- CASE-001 executes a screening script and OpenMC transport over a free
+  candidate input; its committed receipts carry the required
+  `OPENMC_CROSS_SECTIONS` key by name, and its transport capability rounds
+  tally statistics so a seed reproduces bytes across thread orderings.
 - The receipt schema, the case-package schema, this ADR, and the adversarial
   execution tests move together.

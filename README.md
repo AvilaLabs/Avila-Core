@@ -57,6 +57,13 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   evaluates the case, and replays its committed claims, receipts, and
   campaign report without collapsing an unchecked artifact or an unsupplied
   executable into a success state;
+- the first generative-loop case, `CASE-001`, a shielding configuration
+  search: a package may declare free inputs, `run --input` supplies a
+  candidate that invalidates every step it reaches, an unqualified screen
+  satisfies only the nominal-basis requirement while OpenMC transport
+  satisfies the bounded one, every verdict carries its exact margin, and
+  `--log` appends one line per run to a campaign log that a scripted
+  designer in `examples/agents/` drives through the two-fidelity loop;
 - a draft portable evidence model, case-package manifest, execution-receipt
   record, and SHA-256 utility;
 - JSON Schemas that the compiler embeds and enforces as its source layer, and
@@ -69,8 +76,8 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   original specimen compiler view. It computes nothing itself.
 
 The repository also contains proposed `v0.2` semantic rules and an initial
-conformance-vector corpus. The Rust kernel executes all 90 current pure vectors:
-12 canonical-value, 10 unit-scaling, 19 scope-predicate, 41 requirement-verdict,
+conformance-vector corpus. The Rust kernel executes all 91 current pure vectors:
+12 canonical-value, 10 unit-scaling, 19 scope-predicate, 42 requirement-verdict,
 and 8 aggregate-verdict cases. A separate compiler harness executes 68 current
 type fixtures across five pinned registry snapshots, and a campaign harness
 executes 12 claim-admission and verdict fixtures. The first R1–R10 static
@@ -143,6 +150,14 @@ cargo run -p avila-core-cli -- run \
   --capability python3=/usr/bin/python3 \
   --capability aftermatter-cli=../project-aftermatter/target/release/aftermatter
 
+cargo run -p avila-core-cli -- run \
+  examples/cases/case-001-shield-search \
+  --source-root case=examples/cases/case-001-shield-search \
+  --source-root shielding=examples/capabilities/shielding \
+  --source-root nuclear-data=/path/to/endfb-vii.1-hdf5 \
+  --capability python3=/usr/bin/python3 \
+  --input candidate=my-candidate.json --log campaign-log.jsonl
+
 cargo run -p avila-core-app -- \
   --case examples/cases/case-000-actinv-aftermatter \
   --source-root aftermatter=../project-aftermatter \
@@ -188,7 +203,11 @@ changed since the committed receipts, both steps are `REUSED` and nothing
 runs, executables or not; add `--no-reuse` to execute afresh, `--plan` to see
 what would rerun and why without running, and `--json` for the complete
 machine-readable run report. A supplied root or executable that does not
-match fails closed.
+match fails closed. For a case that declares free inputs, `--input NAME=PATH`
+supplies one: the steps it reaches rerun or are reported not run with their
+committed claims withheld, `--env KEY=VALUE` values a key an adapter requires
+only when that step actually runs, and `--log FILE` appends the run's
+supplied inputs, step states, verdicts, and margins as one JSON line.
 
 ## Repository map
 
@@ -212,7 +231,9 @@ docs/
   roadmap/                staged validation and 1.0 planning hypotheses
   adr/                    durable architectural decisions
 schemas/                  machine-readable interchange drafts
-examples/                 unqualified documents, including composed CASE-000
+examples/                 unqualified documents: composed CASE-000 and CASE-001,
+                          the shielding capability scripts, and the scripted
+                          designer that drives the search
 assets/branding/          provisional Avila Core mark
 fixtures/semantic-core/   proposed semantic-profile coverage, vectors, and campaigns
 ```

@@ -1,0 +1,173 @@
+{
+  "claims": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-screen+json",
+        "sha256": "sha256:5daaf5e27e369ec9bc14f7d0b8ed23739dc08bfce746adae72a9e77c1432f201"
+      },
+      "claim": {
+        "model": "unquantified",
+        "nominal": {
+          "unit": "uSv/h",
+          "value": "9.392700480916012"
+        }
+      },
+      "claim_id": "screen-dose-rate",
+      "output_slot": "dose-rate",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "screen"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-screen+json",
+        "sha256": "sha256:5daaf5e27e369ec9bc14f7d0b8ed23739dc08bfce746adae72a9e77c1432f201"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "kg",
+          "value": "846"
+        }
+      },
+      "claim_id": "screen-mass",
+      "output_slot": "mass",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "screen"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-screen+json",
+        "sha256": "sha256:5daaf5e27e369ec9bc14f7d0b8ed23739dc08bfce746adae72a9e77c1432f201"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "cm",
+          "value": "90"
+        }
+      },
+      "claim_id": "screen-thickness",
+      "output_slot": "thickness",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "screen"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-screen+json",
+        "sha256": "sha256:5daaf5e27e369ec9bc14f7d0b8ed23739dc08bfce746adae72a9e77c1432f201"
+      },
+      "claim": {
+        "model": "unquantified"
+      },
+      "claim_id": "screen-result",
+      "output_slot": "screen-result",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "screen"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-transport+json",
+        "sha256": "sha256:f0dd8060405a58bb4ce2f9526eba460286beccde644fc058b4abe6ec742dfab1"
+      },
+      "claim": {
+        "coverage": "0.95",
+        "lower": {
+          "unit": "uSv/h",
+          "value": "25.415854096873536"
+        },
+        "model": "coverage_interval",
+        "nominal": {
+          "unit": "uSv/h",
+          "value": "27.11415384"
+        },
+        "upper": {
+          "unit": "uSv/h",
+          "value": "28.812453583126464"
+        }
+      },
+      "claim_id": "transport-dose-rate",
+      "output_slot": "dose-rate",
+      "producer": {
+        "package_id": "org.python/cpython@3.12.13+openmc-0.15.3",
+        "sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
+      },
+      "step_id": "transport"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-transport+json",
+        "sha256": "sha256:f0dd8060405a58bb4ce2f9526eba460286beccde644fc058b4abe6ec742dfab1"
+      },
+      "claim": {
+        "model": "unquantified"
+      },
+      "claim_id": "transport-result",
+      "output_slot": "transport-result",
+      "producer": {
+        "package_id": "org.python/cpython@3.12.13+openmc-0.15.3",
+        "sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
+      },
+      "step_id": "transport"
+    }
+  ],
+  "compiled_snapshot_sha256": "sha256:90f2c4b79ce0c60671c502f63702461fbbd7835cb8d039e25753eb23a346121d",
+  "decisions": [],
+  "inputs": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-candidate+json",
+        "sha256": "sha256:0e3a08d60c664683d8c40421e9f5aa6754c2288409dbfe0a47b22347a6236eb1"
+      },
+      "input_id": "candidate"
+    },
+    {
+      "artifact": {
+        "media_type": "application/xml",
+        "sha256": "sha256:2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db"
+      },
+      "input_id": "cross-section-index"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-materials+json",
+        "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb"
+      },
+      "input_id": "materials"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:5fd0bd9415ec19e7f15d5bd167976d5852b6984efeea7443aa6323d13cd0253d"
+      },
+      "input_id": "screen-script"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-source+json",
+        "sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b"
+      },
+      "input_id": "source"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:acb2c376462ec9a00bf9472e8ff0b9f9b5b1a500cffcaf4034f7fc5141a14039"
+      },
+      "input_id": "transport-script"
+    }
+  ],
+  "schema_version": "avila.core/evidence-claims/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft"
+}

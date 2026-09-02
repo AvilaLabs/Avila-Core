@@ -1,0 +1,146 @@
+{
+  "schema_version": "avila.core/execution-receipt/v0.1-draft",
+  "case_id": "CASE-001",
+  "compiled_snapshot_sha256": "sha256:90f2c4b79ce0c60671c502f63702461fbbd7835cb8d039e25753eb23a346121d",
+  "step_id": "transport",
+  "capability_type": {
+    "id": "shielding.slab-transport",
+    "major": 1
+  },
+  "adapter": "avila-labs.shielding/slab-transport@1",
+  "capability": {
+    "capability_id": "openmc-python",
+    "package_id": "org.python/cpython@3.12.13+openmc-0.15.3",
+    "executable_sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
+  },
+  "parameters": {
+    "batches": {
+      "type": "integer",
+      "value": 10
+    },
+    "particles": {
+      "type": "integer",
+      "value": 1000000
+    }
+  },
+  "inputs": [
+    {
+      "input_slot": "candidate",
+      "evidence_id": "input:candidate",
+      "workspace_path": "inputs/candidate.json",
+      "media_type": "application/vnd.avila.shield-candidate+json",
+      "sha256": "sha256:0e3a08d60c664683d8c40421e9f5aa6754c2288409dbfe0a47b22347a6236eb1",
+      "bytes": 306
+    },
+    {
+      "input_slot": "cross-section-index",
+      "evidence_id": "input:cross-section-index",
+      "workspace_path": "inputs/cross_sections.xml",
+      "media_type": "application/xml",
+      "sha256": "sha256:2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db",
+      "bytes": 64669
+    },
+    {
+      "input_slot": "materials",
+      "evidence_id": "input:materials",
+      "workspace_path": "inputs/materials.json",
+      "media_type": "application/vnd.avila.shield-materials+json",
+      "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb",
+      "bytes": 1551
+    },
+    {
+      "input_slot": "script",
+      "evidence_id": "input:transport-script",
+      "workspace_path": "tools/transport.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:acb2c376462ec9a00bf9472e8ff0b9f9b5b1a500cffcaf4034f7fc5141a14039",
+      "bytes": 9808
+    },
+    {
+      "input_slot": "source",
+      "evidence_id": "input:source",
+      "workspace_path": "inputs/source.json",
+      "media_type": "application/vnd.avila.shield-source+json",
+      "sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+      "bytes": 753
+    }
+  ],
+  "invocation": {
+    "program": "python3.12",
+    "arguments": [
+      "tools/transport.py",
+      "--candidate",
+      "inputs/candidate.json",
+      "--materials",
+      "inputs/materials.json",
+      "--source",
+      "inputs/source.json",
+      "--cross-sections-index",
+      "inputs/cross_sections.xml",
+      "--particles",
+      "1000000",
+      "--batches",
+      "10",
+      "--seed",
+      "1",
+      "--output",
+      "outputs/transport-result.json"
+    ],
+    "working_directory": ".",
+    "environment": {
+      "HOME": ".",
+      "OMP_NUM_THREADS": "8"
+    },
+    "required_environment": [
+      "OPENMC_CROSS_SECTIONS"
+    ],
+    "supplied_environment": {
+      "OPENMC_CROSS_SECTIONS": "/home/connoravila/nuclear-data/endfb-vii.1-hdf5/cross_sections.xml"
+    },
+    "timeout_ms": 3600000
+  },
+  "invocation_sha256": "sha256:06ec7d8ab3ee1273760887ebff1aa941d82b92b4c249f3af79578009c649adfb",
+  "process": {
+    "started_at": "2026-09-02T18:56:54.174Z",
+    "finished_at": "2026-09-02T18:57:47.929Z",
+    "duration_ms": 53754,
+    "exit_status": 0,
+    "timed_out": false
+  },
+  "logs": [
+    {
+      "stream": "stdout",
+      "workspace_path": "logs/stdout.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "stream": "stderr",
+      "workspace_path": "logs/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "outputs": [
+    {
+      "output_id": "transport-result",
+      "workspace_path": "outputs/transport-result.json",
+      "media_type": "application/vnd.avila.shield-transport+json",
+      "state": "collected",
+      "sha256": "sha256:f0dd8060405a58bb4ce2f9526eba460286beccde644fc058b4abe6ec742dfab1",
+      "bytes": 1681
+    }
+  ],
+  "runner": {
+    "runner": "avila.core/cli-rust@0.1.0",
+    "os": "linux",
+    "arch": "x86_64"
+  },
+  "status": "completed",
+  "limitations": [
+    "Exit status and output digests are process evidence, not scientific success.",
+    "The executable digest identifies the bytes that ran; it does not qualify the method.",
+    "No sandbox, resource accounting, or signature was applied; the environment was cleared and the working directory confined to the workspace."
+  ],
+  "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, professional review, or regulatory suitability."
+}

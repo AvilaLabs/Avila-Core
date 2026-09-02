@@ -9,6 +9,7 @@ pub mod actinv_build;
 mod adversarial_tests;
 pub mod aftermatter;
 pub mod claims;
+pub mod shielding;
 
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -35,6 +36,14 @@ pub struct AdapterOutput {
     pub media_type: &'static str,
 }
 
+/// What a compiled step hands an adapter besides its inputs: the compiled
+/// parameters in tagged form and the bound seed, if the type is seeded.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct StepContext {
+    pub parameters: BTreeMap<String, Value>,
+    pub seed: Option<String>,
+}
+
 /// One claim an adapter extracted from a produced output.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExtractedClaim {
@@ -49,6 +58,8 @@ pub struct ExtractedClaim {
 pub enum Adapter {
     AftermatterEvaluate,
     ActinvBuild,
+    ShieldingScreen,
+    ShieldingTransport,
 }
 
 impl Adapter {
@@ -56,6 +67,8 @@ impl Adapter {
         match id {
             aftermatter::ADAPTER_ID => Some(Self::AftermatterEvaluate),
             actinv_build::ADAPTER_ID => Some(Self::ActinvBuild),
+            shielding::SCREEN_ADAPTER_ID => Some(Self::ShieldingScreen),
+            shielding::TRANSPORT_ADAPTER_ID => Some(Self::ShieldingTransport),
             _ => None,
         }
     }
@@ -64,6 +77,8 @@ impl Adapter {
         match self {
             Self::AftermatterEvaluate => aftermatter::ADAPTER_ID,
             Self::ActinvBuild => actinv_build::ADAPTER_ID,
+            Self::ShieldingScreen => shielding::SCREEN_ADAPTER_ID,
+            Self::ShieldingTransport => shielding::TRANSPORT_ADAPTER_ID,
         }
     }
 
@@ -77,6 +92,14 @@ impl Adapter {
                 id: actinv_build::CAPABILITY_TYPE_ID.into(),
                 major: actinv_build::CAPABILITY_TYPE_MAJOR,
             },
+            Self::ShieldingScreen => CapabilityTypeRef {
+                id: shielding::SCREEN_TYPE_ID.into(),
+                major: 1,
+            },
+            Self::ShieldingTransport => CapabilityTypeRef {
+                id: shielding::TRANSPORT_TYPE_ID.into(),
+                major: 1,
+            },
         }
     }
 
@@ -84,6 +107,8 @@ impl Adapter {
         match self {
             Self::AftermatterEvaluate => aftermatter::INPUT_SLOTS,
             Self::ActinvBuild => actinv_build::INPUT_SLOTS,
+            Self::ShieldingScreen => shielding::SCREEN_INPUT_SLOTS,
+            Self::ShieldingTransport => shielding::TRANSPORT_INPUT_SLOTS,
         }
     }
 
@@ -91,6 +116,8 @@ impl Adapter {
         match self {
             Self::AftermatterEvaluate => aftermatter::OUTPUTS,
             Self::ActinvBuild => actinv_build::OUTPUTS,
+            Self::ShieldingScreen => shielding::SCREEN_OUTPUTS,
+            Self::ShieldingTransport => shielding::TRANSPORT_OUTPUTS,
         }
     }
 
@@ -98,6 +125,8 @@ impl Adapter {
         match self {
             Self::AftermatterEvaluate => aftermatter::OUTPUT_SLOTS,
             Self::ActinvBuild => actinv_build::OUTPUT_SLOTS,
+            Self::ShieldingScreen => shielding::SCREEN_OUTPUT_SLOTS,
+            Self::ShieldingTransport => shielding::TRANSPORT_OUTPUT_SLOTS,
         }
     }
 
@@ -105,6 +134,17 @@ impl Adapter {
         match self {
             Self::AftermatterEvaluate => aftermatter::TIMEOUT,
             Self::ActinvBuild => actinv_build::TIMEOUT,
+            Self::ShieldingScreen => shielding::SCREEN_TIMEOUT,
+            Self::ShieldingTransport => shielding::TRANSPORT_TIMEOUT,
+        }
+    }
+
+    /// Environment keys the package must supply values for. They are named
+    /// by the adapter, valued by the operator, and recorded in the receipt.
+    pub const fn required_environment(self) -> &'static [&'static str] {
+        match self {
+            Self::AftermatterEvaluate | Self::ActinvBuild | Self::ShieldingScreen => &[],
+            Self::ShieldingTransport => shielding::TRANSPORT_ENVIRONMENT_KEYS,
         }
     }
 
@@ -112,27 +152,36 @@ impl Adapter {
     /// else; whatever an adapter needs is declared here and recorded.
     pub fn environment(self) -> BTreeMap<String, String> {
         match self {
-            Self::AftermatterEvaluate => BTreeMap::new(),
+            Self::AftermatterEvaluate | Self::ShieldingScreen => BTreeMap::new(),
             Self::ActinvBuild => actinv_build::environment(),
+            Self::ShieldingTransport => shielding::transport_environment(),
         }
     }
 
     /// The portable argument list: relative workspace paths only.
-    pub fn arguments(self, staged: &BTreeMap<String, String>) -> Result<Vec<String>, String> {
+    pub fn arguments(
+        self,
+        staged: &BTreeMap<String, String>,
+        context: &StepContext,
+    ) -> Result<Vec<String>, String> {
         match self {
             Self::AftermatterEvaluate => aftermatter::arguments(staged),
             Self::ActinvBuild => actinv_build::arguments(staged),
+            Self::ShieldingScreen => shielding::screen_arguments(staged, context),
+            Self::ShieldingTransport => shielding::transport_arguments(staged, context),
         }
     }
 
     pub fn extract_claims(
         self,
         outputs: &BTreeMap<String, Vec<u8>>,
-        parameters: &BTreeMap<String, Value>,
+        context: &StepContext,
     ) -> Result<Vec<ExtractedClaim>, String> {
         match self {
-            Self::AftermatterEvaluate => aftermatter::extract_claims(outputs, parameters),
-            Self::ActinvBuild => actinv_build::extract_claims(outputs, parameters),
+            Self::AftermatterEvaluate => aftermatter::extract_claims(outputs, &context.parameters),
+            Self::ActinvBuild => actinv_build::extract_claims(outputs, &context.parameters),
+            Self::ShieldingScreen => shielding::screen_claims(outputs, context),
+            Self::ShieldingTransport => shielding::transport_claims(outputs, context),
         }
     }
 }
@@ -157,7 +206,12 @@ pub struct ExecutionRequest {
     pub adapter: Adapter,
     pub capability: CapabilityIdentity,
     pub executable: PathBuf,
-    pub parameters: BTreeMap<String, Value>,
+    pub context: StepContext,
+    /// Keys the adapter or the package requires the operator to value.
+    pub required_environment: Vec<String>,
+    /// Operator-supplied values for those keys, merged over the adapter's
+    /// static environment when the program runs.
+    pub environment: BTreeMap<String, String>,
     pub inputs: Vec<StagedInput>,
 }
 
@@ -176,7 +230,9 @@ pub fn plan_invocation(
     adapter: Adapter,
     capability: &CapabilityIdentity,
     program: &str,
-    parameters: &BTreeMap<String, Value>,
+    context: &StepContext,
+    required_environment: &[String],
+    supplied_environment: &BTreeMap<String, String>,
     staged: &[StagedInput],
 ) -> Result<PlannedInvocation, Box<dyn Error>> {
     let mut inputs = Vec::with_capacity(staged.len());
@@ -193,14 +249,32 @@ pub fn plan_invocation(
             bytes,
         });
     }
+    // The plan needs the required key names, not their values: identity is
+    // the names, and a value is only needed when the program actually runs.
+    let environment = adapter.environment();
+    let mut supplied = BTreeMap::new();
+    for key in required_environment {
+        if environment.contains_key(key) {
+            return Err(format!(
+                "environment `{key}` is fixed by the adapter and cannot be supplied"
+            )
+            .into());
+        }
+        if let Some(value) = supplied_environment.get(key) {
+            supplied.insert(key.clone(), value.clone());
+        }
+    }
     let invocation = Invocation {
         program: program.into(),
-        arguments: adapter.arguments(&staged_paths)?,
+        arguments: adapter.arguments(&staged_paths, context)?,
         working_directory: ".".into(),
-        environment: adapter.environment(),
+        environment,
+        required_environment: required_environment.to_vec(),
+        supplied_environment: supplied,
         timeout_ms: u64::try_from(adapter.timeout().as_millis()).unwrap_or(u64::MAX),
     };
-    let invocation_sha256 = invocation_identity(capability, parameters, &inputs, &invocation)?;
+    let invocation_sha256 =
+        invocation_identity(capability, &context.parameters, &inputs, &invocation)?;
     Ok(PlannedInvocation {
         inputs,
         invocation,
@@ -238,7 +312,9 @@ pub fn execute_step(
         request.adapter,
         &request.capability,
         &program,
-        &request.parameters,
+        &request.context,
+        &request.required_environment,
+        &request.environment,
         &request.inputs,
     )?;
     fs::create_dir_all(step_dir)?;
@@ -271,7 +347,8 @@ pub fn execute_step(
     let invocation = plan.invocation;
     let invocation_sha256 = plan.invocation_sha256;
     let arguments = invocation.arguments.clone();
-    let environment = invocation.environment.clone();
+    let mut environment = invocation.environment.clone();
+    environment.extend(invocation.supplied_environment.clone());
     let timeout = request.adapter.timeout();
 
     // Execute with a cleared environment inside the workspace.
@@ -362,7 +439,7 @@ pub fn execute_step(
         capability_type: request.adapter.capability_type(),
         adapter: request.adapter.id().into(),
         capability: request.capability.clone(),
-        parameters: request.parameters.clone(),
+        parameters: request.context.parameters.clone(),
         inputs: receipt_inputs,
         invocation,
         invocation_sha256,

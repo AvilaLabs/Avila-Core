@@ -52,7 +52,7 @@ fn verdict_vectors_are_executable() {
     assert_eq!(set.semantic_profile, SEMANTIC_PROFILE);
     assert_eq!(
         set.vectors.len(),
-        41,
+        42,
         "update the corpus count intentionally"
     );
     assert_eq!(

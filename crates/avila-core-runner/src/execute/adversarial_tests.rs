@@ -14,6 +14,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use avila_core_evidence::{
     IntegrityCheckState, PackageIntegrityStatus, ReceiptCheckState, sha256_file,
 };
+use avila_core_kernel::VerdictStatus;
 use serde_json::{Value, json};
 
 use crate::case_run::{
@@ -351,6 +352,9 @@ fn run_options(synthetic: &Synthetic, workspace: PathBuf) -> CaseRunOptions {
         workspace: Some(workspace),
         reuse: false,
         plan_only: false,
+        inputs: BTreeMap::new(),
+        environment: BTreeMap::new(),
+        log: None,
     }
 }
 
@@ -1071,4 +1075,146 @@ fn a_two_step_chain_reruns_only_what_a_change_reaches() {
         report.execution.as_ref().unwrap().status,
         ExecutionStatus::Executed
     );
+}
+
+/// Declare one package input free, as CASE-001 does for its candidate.
+fn declare_free_input(synthetic: &Synthetic, input_id: &str) {
+    let mut package: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    package["free_inputs"] = json!([input_id]);
+    fs::write(
+        synthetic.case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+}
+
+#[test]
+fn a_supplied_free_input_reruns_what_it_reaches_and_binds_by_receipt() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    declare_free_input(&synthetic, "aftermatter-case");
+    let supplied = dir.0.join("other-case.json");
+    fs::write(&supplied, b"another candidate case\n").unwrap();
+    let log = dir.0.join("campaign-log.jsonl");
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options
+        .inputs
+        .insert("aftermatter-case".into(), supplied.clone());
+    options.log = Some(log.clone());
+
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let summary = human_summary(&report);
+    assert_eq!(report.status, CaseRunStatus::Evaluated, "{summary}");
+    assert!(!report.replay_applicable);
+    assert!(report.replay.is_none());
+    assert!(
+        report
+            .invalidated_steps
+            .contains(&"classification".to_string())
+    );
+    assert_eq!(report.supplied_inputs.len(), 1);
+    assert_eq!(report.supplied_inputs[0].input_id, "aftermatter-case");
+    assert_eq!(report.supplied_inputs[0].sha256, digest(&supplied));
+
+    // The step reached by the supplied input reran, and the receipt names
+    // the input change that forced it.
+    let executed = step(&report);
+    assert_eq!(executed.state, StepExecutionState::Executed, "{summary}");
+    assert!(executed.changes.iter().any(|change| {
+        change.class == ChangeClass::InputBytes && change.detail.contains("slot `case`")
+    }));
+    assert!(
+        executed
+            .outputs
+            .iter()
+            .all(|output| output.reproduces_bound_artifact.is_none())
+    );
+
+    // Its claims carry the receipt's identities, not the package's reference
+    // identities, and nothing committed for it was carried.
+    let claims = report.claims.as_ref().unwrap();
+    assert!(!claims.matches_committed);
+    assert_eq!(claims.reused_claims, 0);
+    assert!(claims.executed_claims > 0);
+    let bindings = report.bindings.as_ref().unwrap();
+    assert_eq!(bindings.status, BindingStatus::Verified, "{summary}");
+    assert_eq!(bindings.receipted_evidence_records, claims.executed_claims);
+    assert!(report.campaign.is_some());
+    assert!(
+        summary.contains("supplied: input `aftermatter-case`"),
+        "{summary}"
+    );
+    assert!(summary.contains("NOT APPLICABLE"), "{summary}");
+
+    // One campaign-log line records the run.
+    let lines: Vec<Value> = fs::read_to_string(&log)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(lines.len(), 1);
+    assert_eq!(lines[0]["status"], "evaluated");
+    assert_eq!(
+        lines[0]["supplied_inputs"][0]["input_id"],
+        "aftermatter-case"
+    );
+    assert_eq!(lines[0]["supplied_inputs"][0]["sha256"], digest(&supplied));
+}
+
+#[test]
+fn without_the_capability_a_supplied_free_input_withholds_the_committed_claims() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    declare_free_input(&synthetic, "aftermatter-case");
+    let supplied = dir.0.join("other-case.json");
+    fs::write(&supplied, b"another candidate case\n").unwrap();
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options.capabilities.clear();
+    options.inputs.insert("aftermatter-case".into(), supplied);
+
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let summary = human_summary(&report);
+    assert_eq!(step(&report).state, StepExecutionState::NotRun, "{summary}");
+    let claims = report.claims.as_ref().unwrap();
+    assert_eq!(
+        claims.executed_claims + claims.reused_claims,
+        0,
+        "{summary}"
+    );
+    assert!(claims.invalidated_claims > 0);
+    assert!(summary.contains("are not carried"), "{summary}");
+    let bindings = report.bindings.as_ref().unwrap();
+    assert_eq!(bindings.status, BindingStatus::Verified, "{summary}");
+    assert_eq!(
+        bindings.withheld_evidence_records,
+        claims.invalidated_claims
+    );
+    assert_eq!(report.status, CaseRunStatus::Evaluated, "{summary}");
+    // With no evidence for the reached step nothing is evaluated: the
+    // reference input's committed results cannot speak for another input.
+    let campaign = report.campaign.as_ref().unwrap();
+    assert!(!campaign.verdicts.is_empty());
+    assert!(
+        campaign
+            .verdicts
+            .iter()
+            .all(|verdict| verdict.verdict.status == VerdictStatus::NotEvaluated),
+        "{summary}"
+    );
+}
+
+#[test]
+fn an_input_the_package_does_not_declare_free_cannot_be_supplied() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let supplied = dir.0.join("other-case.json");
+    fs::write(&supplied, b"another candidate case\n").unwrap();
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options.inputs.insert("aftermatter-case".into(), supplied);
+    let error = execute_case(&synthetic.case_dir, &options)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("not a free input"), "{error}");
 }

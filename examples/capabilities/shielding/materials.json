@@ -1,0 +1,36 @@
+{
+  "schema": "avila.shielding/materials/v1",
+  "note": "Screening-only fast-neutron removal cross sections (approximate fission-spectrum literature values) and nominal densities and compositions for the transport model. None of these values is qualified; the screen is an unqualified guide and the transport step is the bounded method.",
+  "materials": {
+    "polyethylene": {
+      "density_g_cm3": "0.94",
+      "removal_cross_section_cm_inv": "0.110",
+      "composition": { "basis": "ao", "elements": { "C": "1", "H": "2" } }
+    },
+    "borated_polyethylene": {
+      "density_g_cm3": "1.00",
+      "removal_cross_section_cm_inv": "0.110",
+      "composition": { "basis": "wo", "elements": { "H": "0.1368", "C": "0.8132", "B": "0.05" } }
+    },
+    "water": {
+      "density_g_cm3": "1.00",
+      "removal_cross_section_cm_inv": "0.103",
+      "composition": { "basis": "ao", "elements": { "H": "2", "O": "1" } }
+    },
+    "concrete": {
+      "density_g_cm3": "2.30",
+      "removal_cross_section_cm_inv": "0.089",
+      "composition": { "basis": "wo", "elements": { "O": "0.529", "Si": "0.337", "Ca": "0.044", "Al": "0.034", "Fe": "0.014", "Na": "0.016", "K": "0.013", "H": "0.010", "C": "0.003" } }
+    },
+    "iron": {
+      "density_g_cm3": "7.87",
+      "removal_cross_section_cm_inv": "0.168",
+      "composition": { "basis": "ao", "elements": { "Fe": "1" } }
+    },
+    "lead": {
+      "density_g_cm3": "11.35",
+      "removal_cross_section_cm_inv": "0.118",
+      "composition": { "basis": "ao", "elements": { "Pb": "1" } }
+    }
+  }
+}

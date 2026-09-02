@@ -98,7 +98,7 @@ exact within-kind unit scaling. It also evaluates the current bounded predicate
 language with strong Kleene `true`/`false`/`unknown` semantics over explicit
 contexts and source requirements, then derives four-state requirement verdicts
 from admitted exact, interval, coverage-interval, worst-case, and nominal claim
-specimens. Its conformance tests execute all 90 current vectors across the four
+specimens. Its conformance tests execute all 91 current vectors across the four
 pure vector sets. It does not yet compile whole contracts, admit evidence,
 invalidate dependencies, or verify packages.
 

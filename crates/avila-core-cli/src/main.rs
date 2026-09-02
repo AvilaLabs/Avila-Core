@@ -90,6 +90,16 @@ enum Command {
         /// Report what would be reused or rerun, and why, without executing.
         #[arg(long)]
         plan: bool,
+        /// Supply a free contract input for this run as NAME=PATH. The bytes
+        /// are hashed and attested; committed expectations are not replayed.
+        #[arg(long = "input", value_name = "NAME=PATH")]
+        inputs: Vec<String>,
+        /// Supply a value for an environment key an execution declares.
+        #[arg(long = "env", value_name = "KEY=VALUE")]
+        environment: Vec<String>,
+        /// Append one JSON line describing this run to FILE.
+        #[arg(long, value_name = "FILE")]
+        log: Option<PathBuf>,
         /// Emit the complete machine-readable run report instead of the concise view.
         #[arg(long)]
         json: bool,
@@ -188,6 +198,9 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             workspace,
             no_reuse,
             plan,
+            inputs,
+            environment,
+            log,
             json,
         } => {
             let options = avila_core_runner::CaseRunOptions {
@@ -196,6 +209,9 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 workspace,
                 reuse: !no_reuse,
                 plan_only: plan,
+                inputs: avila_core_runner::parse_inputs(&inputs)?,
+                environment: avila_core_runner::parse_environment(&environment)?,
+                log,
             };
             let report = avila_core_runner::execute_case(&case, &options)?;
             if json {
@@ -382,7 +398,7 @@ mod tests {
         let report = semantic_profile_report().unwrap();
         assert_eq!(report.semantic_profile, SEMANTIC_PROFILE);
         assert_eq!(report.status, "draft");
-        assert_eq!(report.total_vectors, 90);
+        assert_eq!(report.total_vectors, 91);
         assert_eq!(report.implemented_vector_sets.len(), 4);
         assert_eq!(report.total_compiler_fixtures, 68);
         assert_eq!(report.implemented_compiler_fixture_sets.len(), 5);

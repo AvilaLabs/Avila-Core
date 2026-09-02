@@ -13,11 +13,13 @@ use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use avila_core_compiler::Comparison;
 use avila_core_compiler::{
     AdmissionState, CampaignReport, CampaignStatus, ClaimsDocument, CompilationStatus,
     CompileReport, CompiledContract, CompiledStep, SourceRef, compile_documents, evaluate_campaign,
     render_campaign_report, render_compile_report,
 };
+use avila_core_evidence::PackageArtifact;
 use avila_core_evidence::{
     ArtifactCheck, CapabilityIdentity, CasePackageManifest, ExecutionReceipt, ExpectedInput,
     IntegrityCheckState, OutputState, PackageExecution, PackageIntegrityReport,
@@ -25,14 +27,16 @@ use avila_core_evidence::{
     ReceiptOutput, ReceiptStatus, VerifiedCasePackage, parse_receipt, sha256_file,
     verify_case_package, verify_receipt,
 };
-use avila_core_kernel::VerdictStatus;
+use avila_core_kernel::{ExactNumber, VerdictStatus};
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::execute::claims::{GeneratedClaim, canonical_identity, generate_claims};
+use crate::execute::claims::{
+    GeneratedClaim, canonical_decimal, canonical_identity, generate_claims,
+};
 use crate::execute::{
-    Adapter, ExecutionRequest, ExtractedClaim, PlannedInvocation, StagedInput, execute_step,
-    plan_invocation, rfc3339_now,
+    Adapter, ExecutionRequest, ExtractedClaim, PlannedInvocation, StagedInput, StepContext,
+    execute_step, plan_invocation, rfc3339_now,
 };
 
 const CASE_RUN_REPORT_SCHEMA_VERSION: &str = "avila.core/case-run-report/v0.2-draft";
@@ -51,6 +55,14 @@ pub struct CaseRunOptions {
     pub reuse: bool,
     /// Report what would be reused or rerun, and why, without executing.
     pub plan_only: bool,
+    /// Free contract inputs supplied for this run, by input id. Each is
+    /// hashed and attested for this run; the committed expectations then
+    /// describe a different candidate and are not replayed.
+    pub inputs: BTreeMap<String, PathBuf>,
+    /// Values for the environment keys the executions declare.
+    pub environment: BTreeMap<String, String>,
+    /// Append one JSON line describing this run to this file.
+    pub log: Option<PathBuf>,
 }
 
 impl Default for CaseRunOptions {
@@ -61,8 +73,47 @@ impl Default for CaseRunOptions {
             workspace: None,
             reuse: true,
             plan_only: false,
+            inputs: BTreeMap::new(),
+            environment: BTreeMap::new(),
+            log: None,
         }
     }
+}
+
+/// A free input supplied for this run.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SuppliedInput {
+    pub input_id: String,
+    pub evidence_id: String,
+    pub path: String,
+    pub sha256: String,
+}
+
+/// One requirement's outcome with the numbers that decided it and the
+/// distance to its limit, for search and for people. Read from the kernel's
+/// verdict output; nothing here is re-derived.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct VerdictMargin {
+    pub requirement_id: String,
+    pub status: VerdictStatus,
+    pub rule: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lower: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub upper: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nominal: Option<String>,
+    /// Limit minus the decisive bound for an upper limit, decisive bound
+    /// minus limit for a lower limit: positive means inside, negative means
+    /// outside. Absent when no number decided the verdict.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub margin: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -87,10 +138,23 @@ pub struct BindingReport {
     pub status: BindingStatus,
     pub evidence_records: usize,
     pub bound_evidence_records: usize,
+    /// Records produced this run for steps a supplied input reaches: their
+    /// identity is the receipt's, not a package-declared one.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub receipted_evidence_records: usize,
+    /// Package-bound records of steps a supplied input reaches that did not
+    /// run: absent by design, because the reference input's results cannot
+    /// speak for another input.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub withheld_evidence_records: usize,
     pub required_review_policies: usize,
     pub bound_review_policies: usize,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub issues: Vec<String>,
+}
+
+fn is_zero(value: &usize) -> bool {
+    *value == 0
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -284,6 +348,8 @@ pub struct ClaimsReport {
     pub executed_claims: usize,
     pub reused_claims: usize,
     pub recorded_claims: usize,
+    /// Committed claims not carried because a supplied input reaches their step.
+    pub invalidated_claims: usize,
     pub decisions: usize,
 }
 
@@ -309,6 +375,18 @@ pub struct CaseRunReport {
     pub bindings: Option<BindingReport>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub campaign: Option<CampaignReport>,
+    /// One entry per requirement verdict with its numbers and margin.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub margins: Vec<VerdictMargin>,
+    /// Free inputs supplied for this run.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supplied_inputs: Vec<SuppliedInput>,
+    /// Steps a supplied input reaches; their committed claims and receipts
+    /// describe a different candidate and are neither carried nor replayed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub invalidated_steps: Vec<String>,
+    /// Whether the committed expectations apply to this run at all.
+    pub replay_applicable: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub replay: Option<ReplayReport>,
     pub notice: String,
@@ -359,6 +437,30 @@ pub fn parse_capabilities(values: &[String]) -> Result<BTreeMap<String, PathBuf>
     )
 }
 
+pub fn parse_inputs(values: &[String]) -> Result<BTreeMap<String, PathBuf>, Box<dyn Error>> {
+    parse_named_paths(values, "input", "candidate=candidates/c-0001.json")
+}
+
+/// Parse repeated `KEY=VALUE` environment arguments.
+pub fn parse_environment(values: &[String]) -> Result<BTreeMap<String, String>, Box<dyn Error>> {
+    let mut environment = BTreeMap::new();
+    for value in values {
+        let Some((key, value)) = value.split_once('=') else {
+            return Err(format!("environment `{value}` must have the form KEY=VALUE").into());
+        };
+        if key.is_empty() {
+            return Err("environment key must not be empty".into());
+        }
+        if environment
+            .insert(key.to_string(), value.to_string())
+            .is_some()
+        {
+            return Err(format!("environment `{key}` was supplied more than once").into());
+        }
+    }
+    Ok(environment)
+}
+
 pub fn execute_case(
     case_or_manifest: &Path,
     options: &CaseRunOptions,
@@ -373,7 +475,9 @@ pub fn execute_case(
         .parent()
         .filter(|path| !path.as_os_str().is_empty())
         .unwrap_or_else(|| Path::new("."));
-    let package = verify_case_package(&manifest_bytes, package_root, &options.source_roots)?;
+    let mut package = verify_case_package(&manifest_bytes, package_root, &options.source_roots)?;
+    let supplied_inputs = supply_free_inputs(&mut package, options)?;
+    let replay_applicable = supplied_inputs.is_empty();
 
     let mut report = CaseRunReport {
         schema_version: CASE_RUN_REPORT_SCHEMA_VERSION.into(),
@@ -387,6 +491,10 @@ pub fn execute_case(
         claims: None,
         bindings: None,
         campaign: None,
+        margins: Vec::new(),
+        supplied_inputs: supplied_inputs.clone(),
+        invalidated_steps: Vec::new(),
+        replay_applicable,
         replay: None,
         notice: CASE_RUN_NOTICE.into(),
     };
@@ -415,13 +523,22 @@ pub fn execute_case(
         .compiled
         .as_ref()
         .ok_or("compiler reported `compiled` without a compiled snapshot")?;
+    let invalidated_steps = steps_reached_by_inputs(compiled, &supplied_inputs);
+    report.invalidated_steps = invalidated_steps.iter().cloned().collect();
 
     // Execute the steps the package declares. A refused or failed execution
     // stops the workflow: no claim is generated over an unverified run.
     let mut executed_claims = Vec::new();
     let mut workspace = None;
     if !package.manifest.executions.is_empty() {
-        let mut runner = Runner::new(&package, compiled, options, &committed_claims);
+        let mut runner = Runner::new(
+            &package,
+            compiled,
+            options,
+            &committed_claims,
+            &supplied_inputs,
+            replay_applicable,
+        );
         let execution = runner.run_all()?;
         executed_claims = runner.claims;
         workspace = runner.workspace;
@@ -455,6 +572,7 @@ pub fn execute_case(
         &package.manifest,
         &committed_claims,
         &executed_claims,
+        &invalidated_steps,
     )?;
     let committed_sha256 = canonical_identity(committed_claims_bytes)?;
     let claims_match = generated.canonical_sha256 == committed_sha256;
@@ -466,6 +584,7 @@ pub fn execute_case(
         executed_claims: generated.executed_claims,
         reused_claims: generated.reused_claims,
         recorded_claims: generated.recorded_claims,
+        invalidated_claims: generated.invalidated_claims,
         decisions: generated.decisions,
     });
     if let Some(workspace) = workspace.as_deref() {
@@ -473,7 +592,7 @@ pub fn execute_case(
     }
 
     let claims: ClaimsDocument = serde_json::from_slice(&generated.bytes)?;
-    let bindings = verify_bindings(&package.manifest, &claims, compiled);
+    let bindings = verify_bindings(&package.manifest, &claims, compiled, &invalidated_steps);
     let bindings_failed = bindings.status == BindingStatus::Failed;
     report.bindings = Some(bindings);
     if bindings_failed {
@@ -483,6 +602,7 @@ pub fn execute_case(
 
     let campaign = evaluate_campaign(contract, registry, &generated.bytes)?;
     let campaign_rejected = campaign.status == CampaignStatus::Rejected;
+    report.margins = margins(compiled, &campaign);
     if !campaign.findings.is_empty() {
         report.rendered_findings = Some(render_campaign_report(
             &campaign,
@@ -493,7 +613,11 @@ pub fn execute_case(
             ],
         ));
     }
-    report.replay = replay_expected(&package, &campaign)?;
+    report.replay = if replay_applicable {
+        replay_expected(&package, &campaign)?
+    } else {
+        None
+    };
     let replay_failed = report.replay.as_ref().is_some_and(|replay| !replay.matches);
     if let Some(workspace) = workspace.as_deref()
         && let Ok(mut bytes) = serde_json::to_vec_pretty(&campaign)
@@ -508,11 +632,253 @@ pub fn execute_case(
             .iter()
             .any(|step| step.replay.as_ref().is_some_and(|replay| !replay.matches))
     });
-    if !campaign_rejected && !replay_failed && claims_match && !receipts_drifted {
+    let expectations_hold =
+        !replay_applicable || (!replay_failed && claims_match && !receipts_drifted);
+    if !campaign_rejected && expectations_hold {
         report.status = CaseRunStatus::Evaluated;
     }
     write_run_report(workspace.as_deref(), &report);
+    append_log(options, &report);
     Ok(report)
+}
+
+/// Hash each supplied free input and let it stand for its contract input in
+/// this run: the manifest's artifact and the integrity check for that
+/// evidence record are replaced by the supplied bytes' identity.
+fn supply_free_inputs(
+    package: &mut VerifiedCasePackage,
+    options: &CaseRunOptions,
+) -> Result<Vec<SuppliedInput>, Box<dyn Error>> {
+    let mut supplied = Vec::new();
+    for (input_id, path) in &options.inputs {
+        if !package.manifest.free_inputs.contains(input_id) {
+            return Err(format!(
+                "input `{input_id}` is not a free input of this package; free inputs: [{}]",
+                package.manifest.free_inputs.join(", ")
+            )
+            .into());
+        }
+        let canonical = fs::canonicalize(path)
+            .map_err(|error| format!("input `{input_id}` at `{}`: {error}", path.display()))?;
+        let (sha256, _) = sha256_file(&canonical)?;
+        let evidence_id = format!("input:{input_id}");
+        let display = canonical.display().to_string();
+        match package
+            .manifest
+            .artifacts
+            .iter_mut()
+            .find(|artifact| artifact.evidence_ids.contains(&evidence_id))
+        {
+            Some(artifact) if artifact.evidence_ids.len() > 1 => {
+                return Err(format!(
+                    "input `{input_id}` is bound by artifact `{}` together with other evidence; it cannot be supplied separately",
+                    artifact.artifact_id
+                )
+                .into());
+            }
+            Some(artifact) => {
+                artifact.source_root = "supplied".into();
+                artifact.path = display.clone();
+                artifact.sha256 = sha256.clone();
+            }
+            None => package.manifest.artifacts.push(PackageArtifact {
+                artifact_id: evidence_id.clone(),
+                evidence_ids: vec![evidence_id.clone()],
+                source_root: "supplied".into(),
+                path: display.clone(),
+                sha256: sha256.clone(),
+            }),
+        }
+        match package
+            .integrity
+            .artifacts
+            .iter_mut()
+            .find(|check| check.evidence_ids.contains(&evidence_id))
+        {
+            Some(check) => {
+                check.source_root = "supplied".into();
+                check.path = display.clone();
+                check.expected_sha256 = sha256.clone();
+                check.actual_sha256 = Some(sha256.clone());
+                check.state = IntegrityCheckState::Verified;
+            }
+            None => package.integrity.artifacts.push(ArtifactCheck {
+                artifact_id: evidence_id.clone(),
+                evidence_ids: vec![evidence_id.clone()],
+                source_root: "supplied".into(),
+                path: display.clone(),
+                expected_sha256: sha256.clone(),
+                actual_sha256: Some(sha256.clone()),
+                state: IntegrityCheckState::Verified,
+            }),
+        }
+        supplied.push(SuppliedInput {
+            input_id: input_id.clone(),
+            evidence_id,
+            path: display,
+            sha256,
+        });
+    }
+    Ok(supplied)
+}
+
+/// Every step a supplied input reaches through the compiled bindings, so
+/// their committed claims are not carried and their receipts not replayed.
+fn steps_reached_by_inputs(
+    compiled: &CompiledContract,
+    supplied: &[SuppliedInput],
+) -> BTreeSet<String> {
+    let inputs: BTreeSet<&str> = supplied
+        .iter()
+        .map(|input| input.input_id.as_str())
+        .collect();
+    let mut reached = BTreeSet::new();
+    for step in &compiled.workflow {
+        let hit = step.bindings.iter().any(|binding| match &binding.source {
+            SourceRef::ContractInput { input_id } => inputs.contains(input_id.as_str()),
+            SourceRef::StepOutput { step_id, .. } => reached.contains(step_id),
+        });
+        if hit {
+            reached.insert(step.step_id.clone());
+        }
+    }
+    reached
+}
+
+/// The numbers behind each verdict and the distance to the limit.
+fn margins(compiled: &CompiledContract, campaign: &CampaignReport) -> Vec<VerdictMargin> {
+    campaign
+        .verdicts
+        .iter()
+        .map(|verdict| {
+            let comparison = compiled
+                .requirements
+                .iter()
+                .find(|requirement| requirement.requirement_id == verdict.requirement_id)
+                .map(|requirement| requirement.comparison);
+            let output = &verdict.verdict;
+            let decisive_upper = output
+                .upper_canonical
+                .as_deref()
+                .or(match output.basis_visible {
+                    Some(avila_core_kernel::BasisKind::Nominal) => {
+                        output.nominal_canonical.as_deref()
+                    }
+                    _ => None,
+                });
+            let decisive_lower = output
+                .lower_canonical
+                .as_deref()
+                .or(match output.basis_visible {
+                    Some(avila_core_kernel::BasisKind::Nominal) => {
+                        output.nominal_canonical.as_deref()
+                    }
+                    _ => None,
+                });
+            let margin = match (comparison, output.limit_canonical.as_deref()) {
+                (Some(Comparison::LessThan | Comparison::LessThanOrEqual), Some(limit)) => {
+                    decisive_upper.and_then(|upper| exact_difference(limit, upper))
+                }
+                (Some(Comparison::GreaterThan | Comparison::GreaterThanOrEqual), Some(limit)) => {
+                    decisive_lower.and_then(|lower| exact_difference(lower, limit))
+                }
+                _ => None,
+            };
+            VerdictMargin {
+                requirement_id: verdict.requirement_id.clone(),
+                status: output.status,
+                rule: output.rule.clone(),
+                unit: output.canonical_unit.clone(),
+                limit: output.limit_canonical.clone(),
+                lower: output.lower_canonical.clone(),
+                upper: output.upper_canonical.clone(),
+                nominal: output.nominal_canonical.clone(),
+                margin,
+            }
+        })
+        .collect()
+}
+
+/// Renders an exact canonical value for people: the terminating decimal when
+/// it is short, otherwise a value rounded to four decimal places and marked
+/// approximate. The report keeps the exact value; only the summary rounds.
+pub fn display_number(text: &str) -> String {
+    let Ok(value) = ExactNumber::from_canonical(text) else {
+        return text.to_string();
+    };
+    if let Ok(decimal) = canonical_decimal(&value)
+        && decimal.len() <= 12
+    {
+        return decimal;
+    }
+    let Ok(scaled) = value
+        .checked_mul_integer(10_000)
+        .and_then(|scaled| scaled.round_half_even_integer())
+    else {
+        return text.to_string();
+    };
+    let sign = if scaled < 0 { "-" } else { "" };
+    let magnitude = scaled.unsigned_abs();
+    format!("~{sign}{}.{:04}", magnitude / 10_000, magnitude % 10_000)
+}
+
+fn exact_difference(left: &str, right: &str) -> Option<String> {
+    let left = ExactNumber::from_canonical(left).ok()?;
+    let right = ExactNumber::from_canonical(right).ok()?;
+    let difference = left.checked_sub(&right).ok()?;
+    Some(canonical_decimal(&difference).unwrap_or_else(|_| difference.canonical_rational()))
+}
+
+/// Append one line describing this run to the campaign log.
+fn append_log(options: &CaseRunOptions, report: &CaseRunReport) {
+    let Some(path) = &options.log else {
+        return;
+    };
+    #[derive(Serialize)]
+    struct LogEntry<'a> {
+        recorded_at: String,
+        case_id: &'a str,
+        status: CaseRunStatus,
+        supplied_inputs: &'a [SuppliedInput],
+        steps: Vec<(String, StepExecutionState)>,
+        verdicts: &'a [VerdictMargin],
+        #[serde(skip_serializing_if = "Option::is_none")]
+        campaign_sha256: Option<&'a str>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        workspace: Option<&'a str>,
+    }
+    let entry = LogEntry {
+        recorded_at: rfc3339_now(),
+        case_id: &report.case_id,
+        status: report.status,
+        supplied_inputs: &report.supplied_inputs,
+        steps: report
+            .execution
+            .as_ref()
+            .map(|execution| {
+                execution
+                    .steps
+                    .iter()
+                    .map(|step| (step.step_id.clone(), step.state))
+                    .collect()
+            })
+            .unwrap_or_default(),
+        verdicts: &report.margins,
+        campaign_sha256: report
+            .campaign
+            .as_ref()
+            .and_then(|campaign| campaign.campaign_sha256.as_deref()),
+        workspace: report
+            .execution
+            .as_ref()
+            .and_then(|execution| execution.workspace.as_deref()),
+    };
+    if let Ok(mut line) = serde_json::to_string(&entry)
+        && let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path)
+    {
+        line.push('\n');
+        let _ = std::io::Write::write_all(&mut file, line.as_bytes());
+    }
 }
 
 fn write_run_report(workspace: Option<&Path>, report: &CaseRunReport) {
@@ -564,6 +930,10 @@ struct Runner<'a> {
     fresh_outputs: BTreeMap<(String, String), FreshOutput>,
     workspace: Option<PathBuf>,
     claims: Vec<GeneratedClaim>,
+    /// Supplied free inputs by evidence id, resolved to their files.
+    supplied: BTreeMap<String, PathBuf>,
+    /// Whether committed receipts describe this run's candidate.
+    replay_applicable: bool,
 }
 
 impl<'a> Runner<'a> {
@@ -572,6 +942,8 @@ impl<'a> Runner<'a> {
         compiled: &'a CompiledContract,
         options: &'a CaseRunOptions,
         committed_claims: &'a Value,
+        supplied_inputs: &[SuppliedInput],
+        replay_applicable: bool,
     ) -> Self {
         let artifact_checks = package
             .integrity
@@ -603,6 +975,11 @@ impl<'a> Runner<'a> {
             fresh_outputs: BTreeMap::new(),
             workspace: None,
             claims: Vec::new(),
+            supplied: supplied_inputs
+                .iter()
+                .map(|input| (input.evidence_id.clone(), PathBuf::from(&input.path)))
+                .collect(),
+            replay_applicable,
         }
     }
 
@@ -878,6 +1255,28 @@ impl<'a> Runner<'a> {
             return Ok(report);
         }
 
+        // The environment keys the adapter or the package declares are part
+        // of the planned invocation by name. Their values are needed only if
+        // the step actually runs, so a reuse or a not-run step needs none.
+        let required_keys: BTreeSet<&str> = adapter
+            .required_environment()
+            .iter()
+            .copied()
+            .chain(execution.environment.iter().map(String::as_str))
+            .collect();
+        let required_environment: Vec<String> =
+            required_keys.iter().map(|key| (*key).to_string()).collect();
+        let mut supplied_environment = BTreeMap::new();
+        let mut missing_environment = Vec::new();
+        for key in required_keys {
+            match self.options.environment.get(key) {
+                Some(value) => {
+                    supplied_environment.insert(key.to_string(), value.clone());
+                }
+                None => missing_environment.push(key.to_string()),
+            }
+        }
+
         // Plan the invocation from the bound inputs, the parameters, and the
         // package's capability identity; the executable is not needed yet.
         let parameters: BTreeMap<String, Value> = step
@@ -885,13 +1284,33 @@ impl<'a> Runner<'a> {
             .iter()
             .map(|(id, value)| serde_json::to_value(value).map(|value| (id.clone(), value)))
             .collect::<Result<_, _>>()?;
+        let context = StepContext {
+            parameters: parameters.clone(),
+            seed: step.reproducibility.seed.clone(),
+        };
         let executable = executable.map(|path| fs::canonicalize(&path).unwrap_or(path));
         let program = executable
             .as_ref()
             .and_then(|path| path.file_name())
             .map(|name| name.to_string_lossy().into_owned())
             .unwrap_or_else(|| declared.capability_id.clone());
-        let plan = plan_invocation(adapter, &identity, &program, &parameters, &staged)?;
+        let plan = match plan_invocation(
+            adapter,
+            &identity,
+            &program,
+            &context,
+            &required_environment,
+            &supplied_environment,
+            &staged,
+        ) {
+            Ok(plan) => plan,
+            Err(error) => {
+                report
+                    .issues
+                    .push(format!("the invocation could not be planned: {error}"));
+                return Ok(report);
+            }
+        };
         report.planned_invocation_sha256 = Some(plan.invocation_sha256.clone());
 
         // Compare with the committed receipt: what changed, by class.
@@ -916,7 +1335,7 @@ impl<'a> Runner<'a> {
                     for (output, path) in &outputs {
                         output_bytes.insert(output.output_id.clone(), fs::read(path)?);
                     }
-                    let extracted = match adapter.extract_claims(&output_bytes, &parameters) {
+                    let extracted = match adapter.extract_claims(&output_bytes, &context) {
                         Ok(extracted) => extracted,
                         Err(issue) => {
                             report
@@ -988,6 +1407,16 @@ impl<'a> Runner<'a> {
             return Ok(report);
         };
 
+        // Running needs a value for every required key.
+        if !missing_environment.is_empty() {
+            for key in &missing_environment {
+                report.issues.push(format!(
+                    "environment `{key}` is required to execute this step and was not supplied; pass --env {key}=VALUE"
+                ));
+            }
+            return Ok(report);
+        }
+
         // The executable must be exactly the bytes the package binds.
         let capability_check = match sha256_file(&executable) {
             Ok((actual, _)) => {
@@ -1040,7 +1469,9 @@ impl<'a> Runner<'a> {
             adapter,
             capability: identity.clone(),
             executable: executable.clone(),
-            parameters: parameters.clone(),
+            context: context.clone(),
+            required_environment: required_environment.clone(),
+            environment: supplied_environment.clone(),
             inputs: staged.clone(),
         };
         let outcome = match execute_step(&step_dir, &request) {
@@ -1115,7 +1546,7 @@ impl<'a> Runner<'a> {
                     );
                 }
             }
-            match adapter.extract_claims(&output_bytes, &parameters) {
+            match adapter.extract_claims(&output_bytes, &context) {
                 Ok(claims) => extracted = claims,
                 Err(issue) => report.issues.push(format!("claim extraction: {issue}")),
             }
@@ -1143,7 +1574,9 @@ impl<'a> Runner<'a> {
                 .map(|check| check.expected_sha256.as_str())
                 .collect();
             let reproduces_bound_artifact = match (&output.sha256, bound_identities.len()) {
-                (Some(sha256), 1) => Some(bound_identities.contains(sha256.as_str())),
+                (Some(sha256), 1) if self.replay_applicable => {
+                    Some(bound_identities.contains(sha256.as_str()))
+                }
                 _ => None,
             };
             report.outputs.push(OutputReport {
@@ -1293,11 +1726,18 @@ impl<'a> Runner<'a> {
                     output.output_id
                 ));
             };
-            let path = self
-                .canonical_roots
-                .get(&check.source_root)
-                .map(|root| root.join(&check.path))
-                .ok_or_else(|| format!("root `{}` is not resolved", check.source_root))?;
+            let path = if check.source_root == "supplied" {
+                self.supplied
+                    .iter()
+                    .find(|(evidence_id, _)| check.evidence_ids.contains(evidence_id))
+                    .map(|(_, path)| path.clone())
+                    .ok_or_else(|| "a supplied artifact has no path".to_string())?
+            } else {
+                self.canonical_roots
+                    .get(&check.source_root)
+                    .map(|root| root.join(&check.path))
+                    .ok_or_else(|| format!("root `{}` is not resolved", check.source_root))?
+            };
             outputs.push((output.clone(), path));
         }
         Ok(outputs)
@@ -1327,6 +1767,9 @@ impl<'a> Runner<'a> {
             .into());
         }
         fs::create_dir_all(&workspace)?;
+        // Absolute, so confinement checks agree with the paths staged under it
+        // when the operator names a relative workspace.
+        let workspace = fs::canonicalize(&workspace)?;
         self.workspace = Some(workspace.clone());
         Ok(workspace)
     }
@@ -1397,11 +1840,14 @@ impl<'a> Runner<'a> {
             .artifact_checks
             .get(evidence_id)
             .ok_or_else(|| format!("evidence record `{evidence_id}` has no package artifact"))?;
-        let path = self
-            .canonical_roots
-            .get(&check.source_root)
-            .map(|root| root.join(&check.path))
-            .unwrap_or_default();
+        let path = if check.source_root == "supplied" {
+            self.supplied.get(evidence_id).cloned().unwrap_or_default()
+        } else {
+            self.canonical_roots
+                .get(&check.source_root)
+                .map(|root| root.join(&check.path))
+                .unwrap_or_default()
+        };
         Ok(ResolvedArtifact {
             evidence_id: evidence_id.to_string(),
             path,
@@ -1419,6 +1865,9 @@ impl<'a> Runner<'a> {
         step_id: &str,
         fresh: &ExecutionReceipt,
     ) -> Result<Option<ReceiptReplayReport>, Box<dyn Error>> {
+        if !self.replay_applicable {
+            return Ok(None);
+        }
         let Some(document) = self.package.manifest.documents.iter().find(|document| {
             document.role == "execution_receipt" && document.step_id.as_deref() == Some(step_id)
         }) else {
@@ -1579,6 +2028,7 @@ fn changes_since(
     if old.arguments != new.arguments
         || old.working_directory != new.working_directory
         || old.environment != new.environment
+        || old.required_environment != new.required_environment
         || old.timeout_ms != new.timeout_ms
     {
         changes.push(ChangeRecord {
@@ -1600,6 +2050,7 @@ fn verify_bindings(
     manifest: &CasePackageManifest,
     claims: &ClaimsDocument,
     compiled: &CompiledContract,
+    invalidated_steps: &BTreeSet<String>,
 ) -> BindingReport {
     let mut issues = Vec::new();
     let mut expected = BTreeMap::<String, String>::new();
@@ -1611,7 +2062,25 @@ fn verify_bindings(
             &mut issues,
         );
     }
+    // Claims for steps a supplied input reaches carry the identity their
+    // receipt recorded; the package's declared identity describes the
+    // reference candidate and is not compared.
+    let mut receipted: BTreeSet<String> = BTreeSet::new();
+    let withheld: BTreeSet<&str> = manifest
+        .executions
+        .iter()
+        .filter(|execution| invalidated_steps.contains(&execution.step_id))
+        .flat_map(|execution| {
+            execution
+                .outputs
+                .iter()
+                .map(|output| output.claim_id.as_str())
+        })
+        .collect();
     for claim in &claims.claims {
+        if invalidated_steps.contains(&claim.step_id) {
+            receipted.insert(claim.claim_id.clone());
+        }
         insert_evidence(
             &mut expected,
             claim.claim_id.clone(),
@@ -1622,9 +2091,15 @@ fn verify_bindings(
 
     let mut seen = BTreeSet::new();
     let mut bound_evidence_records = 0;
+    let mut receipted_evidence_records = 0;
+    let mut withheld_evidence_records = 0;
     for artifact in &manifest.artifacts {
         for evidence_id in &artifact.evidence_ids {
             let Some(expected_sha256) = expected.get(evidence_id) else {
+                if withheld.contains(evidence_id.as_str()) {
+                    withheld_evidence_records += 1;
+                    continue;
+                }
                 issues.push(format!(
                     "artifact `{}` binds unknown evidence record `{evidence_id}`",
                     artifact.artifact_id
@@ -1632,7 +2107,9 @@ fn verify_bindings(
                 continue;
             };
             seen.insert(evidence_id.clone());
-            if expected_sha256 == &artifact.sha256 {
+            if receipted.contains(evidence_id) {
+                receipted_evidence_records += 1;
+            } else if expected_sha256 == &artifact.sha256 {
                 bound_evidence_records += 1;
             } else {
                 issues.push(format!(
@@ -1682,6 +2159,8 @@ fn verify_bindings(
         },
         evidence_records: expected.len(),
         bound_evidence_records,
+        receipted_evidence_records,
+        withheld_evidence_records,
         required_review_policies: required_policies.len(),
         bound_review_policies,
         issues,
@@ -1782,6 +2261,13 @@ pub fn human_summary(report: &CaseRunReport) -> String {
             out,
             "   not checked: source root(s) {}",
             unchecked_roots.into_iter().collect::<Vec<_>>().join(", ")
+        );
+    }
+    for input in &report.supplied_inputs {
+        let _ = writeln!(
+            out,
+            "   supplied: input `{}` = {} {}",
+            input.input_id, input.path, input.sha256
         );
     }
     for check in report.integrity.documents.iter().filter(|check| {
@@ -1949,11 +2435,19 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                         );
                     }
                     StepExecutionState::NotRun => {
-                        let _ = writeln!(
-                            out,
-                            "   [NOT RUN] {} — capability `{}` not supplied; its committed claims are evaluated as recorded attestations",
-                            step.step_id, step.capability_id
-                        );
+                        if report.invalidated_steps.contains(&step.step_id) {
+                            let _ = writeln!(
+                                out,
+                                "   [NOT RUN] {} — capability `{}` not supplied; a supplied input reaches this step, so its committed claims describe the reference input and are not carried",
+                                step.step_id, step.capability_id
+                            );
+                        } else {
+                            let _ = writeln!(
+                                out,
+                                "   [NOT RUN] {} — capability `{}` not supplied; its committed claims are evaluated as recorded attestations",
+                                step.step_id, step.capability_id
+                            );
+                        }
                     }
                     StepExecutionState::Refused => {
                         let _ = writeln!(out, "   [REFUSED] {}", step.step_id);
@@ -2034,28 +2528,62 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                 claims.recorded_claims,
                 claims.decisions
             );
-            let _ = writeln!(
-                out,
-                "   [{}] generated claims {} committed claims.json",
-                if claims.matches_committed {
-                    "MATCH"
-                } else {
-                    "MISMATCH"
-                },
-                if claims.matches_committed {
-                    "match"
-                } else {
-                    "differ from"
-                }
-            );
+            if claims.invalidated_claims > 0 {
+                let _ = writeln!(
+                    out,
+                    "   not carried: {} recorded claim(s) for step(s) reached by a supplied input ({})",
+                    claims.invalidated_claims,
+                    report.invalidated_steps.join(", ")
+                );
+            }
+            if report.replay_applicable {
+                let _ = writeln!(
+                    out,
+                    "   [{}] generated claims {} committed claims.json",
+                    if claims.matches_committed {
+                        "MATCH"
+                    } else {
+                        "MISMATCH"
+                    },
+                    if claims.matches_committed {
+                        "match"
+                    } else {
+                        "differ from"
+                    }
+                );
+            } else {
+                let _ = writeln!(
+                    out,
+                    "   [NOT APPLICABLE] committed claims describe the reference candidate, not the supplied input(s)"
+                );
+            }
             match bindings {
                 Some(bindings) => {
                     let _ = writeln!(
                         out,
-                        "   [{}] {}/{} evidence identities bound; {}/{} review-policy identities",
+                        "   [{}] {}/{} evidence identities bound{}; {}/{} review-policy identities",
                         binding_label(bindings.status),
                         bindings.bound_evidence_records,
                         bindings.evidence_records,
+                        match (
+                            bindings.receipted_evidence_records,
+                            bindings.withheld_evidence_records
+                        ) {
+                            (0, 0) => String::new(),
+                            (receipted, 0) => {
+                                format!(
+                                    " ({receipted} carried by receipt for supplied-input steps)"
+                                )
+                            }
+                            (0, withheld) => {
+                                format!(
+                                    " ({withheld} withheld: reached by a supplied input and not run)"
+                                )
+                            }
+                            (receipted, withheld) => format!(
+                                " ({receipted} carried by receipt for supplied-input steps; {withheld} withheld, not run)"
+                            ),
+                        },
                         bindings.bound_review_policies,
                         bindings.required_review_policies
                     );
@@ -2093,9 +2621,37 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                 campaign.admissions.len()
             );
             for verdict in &campaign.verdicts {
+                let margin = report
+                    .margins
+                    .iter()
+                    .find(|margin| margin.requirement_id == verdict.requirement_id);
+                let numbers = margin.map_or(String::new(), |margin| {
+                    let unit = margin.unit.as_deref().unwrap_or("");
+                    let mut parts = Vec::new();
+                    if let (Some(lower), Some(upper)) = (&margin.lower, &margin.upper) {
+                        parts.push(format!(
+                            "[{}, {}] {unit}",
+                            display_number(lower),
+                            display_number(upper)
+                        ));
+                    } else if let Some(nominal) = &margin.nominal {
+                        parts.push(format!("nominal {} {unit}", display_number(nominal)));
+                    }
+                    if let Some(limit) = &margin.limit {
+                        parts.push(format!("limit {} {unit}", display_number(limit)));
+                    }
+                    if let Some(value) = &margin.margin {
+                        parts.push(format!("margin {} {unit}", display_number(value)));
+                    }
+                    if parts.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" ({})", parts.join("; "))
+                    }
+                });
                 let _ = writeln!(
                     out,
-                    "   [{}] {} — {}",
+                    "   [{}] {} — {}{numbers}",
                     verdict_label(verdict.verdict.status),
                     verdict.requirement_id,
                     verdict.verdict.rule
@@ -2110,6 +2666,13 @@ pub fn human_summary(report: &CaseRunReport) -> String {
         }
     }
 
+    if !report.replay_applicable && report.campaign.is_some() {
+        let _ = writeln!(out, "\n6. REPLAY");
+        let _ = writeln!(
+            out,
+            "   [NOT APPLICABLE] free input(s) supplied; committed expectations describe the reference candidate"
+        );
+    }
     if let Some(replay) = &report.replay {
         let _ = writeln!(out, "\n6. REPLAY");
         let _ = writeln!(
@@ -2279,6 +2842,9 @@ mod tests {
             workspace: Some(workspace.clone()),
             reuse: false,
             plan_only: false,
+            inputs: BTreeMap::new(),
+            environment: BTreeMap::new(),
+            log: None,
         };
         let report = execute_case(&case_000(), &options).unwrap();
         let summary = human_summary(&report);

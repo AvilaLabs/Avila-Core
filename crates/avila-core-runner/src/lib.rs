@@ -18,7 +18,8 @@ pub use case_run::{
     BindingReport, BindingStatus, CapabilityCheck, CapabilityCheckState, CaseRunOptions,
     CaseRunReport, CaseRunStatus, ChangeClass, ChangeRecord, ClaimsReport, ExecutionReport,
     ExecutionStatus, NotExecutedStep, OutputReport, ReceiptReplayReport, ReceiptSummary,
-    ReplayReport, StagedInputReport, StepExecutionReport, StepExecutionState, execute_case,
-    human_summary, parse_capabilities, parse_named_paths, parse_source_roots,
+    ReplayReport, StagedInputReport, StepExecutionReport, StepExecutionState, SuppliedInput,
+    VerdictMargin, execute_case, human_summary, parse_capabilities, parse_environment,
+    parse_inputs, parse_named_paths, parse_source_roots,
 };
-pub use execute::{Adapter, AdapterOutput, ExtractedClaim, RUNNER_ID};
+pub use execute::{Adapter, AdapterOutput, ExtractedClaim, RUNNER_ID, StepContext};

@@ -15,7 +15,7 @@ multiple historical profiles.
 
 - `unit-scaling.v1.json`: 10 vectors;
 - `scope-predicates.v1.json`: 19 vectors;
-- `verdict-calculus.v1.json`: 49 vectors: 41 requirement-evaluation vectors
+- `verdict-calculus.v1.json`: 50 vectors: 42 requirement-evaluation vectors
   plus 8 aggregate-verdict vectors; and
 - `canon.v1.json`: 12 initial canonical-value and byte-reader vectors;
 - `types/compiler-cases.v1.json`: 35 executable compiler fixtures: 8 compiled
@@ -49,7 +49,7 @@ planned unless files exist for them.
 
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
-`scope-predicates.v1.json`, plus the 41 requirement and 8 aggregation vectors in
+`scope-predicates.v1.json`, plus the 42 requirement and 8 aggregation vectors in
 `verdict-calculus.v1.json`. The compiler harness also executes all 68 cases in
 the five compiler manifests and pins each registry digest plus all successful
 compiled-snapshot identities. The campaign harness executes all 12 cases in its

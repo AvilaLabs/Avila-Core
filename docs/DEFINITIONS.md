@@ -258,6 +258,30 @@ binding, parameters, capability, invocation, or a missing, incomplete, or
 output-less receipt. A rerun propagates by content: a consumer whose inputs
 are byte-identical to what its receipt recorded stays reused.
 
+**Free input.** A contract input the case package declares may vary without
+re-freezing the package. Supplying one hashes and attests it, invalidates
+every step it reaches, and makes replay against committed expectations not
+applicable.
+
+**Withheld evidence.** Committed claims of a step a supplied free input
+reaches that did not run: absent by design, because the reference input's
+results cannot speak for another input. Distinct from `not_checked`.
+
+**Receipted evidence.** A fresh output of a step a free input reaches, bound
+by the identity its receipt recorded rather than by a package-declared one.
+
+**Required environment.** Keys an adapter requires the operator to value
+because they locate content (a data-library index). Identity by name,
+receipt provenance by value; the located content is bound as a staged input.
+
+**Margin.** The exact distance from a verdict's decisive bound to its limit,
+in the canonical unit: positive when satisfied, negative when not. Reported
+beside every verdict that has numbers.
+
+**Campaign log.** An append-only file of one JSON line per run: supplied
+inputs and identities, step states, verdicts with numbers and margins, and
+the campaign identity. The raw material of the engineering constellation.
+
 **Plan.** A run that performs the change analysis and stops before executing.
 
 **Fresh run.** A run with reuse disabled: every declared step executes in a

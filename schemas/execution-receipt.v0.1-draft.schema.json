@@ -34,6 +34,8 @@
         "arguments": { "type": "array", "items": { "type": "string", "pattern": "^[^/].*|^$", "description": "Relative workspace paths and flags only; never a host path." } },
         "working_directory": { "const": "." },
         "environment": { "type": "object", "additionalProperties": { "type": "string" } },
+        "required_environment": { "type": "array", "items": { "type": "string" }, "description": "Keys the adapter requires the operator to value. The names enter invocation_sha256; the values do not, because the content each locates is bound as a staged input." },
+        "supplied_environment": { "type": "object", "additionalProperties": { "type": "string" }, "description": "The values supplied for required_environment when the step ran. Recorded for provenance only." },
         "timeout_ms": { "type": "integer", "minimum": 0 }
       }
     },

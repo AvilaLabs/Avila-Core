@@ -1,0 +1,230 @@
+{
+  "schema_version": "avila.core/campaign-report/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "status": "evaluated",
+  "compiled_snapshot_sha256": "sha256:90f2c4b79ce0c60671c502f63702461fbbd7835cb8d039e25753eb23a346121d",
+  "claims_sha256": "sha256:667d2d836d5f31091586e35fbe0ae5234c86eb130383ffe700b1d1e1c963130f",
+  "admissions": [
+    {
+      "evidence_id": "input:candidate",
+      "source": {
+        "source": "contract_input",
+        "input_id": "candidate"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:cross-section-index",
+      "source": {
+        "source": "contract_input",
+        "input_id": "cross-section-index"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:materials",
+      "source": {
+        "source": "contract_input",
+        "input_id": "materials"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:screen-script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "screen-script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:source",
+      "source": {
+        "source": "contract_input",
+        "input_id": "source"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:transport-script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "transport-script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "screen-dose-rate",
+      "source": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "dose-rate"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "screen-mass",
+      "source": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "mass"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "screen-thickness",
+      "source": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "thickness"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "screen-result",
+      "source": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "screen-result"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "transport-dose-rate",
+      "source": {
+        "source": "step_output",
+        "step_id": "transport",
+        "output_slot": "dose-rate"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "transport-result",
+      "source": {
+        "source": "step_output",
+        "step_id": "transport",
+        "output_slot": "transport-result"
+      },
+      "state": "admitted"
+    }
+  ],
+  "verdicts": [
+    {
+      "requirement_id": "SHIELD-R1-screen",
+      "statement": "Screening estimate of the dose rate behind the slab is at or below 10 uSv/h (nominal basis; guides the search, establishes nothing).",
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "dose-rate"
+      },
+      "evidence_ids": [
+        "screen-dose-rate"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "uSv/h",
+        "limit_canonical": "10",
+        "nominal_canonical": "2348175120229003/250000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:90f2c4b79ce0c60671c502f63702461fbbd7835cb8d039e25753eb23a346121d",
+        "claims_sha256": "sha256:667d2d836d5f31091586e35fbe0ae5234c86eb130383ffe700b1d1e1c963130f",
+        "review_attestation": "unverified"
+      }
+    },
+    {
+      "requirement_id": "SHIELD-R2-transport",
+      "statement": "Monte Carlo dose rate behind the slab is at or below 10 uSv/h within its statistical interval.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "transport",
+        "output_slot": "dose-rate"
+      },
+      "evidence_ids": [
+        "transport-dose-rate"
+      ],
+      "verdict": {
+        "status": "fail",
+        "rule": "bounded.le.exceeds",
+        "canonical_unit": "uSv/h",
+        "limit_canonical": "10",
+        "lower_canonical": "397122720263649/15625000000000",
+        "upper_canonical": "450194587236351/15625000000000",
+        "nominal_canonical": "338926923/12500000"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:90f2c4b79ce0c60671c502f63702461fbbd7835cb8d039e25753eb23a346121d",
+        "claims_sha256": "sha256:667d2d836d5f31091586e35fbe0ae5234c86eb130383ffe700b1d1e1c963130f",
+        "review_attestation": "unverified"
+      }
+    },
+    {
+      "requirement_id": "SHIELD-R3-mass",
+      "statement": "Areal mass of the slab is at or below 1500 kg per square metre.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "mass"
+      },
+      "evidence_ids": [
+        "screen-mass"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "bounded.le.within",
+        "canonical_unit": "kg",
+        "limit_canonical": "1500",
+        "lower_canonical": "846",
+        "upper_canonical": "846",
+        "nominal_canonical": "846"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:90f2c4b79ce0c60671c502f63702461fbbd7835cb8d039e25753eb23a346121d",
+        "claims_sha256": "sha256:667d2d836d5f31091586e35fbe0ae5234c86eb130383ffe700b1d1e1c963130f",
+        "review_attestation": "unverified"
+      }
+    },
+    {
+      "requirement_id": "SHIELD-R4-thickness",
+      "statement": "Total slab thickness is at or below 100 cm.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "thickness"
+      },
+      "evidence_ids": [
+        "screen-thickness"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "bounded.le.within",
+        "canonical_unit": "cm",
+        "limit_canonical": "100",
+        "lower_canonical": "90",
+        "upper_canonical": "90",
+        "nominal_canonical": "90"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:90f2c4b79ce0c60671c502f63702461fbbd7835cb8d039e25753eb23a346121d",
+        "claims_sha256": "sha256:667d2d836d5f31091586e35fbe0ae5234c86eb130383ffe700b1d1e1c963130f",
+        "review_attestation": "unverified"
+      }
+    }
+  ],
+  "campaign_sha256": "sha256:eec220eb9a2ed634b1d222d1751ec38645263cd62cd08a921ddfcbf2d061df00",
+  "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked, and review decisions are unverified assertions. No verdict here is scientific truth, certification, or regulatory approval."
+}

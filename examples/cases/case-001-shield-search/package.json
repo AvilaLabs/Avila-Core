@@ -1,0 +1,228 @@
+{
+  "schema_version": "avila.core/case-package/v0.1-draft",
+  "case_id": "CASE-001",
+  "title": "Shielding configuration search: screen -> transport -> Avila Core",
+  "documents": [
+    {
+      "document_id": "case-001-contract",
+      "role": "contract",
+      "path": "contract.json",
+      "sha256": "sha256:dcafd28d782e0a89dc62900bc4ffe4c7067f437e08257007f234191a9b1fc032"
+    },
+    {
+      "document_id": "case-001-registry",
+      "role": "registry",
+      "path": "registry.json",
+      "sha256": "sha256:eb2040d50be91a9e36925eb8386b3905bd922df3d52c4451ff25672b37901aba"
+    },
+    {
+      "document_id": "case-001-claims",
+      "role": "claims",
+      "path": "claims.json",
+      "sha256": "sha256:d5ef4255b18d948d1e0c115c893d50730af95e08e37ab1845b80e5f2c31da09d"
+    },
+    {
+      "role": "expected_campaign_report",
+      "document_id": "case-001-expected-campaign",
+      "path": "campaign-report.json",
+      "sha256": "sha256:f020dd70113ed6be1ecfd7cea0e66c15e2d4b916233fc9d699ad6c629c1a25be"
+    },
+    {
+      "role": "execution_receipt",
+      "document_id": "case-001-screen-receipt",
+      "path": "receipts/screen.json",
+      "sha256": "sha256:8f681a46dfe7fd3b7bab842892b6a58a78f9fd6f6e8af0ca948575ec6e031489",
+      "step_id": "screen"
+    },
+    {
+      "role": "execution_receipt",
+      "document_id": "case-001-transport-receipt",
+      "path": "receipts/transport.json",
+      "sha256": "sha256:f4bb40538967d490101ed57c1c1ccb8e185b861cc0a31c5854d81dd791624c1b",
+      "step_id": "transport"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "reference-candidate",
+      "evidence_ids": [
+        "input:candidate"
+      ],
+      "source_root": "case",
+      "path": "candidates/reference.json",
+      "sha256": "sha256:0e3a08d60c664683d8c40421e9f5aa6754c2288409dbfe0a47b22347a6236eb1"
+    },
+    {
+      "artifact_id": "materials",
+      "evidence_ids": [
+        "input:materials"
+      ],
+      "source_root": "shielding",
+      "path": "materials.json",
+      "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb"
+    },
+    {
+      "artifact_id": "source",
+      "evidence_ids": [
+        "input:source"
+      ],
+      "source_root": "shielding",
+      "path": "source.json",
+      "sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b"
+    },
+    {
+      "artifact_id": "screen-script",
+      "evidence_ids": [
+        "input:screen-script"
+      ],
+      "source_root": "shielding",
+      "path": "screen.py",
+      "sha256": "sha256:5fd0bd9415ec19e7f15d5bd167976d5852b6984efeea7443aa6323d13cd0253d"
+    },
+    {
+      "artifact_id": "transport-script",
+      "evidence_ids": [
+        "input:transport-script"
+      ],
+      "source_root": "shielding",
+      "path": "transport.py",
+      "sha256": "sha256:acb2c376462ec9a00bf9472e8ff0b9f9b5b1a500cffcaf4034f7fc5141a14039"
+    },
+    {
+      "artifact_id": "cross-section-index",
+      "evidence_ids": [
+        "input:cross-section-index"
+      ],
+      "source_root": "nuclear-data",
+      "path": "cross_sections.xml",
+      "sha256": "sha256:2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db"
+    },
+    {
+      "artifact_id": "reference-screen-result",
+      "evidence_ids": [
+        "screen-dose-rate",
+        "screen-mass",
+        "screen-thickness",
+        "screen-result"
+      ],
+      "source_root": "case",
+      "path": "expected/screen-result.json",
+      "sha256": "sha256:5daaf5e27e369ec9bc14f7d0b8ed23739dc08bfce746adae72a9e77c1432f201"
+    },
+    {
+      "artifact_id": "reference-transport-result",
+      "evidence_ids": [
+        "transport-dose-rate",
+        "transport-result"
+      ],
+      "source_root": "case",
+      "path": "expected/transport-result.json",
+      "sha256": "sha256:f0dd8060405a58bb4ce2f9526eba460286beccde644fc058b4abe6ec742dfab1"
+    }
+  ],
+  "capabilities": [
+    {
+      "capability_id": "python3",
+      "package_id": "org.python/cpython@3.14.4",
+      "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+    },
+    {
+      "capability_id": "openmc-python",
+      "package_id": "org.python/cpython@3.12.13+openmc-0.15.3",
+      "executable_sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
+    }
+  ],
+  "executions": [
+    {
+      "step_id": "screen",
+      "adapter": "avila-labs.shielding/screen@1",
+      "capability_id": "python3",
+      "inputs": [
+        {
+          "input_slot": "script",
+          "workspace_path": "tools/screen.py"
+        },
+        {
+          "input_slot": "candidate",
+          "workspace_path": "inputs/candidate.json"
+        },
+        {
+          "input_slot": "materials",
+          "workspace_path": "inputs/materials.json"
+        },
+        {
+          "input_slot": "source",
+          "workspace_path": "inputs/source.json"
+        }
+      ],
+      "outputs": [
+        {
+          "output_slot": "dose-rate",
+          "claim_id": "screen-dose-rate"
+        },
+        {
+          "output_slot": "mass",
+          "claim_id": "screen-mass"
+        },
+        {
+          "output_slot": "thickness",
+          "claim_id": "screen-thickness"
+        },
+        {
+          "output_slot": "screen-result",
+          "claim_id": "screen-result"
+        }
+      ]
+    },
+    {
+      "step_id": "transport",
+      "adapter": "avila-labs.shielding/slab-transport@1",
+      "capability_id": "openmc-python",
+      "inputs": [
+        {
+          "input_slot": "script",
+          "workspace_path": "tools/transport.py"
+        },
+        {
+          "input_slot": "candidate",
+          "workspace_path": "inputs/candidate.json"
+        },
+        {
+          "input_slot": "materials",
+          "workspace_path": "inputs/materials.json"
+        },
+        {
+          "input_slot": "source",
+          "workspace_path": "inputs/source.json"
+        },
+        {
+          "input_slot": "cross-section-index",
+          "workspace_path": "inputs/cross_sections.xml"
+        }
+      ],
+      "outputs": [
+        {
+          "output_slot": "dose-rate",
+          "claim_id": "transport-dose-rate"
+        },
+        {
+          "output_slot": "transport-result",
+          "claim_id": "transport-result"
+        }
+      ],
+      "environment": [
+        "OPENMC_CROSS_SECTIONS"
+      ]
+    }
+  ],
+  "free_inputs": [
+    "candidate"
+  ],
+  "limitations": [
+    "CASE-001 is a research-only design-search specimen over a synthetic plane source; no facility, generator, or occupancy is represented.",
+    "The screening capability is unqualified and evaluated on a nominal basis; only the transport capability produces a bounded claim, and its interval covers statistical error only.",
+    "Executables are bound by digest: a system Python interpreter for the screen and the OpenMC environment's interpreter for transport; neither is a qualified package.",
+    "The nuclear data library is identified by the digest of its index; the nuclide files it names are not re-hashed by this case.",
+    "No review obligation is compiled: technical verdicts here guide a search and authorize nothing."
+  ]
+}

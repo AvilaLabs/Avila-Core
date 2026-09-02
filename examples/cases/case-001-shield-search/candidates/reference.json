@@ -1,0 +1,8 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "reference-poly-90",
+  "description": "Reference candidate: 90 cm of polyethylene. The screen predicts it passes the dose-rate limit; transport shows it does not.",
+  "layers": [
+    { "material": "polyethylene", "thickness_cm": "90" }
+  ]
+}

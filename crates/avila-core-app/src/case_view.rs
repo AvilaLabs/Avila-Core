@@ -200,6 +200,7 @@ impl CaseSetup {
                 .then(|| PathBuf::from(self.workspace.trim())),
             reuse: self.reuse,
             plan_only,
+            ..CaseRunOptions::default()
         }
     }
 }

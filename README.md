@@ -47,13 +47,16 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   both otherwise-within-limit requirements for absent qualified review;
 - a case-package workflow that re-hashes package documents, re-hashes
   external artifact bytes only from explicitly supplied roots, executes the
-  steps the package declares through a named case-specific adapter over an
-  exact executable in a fresh workspace with a cleared environment, writes an
-  execution receipt and verifies it from bytes, generates the claims document
-  from package identities and fresh outputs, binds those identities to the
-  claims and review policy, compiles and evaluates the case, and replays its
-  committed claims, receipt, and campaign report without collapsing an
-  unchecked artifact or an unsupplied executable into a success state;
+  steps the package declares through named case-specific adapters over exact
+  executables in a fresh workspace with a cleared environment, writes an
+  execution receipt per step and verifies it from bytes, reuses a step whose
+  committed receipt matches the planned invocation and whose outputs still
+  verify, names every change that forces a rerun by SC-12 class, generates
+  the claims document from package identities and fresh or reused outputs,
+  binds those identities to the claims and review policy, compiles and
+  evaluates the case, and replays its committed claims, receipts, and
+  campaign report without collapsing an unchecked artifact or an unsupplied
+  executable into a success state;
 - a draft portable evidence model, case-package manifest, execution-receipt
   record, and SHA-256 utility;
 - JSON Schemas that the compiler embeds and enforces as its source layer, and
@@ -158,10 +161,12 @@ The `run` command is the concise end-to-end view: integrity, compiled
 workflow, execution with a verified receipt, generated claims, identity
 binding, admissions, verdicts, and replay against the committed claims,
 receipt, and campaign report. Omit `--source-root` to see every external
-artifact reported as `not_checked`; omit a `--capability` to see that step
-reported `NOT RUN` with its committed claims evaluated as recorded
-attestations; add `--json` for the complete machine-readable run report. A
-supplied root or executable that does not match fails closed.
+artifact reported as `not_checked`. With the roots supplied and nothing
+changed since the committed receipts, both steps are `REUSED` and nothing
+runs, executables or not; add `--no-reuse` to execute afresh, `--plan` to see
+what would rerun and why without running, and `--json` for the complete
+machine-readable run report. A supplied root or executable that does not
+match fails closed.
 
 ## Repository map
 

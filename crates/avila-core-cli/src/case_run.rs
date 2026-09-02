@@ -20,26 +20,48 @@ use avila_core_compiler::{
 use avila_core_evidence::{
     ArtifactCheck, CapabilityIdentity, CasePackageManifest, ExecutionReceipt, ExpectedInput,
     IntegrityCheckState, OutputState, PackageExecution, PackageIntegrityReport,
-    PackageIntegrityStatus, ReceiptCheck, ReceiptCheckState, ReceiptExpectations, ReceiptStatus,
-    VerifiedCasePackage, parse_receipt, sha256_file, verify_case_package, verify_receipt,
+    PackageIntegrityStatus, ReceiptCheck, ReceiptCheckState, ReceiptExpectations, ReceiptInput,
+    ReceiptOutput, ReceiptStatus, VerifiedCasePackage, parse_receipt, sha256_file,
+    verify_case_package, verify_receipt,
 };
 use avila_core_kernel::VerdictStatus;
 use serde::Serialize;
 use serde_json::Value;
 
 use crate::execute::claims::{GeneratedClaim, canonical_identity, generate_claims};
-use crate::execute::{Adapter, ExecutionRequest, StagedInput, execute_step, rfc3339_now};
+use crate::execute::{
+    Adapter, ExecutionRequest, ExtractedClaim, PlannedInvocation, StagedInput, execute_step,
+    plan_invocation, rfc3339_now,
+};
 
 const CASE_RUN_REPORT_SCHEMA_VERSION: &str = "avila.core/case-run-report/v0.2-draft";
 const CASE_RUN_NOTICE: &str = "This workflow separates byte-integrity checks, semantic compilation, controlled execution with receipts, claim generation, identity binding, campaign evaluation, and replay. Re-hashing bytes proves identity only; a verified receipt proves that a named executable ran over named bytes and produced named bytes; structural admission and a Core verdict do not establish scientific correctness, qualification, certification, or regulatory approval.";
 
 /// How the runner is pointed at the outside world: named artifact roots,
 /// named executables, and where to put the workspace.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct CaseRunOptions {
     pub source_roots: BTreeMap<String, PathBuf>,
     pub capabilities: BTreeMap<String, PathBuf>,
     pub workspace: Option<PathBuf>,
+    /// Reuse a step from its committed receipt when the planned invocation
+    /// identity matches and every recorded output still verifies at a bound
+    /// identity (SC-12 execution memoization). Off forces fresh execution.
+    pub reuse: bool,
+    /// Report what would be reused or rerun, and why, without executing.
+    pub plan_only: bool,
+}
+
+impl Default for CaseRunOptions {
+    fn default() -> Self {
+        Self {
+            source_roots: BTreeMap::new(),
+            capabilities: BTreeMap::new(),
+            workspace: None,
+            reuse: true,
+            plan_only: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -47,6 +69,8 @@ pub struct CaseRunOptions {
 pub enum CaseRunStatus {
     Evaluated,
     Rejected,
+    /// A `--plan` run: the change analysis was reported and nothing ran.
+    Planned,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -78,8 +102,12 @@ pub struct ReplayReport {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecutionStatus {
-    /// Every declared execution ran and its receipt verified.
+    /// Every declared execution ran or was reused, and every receipt verified.
     Executed,
+    /// Every declared execution was reused from a committed receipt; nothing ran.
+    Reused,
+    /// A plan-only run: what would run, and why, was reported.
+    Planned,
     /// No executable was supplied; committed claims are evaluated as recorded.
     NotRun,
     /// Some declared executions ran and others were not supplied.
@@ -95,9 +123,36 @@ pub enum ExecutionStatus {
 #[serde(rename_all = "snake_case")]
 pub enum StepExecutionState {
     Executed,
+    /// The committed receipt's invocation identity equals the planned one
+    /// and its outputs verify at bound identities; nothing ran.
+    Reused,
+    /// Plan only: the step would execute for the listed changes.
+    Planned,
     NotRun,
     Refused,
     Failed,
+}
+
+/// The typed change classes of SC-12 that the runner can detect between a
+/// committed receipt and the invocation it plans now.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ChangeClass {
+    InputBytes,
+    InputBinding,
+    Parameters,
+    Capability,
+    Invocation,
+    NoCommittedReceipt,
+    ReceiptNotCompleted,
+    OutputsUnavailable,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ChangeRecord {
+    pub class: ChangeClass,
+    pub detail: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -178,6 +233,16 @@ pub struct StepExecutionReport {
     pub capability: Option<CapabilityCheck>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub inputs: Vec<StagedInputReport>,
+    /// Identity of the invocation the runner planned from the current bound
+    /// inputs, parameters, and capability, before deciding to reuse or run.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub planned_invocation_sha256: Option<String>,
+    /// What differs from the committed receipt, by SC-12 change class.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub changes: Vec<ChangeRecord>,
+    /// The committed receipt document this step was reused from.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reused_receipt: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub receipt: Option<ReceiptSummary>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -216,6 +281,7 @@ pub struct ClaimsReport {
     pub matches_committed: bool,
     pub input_attestations: usize,
     pub executed_claims: usize,
+    pub reused_claims: usize,
     pub recorded_claims: usize,
     pub decisions: usize,
 }
@@ -245,7 +311,10 @@ pub struct CaseRunReport {
 
 impl CaseRunReport {
     pub fn succeeded(&self) -> bool {
-        self.status == CaseRunStatus::Evaluated
+        matches!(
+            self.status,
+            CaseRunStatus::Evaluated | CaseRunStatus::Planned
+        )
     }
 }
 
@@ -346,10 +415,19 @@ pub fn execute_case(
         let execution = runner.run_all()?;
         executed_claims = runner.claims;
         workspace = runner.workspace;
-        let stop = matches!(
-            execution.status,
-            ExecutionStatus::Refused | ExecutionStatus::Failed
-        );
+        let stop = options.plan_only
+            || matches!(
+                execution.status,
+                ExecutionStatus::Refused | ExecutionStatus::Failed | ExecutionStatus::Planned
+            );
+        if options.plan_only
+            && !matches!(
+                execution.status,
+                ExecutionStatus::Refused | ExecutionStatus::Failed
+            )
+        {
+            report.status = CaseRunStatus::Planned;
+        }
         report.execution = Some(execution);
         report.compile = Some(compile.clone());
         if stop {
@@ -376,6 +454,7 @@ pub fn execute_case(
         matches_committed: claims_match,
         input_attestations: generated.input_attestations,
         executed_claims: generated.executed_claims,
+        reused_claims: generated.reused_claims,
         recorded_claims: generated.recorded_claims,
         decisions: generated.decisions,
     });
@@ -546,6 +625,9 @@ impl<'a> Runner<'a> {
                     state: StepExecutionState::Refused,
                     capability: None,
                     inputs: Vec::new(),
+                    planned_invocation_sha256: None,
+                    changes: Vec::new(),
+                    reused_receipt: None,
                     receipt: None,
                     outputs: Vec::new(),
                     verification: None,
@@ -563,6 +645,8 @@ impl<'a> Runner<'a> {
             ExecutionStatus::Refused
         } else if states.contains(&StepExecutionState::Failed) {
             ExecutionStatus::Failed
+        } else if states.contains(&StepExecutionState::Planned) {
+            ExecutionStatus::Planned
         } else if states
             .iter()
             .all(|state| *state == StepExecutionState::NotRun)
@@ -570,8 +654,15 @@ impl<'a> Runner<'a> {
             ExecutionStatus::NotRun
         } else if states
             .iter()
-            .all(|state| *state == StepExecutionState::Executed)
+            .all(|state| *state == StepExecutionState::Reused)
         {
+            ExecutionStatus::Reused
+        } else if states.iter().all(|state| {
+            matches!(
+                state,
+                StepExecutionState::Executed | StepExecutionState::Reused
+            )
+        }) {
             ExecutionStatus::Executed
         } else {
             ExecutionStatus::Partial
@@ -599,6 +690,9 @@ impl<'a> Runner<'a> {
             state: StepExecutionState::Refused,
             capability: None,
             inputs: Vec::new(),
+            planned_invocation_sha256: None,
+            changes: Vec::new(),
+            reused_receipt: None,
             receipt: None,
             outputs: Vec::new(),
             verification: None,
@@ -626,21 +720,13 @@ impl<'a> Runner<'a> {
             source_commit: declared.source_commit.clone(),
             executable_sha256: declared.executable_sha256.clone(),
         };
-
-        // Without an executable there is nothing to run: the recorded claims
-        // stand as attestations and the gap is reported, not hidden.
-        let Some(executable) = self.options.capabilities.get(&execution.capability_id) else {
-            report.capability = Some(CapabilityCheck {
-                capability_id: declared.capability_id.clone(),
-                package_id: declared.package_id.clone(),
-                expected_sha256: declared.executable_sha256.clone(),
-                actual_sha256: None,
-                state: CapabilityCheckState::NotSupplied,
-            });
-            report.state = StepExecutionState::NotRun;
-            return Ok(report);
+        let not_supplied = CapabilityCheck {
+            capability_id: declared.capability_id.clone(),
+            package_id: declared.package_id.clone(),
+            expected_sha256: declared.executable_sha256.clone(),
+            actual_sha256: None,
+            state: CapabilityCheckState::NotSupplied,
         };
-
         let Some(adapter) = Adapter::by_id(&execution.adapter) else {
             report.issues.push(format!(
                 "adapter `{}` is not known to this runner",
@@ -668,48 +754,6 @@ impl<'a> Runner<'a> {
                 .push("a review obligation is never executed by the runner".into());
         }
 
-        // The executable must be exactly the bytes the package binds. It is
-        // resolved to an absolute path first: the child runs inside the
-        // workspace, so a relative path would otherwise be resolved there.
-        let executable = fs::canonicalize(executable).unwrap_or_else(|_| executable.clone());
-        let capability_check = match sha256_file(&executable) {
-            Ok((actual, _)) => {
-                let state = if actual == declared.executable_sha256 {
-                    CapabilityCheckState::Verified
-                } else {
-                    CapabilityCheckState::Mismatch
-                };
-                CapabilityCheck {
-                    capability_id: declared.capability_id.clone(),
-                    package_id: declared.package_id.clone(),
-                    expected_sha256: declared.executable_sha256.clone(),
-                    actual_sha256: Some(actual),
-                    state,
-                }
-            }
-            Err(_) => CapabilityCheck {
-                capability_id: declared.capability_id.clone(),
-                package_id: declared.package_id.clone(),
-                expected_sha256: declared.executable_sha256.clone(),
-                actual_sha256: None,
-                state: CapabilityCheckState::Missing,
-            },
-        };
-        match capability_check.state {
-            CapabilityCheckState::Verified => {}
-            CapabilityCheckState::Mismatch => report.issues.push(format!(
-                "executable `{}` hashes to {}, but the package binds {}",
-                executable.display(),
-                capability_check.actual_sha256.as_deref().unwrap_or("?"),
-                declared.executable_sha256
-            )),
-            _ => report.issues.push(format!(
-                "executable `{}` cannot be read",
-                executable.display()
-            )),
-        }
-        report.capability = Some(capability_check);
-
         // Every bound input slot must be staged from verified bytes.
         let staging: BTreeMap<&str, &str> = execution
             .inputs
@@ -729,6 +773,7 @@ impl<'a> Runner<'a> {
             }
         }
         let mut staged = Vec::new();
+        let mut unverified = Vec::new();
         for binding in &step.bindings {
             let Some(workspace_path) = staging.get(binding.input_slot.as_str()) else {
                 report.issues.push(format!(
@@ -747,8 +792,8 @@ impl<'a> Runner<'a> {
             match self.resolve_source(&binding.source) {
                 Ok(artifact) => {
                     if artifact.integrity != IntegrityCheckState::Verified {
-                        report.issues.push(format!(
-                            "input slot `{}` bytes (`{}`) were not verified: {:?}; the runner does not execute over unchecked bytes",
+                        unverified.push(format!(
+                            "input slot `{}` bytes (`{}`) were not verified: {:?}; the runner neither executes over nor reuses unchecked bytes",
                             binding.input_slot, artifact.evidence_id, artifact.integrity
                         ));
                     }
@@ -788,15 +833,186 @@ impl<'a> Runner<'a> {
         if !report.issues.is_empty() {
             return Ok(report);
         }
+        let claim_ids_by_slot: BTreeMap<&str, &str> = execution
+            .outputs
+            .iter()
+            .map(|output| (output.output_slot.as_str(), output.claim_id.as_str()))
+            .collect();
 
-        // Run.
-        let workspace = self.workspace_dir()?;
-        let step_dir = workspace.join(&step.step_id);
+        // Unchecked bytes: without an executable the step is simply not run;
+        // with one, the runner refuses, because it executes only over bytes
+        // it verified and reuses only against them.
+        let executable = self
+            .options
+            .capabilities
+            .get(&execution.capability_id)
+            .cloned();
+        if !unverified.is_empty() {
+            match executable {
+                None => {
+                    report.capability = Some(not_supplied);
+                    report.state = StepExecutionState::NotRun;
+                }
+                Some(_) => report.issues = unverified,
+            }
+            return Ok(report);
+        }
+
+        // Plan the invocation from the bound inputs, the parameters, and the
+        // package's capability identity; the executable is not needed yet.
         let parameters: BTreeMap<String, Value> = step
             .parameters
             .iter()
             .map(|(id, value)| serde_json::to_value(value).map(|value| (id.clone(), value)))
             .collect::<Result<_, _>>()?;
+        let executable = executable.map(|path| fs::canonicalize(&path).unwrap_or(path));
+        let program = executable
+            .as_ref()
+            .and_then(|path| path.file_name())
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| declared.capability_id.clone());
+        let plan = plan_invocation(adapter, &identity, &program, &parameters, &staged)?;
+        report.planned_invocation_sha256 = Some(plan.invocation_sha256.clone());
+
+        // Compare with the committed receipt: what changed, by class.
+        let committed = self.committed_receipt(&step.step_id)?;
+        report.changes = match &committed {
+            Some((_, receipt)) => changes_since(receipt, &plan, &identity, &parameters),
+            None => vec![ChangeRecord {
+                class: ChangeClass::NoCommittedReceipt,
+                detail: "the package commits no execution receipt for this step".into(),
+            }],
+        };
+
+        // Reuse: same invocation identity, a completed receipt, and every
+        // recorded output verifiable at a bound identity (SC-12 memoization).
+        if self.options.reuse
+            && report.changes.is_empty()
+            && let Some((document_id, receipt)) = &committed
+        {
+            match self.reusable_outputs(receipt) {
+                Ok(outputs) => {
+                    let mut output_bytes = BTreeMap::new();
+                    for (output, path) in &outputs {
+                        output_bytes.insert(output.output_id.clone(), fs::read(path)?);
+                    }
+                    let extracted = match adapter.extract_claims(&output_bytes, &parameters) {
+                        Ok(extracted) => extracted,
+                        Err(issue) => {
+                            report
+                                .issues
+                                .push(format!("claim extraction over reused outputs: {issue}"));
+                            report.state = StepExecutionState::Failed;
+                            return Ok(report);
+                        }
+                    };
+                    let extracted_slots: BTreeSet<&str> = extracted
+                        .iter()
+                        .map(|claim| claim.output_slot.as_str())
+                        .collect();
+                    if extracted_slots != adapter_slots {
+                        report.issues.push(format!(
+                            "adapter extracted claims for {:?}, but declares {:?}",
+                            extracted_slots, adapter_slots
+                        ));
+                        report.state = StepExecutionState::Failed;
+                        return Ok(report);
+                    }
+                    for (output, _) in &outputs {
+                        report.outputs.push(OutputReport {
+                            output_id: output.output_id.clone(),
+                            workspace_path: output.workspace_path.clone(),
+                            state: output.state,
+                            sha256: output.sha256.clone(),
+                            bytes: output.bytes,
+                            reproduces_bound_artifact: Some(true),
+                        });
+                    }
+                    report.receipt = Some(ReceiptSummary {
+                        workspace_path: self.document_path(document_id),
+                        sha256: self.document_sha256(document_id),
+                        invocation_sha256: receipt.invocation_sha256.clone(),
+                        status: receipt.status,
+                        exit_status: receipt.process.exit_status,
+                        duration_ms: receipt.process.duration_ms,
+                    });
+                    self.promote(
+                        step,
+                        &identity,
+                        &claim_ids_by_slot,
+                        &extracted,
+                        &outputs,
+                        true,
+                    )?;
+                    report.reused_receipt = Some(document_id.clone());
+                    report.state = StepExecutionState::Reused;
+                    return Ok(report);
+                }
+                Err(detail) => report.changes.push(ChangeRecord {
+                    class: ChangeClass::OutputsUnavailable,
+                    detail,
+                }),
+            }
+        }
+
+        if self.options.plan_only {
+            report.state = StepExecutionState::Planned;
+            return Ok(report);
+        }
+
+        // Without an executable there is nothing to run: the recorded claims
+        // stand as attestations and the gap is reported, not hidden.
+        let Some(executable) = executable else {
+            report.capability = Some(not_supplied);
+            report.state = StepExecutionState::NotRun;
+            return Ok(report);
+        };
+
+        // The executable must be exactly the bytes the package binds.
+        let capability_check = match sha256_file(&executable) {
+            Ok((actual, _)) => {
+                let state = if actual == declared.executable_sha256 {
+                    CapabilityCheckState::Verified
+                } else {
+                    CapabilityCheckState::Mismatch
+                };
+                CapabilityCheck {
+                    capability_id: declared.capability_id.clone(),
+                    package_id: declared.package_id.clone(),
+                    expected_sha256: declared.executable_sha256.clone(),
+                    actual_sha256: Some(actual),
+                    state,
+                }
+            }
+            Err(_) => CapabilityCheck {
+                capability_id: declared.capability_id.clone(),
+                package_id: declared.package_id.clone(),
+                expected_sha256: declared.executable_sha256.clone(),
+                actual_sha256: None,
+                state: CapabilityCheckState::Missing,
+            },
+        };
+        match capability_check.state {
+            CapabilityCheckState::Verified => {}
+            CapabilityCheckState::Mismatch => report.issues.push(format!(
+                "executable `{}` hashes to {}, but the package binds {}",
+                executable.display(),
+                capability_check.actual_sha256.as_deref().unwrap_or("?"),
+                declared.executable_sha256
+            )),
+            _ => report.issues.push(format!(
+                "executable `{}` cannot be read",
+                executable.display()
+            )),
+        }
+        report.capability = Some(capability_check);
+        if !report.issues.is_empty() {
+            return Ok(report);
+        }
+
+        // Run.
+        let workspace = self.workspace_dir()?;
+        let step_dir = workspace.join(&step.step_id);
         let request = ExecutionRequest {
             case_id: self.package.manifest.case_id.clone(),
             compiled_snapshot_sha256: self.compiled.snapshot_sha256.clone(),
@@ -831,6 +1047,12 @@ impl<'a> Runner<'a> {
             exit_status: receipt.process.exit_status,
             duration_ms: receipt.process.duration_ms,
         });
+        if receipt.invocation_sha256 != plan.invocation_sha256 {
+            report.issues.push(format!(
+                "the receipt records invocation {} but the runner planned {}",
+                receipt.invocation_sha256, plan.invocation_sha256
+            ));
+        }
         let expectations = ReceiptExpectations {
             case_id: self.package.manifest.case_id.clone(),
             compiled_snapshot_sha256: self.compiled.snapshot_sha256.clone(),
@@ -861,14 +1083,6 @@ impl<'a> Runner<'a> {
         let verified = verification.state == ReceiptCheckState::Verified;
         report.issues.extend(verification.issues.iter().cloned());
         report.verification = Some(verification);
-
-        // Bound identities for the outputs: which claim ids each output
-        // carries and what identity the package binds for them.
-        let claim_ids_by_slot: BTreeMap<&str, &str> = execution
-            .outputs
-            .iter()
-            .map(|output| (output.output_slot.as_str(), output.claim_id.as_str()))
-            .collect();
 
         let mut extracted = Vec::new();
         if verified {
@@ -929,13 +1143,43 @@ impl<'a> Runner<'a> {
             return Ok(report);
         }
 
-        // Promote: fresh outputs become available to later steps and to the
-        // generated claims document.
-        for claim in &extracted {
-            let output = receipt
-                .outputs
+        let produced: Vec<(ReceiptOutput, PathBuf)> = receipt
+            .outputs
+            .iter()
+            .map(|output| {
+                (
+                    output.clone(),
+                    outcome.step_dir.join(&output.workspace_path),
+                )
+            })
+            .collect();
+        self.promote(
+            step,
+            &identity,
+            &claim_ids_by_slot,
+            &extracted,
+            &produced,
+            false,
+        )?;
+        report.state = StepExecutionState::Executed;
+        Ok(report)
+    }
+
+    /// Promote produced or reused outputs: they become available to later
+    /// steps, and their extracted claims enter the generated document.
+    fn promote(
+        &mut self,
+        step: &CompiledStep,
+        identity: &CapabilityIdentity,
+        claim_ids_by_slot: &BTreeMap<&str, &str>,
+        extracted: &[ExtractedClaim],
+        produced: &[(ReceiptOutput, PathBuf)],
+        reused: bool,
+    ) -> Result<(), Box<dyn Error>> {
+        for claim in extracted {
+            let (output, path) = produced
                 .iter()
-                .find(|output| output.output_id == claim.output_id)
+                .find(|(output, _)| output.output_id == claim.output_id)
                 .ok_or_else(|| format!("adapter named unknown output `{}`", claim.output_id))?;
             let sha256 = output
                 .sha256
@@ -948,7 +1192,7 @@ impl<'a> Runner<'a> {
                 (step.step_id.clone(), claim.output_slot.clone()),
                 FreshOutput {
                     evidence_id: (*claim_id).to_string(),
-                    path: outcome.step_dir.join(&output.workspace_path),
+                    path: path.clone(),
                     sha256: sha256.clone(),
                     media_type: output.media_type.clone(),
                 },
@@ -962,10 +1206,81 @@ impl<'a> Runner<'a> {
                 producer_package_id: identity.package_id.clone(),
                 producer_sha256: identity.executable_sha256.clone(),
                 claim: claim.claim.clone(),
+                reused,
             });
         }
-        report.state = StepExecutionState::Executed;
-        Ok(report)
+        Ok(())
+    }
+
+    /// The committed receipt document for a step, parsed.
+    fn committed_receipt(
+        &self,
+        step_id: &str,
+    ) -> Result<Option<(String, ExecutionReceipt)>, Box<dyn Error>> {
+        let Some(document) = self.package.manifest.documents.iter().find(|document| {
+            document.role == "execution_receipt" && document.step_id.as_deref() == Some(step_id)
+        }) else {
+            return Ok(None);
+        };
+        let bytes = self
+            .package
+            .document_by_id(&document.document_id)
+            .ok_or("committed receipt was not readable after package verification")?;
+        Ok(Some((document.document_id.clone(), parse_receipt(bytes)?)))
+    }
+
+    fn document_path(&self, document_id: &str) -> String {
+        self.package
+            .manifest
+            .documents
+            .iter()
+            .find(|document| document.document_id == document_id)
+            .map(|document| document.path.clone())
+            .unwrap_or_default()
+    }
+
+    fn document_sha256(&self, document_id: &str) -> String {
+        self.package
+            .manifest
+            .documents
+            .iter()
+            .find(|document| document.document_id == document_id)
+            .map(|document| document.sha256.clone())
+            .unwrap_or_default()
+    }
+
+    /// Every output a completed receipt recorded, located as a verified bound
+    /// artifact with the same digest. An output that cannot be located that
+    /// way makes the receipt unusable for reuse.
+    fn reusable_outputs(
+        &self,
+        receipt: &ExecutionReceipt,
+    ) -> Result<Vec<(ReceiptOutput, PathBuf)>, String> {
+        if receipt.status != ReceiptStatus::Completed || receipt.process.exit_status != Some(0) {
+            return Err("the committed receipt did not complete with exit status 0".into());
+        }
+        let mut outputs = Vec::new();
+        for output in &receipt.outputs {
+            let Some(sha256) = output.sha256.as_deref() else {
+                return Err(format!("output `{}` carries no digest", output.output_id));
+            };
+            let located = self.package.integrity.artifacts.iter().find(|check| {
+                check.state == IntegrityCheckState::Verified && check.expected_sha256 == sha256
+            });
+            let Some(check) = located else {
+                return Err(format!(
+                    "output `{}` ({sha256}) is not available as a verified bound artifact",
+                    output.output_id
+                ));
+            };
+            let path = self
+                .canonical_roots
+                .get(&check.source_root)
+                .map(|root| root.join(&check.path))
+                .ok_or_else(|| format!("root `{}` is not resolved", check.source_root))?;
+            outputs.push((output.clone(), path));
+        }
+        Ok(outputs)
     }
 
     fn workspace_dir(&mut self) -> Result<PathBuf, Box<dyn Error>> {
@@ -1148,6 +1463,117 @@ impl<'a> Runner<'a> {
             differences,
         }))
     }
+}
+
+/// What differs between a committed receipt and the invocation planned now,
+/// by SC-12 change class. Empty means the receipt describes exactly this
+/// request.
+fn changes_since(
+    committed: &ExecutionReceipt,
+    plan: &PlannedInvocation,
+    capability: &CapabilityIdentity,
+    parameters: &BTreeMap<String, Value>,
+) -> Vec<ChangeRecord> {
+    let mut changes = Vec::new();
+    if committed.capability != *capability {
+        changes.push(ChangeRecord {
+            class: ChangeClass::Capability,
+            detail: format!(
+                "executable {} → {}",
+                committed.capability.executable_sha256, capability.executable_sha256
+            ),
+        });
+    }
+    let keys: BTreeSet<&String> = committed
+        .parameters
+        .keys()
+        .chain(parameters.keys())
+        .collect();
+    for key in keys {
+        if committed.parameters.get(key) != parameters.get(key) {
+            changes.push(ChangeRecord {
+                class: ChangeClass::Parameters,
+                detail: format!(
+                    "parameter `{key}` {} → {}",
+                    committed
+                        .parameters
+                        .get(key)
+                        .map_or("absent".to_string(), Value::to_string),
+                    parameters
+                        .get(key)
+                        .map_or("absent".to_string(), Value::to_string)
+                ),
+            });
+        }
+    }
+    let before: BTreeMap<&str, &ReceiptInput> = committed
+        .inputs
+        .iter()
+        .map(|input| (input.input_slot.as_str(), input))
+        .collect();
+    let after: BTreeMap<&str, &ReceiptInput> = plan
+        .inputs
+        .iter()
+        .map(|input| (input.input_slot.as_str(), input))
+        .collect();
+    let slots: BTreeSet<&str> = before.keys().chain(after.keys()).copied().collect();
+    for slot in slots {
+        match (before.get(slot), after.get(slot)) {
+            (Some(old), Some(new)) => {
+                if old.evidence_id != new.evidence_id {
+                    changes.push(ChangeRecord {
+                        class: ChangeClass::InputBinding,
+                        detail: format!(
+                            "slot `{slot}` bound `{}` → `{}`",
+                            old.evidence_id, new.evidence_id
+                        ),
+                    });
+                }
+                if old.sha256 != new.sha256 || old.bytes != new.bytes {
+                    changes.push(ChangeRecord {
+                        class: ChangeClass::InputBytes,
+                        detail: format!("slot `{slot}` bytes {} → {}", old.sha256, new.sha256),
+                    });
+                } else if old.workspace_path != new.workspace_path
+                    || old.media_type != new.media_type
+                {
+                    changes.push(ChangeRecord {
+                        class: ChangeClass::Invocation,
+                        detail: format!("slot `{slot}` staging path or media type differs"),
+                    });
+                }
+            }
+            (Some(_), None) => changes.push(ChangeRecord {
+                class: ChangeClass::InputBinding,
+                detail: format!("slot `{slot}` is no longer bound"),
+            }),
+            (None, Some(_)) => changes.push(ChangeRecord {
+                class: ChangeClass::InputBinding,
+                detail: format!("slot `{slot}` is newly bound"),
+            }),
+            (None, None) => {}
+        }
+    }
+    let old = &committed.invocation;
+    let new = &plan.invocation;
+    if old.arguments != new.arguments
+        || old.working_directory != new.working_directory
+        || old.environment != new.environment
+        || old.timeout_ms != new.timeout_ms
+    {
+        changes.push(ChangeRecord {
+            class: ChangeClass::Invocation,
+            detail: "the adapter's arguments, environment, working directory, or timeout differ"
+                .into(),
+        });
+    }
+    if committed.status != ReceiptStatus::Completed || committed.process.exit_status != Some(0) {
+        changes.push(ChangeRecord {
+            class: ChangeClass::ReceiptNotCompleted,
+            detail: "the committed receipt did not complete with exit status 0".into(),
+        });
+    }
+    changes
 }
 
 fn verify_bindings(
@@ -1477,6 +1903,26 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                             );
                         }
                     }
+                    StepExecutionState::Reused => {
+                        let _ = writeln!(
+                            out,
+                            "   [REUSED] {} — committed receipt {} matches the planned invocation {}; {} output(s) verified at their bound identities; nothing ran",
+                            step.step_id,
+                            step.receipt
+                                .as_ref()
+                                .map_or("?", |receipt| receipt.workspace_path.as_str()),
+                            step.planned_invocation_sha256.as_deref().unwrap_or("?"),
+                            step.outputs.len()
+                        );
+                    }
+                    StepExecutionState::Planned => {
+                        let _ = writeln!(
+                            out,
+                            "   [PLANNED] {} would execute (invocation {})",
+                            step.step_id,
+                            step.planned_invocation_sha256.as_deref().unwrap_or("?")
+                        );
+                    }
                     StepExecutionState::NotRun => {
                         let _ = writeln!(
                             out,
@@ -1490,6 +1936,29 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                     StepExecutionState::Failed => {
                         let _ = writeln!(out, "   [FAILED] {}", step.step_id);
                     }
+                }
+                if !step.changes.is_empty()
+                    && matches!(
+                        step.state,
+                        StepExecutionState::Executed
+                            | StepExecutionState::Planned
+                            | StepExecutionState::NotRun
+                    )
+                {
+                    let _ = writeln!(
+                        out,
+                        "      {}: {}",
+                        if step.state == StepExecutionState::Executed {
+                            "rerun because"
+                        } else {
+                            "would rerun because"
+                        },
+                        step.changes
+                            .iter()
+                            .map(|change| format!("{:?}: {}", change.class, change.detail))
+                            .collect::<Vec<_>>()
+                            .join("; ")
+                    );
                 }
                 for issue in &step.issues {
                     let _ = writeln!(out, "      issue: {issue}");
@@ -1533,9 +2002,10 @@ pub fn human_summary(report: &CaseRunReport) -> String {
         (Some(claims), bindings) => {
             let _ = writeln!(
                 out,
-                "   [GENERATED] {} input attestations from package identities; {} claims from executed outputs; {} recorded claims carried; {} decisions",
+                "   [GENERATED] {} input attestations from package identities; {} claims from executed outputs; {} from reused outputs; {} recorded claims carried; {} decisions",
                 claims.input_attestations,
                 claims.executed_claims,
+                claims.reused_claims,
                 claims.recorded_claims,
                 claims.decisions
             );
@@ -1573,6 +2043,9 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                 }
             }
         }
+        (None, _) if report.status == CaseRunStatus::Planned => {
+            let _ = writeln!(out, "   [NOT RUN] plan only");
+        }
         (None, _) => {
             let _ = writeln!(out, "   [NOT RUN] an earlier gate did not pass");
         }
@@ -1580,6 +2053,9 @@ pub fn human_summary(report: &CaseRunReport) -> String {
 
     let _ = writeln!(out, "\n5. EVALUATE");
     match report.campaign.as_ref() {
+        None if report.status == CaseRunStatus::Planned => {
+            let _ = writeln!(out, "   [NOT RUN] plan only");
+        }
         Some(campaign) => {
             let admitted = campaign
                 .admissions
@@ -1624,7 +2100,13 @@ pub fn human_summary(report: &CaseRunReport) -> String {
     }
 
     let execution_phrase = match report.execution.as_ref().map(|execution| execution.status) {
-        Some(ExecutionStatus::Executed) => "every declared step executed with a verified receipt",
+        Some(ExecutionStatus::Executed) => {
+            "every declared step executed or was reused under a verified receipt"
+        }
+        Some(ExecutionStatus::Reused) => {
+            "every declared step was reused from a committed receipt whose invocation identity and outputs still verify, so nothing ran"
+        }
+        Some(ExecutionStatus::Planned) => "execution was planned only",
         Some(ExecutionStatus::NotRun) => "no step was executed",
         Some(ExecutionStatus::Partial) => {
             "some declared steps executed and others were not supplied"
@@ -1646,6 +2128,7 @@ pub fn human_summary(report: &CaseRunReport) -> String {
         match report.status {
             CaseRunStatus::Evaluated => "workflow evaluated",
             CaseRunStatus::Rejected => "workflow rejected",
+            CaseRunStatus::Planned => "workflow planned, not run",
         },
         match report.integrity.status {
             PackageIntegrityStatus::Complete => "complete for every declared artifact",
@@ -1769,6 +2252,8 @@ mod tests {
                 ("python3".to_string(), PathBuf::from(python3)),
             ]),
             workspace: Some(workspace.clone()),
+            reuse: false,
+            plan_only: false,
         };
         let report = execute_case(&case_000(), &options).unwrap();
         let summary = human_summary(&report);
@@ -1779,6 +2264,7 @@ mod tests {
         assert_eq!(execution.steps.len(), 2);
         for step in &execution.steps {
             assert_eq!(step.state, StepExecutionState::Executed, "{summary}");
+            assert!(step.changes.is_empty(), "{summary}");
             assert!(
                 step.outputs
                     .iter()
@@ -1794,5 +2280,20 @@ mod tests {
         assert!(summary.contains("[EXECUTED] activation via python3"));
         assert!(summary.contains("[EXECUTED] classification via aftermatter-cli"));
         let _ = fs::remove_dir_all(&workspace);
+
+        // The same request again: both receipts match, nothing runs.
+        let reuse = CaseRunOptions {
+            reuse: true,
+            workspace: Some(workspace.clone()),
+            ..options
+        };
+        let report = execute_case(&case_000(), &reuse).unwrap();
+        let summary = human_summary(&report);
+        assert_eq!(report.status, CaseRunStatus::Evaluated, "{summary}");
+        let execution = report.execution.as_ref().unwrap();
+        assert_eq!(execution.status, ExecutionStatus::Reused);
+        assert!(execution.workspace.is_none());
+        assert_eq!(report.claims.as_ref().unwrap().reused_claims, 6);
+        assert!(report.claims.as_ref().unwrap().matches_committed);
     }
 }

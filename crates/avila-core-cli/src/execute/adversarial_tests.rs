@@ -17,7 +17,7 @@ use avila_core_evidence::{
 use serde_json::{Value, json};
 
 use crate::case_run::{
-    BindingStatus, CapabilityCheckState, CaseRunOptions, CaseRunReport, CaseRunStatus,
+    BindingStatus, CapabilityCheckState, CaseRunOptions, CaseRunReport, CaseRunStatus, ChangeClass,
     ExecutionStatus, StepExecutionState, execute_case, human_summary,
 };
 
@@ -121,6 +121,26 @@ struct Synthetic {
 /// stand-in input bytes under one source root, a canned expected output, and
 /// an execution bound to `stub`.
 fn build_package(dir: &Path, stub: &Path) -> Synthetic {
+    build_package_with(dir, stub, None)
+}
+
+/// A stub for the activation step: ignores the builder arguments and writes
+/// the three fixed outputs the R0 builder layout pins.
+fn write_activation_stub(path: &Path, inventory: &[u8]) {
+    let inventory = String::from_utf8_lossy(inventory).to_string();
+    let script = format!(
+        "#!/bin/sh\nprintf '%s\\n' '{{\"spec\":\"actinv-spec-1\"}}' > cases/r0/input/actinv-problem.json\nprintf '%s\\n' '{inventory}' > cases/r0/reference/actinv-result.json\nprintf '%s\\n' '{{\"schema\":\"aftermatter-decay-metadata-1\"}}' > cases/r0/reference/decay-half-lives.json\nexit 0\n"
+    );
+    fs::write(path, script).unwrap();
+    fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+}
+
+const STUB_INVENTORY: &str = "{\"schema\":\"aftermatter-inventory-1\",\"stub\":true}";
+
+/// Build the synthetic package; with `activation_stub`, the activation step is
+/// declared for execution too, so the two-step chain can be reused, rerun, or
+/// planned selectively.
+fn build_package_with(dir: &Path, stub: &Path, activation_stub: Option<&Path>) -> Synthetic {
     let case_dir = dir.join("case");
     let root = dir.join("root");
     fs::create_dir_all(case_dir.join("receipts")).unwrap();
@@ -137,9 +157,15 @@ fn build_package(dir: &Path, stub: &Path) -> Synthetic {
         fs::write(&canned, canned_route_result("0.5")).unwrap();
     }
     fs::copy(&canned, root.join("route-result.json")).unwrap();
-    fs::write(root.join("inventory.json"), b"{\"stub\":\"inventory\"}").unwrap();
-    fs::write(root.join("problem.json"), b"{\"stub\":\"problem\"}").unwrap();
-    fs::write(root.join("decay.json"), b"{\"stub\":\"decay\"}").unwrap();
+    // The recorded activation outputs are exactly what the activation stub
+    // writes, so a chain with both executions binds one set of identities.
+    fs::write(root.join("inventory.json"), format!("{STUB_INVENTORY}\n")).unwrap();
+    fs::write(root.join("problem.json"), b"{\"spec\":\"actinv-spec-1\"}\n").unwrap();
+    fs::write(
+        root.join("decay.json"),
+        b"{\"schema\":\"aftermatter-decay-metadata-1\"}\n",
+    )
+    .unwrap();
 
     let contract: Value =
         serde_json::from_slice(&fs::read(case_dir.join("contract.json")).unwrap()).unwrap();
@@ -233,6 +259,40 @@ fn build_package(dir: &Path, stub: &Path) -> Synthetic {
     )
     .unwrap();
 
+    let mut capabilities = vec![json!({
+        "capability_id": "stub",
+        "package_id": "test/stub@1",
+        "executable_sha256": digest(stub),
+    })];
+    let mut executions = Vec::new();
+    if let Some(activation_stub) = activation_stub {
+        capabilities.push(json!({
+            "capability_id": "python3",
+            "package_id": "test/activation-stub@1",
+            "executable_sha256": digest(activation_stub),
+        }));
+        executions.push(json!({
+            "step_id": "activation",
+            "adapter": "avila-labs.aftermatter/build-r0-case@1",
+            "capability_id": "python3",
+            "inputs": [
+                { "input_slot": "builder", "workspace_path": "tools/build_r0_case.py" },
+                { "input_slot": "actinv-executable", "workspace_path": "tools/actinv" },
+                { "input_slot": "actinv-dump-helper", "workspace_path": "tools/dump" },
+                { "input_slot": "spectrum", "workspace_path": "cases/r0/input/fns-spectrum.json" },
+                { "input_slot": "activation-library", "workspace_path": ".data/actinv/v1.0.0/activation/tendl-2025-neutron-709g.npz" },
+                { "input_slot": "library-index", "workspace_path": ".data/actinv/v1.0.0/activation/tendl-2025-neutron-709g_index.json" },
+                { "input_slot": "decay-primary", "workspace_path": ".data/actinv/v1.0.0/decay/endf-b-viii-0_decay.dat" },
+                { "input_slot": "decay-fallback", "workspace_path": ".data/actinv/v1.0.0/decay/jeff-3-3_decay.dat" },
+                { "input_slot": "data-notice", "workspace_path": ".data/actinv/v1.0.0/ACTINV-DATA-NOTICE.md" }
+            ],
+            "outputs": [
+                { "output_slot": "problem", "claim_id": "actinv-r0-problem" },
+                { "output_slot": "inventory", "claim_id": "actinv-r0-inventory" },
+                { "output_slot": "decay-metadata", "claim_id": "actinv-r0-decay-metadata" }
+            ]
+        }));
+    }
     let package = json!({
         "schema_version": "avila.core/case-package/v0.1-draft",
         "case_id": "CASE-STUB",
@@ -244,11 +304,7 @@ fn build_package(dir: &Path, stub: &Path) -> Synthetic {
             { "document_id": "policy", "role": "review_policy", "path": "reviewer-eligibility-policy.md", "sha256": digest(&case_dir.join("reviewer-eligibility-policy.md")) }
         ],
         "artifacts": artifacts,
-        "capabilities": [{
-            "capability_id": "stub",
-            "package_id": "test/stub@1",
-            "executable_sha256": digest(stub),
-        }],
+        "capabilities": capabilities,
         "executions": [{
             "step_id": "classification",
             "adapter": "avila-labs.aftermatter/evaluate@1",
@@ -270,6 +326,11 @@ fn build_package(dir: &Path, stub: &Path) -> Synthetic {
         }],
         "limitations": ["synthetic test package"]
     });
+    let mut package = package;
+    let declared = package["executions"].as_array_mut().unwrap();
+    for execution in executions.into_iter().rev() {
+        declared.insert(0, execution);
+    }
     fs::write(
         case_dir.join("package.json"),
         serde_json::to_vec_pretty(&package).unwrap(),
@@ -288,6 +349,8 @@ fn run_options(synthetic: &Synthetic, workspace: PathBuf) -> CaseRunOptions {
         source_roots: BTreeMap::from([("stub".to_string(), synthetic.root.clone())]),
         capabilities: BTreeMap::from([("stub".to_string(), synthetic.stub.clone())]),
         workspace: Some(workspace),
+        reuse: false,
+        plan_only: false,
     }
 }
 
@@ -310,6 +373,10 @@ fn bless(synthetic: &Synthetic, workspace: &Path) {
         case_dir.join("receipts/classification.json"),
     )
     .unwrap();
+    let activation = workspace.join("activation/receipt.json");
+    if activation.is_file() {
+        fs::copy(&activation, case_dir.join("receipts/activation.json")).unwrap();
+    }
     let mut package: Value =
         serde_json::from_slice(&fs::read(case_dir.join("package.json")).unwrap()).unwrap();
     let documents = package["documents"].as_array_mut().unwrap();
@@ -319,8 +386,16 @@ fn bless(synthetic: &Synthetic, workspace: &Path) {
         }
     }
     documents.retain(|document| {
-        document["document_id"] != "expected" && document["document_id"] != "receipt"
+        document["document_id"] != "expected"
+            && document["document_id"] != "receipt"
+            && document["document_id"] != "activation-receipt"
     });
+    if case_dir.join("receipts/activation.json").is_file() {
+        documents.push(json!({
+            "document_id": "activation-receipt", "role": "execution_receipt", "path": "receipts/activation.json",
+            "sha256": digest(&case_dir.join("receipts/activation.json")), "step_id": "activation"
+        }));
+    }
     documents.push(json!({
         "document_id": "expected", "role": "expected_campaign_report", "path": "campaign-report.json",
         "sha256": digest(&case_dir.join("campaign-report.json"))
@@ -674,4 +749,326 @@ fn an_adapter_bound_to_the_wrong_step_type_is_refused() {
             .any(|issue| issue.contains("compiles to `aftermatter.r0-inventory-build@1`"))
     );
     assert!(report.campaign.is_none());
+}
+
+fn reuse_options(synthetic: &Synthetic, workspace: PathBuf) -> CaseRunOptions {
+    CaseRunOptions {
+        reuse: true,
+        ..run_options(synthetic, workspace)
+    }
+}
+
+/// Replace one stand-in input's bytes and rebind its package identity, as a
+/// case author does when an input legitimately changes.
+fn change_input(synthetic: &Synthetic, artifact_id: &str, file: &str, bytes: &[u8]) {
+    fs::write(synthetic.root.join(file), bytes).unwrap();
+    let mut package: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    for artifact in package["artifacts"].as_array_mut().unwrap() {
+        if artifact["artifact_id"] == artifact_id {
+            artifact["sha256"] = json!(digest(&synthetic.root.join(file)));
+        }
+    }
+    fs::write(
+        synthetic.case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+}
+
+/// A blessed two-step synthetic chain: both executions committed with
+/// receipts from an honest fresh run.
+fn blessed_chain(dir: &TestDir) -> Synthetic {
+    let stub = dir.0.join("stub.sh");
+    let canned = dir.0.join("canned-route-result.json");
+    fs::write(&canned, canned_route_result("0.5")).unwrap();
+    write_copy_stub(&stub, &canned);
+    let activation_stub = dir.0.join("activation.sh");
+    write_activation_stub(&activation_stub, STUB_INVENTORY.as_bytes());
+    let synthetic = build_package_with(&dir.0, &stub, Some(&activation_stub));
+    let workspace = dir.workspace();
+    let mut options = run_options(&synthetic, workspace.clone());
+    options
+        .capabilities
+        .insert("python3".into(), activation_stub);
+    let first = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(
+        first.execution.as_ref().unwrap().status,
+        ExecutionStatus::Executed,
+        "{}",
+        human_summary(&first)
+    );
+    bless(&synthetic, &workspace);
+    synthetic
+}
+
+fn chain_options(
+    dir: &TestDir,
+    synthetic: &Synthetic,
+    reuse: bool,
+    plan_only: bool,
+) -> CaseRunOptions {
+    let mut options = run_options(synthetic, dir.workspace());
+    options
+        .capabilities
+        .insert("python3".into(), dir.0.join("activation.sh"));
+    options.reuse = reuse;
+    options.plan_only = plan_only;
+    options
+}
+
+#[test]
+fn an_unchanged_case_is_reused_without_running_anything() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let workspace = dir.workspace();
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, workspace.clone()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    assert_eq!(report.status, CaseRunStatus::Evaluated, "{summary}");
+    let execution = report.execution.as_ref().unwrap();
+    assert_eq!(execution.status, ExecutionStatus::Reused);
+    assert!(execution.workspace.is_none());
+    assert!(!workspace.exists(), "reuse must not create a workspace");
+    let reused = step(&report);
+    assert_eq!(reused.state, StepExecutionState::Reused);
+    assert!(reused.changes.is_empty());
+    assert_eq!(reused.reused_receipt.as_deref(), Some("receipt"));
+    assert_eq!(reused.outputs[0].reproduces_bound_artifact, Some(true));
+    let claims = report.claims.as_ref().unwrap();
+    assert_eq!(claims.reused_claims, 3);
+    assert_eq!(claims.executed_claims, 0);
+    assert!(claims.matches_committed);
+    assert!(summary.contains("[REUSED] classification"));
+
+    // Reuse never needs the executable: the receipt and the bound bytes do.
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options.capabilities.clear();
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(
+        report.execution.as_ref().unwrap().status,
+        ExecutionStatus::Reused
+    );
+    assert_eq!(report.status, CaseRunStatus::Evaluated);
+}
+
+#[test]
+fn a_changed_input_reruns_the_step_and_names_the_change() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    change_input(
+        &synthetic,
+        "aftermatter-case",
+        "inputs/aftermatter-case",
+        b"revised case\n",
+    );
+
+    // Plan first: what would rerun, and why, without running.
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .map(|_| ())
+    .and_then(|_| {
+        let mut options = reuse_options(&synthetic, dir.workspace());
+        options.plan_only = true;
+        execute_case(&synthetic.case_dir, &options)
+    })
+    .unwrap();
+    let summary = human_summary(&report);
+    assert_eq!(report.status, CaseRunStatus::Planned, "{summary}");
+    let planned = step(&report);
+    assert_eq!(planned.state, StepExecutionState::Planned);
+    assert!(planned.changes.iter().any(|change| {
+        change.class == ChangeClass::InputBytes && change.detail.contains("slot `case`")
+    }));
+    assert!(report.claims.is_none() && report.campaign.is_none());
+    assert!(summary.contains("would rerun because: InputBytes"));
+
+    // Then run: the step executes, the change is recorded, and the committed
+    // claims no longer match because the attested input identity moved.
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let executed = step(&report);
+    assert_eq!(executed.state, StepExecutionState::Executed, "{summary}");
+    assert_eq!(executed.changes.len(), 1);
+    assert_eq!(executed.changes[0].class, ChangeClass::InputBytes);
+    assert!(!report.claims.as_ref().unwrap().matches_committed);
+    assert_eq!(report.status, CaseRunStatus::Rejected);
+    assert!(summary.contains("rerun because: InputBytes"));
+}
+
+#[test]
+fn a_requirement_change_reuses_evidence_and_recomputes_verdicts() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let contract_path = synthetic.case_dir.join("contract.json");
+    let mut contract: Value = serde_json::from_slice(&fs::read(&contract_path).unwrap()).unwrap();
+    for requirement in contract["requirements"].as_array_mut().unwrap() {
+        requirement["limit"]["value"] = json!("0.2");
+    }
+    fs::write(
+        &contract_path,
+        serde_json::to_vec_pretty(&contract).unwrap(),
+    )
+    .unwrap();
+    rehash_document(&synthetic.case_dir, "contract", "contract.json");
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    assert_eq!(
+        report.execution.as_ref().unwrap().status,
+        ExecutionStatus::Reused,
+        "{summary}"
+    );
+    let campaign = report.campaign.as_ref().unwrap();
+    assert!(
+        campaign
+            .verdicts
+            .iter()
+            .all(|verdict| { verdict.verdict.status == avila_core_kernel::VerdictStatus::Fail }),
+        "{summary}"
+    );
+    assert!(
+        !report.claims.as_ref().unwrap().matches_committed,
+        "the snapshot identity moved"
+    );
+    assert_eq!(report.status, CaseRunStatus::Rejected);
+    assert!(summary.contains("[FAIL] CASE-000-R1"));
+}
+
+#[test]
+fn an_edited_receipt_cannot_be_reused_and_the_rerun_drifts_from_it() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let receipt_path = synthetic.case_dir.join("receipts/classification.json");
+    let mut edited: Value = serde_json::from_slice(&fs::read(&receipt_path).unwrap()).unwrap();
+    edited["outputs"][0]["sha256"] =
+        json!("sha256:2222222222222222222222222222222222222222222222222222222222222222");
+    fs::write(&receipt_path, serde_json::to_vec_pretty(&edited).unwrap()).unwrap();
+    rehash_document(
+        &synthetic.case_dir,
+        "receipt",
+        "receipts/classification.json",
+    );
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let executed = step(&report);
+    assert_eq!(executed.state, StepExecutionState::Executed);
+    assert!(
+        executed
+            .changes
+            .iter()
+            .any(|change| change.class == ChangeClass::OutputsUnavailable)
+    );
+    assert!(!executed.replay.as_ref().unwrap().matches);
+    assert_eq!(report.status, CaseRunStatus::Rejected);
+}
+
+#[test]
+fn a_two_step_chain_reruns_only_what_a_change_reaches() {
+    let dir = TestDir::new();
+    let synthetic = blessed_chain(&dir);
+
+    // Unchanged: both reused.
+    let report = execute_case(
+        &synthetic.case_dir,
+        &chain_options(&dir, &synthetic, true, false),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    assert_eq!(
+        report.execution.as_ref().unwrap().status,
+        ExecutionStatus::Reused,
+        "{summary}"
+    );
+    assert_eq!(report.status, CaseRunStatus::Evaluated);
+    assert_eq!(report.claims.as_ref().unwrap().reused_claims, 6);
+
+    // A changed classification input reaches only classification.
+    change_input(
+        &synthetic,
+        "aftermatter-wcs-rulepack",
+        "inputs/aftermatter-wcs-rulepack",
+        b"revised rulepack\n",
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &chain_options(&dir, &synthetic, true, true),
+    )
+    .unwrap();
+    let steps = &report.execution.as_ref().unwrap().steps;
+    assert_eq!(steps[0].step_id, "activation");
+    assert_eq!(steps[0].state, StepExecutionState::Reused);
+    assert_eq!(steps[1].step_id, "classification");
+    assert_eq!(steps[1].state, StepExecutionState::Planned);
+    assert!(
+        steps[1]
+            .changes
+            .iter()
+            .any(|change| change.class == ChangeClass::InputBytes)
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &chain_options(&dir, &synthetic, true, false),
+    )
+    .unwrap();
+    let steps = &report.execution.as_ref().unwrap().steps;
+    assert_eq!(steps[0].state, StepExecutionState::Reused);
+    assert_eq!(steps[1].state, StepExecutionState::Executed);
+    assert_eq!(report.claims.as_ref().unwrap().reused_claims, 3);
+    assert_eq!(report.claims.as_ref().unwrap().executed_claims, 3);
+
+    // A changed activation input reruns activation; classification receives
+    // byte-identical outputs and is reused, because dependency follows content.
+    bless(
+        &synthetic,
+        Path::new(
+            report
+                .execution
+                .as_ref()
+                .unwrap()
+                .workspace
+                .as_ref()
+                .unwrap(),
+        ),
+    );
+    change_input(
+        &synthetic,
+        "fns-spectrum",
+        "inputs/fns-spectrum",
+        b"revised spectrum\n",
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &chain_options(&dir, &synthetic, true, false),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let steps = &report.execution.as_ref().unwrap().steps;
+    assert_eq!(steps[0].state, StepExecutionState::Executed, "{summary}");
+    assert!(steps[0].changes.iter().any(|change| {
+        change.class == ChangeClass::InputBytes && change.detail.contains("slot `spectrum`")
+    }));
+    assert_eq!(steps[1].state, StepExecutionState::Reused, "{summary}");
+    assert_eq!(
+        report.execution.as_ref().unwrap().status,
+        ExecutionStatus::Executed
+    );
 }

@@ -150,6 +150,13 @@ Selective reuse is allowed only when a typed dependency and reviewed reuse rule
 show that the changed object cannot affect the evidence. “The files look similar”
 is not a reuse rule.
 
+The case runner implements the execution-memoization half of this: a step is
+reused only when its planned invocation identity equals a committed completed
+receipt's and every recorded output verifies at a bound identity, and any
+difference is reported by change class and reruns the step. Authorized
+non-dependence reuse rules, and invalidation by policy, qualification, review,
+or advisory changes, are not implemented.
+
 ## Package contents
 
 A portable package should contain or securely reference:

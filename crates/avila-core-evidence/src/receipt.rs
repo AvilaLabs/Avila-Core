@@ -166,27 +166,43 @@ pub enum ReceiptError {
 /// The identity of what was asked of the program: capability, parameters,
 /// staged inputs, and invocation. Process outcome and outputs are results
 /// and deliberately excluded, so a rerun of the same request has the same
-/// invocation identity whatever it produced.
+/// invocation identity whatever it produced. This is the memoization key of
+/// SC-12: a completed receipt with the same identity, whose outputs are still
+/// verifiable, stands for a rerun of a deterministic capability.
 pub fn invocation_identity(
     capability: &CapabilityIdentity,
     parameters: &BTreeMap<String, serde_json::Value>,
     inputs: &[ReceiptInput],
     invocation: &Invocation,
 ) -> Result<String, ReceiptError> {
+    /// The program name is a display annotation of the executable, whose
+    /// identity is its digest; it does not enter the invocation identity.
+    #[derive(Serialize)]
+    struct InvocationBody<'a> {
+        arguments: &'a [String],
+        working_directory: &'a str,
+        environment: &'a BTreeMap<String, String>,
+        timeout_ms: u64,
+    }
     #[derive(Serialize)]
     struct IdentityBody<'a> {
         schema_version: &'a str,
         capability: &'a CapabilityIdentity,
         parameters: &'a BTreeMap<String, serde_json::Value>,
         inputs: &'a [ReceiptInput],
-        invocation: &'a Invocation,
+        invocation: InvocationBody<'a>,
     }
     let body = IdentityBody {
         schema_version: EXECUTION_RECEIPT_SCHEMA_VERSION,
         capability,
         parameters,
         inputs,
-        invocation,
+        invocation: InvocationBody {
+            arguments: &invocation.arguments,
+            working_directory: &invocation.working_directory,
+            environment: &invocation.environment,
+            timeout_ms: invocation.timeout_ms,
+        },
     };
     let bytes = serde_json::to_vec(&body)
         .map_err(|error| ReceiptError::Serialization(error.to_string()))?;

@@ -107,9 +107,11 @@ requirements, the register is the declared inputs, and the checker is a
 capability type. Executing the protocol produces the claims document; the
 checker's re-derivation is the admission step; the ledger entry is the
 campaign report; the manifest is its identity. Execution receipts now exist
-for the steps a case declares (ADR-0007); what remains is capability identity
-beyond an executable digest, the signed half of A2, and typed invalidation so
-a changed input or method names exactly which verdicts no longer stand.
+for the steps a case declares, and they double as the memoization table:
+an unchanged step is reused, a changed one is rerun with its change named by
+class, and a requirement change re-evaluates over reused evidence
+(ADR-0007). What remains is capability identity beyond an executable digest,
+the signed half of A2, and the change classes a receipt cannot see.
 
 ## First composed internal case
 

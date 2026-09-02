@@ -88,7 +88,23 @@ extracts claims from the bytes that come back.
    bound to the package identities, is evaluated, and its campaign report is
    compared with the committed expectation. Any drift is a rejected run.
 
-7. **Omission is visible; deviation is fatal.** As with artifact roots
+7. **Receipts are the memoization table.** Before running a step the runner
+   plans its invocation from the currently bound inputs, parameters, and the
+   package's capability identity, and computes the same invocation identity a
+   receipt would carry. If the committed receipt for the step carries that
+   identity, completed with exit status zero, and every output it recorded is
+   available as a verified artifact at a bound identity, the step is
+   `reused`: nothing runs, the executable is not needed, the claims are
+   re-extracted from the bound bytes, and later steps consume them. Otherwise
+   the runner reports what differs by SC-12 change class and reruns exactly
+   that step; because identity follows content, a rerun whose outputs are
+   byte-identical leaves its consumers reused. `--plan` stops after that
+   analysis; `--no-reuse` runs everything afresh. Reuse is exactly what a
+   `deterministic` declaration permits (SC-5.4) and nothing more: a capability
+   that depends on undeclared state is not caught by reuse, only by a fresh
+   run.
+
+8. **Omission is visible; deviation is fatal.** As with artifact roots
    (S-018), an executable that is not supplied leaves the step `not_run` and
    the committed claims stand as recorded attestations, visibly. A supplied
    executable must match, run to completion, and reproduce claims that bind,
@@ -96,8 +112,11 @@ extracts claims from the bytes that come back.
 
 ## Boundary
 
-This is the first executable slice of SC-11 A1, A2, A4, and A5 in a
-case-specific form. It does not implement signatures or trust roots (A2's
+This is the first executable slice of SC-11 A1, A2, A4, and A5 and of
+SC-12 execution memoization and typed change classes, in a case-specific
+form. Change classes beyond what a receipt can see (requirement, policy,
+qualification, review, advisory) are not detected here; a requirement change
+simply recompiles the snapshot and re-evaluates over reused evidence. It does not implement signatures or trust roots (A2's
 runner-signature half), qualification or applicability facts (A7), policy
 snapshots (A8), review fulfilment (A9), invalidation (A10), sandboxing,
 resource accounting, package selection, or a generic adapter protocol. The

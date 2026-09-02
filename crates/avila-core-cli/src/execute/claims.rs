@@ -30,6 +30,9 @@ pub struct GeneratedClaim {
     pub producer_package_id: String,
     pub producer_sha256: String,
     pub claim: Value,
+    /// Whether the output was reused from a committed receipt rather than
+    /// produced by a fresh execution in this run.
+    pub reused: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -39,6 +42,7 @@ pub struct GeneratedClaims {
     pub canonical_sha256: String,
     pub input_attestations: usize,
     pub executed_claims: usize,
+    pub reused_claims: usize,
     pub recorded_claims: usize,
     pub decisions: usize,
 }
@@ -103,6 +107,7 @@ pub fn generate_claims(
 
     let mut claims = Vec::new();
     let mut executed_count = 0;
+    let mut reused_count = 0;
     let mut recorded_count = 0;
     for step in &compiled.workflow {
         if executed_steps.contains(step.step_id.as_str()) {
@@ -110,7 +115,11 @@ pub fn generate_claims(
                 .iter()
                 .filter(|claim| claim.step_id == step.step_id)
             {
-                executed_count += 1;
+                if claim.reused {
+                    reused_count += 1;
+                } else {
+                    executed_count += 1;
+                }
                 claims.push(json!({
                     "claim_id": claim.claim_id,
                     "step_id": claim.step_id,
@@ -159,6 +168,7 @@ pub fn generate_claims(
     Ok(GeneratedClaims {
         input_attestations: value["inputs"].as_array().map_or(0, Vec::len),
         executed_claims: executed_count,
+        reused_claims: reused_count,
         recorded_claims: recorded_count,
         decisions: value["decisions"].as_array().map_or(0, Vec::len),
         value,

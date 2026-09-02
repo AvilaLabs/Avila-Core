@@ -135,12 +135,27 @@ receipt, generated `claims.json`, `campaign-report.json`, and `run-report.json`
 under `workspaces/CASE-000/<run>/` (gitignored) unless `--workspace` names a
 fresh directory. Pass `--json` for the complete machine-readable report.
 
-Omit a `--capability` and that step is reported `NOT RUN`: its committed
-claims are evaluated as recorded attestations, visibly, and a later step that
-consumes its outputs stages the bound artifact bytes instead. Omit a source
-root and its artifacts are `not_checked`; the runner then refuses to execute
-over those bytes. Supply a root or an executable that does not match and the
-run fails closed.
+By default the runner first plans each step's invocation and compares it
+with the committed receipt. When the identity matches, the receipt completed,
+and every recorded output still verifies at its bound identity, the step is
+`REUSED` and nothing runs, so the command above with the three roots and no
+`--capability` reports both steps reused and evaluates exactly as the frozen
+expectations say. Pass `--no-reuse` to execute both tools afresh, or `--plan`
+to see what would rerun and why (by SC-12 change class: input bytes, input
+binding, parameters, capability, invocation, receipt state) without running.
+
+Omit a `--capability` for a step that cannot be reused and it is reported
+`NOT RUN`: its committed claims are evaluated as recorded attestations,
+visibly, and a later step that consumes its outputs stages the bound artifact
+bytes instead. Omit a source root and its artifacts are `not_checked`; the
+runner then neither executes over nor reuses those bytes. Supply a root or an
+executable that does not match and the run fails closed.
+
+To see selective rerun on this case, change one thing in a scratch copy of
+the Aftermatter root, rebind that artifact's digest in `package.json`, and
+run with `--plan`: a rulepack change reaches only `classification`, while a
+spectrum change reaches `activation` and, because its outputs are then
+compared by content, `classification` only if the inventory actually moved.
 
 The standalone commands still work over the committed documents:
 

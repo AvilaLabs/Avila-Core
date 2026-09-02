@@ -43,14 +43,14 @@
       "document_id": "case-000-activation-receipt",
       "role": "execution_receipt",
       "path": "receipts/activation.json",
-      "sha256": "sha256:3f38d0d2e632486795fe6d65791e863997f4f43a1ee0ba98b98d8dcf9767a51d",
+      "sha256": "sha256:7eed646fef2eb42e353af9f61eb0967a5faacf526a18801578a96ea403a88fa2",
       "step_id": "activation"
     },
     {
       "document_id": "case-000-classification-receipt",
       "role": "execution_receipt",
       "path": "receipts/classification.json",
-      "sha256": "sha256:f290596c51be863296dce509a78909c8150bc10241af23c020f44296720bad5f",
+      "sha256": "sha256:1a076303558f29436dd02417294b761750c745cbf957b39df37dd77fe2e43bd9",
       "step_id": "classification"
     }
   ],

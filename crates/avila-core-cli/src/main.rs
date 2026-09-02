@@ -77,6 +77,14 @@ enum Command {
         /// current directory when something is executed.
         #[arg(long, value_name = "DIR")]
         workspace: Option<PathBuf>,
+        /// Execute every declared step afresh instead of reusing a step whose
+        /// committed receipt matches the planned invocation and whose outputs
+        /// still verify.
+        #[arg(long = "no-reuse")]
+        no_reuse: bool,
+        /// Report what would be reused or rerun, and why, without executing.
+        #[arg(long)]
+        plan: bool,
         /// Emit the complete machine-readable run report instead of the concise view.
         #[arg(long)]
         json: bool,
@@ -144,12 +152,16 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             source_roots,
             capabilities,
             workspace,
+            no_reuse,
+            plan,
             json,
         } => {
             let options = case_run::CaseRunOptions {
                 source_roots: case_run::parse_source_roots(&source_roots)?,
                 capabilities: case_run::parse_capabilities(&capabilities)?,
                 workspace,
+                reuse: !no_reuse,
+                plan_only: plan,
             };
             let report = case_run::execute_case(&case, &options)?;
             if json {

@@ -161,6 +161,53 @@ pub struct ExecutionRequest {
     pub inputs: Vec<StagedInput>,
 }
 
+/// What a step execution would ask of the program, computed before anything
+/// is staged or run: the receipt inputs, the portable invocation, and their
+/// identity. The same identity on a completed committed receipt whose
+/// outputs still verify is the memoization key for reuse.
+#[derive(Debug, Clone)]
+pub struct PlannedInvocation {
+    pub inputs: Vec<ReceiptInput>,
+    pub invocation: Invocation,
+    pub invocation_sha256: String,
+}
+
+pub fn plan_invocation(
+    adapter: Adapter,
+    capability: &CapabilityIdentity,
+    program: &str,
+    parameters: &BTreeMap<String, Value>,
+    staged: &[StagedInput],
+) -> Result<PlannedInvocation, Box<dyn Error>> {
+    let mut inputs = Vec::with_capacity(staged.len());
+    let mut staged_paths = BTreeMap::new();
+    for input in staged {
+        let bytes = fs::metadata(&input.source_path)?.len();
+        staged_paths.insert(input.input_slot.clone(), input.workspace_path.clone());
+        inputs.push(ReceiptInput {
+            input_slot: input.input_slot.clone(),
+            evidence_id: input.evidence_id.clone(),
+            workspace_path: input.workspace_path.clone(),
+            media_type: input.media_type.clone(),
+            sha256: input.expected_sha256.clone(),
+            bytes,
+        });
+    }
+    let invocation = Invocation {
+        program: program.into(),
+        arguments: adapter.arguments(&staged_paths)?,
+        working_directory: ".".into(),
+        environment: adapter.environment(),
+        timeout_ms: u64::try_from(adapter.timeout().as_millis()).unwrap_or(u64::MAX),
+    };
+    let invocation_sha256 = invocation_identity(capability, parameters, &inputs, &invocation)?;
+    Ok(PlannedInvocation {
+        inputs,
+        invocation,
+        invocation_sha256,
+    })
+}
+
 /// Where one execution left its bytes. The receipt is re-read from disk by
 /// the caller so verification never trusts in-memory state.
 #[derive(Debug)]
@@ -182,36 +229,37 @@ pub fn execute_step(
         )
         .into());
     }
+    let program = request
+        .executable
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| request.capability.capability_id.clone());
+    let plan = plan_invocation(
+        request.adapter,
+        &request.capability,
+        &program,
+        &request.parameters,
+        &request.inputs,
+    )?;
     fs::create_dir_all(step_dir)?;
     fs::create_dir_all(step_dir.join("logs"))?;
 
     // Stage: copy verified bytes to runner-assigned relative paths and re-hash
-    // the copies so the receipt describes what the program could read.
-    let mut receipt_inputs = Vec::with_capacity(request.inputs.len());
-    let mut staged_paths = BTreeMap::new();
-    for input in &request.inputs {
+    // the copies so the receipt describes exactly what the program could read.
+    for (input, planned) in request.inputs.iter().zip(&plan.inputs) {
         let destination = step_dir.join(&input.workspace_path);
         if let Some(parent) = destination.parent() {
             fs::create_dir_all(parent)?;
         }
         fs::copy(&input.source_path, &destination)?;
         let (sha256, bytes) = sha256_file(&destination)?;
-        if sha256 != input.expected_sha256 {
+        if sha256 != planned.sha256 || bytes != planned.bytes {
             return Err(format!(
-                "staged copy of `{}` hashes to {sha256}, expected {}",
-                input.evidence_id, input.expected_sha256
+                "staged copy of `{}` hashes to {sha256} ({bytes} bytes), expected {} ({} bytes)",
+                input.evidence_id, planned.sha256, planned.bytes
             )
             .into());
         }
-        staged_paths.insert(input.input_slot.clone(), input.workspace_path.clone());
-        receipt_inputs.push(ReceiptInput {
-            input_slot: input.input_slot.clone(),
-            evidence_id: input.evidence_id.clone(),
-            workspace_path: input.workspace_path.clone(),
-            media_type: input.media_type.clone(),
-            sha256,
-            bytes,
-        });
     }
     for output in request.adapter.outputs() {
         if let Some(parent) = step_dir.join(output.workspace_path).parent() {
@@ -219,27 +267,12 @@ pub fn execute_step(
         }
     }
 
-    let arguments = request.adapter.arguments(&staged_paths)?;
+    let receipt_inputs = plan.inputs;
+    let invocation = plan.invocation;
+    let invocation_sha256 = plan.invocation_sha256;
+    let arguments = invocation.arguments.clone();
+    let environment = invocation.environment.clone();
     let timeout = request.adapter.timeout();
-    let environment = request.adapter.environment();
-    let program = request
-        .executable
-        .file_name()
-        .map(|name| name.to_string_lossy().into_owned())
-        .unwrap_or_else(|| request.capability.capability_id.clone());
-    let invocation = Invocation {
-        program,
-        arguments: arguments.clone(),
-        working_directory: ".".into(),
-        environment: environment.clone(),
-        timeout_ms: u64::try_from(timeout.as_millis()).unwrap_or(u64::MAX),
-    };
-    let invocation_sha256 = invocation_identity(
-        &request.capability,
-        &request.parameters,
-        &receipt_inputs,
-        &invocation,
-    )?;
 
     // Execute with a cleared environment inside the workspace.
     let stdout_path = step_dir.join("logs/stdout.log");

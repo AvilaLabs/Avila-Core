@@ -195,7 +195,7 @@
     },
     "reviewPolicyBinding": {
       "type": "object",
-      "description": "Contract binding for a pending person or agent review obligation. The compiler preserves the external policy identity, independence requirements, and instructions but does not evaluate them.",
+      "description": "Contract binding for an optional connected-agent practicality stage after technical evaluation. When included, it can return a candidate or route it to the user; it never participates in compilation success, qualification, evidence admission, or a technical verdict.",
       "additionalProperties": false,
       "required": [
         "reviewer_eligibility_policy",
@@ -209,7 +209,7 @@
           "$ref": "#/$defs/reviewIndependence"
         },
         "instructions": {
-          "description": "Exact practical instructions bound into the compiled review obligation. Agent reviews require at least one; the compiler does not interpret whether they were followed.",
+          "description": "Exact practical instructions bound into the optional agent stage. At least one is required; the compiler does not interpret whether the connected agent followed them.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/nonemptyString"

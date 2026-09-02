@@ -27,7 +27,7 @@ use self::requirements::compile_requirements;
 use self::resolve::{
     collect_sources, resolve_workflow, validate_contract_registry_refs, validate_graph,
 };
-use self::review::compile_review_obligations;
+use self::review::compile_presentation_gates;
 use self::schema::SchemaDocument;
 use self::shape::validate_contract_shape;
 use self::source::{read_document, validate_document_headers};
@@ -44,8 +44,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub use ir::{
     COMPILE_NOTICE, CanonicalTypedQuantity, CompilationStatus, CompileReport, CompiledContract,
-    CompiledParameterValue, CompiledReproducibility, CompiledRequirement, CompiledReviewObligation,
-    CompiledStep, CompilerError, DocumentIdentity, ResolvedBinding, ReviewFulfillment,
+    CompiledParameterValue, CompiledPresentationGate, CompiledReproducibility, CompiledRequirement,
+    CompiledStep, CompilerError, DocumentIdentity, PresentationGateState, ResolvedBinding,
 };
 
 const COMPILER_ID: &str = concat!("avila.core/compiler-rust@", env!("CARGO_PKG_VERSION"));
@@ -124,7 +124,7 @@ pub fn compile_documents(
         &unknown_type_steps,
         &mut findings,
     );
-    let compiled_reviews = compile_review_obligations(
+    let presentation_gates = compile_presentation_gates(
         &contract,
         &registry_index,
         &resolution.bindings,
@@ -164,7 +164,7 @@ pub fn compile_documents(
         &resolution.bindings,
         &compiled_parameters,
         &compiled_reproducibility,
-        &compiled_reviews,
+        &presentation_gates,
         &order,
     );
     let mut inputs = contract.inputs.clone();
@@ -198,7 +198,7 @@ fn build_compiled_steps(
     bindings: &BTreeMap<String, Vec<ResolvedBinding>>,
     parameters: &BTreeMap<String, BTreeMap<String, CompiledParameterValue>>,
     reproducibility: &BTreeMap<String, CompiledReproducibility>,
-    review_obligations: &BTreeMap<String, CompiledReviewObligation>,
+    presentation_gates: &BTreeMap<String, CompiledPresentationGate>,
     order: &[String],
 ) -> Vec<CompiledStep> {
     let steps: BTreeMap<_, _> = contract
@@ -221,7 +221,7 @@ fn build_compiled_steps(
                     .get(step_id)
                     .cloned()
                     .expect("every compiled step has a reproducibility declaration"),
-                review_obligation: review_obligations.get(step_id).cloned(),
+                presentation_gate: presentation_gates.get(step_id).cloned(),
             }
         })
         .collect()

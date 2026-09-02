@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::document::{QuantityValue, ReviewDisposition};
+use crate::document::QuantityValue;
 
 pub const CLAIMS_SCHEMA_VERSION: &str = "avila.core/evidence-claims/v0.2-draft";
 pub const CAMPAIGN_REPORT_SCHEMA_VERSION: &str = "avila.core/campaign-report/v0.2-draft";
@@ -18,8 +18,6 @@ pub struct ClaimsDocument {
     pub inputs: Vec<InputAttestation>,
     #[serde(default)]
     pub claims: Vec<OutputClaim>,
-    #[serde(default)]
-    pub decisions: Vec<ReviewDecision>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,27 +89,4 @@ pub enum ClaimValue {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         nominal: Option<QuantityValue>,
     },
-}
-
-/// An asserted review decision. Nothing about it is signed or verified.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ReviewDecision {
-    pub step_id: String,
-    pub disposition: ReviewDisposition,
-    pub rationale: String,
-    pub reviewer: ReviewerIdentity,
-    pub attestation: Attestation,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ReviewerIdentity {
-    pub identity: String,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Attestation {
-    Unverified,
 }

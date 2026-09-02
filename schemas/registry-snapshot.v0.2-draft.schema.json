@@ -252,7 +252,7 @@
     },
     "reviewDeclaration": {
       "type": "object",
-      "description": "Type-level review signature. The reviewer role bounds its dispositions; no disposition constitutes a technical requirement verdict.",
+      "description": "Type-level signature for an optional connected-agent practicality stage. Its disposition routes a candidate back to iteration or onward to the user; it cannot constitute or alter a technical requirement verdict.",
       "additionalProperties": false,
       "required": [
         "reviewer_role",
@@ -262,11 +262,8 @@
       ],
       "properties": {
         "reviewer_role": {
-          "description": "Accountable people may govern use; agents may only route work toward or back from accountable review.",
-          "enum": [
-            "accountable_person",
-            "agent"
-          ]
+          "description": "The optional practicality stage is performed by a connected agent. Human acknowledgment, when desired, is a separate downstream concern.",
+          "const": "agent"
         },
         "presented_input_slots": {
           "type": "array",
@@ -285,9 +282,7 @@
           "uniqueItems": true,
           "items": {
             "enum": [
-              "approve_for_use",
-              "reject_for_use",
-              "recommend_for_accountable_review",
+              "present_to_user",
               "request_changes",
               "abstain"
             ]

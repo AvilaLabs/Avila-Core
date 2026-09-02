@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/evidence-claims/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
-  "compiled_snapshot_sha256": "sha256:56b02127d2882bcdb66d418e4416f2b7853054c219070ef40bf53ee5721cdacc",
+  "compiled_snapshot_sha256": "sha256:5cfda41aba2d14d137ca9e2200a35d4abba940abcf796640fec9004aa5b47f74",
   "claims": [
     {
       "claim_id": "dose",
@@ -35,6 +35,5 @@
         "model": "unquantified"
       }
     }
-  ],
-  "decisions": []
+  ]
 }

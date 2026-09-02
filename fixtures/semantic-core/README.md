@@ -32,17 +32,17 @@ multiple historical profiles.
   seeded-stochastic, and nondeterministic types, material execution factors,
   seeds, and explicit role-scoped nondeterminism policy; and
 - `types/compiler-review-cases.v1.json`: 9 executable structural R9 fixtures:
-  2 compiled cases and 7 rejected cases covering exact review dossiers,
-  governance-only dispositions, digest-pinned external eligibility policy,
-  explicit independence, and pending review obligations; and
+  2 compiled cases and 7 rejected cases covering exact optional presentation
+  dossiers, agent routing dispositions, digest-pinned policy identity, explicit
+  instructions, and `awaiting_agent` state; and
 - `types/compiler-purpose-cases.v1.json`: 6 executable R10 fixtures: 3 compiled
   cases and 3 rejected cases covering governed purpose resolution, exact nominal
   exclusions, unrelated and similarly named purposes, and major-version
   mismatch; and
-- `campaigns/campaign-cases.v1.json`: 13 executable campaign fixtures covering
+- `campaigns/campaign-cases.v1.json`: 12 executable campaign fixtures covering
   the first SC-10/SC-11 claim-admission and verdict slice, including bounded
-  outcomes, exact unit scaling, quarantine paths, snapshot mismatch, and review
-  asymmetry.
+  outcomes, exact unit scaling, quarantine paths, snapshot mismatch,
+  qualification, and proof that presentation policy is not a verdict input.
 
 All other fixtures below are required before ADR acceptance and are currently
 planned unless files exist for them.
@@ -52,9 +52,9 @@ The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `scope-predicates.v1.json`, plus the 42 requirement and 8 aggregation vectors in
 `verdict-calculus.v1.json`. The compiler harness also executes all 68 cases in
 the five compiler manifests and pins each registry digest plus all successful
-compiled-snapshot identities. The campaign harness executes all 13 cases in its
-manifest and pins every successful campaign identity. Passing the 90 pure
-vectors, 68 compiler fixtures, and 13 campaign fixtures does not accept
+compiled-snapshot identities. The campaign harness executes all 12 cases in its
+manifest and pins every successful campaign identity. Passing the 91 pure
+vectors, 68 compiler fixtures, and 12 campaign fixtures does not accept
 ADR-0006: full package-level admission, package rule halves, and other vector
 families in this coverage plan remain absent, and no result is scientifically
 qualified.
@@ -99,7 +99,7 @@ fixtures/semantic-core/
   types/compiler.reproducibility.registry.v1.json
                              exact determinism registry pinned by the R8 manifest
   types/compiler.review.registry.v1.json
-                             exact accountable-review registry pinned by the R9 manifest
+                             exact optional agent-presentation registry pinned by the R9 manifest
   types/compiler.purpose.registry.v1.json
                              exact governed-purpose registry pinned by the R10 manifest
   scenarios/                 planned end-to-end campaign fixtures
@@ -266,13 +266,13 @@ canonically.
 | `types.R8.nondeterministic-refused.fail` | `CORE-A4301` |
 | `types.R8.nondeterministic-permitted.pass` | explicit policy permits every produced role without changing the nondeterministic class |
 | `types.R8.permission-scope.fail` | permission for an unrelated role does not enable the step → `CORE-A4301` |
-| `types.R9.review-bound.pass` | exact dossier, governance dispositions, external eligibility-policy identity, and independence constraints compile to `pending_external_review` |
-| `types.R9.explicit-none.pass` | an explicit lack of separation is preserved as a visible weakening, never inferred as a default |
-| `types.R9.missing-review.fail` | a review capability without its contract policy binding → `CORE-R3401` |
-| `types.R9.policy-digest.fail` / `policy-revision.fail` | eligibility policy must be pinned by a valid immutable identity → `CORE-R3401` |
+| `types.R9.review-bound.pass` | exact dossier, agent routing dispositions, policy identity, and instructions compile to `presentation_gate.state = awaiting_agent` |
+| `types.R9.explicit-none.pass` | an explicit lack of separation metadata is preserved; it never affects a technical verdict |
+| `types.R9.missing-review.fail` | a configured presentation capability without its contract policy binding → `CORE-R3401` |
+| `types.R9.policy-digest.fail` / `policy-revision.fail` | agent policy must be pinned by a valid immutable identity → `CORE-R3401` |
 | `types.R9.empty-independence.fail` / `duplicate-independence.fail` | constraint mode is nonempty and unambiguous → `CORE-R3401` |
 | `types.R9.binding-on-non-review.fail` | a normal capability cannot acquire review semantics from contract syntax → `CORE-R3401` |
-| `types.R9.nondeterminism-refused.fail` | review remains nondeterministic and still requires explicit R8 role-scoped permission → `CORE-A4301` |
+| `types.R9.nondeterminism-refused.fail` | a nondeterministic routing output still requires explicit R8 role-scoped permission → `CORE-A4301` |
 | `types.R10.allowed.pass` | a resolved purpose not excluded by the producing output is retained in compiled IR |
 | `types.R10.excluded.fail` | an exact output-purpose exclusion → `CORE-T2601` |
 | `types.R10.unrelated-purpose.pass` | excluding one purpose does not exclude unrelated governed identities |
@@ -292,7 +292,7 @@ canonically.
 | `types.cascade.unknown-type-suppressed.pass` | a step of unknown capability type is reported once at its `capability_type`; bindings and metrics naming its outputs are suppressed, not reported as nonexistent |
 | `types.cascade-preserves-independent.pass` | dependency-blocked step with its own `CORE-P5101` reports both |
 | `types.conversion-capability.pass` | Gy→Sv via `core.convert.absorbed_dose_to_dose_equivalent@1` type-checks with weighting role bound |
-| `types.human-step.pass` | fulfilled, signed `core.review.decision@1` record is admitted under external organization policy; type-level obligation is now covered by the executable R9 fixtures |
+| `types.presentation-agent.pass` | optional agent presentation request binds an exact dossier and stays outside campaign admission; type-level structure is covered by the executable R9 fixtures |
 | `types.partial-outputs.pass/fail` | declaration admits only named slots; undeclared partial → `CORE-E7201` |
 
 ### applicability/ (SC-7)
@@ -335,10 +335,10 @@ canonically.
 | `policy.rule.forbid_self_preference.pinned.pass` | Avila package pinned by contract with justification |
 | `policy.rule.forbid_self_preference.unpinned.fail` | `CORE-P5501` |
 | `policy.rule.permit_nominal_basis.fail` | nominal requirement under governed policy → `CORE-A4201` |
-| `policy.rule.required_review_roles.pass` | verdict blocked until review present |
-| `policy.rule.separation_of_duties.fail` | approver = requester under `distinct` → `CORE-A4502` |
+| `policy.rule.presentation-cannot-gate-verdict.pass` | optional routing policy never enters verdict calculus |
+| `policy.rule.separation_of_duties.fail` | two technical roles violate an explicitly declared organization policy → `CORE-A4502` |
 | `policy.rule.separation_of_duties.waived.pass` | waived; `waived_controls` recorded in package |
-| `policy.rule.cost_caps.pass` | `CORE-P5401` → `awaiting_approval` |
+| `policy.rule.cost_caps.pass` | `CORE-P5401` → external user confirmation before execution, not before verdict derivation |
 | `policy.selection.every-candidate-decided.pass` | selection record lists all candidates with reasons |
 | `policy.selection.rank-order.pass` | policy-declared technical/operational criteria; provider maturity is not an implicit quality rank |
 | `policy.selection.tie-break.pass` | ascending `capability_id`, descending version |
@@ -358,7 +358,7 @@ canonically.
 | `lifecycle.status.approved.permits-bind.pass` | contract lifecycle is separate from campaign state |
 | `lifecycle.status.retired.read-only.pass` | |
 | `lifecycle.instantiation-is-origin.pass` | template instance is immutable origin metadata, not a status |
-| `lifecycle.campaign-state-not-contract-state.pass` | planned/executed/reviewed exist only on campaigns |
+| `lifecycle.campaign-state-not-contract-state.pass` | planned/running/completed exist only on campaigns |
 | `lifecycle.template.instantiate.eligible.pass` | |
 | `lifecycle.template.ineligible.fail` | `CORE-A4401` |
 | `lifecycle.template.eligibility-unknown.fail` | `CORE-A4405` |
@@ -391,10 +391,9 @@ canonically.
 | `verdict.aggregation.coverage-needs-capability.fail` | marginal coverage intervals are not assigned joint coverage by the kernel |
 | `verdict.one-sided.lower/upper.*` | both comparison directions and strict boundaries |
 | `verdict.equal.nominal/one-sided.*` | nominal tolerance and one-sided contradiction rules |
-| `verdict.not_evaluated.missing/quarantined/invalidated/awaiting_review` | reasons and owners listed; no numbers |
+| `verdict.not_evaluated.missing/quarantined/invalidated` | reasons and owners listed; no numbers |
 | `verdict.not_evaluated.duplicate-claim` | `CORE-E7301` |
-| `verdict.pass-requires-reviews.pass` | PASS withheld until reviews present |
-| `verdict.fail-with-reviews-outstanding.pass` | FAIL emitted with `reviews_outstanding` |
+| `verdict.presentation-policy.not-an-input.pass` | the same admitted claims produce the same verdict with or without optional presentation routing |
 | `verdict.record-fields.pass` | every field of `avila.core/verdict/v0.2` present |
 | `verdict.evaluator-identity.pass` | `kernel:verdict-calculus@1` |
 | `verdict.core-requirement-evaluation-step.pass` | specimen step type maps to kernel |
@@ -417,11 +416,11 @@ canonically.
 | `admission.A7.actual-context.fail` | see `scope.a7-actual-context.fail` |
 | `admission.A7.vacuous-recorded.pass` | no qualification required → sub-record says so |
 | `admission.A8.policy-changed.fail` | → invalidated |
-| `admission.A9.awaiting-review.pass` | state, not quarantine |
+| `admission.A9.optional-routing-record.pass` | a valid attached routing record is checked separately and does not change artifact admission |
 | `admission.A10.ancestor-invalidated.fail` | |
 | `admission.state.quarantine-terminal.pass` | rerun yields new artifact id |
-| `admission.review.accept/reject/request_information.pass` | A9 / `review_rejected` / `CORE-E7401` |
-| `admission.review.cannot-edit-artifact.fail` | review record with mutated bytes → `CORE-E7101` |
+| `admission.presentation.present/return/abstain.pass` | closed routing dispositions; technical verdict unchanged |
+| `admission.presentation.cannot-edit-artifact.fail` | routing record with mutated dossier bytes is quarantined; artifact and verdict remain unchanged |
 | `admission.non-artifact-records.pass` | snapshot, approvals, selection, preflight, change events are records |
 | `admission.sub-record-replayable.pass` | verifier replays A1–A4, A6(kernel), A7, A8, A10 from package alone |
 | `admission.undeclared-output-discarded.pass` | `CORE-X6301` note; not evidence |

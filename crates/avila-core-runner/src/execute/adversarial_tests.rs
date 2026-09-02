@@ -146,11 +146,7 @@ fn build_package_with(dir: &Path, stub: &Path, activation_stub: Option<&Path>) -
     let root = dir.join("root");
     fs::create_dir_all(case_dir.join("receipts")).unwrap();
     fs::create_dir_all(root.join("inputs")).unwrap();
-    for name in [
-        "contract.json",
-        "registry.json",
-        "reviewer-eligibility-policy.md",
-    ] {
+    for name in ["contract.json", "registry.json"] {
         fs::copy(case_000().join(name), case_dir.join(name)).unwrap();
     }
     let canned = dir.join("canned-route-result.json");
@@ -251,8 +247,7 @@ fn build_package_with(dir: &Path, stub: &Path, activation_stub: Option<&Path>) -
                 "artifact": { "sha256": digest(&root.join("decay.json")), "media_type": "application/vnd.aftermatter.decay-metadata+json" },
                 "claim": { "model": "unquantified" }
             }
-        ],
-        "decisions": []
+        ]
     });
     fs::write(
         case_dir.join("claims.json"),
@@ -301,8 +296,7 @@ fn build_package_with(dir: &Path, stub: &Path, activation_stub: Option<&Path>) -
         "documents": [
             { "document_id": "contract", "role": "contract", "path": "contract.json", "sha256": digest(&case_dir.join("contract.json")) },
             { "document_id": "registry", "role": "registry", "path": "registry.json", "sha256": digest(&case_dir.join("registry.json")) },
-            { "document_id": "claims", "role": "claims", "path": "claims.json", "sha256": digest(&case_dir.join("claims.json")) },
-            { "document_id": "policy", "role": "review_policy", "path": "reviewer-eligibility-policy.md", "sha256": digest(&case_dir.join("reviewer-eligibility-policy.md")) }
+            { "document_id": "claims", "role": "claims", "path": "claims.json", "sha256": digest(&case_dir.join("claims.json")) }
         ],
         "artifacts": artifacts,
         "capabilities": capabilities,
@@ -493,7 +487,7 @@ fn honest_execution_generates_claims_and_replays() {
         campaign
             .verdicts
             .iter()
-            .all(|verdict| { verdict.verdict.rule == "not_evaluated.review_pending" })
+            .all(|verdict| { verdict.verdict.rule == "bounded.lt.within" })
     );
     assert!(report.replay.as_ref().unwrap().matches);
     assert!(summary.contains("[EXECUTED] classification via stub"));
@@ -1500,8 +1494,7 @@ fn a_run_outside_the_envelope_cannot_establish_a_bounded_requirement() {
         "{summary}"
     );
     assert!(summary.contains("[OUTSIDE] 1/2 terms hold"), "{summary}");
-    // CASE-000's requirements also await qualified review, which is reported
-    // first; the envelope reason is carried on every bounded verdict.
+    // The qualification failure is carried on every bounded verdict.
     let campaign = report.campaign.as_ref().expect("campaign evaluated");
     for verdict in &campaign.verdicts {
         assert_eq!(

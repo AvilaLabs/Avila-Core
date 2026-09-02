@@ -8,13 +8,13 @@ precede horizontal platform construction.
 ### H1 — expensive resolution gap
 
 For a recurring technical question, the principal avoidable cost lies in
-assembling, checking, rerunning, and reviewing evidence across tools—not solely
+assembling, checking, iterating, and rerunning evidence across tools—not solely
 in solver execution.
 
 Evidence required:
 
 - time study of at least three completed decisions;
-- identifiable handoffs, rework, and review loops;
+- identifiable handoffs, rework, and iteration loops;
 - buyer willingness to pay to shorten the full loop; and
 - no existing deployed product that already solves it adequately.
 
@@ -28,17 +28,17 @@ Evidence required:
 - two cases instantiated from one template;
 - explicit differences and eligibility rules;
 - lower scoping effort on the second case; and
-- professional agreement that the template remains valid.
+- successful replay and adversarial cases showing the template remains valid.
 
-### H3 — portable package improves review
+### H3 — portable package improves independent verification
 
-An independent reviewer can understand and assess the campaign faster from the
-Core package than from current scripts, folders, and reports.
+An independent implementation or evidence consumer can verify the campaign
+faster from the Core package than from current scripts, folders, and reports.
 
 Evidence required:
 
 - blinded or structured comparison where feasible;
-- reviewer time, questions, missing-evidence findings, and confidence rationale;
+- verification time, questions, missing-evidence findings, and confidence rationale;
 - successful offline integrity verification; and
 - documented remaining manual judgment.
 
@@ -52,7 +52,8 @@ Evidence required:
 - independent implementation using public SDK documentation;
 - shared conformance cases;
 - deterministic provider selection under policy; and
-- review of whether outputs are truly substitutable for the context of use.
+- reference and adversarial tests of whether outputs are truly substitutable
+  for the context of use.
 
 ### H5 — selective reruns create compounding speed
 
@@ -61,8 +62,8 @@ subgraph after representative changes.
 
 Evidence required:
 
-- a catalog of input, method, data, policy, and review changes;
-- expected invalidation graph signed off by method owners;
+- a catalog of input, method, data, policy, and qualification changes;
+- expected invalidation graph bound to its named owner and tests;
 - no stale verdict surviving a relevant change; and
 - measured cost and time saved against full rerun.
 
@@ -90,7 +91,7 @@ Evidence required:
   alone; the diagnostic-contract harness measures the synthetic half today,
   where every mechanically repairable mistake is fixed from the compiler's own
   repairs in one round;
-- measured failures caught before execution and reviewer clarification avoided;
+- measured failures caught before execution and agent rework avoided;
 - complete boundary vectors for exact quantities, predicates, admission, verdict
   calculus, and invalidation;
 - an independent implementation of the written rules that passes the normative
@@ -98,18 +99,35 @@ Evidence required:
 - explicit separation between compiler correctness and scientific adequacy of
   the admitted methods.
 
-## Interview groups
+### H8 — autonomous generative search is useful
 
-Interview each role separately before proposing the product:
+A connected agent can hold a contract fixed, use Core's structured findings
+and margins to explore a bounded design space, and either find an
+all-requirements-passing candidate or report bounded exhaustion without a
+professional reviewer in the loop.
+
+Evidence required:
+
+- one fixed benchmark, candidate space, and stopping rule;
+- an iteration trace proving requirements were not silently rewritten;
+- at least one known shortcut Core refuses;
+- independent replay of the final or exhaustion package; and
+- if configured, an optional practicality gate that returns an awkward
+  candidate and presents a clean one without altering the technical verdict.
+
+## Optional product-discovery interviews
+
+When available, interview roles separately to inform product selection. These
+conversations do not gate engineering progress or technical verdicts:
 
 - engineers and researchers who assemble the workflow;
 - method owners who defend applicability;
-- reviewers, quality staff, customers, or regulators who consume evidence;
+- independent verifiers, quality staff, customers, or regulators who consume evidence;
 - managers who fund delay and rework;
 - software, data, lab, and consulting providers; and
 - IT/security staff responsible for the execution environment.
 
-Ask for the last real example, artifacts, elapsed time, failure, and approval
+Ask for the last real example, artifacts, elapsed time, failure, and consumption
 path. Avoid asking whether a hypothetical platform “sounds useful.”
 
 ## First-pilot discovery packet
@@ -126,7 +144,7 @@ Capture:
 3. inputs, formats, tools, data, scripts, people, and licenses;
 4. acceptance requirements and ambiguity;
 5. uncertainty and numerical treatment;
-6. review checklist and evidence actually requested;
+6. independent-verification needs and practical concerns not encoded as requirements;
 7. known failure cases and prior rework;
 8. security, export, retention, and deployment constraints;
 9. total direct and delay cost; and
@@ -148,7 +166,9 @@ The reference suite must include:
 - corrupted artifacts and invalid signatures;
 - dependency changes that should and should not invalidate a verdict;
 - process crashes, partial outputs, timeouts, and hostile archives; and
-- an independent manual reconstruction of at least one verdict.
+- an independent implementation's reconstruction of at least one verdict; and
+- an optional connected-agent practicality test that returns a deliberately
+  awkward finalist and presents a clean one without changing either verdict.
 
 Core fails validation if only the happy path works.
 
@@ -156,11 +176,11 @@ Core fails validation if only the happy path works.
 
 Primary:
 
-- question-to-reviewed-verdict elapsed time;
+- question-to-evidenced-candidate elapsed time;
 - expensive runs prevented by semantic preflight and their false-block rate;
 - total cost of resolution;
-- professional labor hours;
-- reviewer time and clarification loops;
+- setup and maintenance labor hours;
+- agent iterations, retries, and clarification loops;
 - percentage of evidence reused correctly after change;
 - number and severity of missing-evidence findings; and
 - repeat contract purchase.
@@ -174,8 +194,8 @@ Guardrails:
 - claims lacking complete lineage;
 - unpriced Avila labor;
 - data leaving the permitted boundary; and
-- user interpretation of Core as certification or replacement for professional
-  responsibility.
+- user interpretation of Core as certification or as coverage of unstated
+  practical requirements.
 
 Any verdict that does not follow from its recorded semantic profile and admitted
 evidence is a release-stopping event for the affected scope. A scientifically
@@ -189,10 +209,10 @@ Reconsider the first vertical if:
 
 - the painful work is mostly one-time and not reusable;
 - existing platforms already satisfy the buyer at acceptable cost;
-- the reviewer does not value the evidence package;
+- an independent implementation cannot use the evidence package;
 - tool licenses prevent practical execution or evidence portability;
 - method interfaces lose essential semantics;
-- professional qualification cannot be owned credibly;
+- qualification cannot be supported by explicit validation evidence;
 - Avify-style bounds are too conservative or expensive for the chosen question;
 - each case requires permanent bespoke consulting; or
 - customers will not pay independently of a favorable verdict.

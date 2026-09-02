@@ -175,16 +175,16 @@ def main():
         status = (entry["transport"] or {}).get("status") or "not evaluated"
         counts[status] = counts.get(status, 0) + 1
     tally = ", ".join(f"{count} {status}" for status, count in sorted(counts.items()))
-    recommended = [
+    presented = [
         entry for entry in results
-        if entry["review"]["disposition"] == "recommend_for_accountable_review"
+        if entry["review"]["disposition"] == "present_to_user"
     ]
     lines += ["", f"Transport verdicts for the {len(results)} finalists: {tally}." if results else "",
-              f"Accountable-review queue: {len(recommended)} candidate(s). The agent returned {len(results) - len(recommended)} to the designer; it approved none.",
+              f"User presentation queue: {len(presented)} candidate(s). The optional agent gate returned {len(results) - len(presented)} to the designer.",
               f"{duplicates} feasible candidate(s) skipped as duplicates of a design already sent to transport." if duplicates else "",
               "An `inconclusive` verdict means the statistical interval straddles the limit; more particles narrow it, and a candidate whose nominal sits above the limit is unlikely to pass.", "",
               "Values are shown to four significant digits; the campaign log keeps every exact value and identity. Each staged-review record binds Core's exact review request, dossier identities, policy, instructions, agent implementation, disposition, and actions.", "",
-              "The screen's PASS is nominal and establishes nothing; only the transport verdict is bounded, and its interval is statistical only. Agent routing is not accountable review and never approves a candidate for use."]
+              "The screen's PASS is nominal and establishes nothing; only the transport verdict is bounded, and its interval is statistical only. Practical-review routing controls presentation and never changes a Core verdict."]
     (out / "summary.md").write_text("\n".join(lines) + "\n")
     print((out / "summary.md").read_text())
     return 0

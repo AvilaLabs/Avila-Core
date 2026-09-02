@@ -152,15 +152,6 @@ pub struct EvidenceClaim {
     pub aggregation_instance: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ReviewRequirements {
-    #[serde(default)]
-    pub required: Vec<String>,
-    #[serde(default)]
-    pub present: Vec<String>,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct VerdictCase {
@@ -168,8 +159,6 @@ pub struct VerdictCase {
     pub requirement: KernelRequirement,
     #[serde(default)]
     pub evidence: Vec<EvidenceClaim>,
-    #[serde(default)]
-    pub reviews: ReviewRequirements,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -186,10 +175,6 @@ pub enum VerdictReason {
     DuplicateClaims {
         code: String,
         evidence_ids: Vec<String>,
-    },
-    ReviewPending {
-        review_role: String,
-        state: String,
     },
 }
 
@@ -219,8 +204,6 @@ pub struct VerdictOutput {
     pub numbers_present: Option<bool>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub reasons: Vec<VerdictReason>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub reviews_outstanding: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_upper_text: Option<String>,
 }
@@ -241,7 +224,6 @@ impl VerdictOutput {
             basis_visible: None,
             numbers_present: Some(false),
             reasons,
-            reviews_outstanding: Vec::new(),
             display_upper_text: None,
         }
     }
@@ -354,20 +336,6 @@ impl<'a> VerdictEvaluator<'a> {
             )?,
         };
 
-        let reviews_outstanding = outstanding_reviews(&case.reviews);
-        if status == VerdictStatus::Pass && !reviews_outstanding.is_empty() {
-            return Ok(VerdictOutput::not_evaluated(
-                "not_evaluated.review_pending",
-                reviews_outstanding
-                    .into_iter()
-                    .map(|review_role| VerdictReason::ReviewPending {
-                        review_role,
-                        state: "pending".into(),
-                    })
-                    .collect(),
-            ));
-        }
-
         let mut output = VerdictOutput {
             status,
             rule,
@@ -402,7 +370,6 @@ impl<'a> VerdictEvaluator<'a> {
                 .then_some(BasisKind::Nominal),
             numbers_present: None,
             reasons: Vec::new(),
-            reviews_outstanding,
             display_upper_text: None,
         };
 
@@ -857,15 +824,6 @@ const fn comparison_satisfied(comparison: VerdictComparison, ordering: Ordering)
         VerdictComparison::GreaterThanOrEqual => ordering.is_ge(),
         VerdictComparison::Equal => ordering.is_eq(),
     }
-}
-
-fn outstanding_reviews(reviews: &ReviewRequirements) -> Vec<String> {
-    reviews
-        .required
-        .iter()
-        .filter(|role| !reviews.present.contains(role))
-        .cloned()
-        .collect()
 }
 
 fn extremum<'a>(

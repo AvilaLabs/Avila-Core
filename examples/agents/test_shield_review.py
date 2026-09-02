@@ -11,7 +11,7 @@ INSTRUCTIONS = [
     "Use Core's recorded requirement statuses and rules; never derive, edit, or override a technical verdict.",
     "Request changes unless every compiled requirement is PASS.",
     "After technical PASS, request changes for adjacent identical layers, a layer thinner than 10 cm, or liquid water without explicit containment evidence.",
-    "A positive result may only recommend the candidate for accountable human review; never approve or reject it for use.",
+    "After technical and practical checks pass, route the candidate to the user without altering Core's verdict.",
 ]
 
 
@@ -41,9 +41,9 @@ def specimen():
         "compiled_snapshot_sha256": "sha256:" + "1" * 64,
         "campaign_sha256": campaign["campaign_sha256"],
         "step_id": "practical-review",
-        "fulfillment": "pending_agent_review",
+        "gate_state": "awaiting_agent",
         "reviewer_role": "agent",
-        "state": "ready_for_review",
+        "readiness": "ready_for_agent",
         "presented_evidence": [
             {
                 "input_slot": "reviewer",
@@ -60,10 +60,10 @@ def specimen():
                 "media_type": "application/vnd.avila.shield-candidate+json",
             }
         ],
-        "decision_role": {"id": "core.review.routing-decision", "major": 1},
-        "decision_media_type": "application/vnd.avila-core.staged-review+json",
+        "decision_role": {"id": "core.presentation.routing-record", "major": 1},
+        "decision_media_type": "application/vnd.avila-core.presentation-routing+json",
         "allowed_dispositions": [
-            "recommend_for_accountable_review",
+            "present_to_user",
             "request_changes",
             "abstain",
         ],
@@ -76,7 +76,7 @@ def specimen():
         "instructions": INSTRUCTIONS,
     }
     request["request_sha256"] = shield_review.identity(request)
-    report = {"campaign": campaign, "review_stages": [request]}
+    report = {"campaign": campaign, "presentation_gates": [request]}
     policy = {
         "policy_id": "avila-labs.shielding/practical-agent-review",
         "revision": 1,
@@ -100,7 +100,7 @@ def rebind_campaign(report):
         if key not in {"campaign_sha256", "notice"}
     }
     campaign["campaign_sha256"] = shield_review.identity(body)
-    request = report["review_stages"][0]
+    request = report["presentation_gates"][0]
     request["campaign_sha256"] = campaign["campaign_sha256"]
     request_body = {
         key: value for key, value in request.items() if key != "request_sha256"
@@ -119,12 +119,11 @@ class ShieldReviewTests(unittest.TestCase):
             REVIEWER_SHA256,
         )
 
-    def test_clean_candidate_is_only_recommended_to_a_person(self):
+    def test_clean_candidate_is_presented_to_the_user(self):
         report, candidate, policy = specimen()
         record = self.review(report, candidate, policy)
-        self.assertEqual(record["disposition"], "recommend_for_accountable_review")
+        self.assertEqual(record["disposition"], "present_to_user")
         self.assertEqual(record["actions"], [])
-        self.assertNotIn(record["disposition"], shield_review.FORBIDDEN_AGENT_DISPOSITIONS)
 
     def test_core_inconclusive_returns_candidate_without_rederiving_verdict(self):
         report, candidate, policy = specimen()
@@ -146,14 +145,14 @@ class ShieldReviewTests(unittest.TestCase):
         self.assertEqual(record["disposition"], "request_changes")
         self.assertEqual(len(record["actions"]), 2)
 
-    def test_agent_authority_in_request_is_refused(self):
+    def test_unknown_routing_disposition_is_refused(self):
         report, candidate, policy = specimen()
         report = copy.deepcopy(report)
-        request = report["review_stages"][0]
-        request["allowed_dispositions"].append("approve_for_use")
+        request = report["presentation_gates"][0]
+        request["allowed_dispositions"].append("override_core_verdict")
         body = {key: value for key, value in request.items() if key != "request_sha256"}
         request["request_sha256"] = shield_review.identity(body)
-        with self.assertRaisesRegex(ValueError, "authority"):
+        with self.assertRaisesRegex(ValueError, "unknown routing disposition"):
             self.review(report, candidate, policy)
 
     def test_different_candidate_bytes_are_refused(self):

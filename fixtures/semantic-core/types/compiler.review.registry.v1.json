@@ -58,13 +58,13 @@
     },
     {
       "role": {
-        "id": "core.review.decision",
+        "id": "core.presentation.routing-record",
         "major": 1
       },
       "owner": "core.semantic_owner",
-      "validator": "core.validate.review-decision@1",
+      "validator": "core.validate.presentation-routing@1",
       "accepted_media_types": [
-        "application/vnd.avila-core.review-decision+json"
+        "application/vnd.avila-core.presentation-routing+json"
       ],
       "permitted_claim_models": [
         {
@@ -117,7 +117,7 @@
     },
     {
       "capability_type": {
-        "id": "fixture.accountable_review",
+        "id": "fixture.practical_agent_review",
         "major": 1
       },
       "owner": "fixture.review_method_owner",
@@ -152,10 +152,10 @@
         {
           "slot_id": "decision",
           "role": {
-            "id": "core.review.decision",
+            "id": "core.presentation.routing-record",
             "major": 1
           },
-          "media_type": "application/vnd.avila-core.review-decision+json",
+          "media_type": "application/vnd.avila-core.presentation-routing+json",
           "permitted_claim_models": [
             {
               "model": "unquantified"
@@ -164,21 +164,20 @@
         }
       ],
       "review": {
-        "reviewer_role": "accountable_person",
+        "reviewer_role": "agent",
         "presented_input_slots": [
           "trace",
           "result"
         ],
         "decision_output_slot": "decision",
         "allowed_dispositions": [
-          "approve_for_use",
-          "reject_for_use",
+          "present_to_user",
           "request_changes",
           "abstain"
         ]
       },
       "non_claims": [
-        "A reviewer does not recalculate or override the technical dose-rate claim."
+        "The optional agent can return the candidate or route it to the user, but does not recalculate or override the technical dose-rate claim."
       ]
     }
   ],

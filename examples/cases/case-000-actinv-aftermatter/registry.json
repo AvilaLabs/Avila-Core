@@ -163,16 +163,6 @@
       "non_claims": [
         "Feasible is not acceptance, unresolved is not rejection, and this role carries no operational authorization."
       ]
-    },
-    {
-      "role": { "id": "core.review.decision", "major": 1 },
-      "owner": "avila-labs.core",
-      "validator": "core.validate.review-decision@1",
-      "accepted_media_types": ["application/vnd.avila-core.review-decision+json"],
-      "permitted_claim_models": [{ "model": "unquantified" }],
-      "non_claims": [
-        "A review disposition governs use and does not replace or alter the technical fraction claims."
-      ]
     }
   ],
   "capability_types": [
@@ -343,54 +333,6 @@
       "non_claims": [
         "Core executes Aftermatter for this type by verified digest; it does not qualify Aftermatter, its rulepacks, or the result.",
         "The result is not a regulatory classification or facility-acceptance decision."
-      ]
-    },
-    {
-      "capability_type": { "id": "core.accountable-review", "major": 1 },
-      "owner": "avila-labs.core",
-      "reproducibility": { "determinism": "nondeterministic" },
-      "inputs": [
-        {
-          "slot_id": "table-1-fraction",
-          "role": { "id": "aftermatter.classification-fraction", "major": 1 },
-          "accepted_media_types": ["application/vnd.aftermatter.route-result+json"]
-        },
-        {
-          "slot_id": "table-2-fraction",
-          "role": { "id": "aftermatter.classification-fraction", "major": 1 },
-          "accepted_media_types": ["application/vnd.aftermatter.route-result+json"]
-        },
-        {
-          "slot_id": "route-result",
-          "role": { "id": "aftermatter.route-result", "major": 1 },
-          "accepted_media_types": ["application/vnd.aftermatter.route-result+json"]
-        }
-      ],
-      "outputs": [
-        {
-          "slot_id": "decision",
-          "role": { "id": "core.review.decision", "major": 1 },
-          "media_type": "application/vnd.avila-core.review-decision+json",
-          "permitted_claim_models": [{ "model": "unquantified" }]
-        }
-      ],
-      "review": {
-        "reviewer_role": "accountable_person",
-        "presented_input_slots": [
-          "table-1-fraction",
-          "table-2-fraction",
-          "route-result"
-        ],
-        "decision_output_slot": "decision",
-        "allowed_dispositions": [
-          "approve_for_use",
-          "reject_for_use",
-          "request_changes",
-          "abstain"
-        ]
-      },
-      "non_claims": [
-        "The review is absent in the frozen campaign and Core cannot authenticate reviewer eligibility, independence, signature, or professional judgment."
       ]
     }
   ]

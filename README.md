@@ -3,14 +3,15 @@
 > Internal codename: Project North Star
 
 Avila Core is an early research project exploring a neutral semantic and trust
-layer for computational engineering. An organization states what it needs to
-establish as an **evidence contract**; qualified capabilities contribute
+layer for computational engineering. A person or connected agent states what
+must be established as an **evidence contract**; capabilities contribute
 evidence; Core determines what follows under explicit rules and returns a
-portable, independently reviewable package.
+portable, independently verifiable package.
 
 The long-term aim is not to sell another solver, workflow canvas, or block of
-compute. It is to shorten the path from an important technical question to an
-admissible answer while preserving the authority of domain professionals.
+compute. It is to let agents explore difficult engineering spaces against a
+strict evidence compiler until the stated gates pass, without making every
+campaign depend on professional review.
 
 ## Current status
 
@@ -24,10 +25,10 @@ This repository is a **pre-alpha scaffold**. It currently provides:
 - exact four-state verdict derivation over admitted claim specimens;
 - a first `v0.2-draft` semantic compiler that resolves typed dataflow,
   enforces typed parameter domains, diagnoses graph and binding failures, and
-  checks type-level determinism, seeds, and material execution factors before
-  compiling accountable review steps into pending obligations bound to an
-  exact evidence dossier, external eligibility-policy identity, explicit
-  independence rules, and governance-only dispositions, while governed
+  checks type-level determinism, seeds, and material execution factors; when
+  configured, it also compiles an optional connected-agent presentation gate
+  bound to an exact evidence dossier, policy identity, practical instructions,
+  and closed routing dispositions, while governed
   requirement purposes prevent outputs from serving uses they explicitly
   exclude; then emits an immutable snapshot with canonical configuration and
   exact requirement limits;
@@ -37,14 +38,14 @@ This repository is a **pre-alpha scaffold**. It currently provides:
 - the first executable campaign slice: an evidence-claims document is admitted
   against the compiled snapshot under the type-level admission conditions, and
   the kernel derives one `PASS`, `FAIL`, `INCONCLUSIVE`, or `NOT_EVALUATED`
-  verdict per requirement, with review asymmetry and a content-identified
-  report;
+  verdict per requirement, independent of any review or presentation state,
+  with a content-identified report;
 - the first composed internal case, `CASE-000`, which binds an existing
   synthetic ACTINV 1.0.1 → Aftermatter R0 chain, executes both computational
   steps (ACTINV through Aftermatter's frozen R0 builder, then Aftermatter over
   the fresh inventory), generates every output claim from the fresh results,
-  admits 14 source attestations and 6 output claims, and truthfully withholds
-  both otherwise-within-limit requirements for absent qualified review;
+  admits 14 source attestations and 6 output claims, and returns technical
+  `PASS` for both bounded requirements without a review stage;
 - a case-package workflow that re-hashes package documents, re-hashes
   external artifact bytes only from explicitly supplied roots, executes the
   steps the package declares through named case-specific adapters over exact
@@ -53,7 +54,7 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   committed receipt matches the planned invocation and whose outputs still
   verify, names every change that forces a rerun by SC-12 class, generates
   the claims document from package identities and fresh or reused outputs,
-  binds those identities to the claims and review policy, compiles and
+  binds those identities to the claims and any optional agent policy, compiles and
   evaluates the case, and replays its committed claims, receipts, and
   campaign report without collapsing an unchecked artifact or an unsupplied
   executable into a success state;
@@ -64,8 +65,9 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   satisfies the bounded one, every verdict carries its exact margin, and
   `--log` appends one line per run to a campaign log that a scripted
   designer in `examples/agents/` drives through the two-fidelity loop; its
-  hash-bound staged reviewer receives Core's exact dossier and can only
-  return work or recommend accountable review, never approve it;
+  optional hash-bound practicality agent receives Core's exact post-campaign
+  dossier and can only return work, present it to the user, or abstain; it
+  never changes the technical verdict;
 - qualification envelopes: a method owner's record binds an exact executable
   and adapter to a kernel applicability predicate over facts the adapter
   reads from verified inputs; the runner evaluates it before a step runs and
@@ -78,14 +80,14 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   refuses to execute over an unstated omission or a weaker-than-required
   basis, so a search cannot optimize an incomplete question;
 - a draft portable evidence model, case-package manifest, execution-receipt
-  and non-accountable staged-review records, and SHA-256 utility;
+  and optional presentation-routing records, and SHA-256 utility;
 - JSON Schemas that the compiler embeds and enforces as its source layer, and
   a deliberately non-executable specimen contract and registry snapshot;
 - a local CLI for canonicalization, compilation, campaign evaluation, the
   diagnostic catalog, and the case workflow; and
 - an egui workbench that runs a composed case through the same runner and
   renders integrity, compilation, execution with reuse and change classes,
-  claims, verdicts with their boundaries, staged-review readiness and
+  claims, verdicts with their boundaries, optional presentation-gate readiness and
   instructions, and replay, plus the original specimen compiler view. It
   computes nothing itself.
 
@@ -94,7 +96,7 @@ conformance-vector corpus. The Rust kernel executes all 91 current pure vectors:
 12 canonical-value, 10 unit-scaling, 19 scope-predicate, 42 requirement-verdict,
 and 8 aggregate-verdict cases. A separate compiler harness executes 68 current
 type fixtures across five pinned registry snapshots, and a campaign harness
-executes 13 claim-admission and verdict fixtures. The first R1–R10 static
+executes 12 claim-admission and verdict fixtures. The first R1–R10 static
 compiler frontier and a type-level SC-10/SC-11 campaign slice are implemented,
 but package-level rule halves, other normative fixture families, full
 package-level admission, invalidation, and package semantics remain proposed
@@ -109,7 +111,8 @@ resolved roots and, where a case declares it, runs exact executables through
 case-specific adapters; a matching hash establishes identity only, and a
 verified receipt establishes process provenance only. In CASE-000 both the
 ACTINV build and the Aftermatter classification are executed and every output
-claim is extracted from the fresh results; qualified review remains external.
+claim is extracted from the fresh results. Their two technical PASS verdicts
+need no professional review; the case still claims no scientific qualification.
 
 ## Core objects
 
@@ -118,7 +121,7 @@ claim is extracted from the fresh results; qualified review remains external.
 | Contract | The bounded question, requirements, assumptions, inputs, and evidence policy. |
 | Capability | A versioned method or adapter with an explicit provider, execution boundary, qualification scope, and limitations. |
 | Campaign | A planned or executed dependency graph resolving one contract. |
-| Evidence | Immutable records connecting inputs, capabilities, executions, outputs, reviews, and claims. |
+| Evidence | Immutable records connecting inputs, capabilities, executions, outputs, and claims; optional presentation routing stays separate. |
 | Verdict | `PASS`, `FAIL`, `INCONCLUSIVE`, or `NOT_EVALUATED` for a specific requirement and boundary. |
 
 A verdict means that the recorded state follows from admitted evidence under a
@@ -211,7 +214,7 @@ document against the compiled snapshot and prints one verdict per requirement;
 see the [campaign evaluation boundary](docs/architecture/CAMPAIGN_EVALUATION.md).
 The `run` command is the concise end-to-end view: integrity, compiled
 workflow, execution with a verified receipt, generated claims, identity
-binding, admissions, verdicts, exact staged-review requests, and replay
+binding, admissions, verdicts, optional exact presentation-gate requests, and replay
 against the committed claims, receipt, and campaign report. Omit
 `--source-root` to see every external
 artifact reported as `not_checked`. With the roots supplied and nothing
@@ -268,6 +271,8 @@ validation work is captured in the
 proposed language rules are in [ADR-0006](docs/adr/0006-semantic-core.md);
 execution receipts and case-specific adapters are decided in
 [ADR-0007](docs/adr/0007-execution-receipts.md).
+The technical-verdict/presentation boundary is fixed by
+[ADR-0010](docs/adr/0010-technical-verdicts-and-optional-presentation-gates.md).
 
 ## Licensing and claims
 

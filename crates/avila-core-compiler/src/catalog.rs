@@ -84,13 +84,6 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         next_action: "Keep exactly one claim per output slot; a rerun creates a new claim only after the previous one is withdrawn.",
     },
     DiagnosticExplanation {
-        code: "CORE-E7401",
-        title: "Review decision not admissible",
-        rule: "SC-9 and SC-11 A9",
-        meaning: "A decision names a step with no compiled review obligation, carries a disposition the review type does not allow, or repeats a step's decision. Decisions are unverified assertions in this slice; they withhold `PASS` until present and never become a technical verdict.",
-        next_action: "Record one allowed disposition per review step. Signature and eligibility verification are later admission checks.",
-    },
-    DiagnosticExplanation {
         code: "CORE-R3101",
         title: "No compatible source",
         rule: "SC-6 R1",
@@ -134,10 +127,10 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
     },
     DiagnosticExplanation {
         code: "CORE-R3401",
-        title: "Review obligation incomplete",
+        title: "Optional presentation gate incomplete",
         rule: "SC-6 R9",
-        meaning: "An accountable-review capability type or its contract binding is structurally incomplete or contradictory: the type is not nondeterministic, hides or makes optional a presented input, emits anything but a single `unquantified` decision record, uses a quantitative decision role, or repeats a disposition; the step lacks its review binding, pins the eligibility policy without a revision and lowercase `sha256:` identity, or declares empty or duplicated independence constraints; or a non-review type carries a review binding.",
-        next_action: "Complete the declaration at the reported pointer. Even then the compiler does not decide reviewer eligibility or fulfill the review; those are later admission checks.",
+        meaning: "An optional agent practicality stage or its contract binding is structurally incomplete or contradictory: it hides or makes optional a presented input, emits anything but one unquantified routing record, uses a quantitative routing role, repeats a disposition, lacks explicit instructions, pins its agent policy without a revision and lowercase `sha256:` identity, declares invalid independence constraints, or appears on a capability type that has no review declaration.",
+        next_action: "Complete the declaration at the reported pointer. This only compiles an optional presentation gate; it is never a requirement-verdict input.",
     },
     DiagnosticExplanation {
         code: "CORE-R3501",

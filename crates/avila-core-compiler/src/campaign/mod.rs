@@ -6,8 +6,8 @@
 //! A5 presence, A6 model, shape, media, and units, and slot cardinality) and
 //! derives verdicts with the kernel. It does not read artifact bytes, verify
 //! receipts, signatures, or package identities, evaluate qualification or
-//! policy snapshots, or invalidate anything. Review decisions are recorded as
-//! unverified assertions and withhold `PASS` until present.
+//! policy snapshots, or invalidate anything. Optional practical-review stages
+//! are outside technical evidence admission and cannot alter a verdict.
 
 mod admission;
 mod document;
@@ -25,12 +25,11 @@ use crate::diagnostic::{CORE_E7001, CORE_S1102, CoreDiagnostic, FindingClass, So
 use crate::document::{RegistrySnapshot, SourceRef};
 
 pub use document::{
-    ArtifactIdentity, Attestation, CAMPAIGN_REPORT_SCHEMA_VERSION, CLAIMS_SCHEMA_VERSION,
-    ClaimValue, ClaimsDocument, InputAttestation, OutputClaim, ProducerIdentity, ReviewDecision,
-    ReviewerIdentity,
+    ArtifactIdentity, CAMPAIGN_REPORT_SCHEMA_VERSION, CLAIMS_SCHEMA_VERSION, ClaimValue,
+    ClaimsDocument, InputAttestation, OutputClaim, ProducerIdentity,
 };
 
-pub const CAMPAIGN_NOTICE: &str = "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked, and review decisions are unverified assertions. No verdict here is scientific truth, certification, or regulatory approval.";
+pub const CAMPAIGN_NOTICE: &str = "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval.";
 const EVALUATOR_ID: &str = concat!("avila.core/kernel-rust@", env!("CARGO_PKG_VERSION"));
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -108,7 +107,6 @@ pub struct VerdictBoundary {
     pub evaluator: String,
     pub compiled_snapshot_sha256: String,
     pub claims_sha256: String,
-    pub review_attestation: Attestation,
 }
 
 /// Compiles the contract, admits the claims against the compiled snapshot,
@@ -181,23 +179,15 @@ pub fn evaluate_campaign(
         ));
     }
 
-    let (admissions, decisions) = admission::admit(&compiled, &registry, &claims, &mut findings);
+    let admissions = admission::admit(&compiled, &registry, &claims, &mut findings);
     let boundary = VerdictBoundary {
         semantic_profile: SEMANTIC_PROFILE.into(),
         compiler: compiled.compiler.clone(),
         evaluator: EVALUATOR_ID.into(),
         compiled_snapshot_sha256: compiled.snapshot_sha256.clone(),
         claims_sha256: claims_sha256.clone(),
-        review_attestation: Attestation::Unverified,
     };
-    let verdicts = verdicts::evaluate(
-        &compiled,
-        &registry,
-        &claims,
-        &admissions,
-        &decisions,
-        &boundary,
-    );
+    let verdicts = verdicts::evaluate(&compiled, &registry, &claims, &admissions, &boundary);
     crate::compile::sort_findings(&mut findings);
 
     #[derive(Serialize)]

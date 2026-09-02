@@ -75,9 +75,10 @@ extracts claims from the bytes that come back.
    outputs collected, and a timeout. The runner refuses to execute over
    bytes it has not verified, over an executable whose digest differs from
    the bound identity, through an adapter whose capability type differs from
-   the compiled step's, or for a step that carries a review obligation. A
+   the compiled step's, or when another execution precondition fails. A
    refused or failed execution stops the workflow before any claim is
-   generated.
+   generated. An optional post-campaign presentation gate is not an execution
+   precondition.
 
 6. **Claims are generated, not authored.** Input attestations come from the
    package's artifact identities; claims for executed steps come from the

@@ -49,7 +49,6 @@ pub struct GeneratedClaims {
     /// Committed claims that were not carried because a supplied input
     /// reaches their step; they described a different candidate.
     pub invalidated_claims: usize,
-    pub decisions: usize,
 }
 
 pub fn generate_claims(
@@ -164,19 +163,12 @@ pub fn generate_claims(
         claims.push((*claim).clone());
     }
 
-    let decisions: Vec<Value> = committed
-        .get("decisions")
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-
     let value = json!({
         "schema_version": CLAIMS_SCHEMA_VERSION,
         "semantic_profile": SEMANTIC_PROFILE,
         "compiled_snapshot_sha256": compiled.snapshot_sha256,
         "inputs": inputs,
         "claims": claims,
-        "decisions": decisions,
     });
     let mut bytes = serde_json::to_vec_pretty(&value)?;
     bytes.push(b'\n');
@@ -187,7 +179,6 @@ pub fn generate_claims(
         reused_claims: reused_count,
         recorded_claims: recorded_count,
         invalidated_claims: invalidated_count,
-        decisions: value["decisions"].as_array().map_or(0, Vec::len),
         value,
         bytes,
         canonical_sha256,

@@ -1,19 +1,18 @@
 //! Keeps the first composed internal case pinned to its source identities and
-//! deliberately review-blocked campaign result.
+//! technical campaign result.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use avila_core_compiler::evaluate_campaign;
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 
 fn case_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/cases/case-000-actinv-aftermatter")
 }
 
 #[test]
-fn case_000_is_reproducible_and_review_blocked() {
+fn case_000_is_reproducible_and_technically_evaluated() {
     let root = case_root();
     let contract = fs::read(root.join("contract.json")).unwrap();
     let registry = fs::read(root.join("registry.json")).unwrap();
@@ -43,9 +42,8 @@ fn case_000_is_reproducible_and_review_blocked() {
     let verdicts = actual["verdicts"].as_array().unwrap();
     assert_eq!(verdicts.len(), 2);
     assert!(verdicts.iter().all(|record| {
-        record["verdict"]["status"] == json!("not_evaluated")
-            && record["verdict"]["rule"] == json!("not_evaluated.review_pending")
-            && record["verdict"]["reasons"][0]["review_role"] == json!("qualified-review")
+        record["verdict"]["status"] == json!("pass")
+            && record["verdict"]["rule"] == json!("bounded.lt.within")
     }));
 
     let provenance: Value =
@@ -67,11 +65,5 @@ fn case_000_is_reproducible_and_review_blocked() {
             .filter(|route| route["state"] == json!("unresolved"))
             .count(),
         3
-    );
-
-    let policy = fs::read(root.join("reviewer-eligibility-policy.md")).unwrap();
-    assert_eq!(
-        format!("{:x}", Sha256::digest(policy)),
-        "5ce3fcac9014d4cc5f6c184eb458911469e879b7ce78f5b42fa118b28652dd16"
     );
 }

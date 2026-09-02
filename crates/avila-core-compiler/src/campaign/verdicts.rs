@@ -4,19 +4,15 @@
 use avila_core_kernel::{
     BasisKind as KernelBasis, EvidenceClaim, EvidenceModel, EvidenceState, ExactNumber,
     KernelRequirement, Quantity, RequirementBasis as KernelRequirementBasis, RequirementPolicy,
-    ReviewRequirements, VerdictCase, VerdictComparison, VerdictEvaluator, VerdictOutput,
-    VerdictReason, VerdictStatus,
+    VerdictCase, VerdictComparison, VerdictEvaluator, VerdictOutput, VerdictReason, VerdictStatus,
 };
 
-use super::admission::Decisions;
 use super::document::{ClaimValue, ClaimsDocument};
 use super::{AdmissionRecord, AdmissionState, VerdictBoundary, VerdictRecord};
 use crate::compile::registry::RegistryIndex;
 use crate::compile::{CanonicalTypedQuantity, CompiledContract};
 use crate::diagnostic::CORE_A4401;
-use crate::document::{
-    BasisKind, Comparison, QuantityValue, ReviewDisposition, ReviewerRole, SourceRef,
-};
+use crate::document::{BasisKind, Comparison, QuantityValue, SourceRef};
 use crate::qualification::{ClaimQualification, EnvelopeState};
 
 pub(super) fn evaluate(
@@ -24,25 +20,9 @@ pub(super) fn evaluate(
     registry: &RegistryIndex<'_>,
     claims: &ClaimsDocument,
     admissions: &[AdmissionRecord],
-    decisions: &Decisions,
     boundary: &VerdictBoundary,
 ) -> Vec<VerdictRecord> {
     let evaluator = VerdictEvaluator::new(&registry.kinds);
-    let required_reviews: Vec<String> = compiled
-        .workflow
-        .iter()
-        .filter(|step| {
-            step.review_obligation
-                .as_ref()
-                .is_some_and(|review| review.reviewer_role == ReviewerRole::AccountablePerson)
-        })
-        .map(|step| step.step_id.clone())
-        .collect();
-    let present_reviews: Vec<String> = required_reviews
-        .iter()
-        .filter(|step_id| decisions.get(*step_id) == Some(&ReviewDisposition::ApproveForUse))
-        .cloned()
-        .collect();
 
     compiled
         .requirements
@@ -97,22 +77,11 @@ pub(super) fn evaluate(
                     display_rounding: None,
                 },
                 evidence,
-                reviews: ReviewRequirements {
-                    required: required_reviews.clone(),
-                    present: present_reviews.clone(),
-                },
             };
             // A claim from outside its producer's qualification envelope, or
             // of unknown position, cannot establish a bounded requirement.
-            // Outstanding review is reported first; the envelope reason is
-            // appended so it is visible either way.
             let quarantined = quarantined_by_qualification(requirement, claims, admissions);
-            let reviews_satisfied = required_reviews
-                .iter()
-                .all(|step_id| present_reviews.contains(step_id));
-            let verdict = if !quarantined.is_empty()
-                && requirement.basis.kind != BasisKind::Nominal
-                && reviews_satisfied
+            let verdict = if !quarantined.is_empty() && requirement.basis.kind != BasisKind::Nominal
             {
                 qualification_verdict(&quarantined)
             } else {
@@ -135,7 +104,6 @@ pub(super) fn evaluate(
                             code: error.code().into(),
                             owner: "executor".into(),
                         }],
-                        reviews_outstanding: Vec::new(),
                         display_upper_text: None,
                     });
                 if !quarantined.is_empty() && requirement.basis.kind != BasisKind::Nominal {
@@ -232,7 +200,6 @@ fn qualification_verdict(quarantined: &[(String, ClaimQualification)]) -> Verdic
         basis_visible: None,
         numbers_present: Some(false),
         reasons: qualification_reasons(quarantined),
-        reviews_outstanding: Vec::new(),
         display_upper_text: None,
     }
 }

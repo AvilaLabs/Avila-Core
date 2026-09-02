@@ -7,24 +7,25 @@
 
 ## Purpose
 
-Avila Core exists to make rigorous computational work easier for the
-professionals responsible for it. It should help them translate a technical
-question into a reproducible chain of methods, evidence, review, and an explicit
-decision state without replacing their professional responsibility or judgment.
+Avila Core exists to let people and software agents attack difficult
+engineering problems through rigorous, repeatable search. It translates a
+bounded technical question into a reproducible chain of methods, evidence, and
+explicit verdicts, then tells an iterating agent exactly what failed and why.
 
 The north-star product is a neutral semantic, market, and trust layer for
 computational engineering:
 
-> Organizations submit evidence contracts; qualified capabilities compete and
-> compose to contribute evidence; Core returns portable, independently
-> reviewable conclusions about what follows under the declared rules.
+> People or agents submit evidence contracts; capabilities compete and compose
+> to contribute evidence; Core returns portable, independently verifiable
+> conclusions about what follows under the declared rules.
 
 ## Problem
 
-Technical organizations already possess solvers, data, experts, scripts, and
-compute. Their costly bottleneck is often the distance between those resources
-and an answer that another professional can understand, reproduce, challenge,
-and accept. More simulation is not automatically more certainty.
+Technical organizations already possess solvers, data, scripts, and compute.
+Their costly bottleneck is often turning those pieces into a strict oracle that
+can explore thousands of candidates without moving the requirements, losing
+provenance, or mistaking a successful process for a satisfactory design. More
+simulation is not automatically more certainty.
 
 Core’s governing thesis is:
 
@@ -37,14 +38,19 @@ This is a hypothesis to validate, not a claim of existing product-market fit.
 
 1. **Requesters and engineers** need a bounded question resolved without
    manually rebuilding every cross-tool workflow.
-2. **Method owners and domain professionals** need their methods, limits, and
-   judgment represented faithfully and reused without becoming invisible.
-3. **Capability providers** need a neutral route to distribute and be paid for
+2. **Connected agents and designers** need machine-readable failures, margins,
+   and evidence so they can iterate without inventing verdicts.
+3. **Method owners** need their methods, limits, validation records, and
+   applicability boundaries represented faithfully and reused without becoming
+   invisible.
+4. **Capability providers** need a neutral route to distribute and be paid for
    valuable computational methods.
-4. **Reviewers and evidence consumers** need a portable package they can inspect
-   without trusting Core’s interface or the requester’s summary.
+5. **Evidence consumers** need a portable package they can inspect without
+   trusting Core’s interface or the requester’s summary.
 
-No user role delegates professional responsibility to Core.
+No Core verdict requires a professional reviewer. External organizations may
+add their own acknowledgement, approval, or regulatory process without turning
+it into a kernel rule.
 
 ## Product boundary
 
@@ -77,8 +83,8 @@ Core may not, by itself:
 - Core is solver-, provider-, language-, and infrastructure-neutral.
 - The local runtime and independent verifier must remain viable product
   boundaries even if their final license is not yet decided.
-- Scientific judgment stays with named method owners, reviewers, and evidence
-  consumers—not with the graphical interface or semantic compiler.
+- Method boundaries stay with named owners and validation records—not with the
+  graphical interface, generative agent, or semantic compiler.
 - Every Core verdict remains conditional on the exact records, trust policy,
   semantic profile, and limitations named in it.
 - Core should minimize redundant compute rather than benefit from its growth.
@@ -86,13 +92,15 @@ Core may not, by itself:
 
 ## What success means
 
-The first meaningful proof is one real evidence contract that a domain
-professional says is materially faster to resolve in Core, with no loss of
-reviewability, than through the existing workflow.
+The first meaningful proof is one bounded evidence contract for which an agent
+uses Core to find a candidate that passes all stated gates, while Core refuses
+at least one invalid shortcut and preserves independently reproducible evidence.
 
-The 1.0 threshold is higher: an independent organization must be able to define,
-execute, review, export, independently verify, invalidate, and selectively rerun
-a supported contract using multiple interchangeable capability providers. The
-exact supported domain will be narrow and named.
+The 1.0 threshold is higher: an independent user or implementation must be able
+to define, execute, iterate, export, independently verify, invalidate, and
+selectively rerun a supported contract using multiple interchangeable
+capability providers. A configured connected-agent practicality gate may route
+finalists before presentation, but Core must work without it. The exact
+supported domain will be narrow and named.
 
 Scale, revenue, or number of integrations cannot substitute for those proofs.

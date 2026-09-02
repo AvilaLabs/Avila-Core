@@ -9,9 +9,11 @@ answer. It is not a guarantee of `PASS` and not a legal certification by itself.
 The contract is the fundamental product and commercial unit because it aligns:
 
 - the requester’s question;
-- the professional’s method boundary;
+- the method owner’s explicit boundary and validation evidence;
 - the provider’s delivery obligation;
-- the reviewer’s acceptance criteria; and
+- the connected agent’s fixed search target and any optional presentation
+  instructions;
+- the independent verifier’s inputs; and
 - Core’s planning, evidence, and pricing logic.
 
 ## Required content
@@ -35,13 +37,14 @@ A production contract must identify at least:
    error, model-form treatment, and coverage policy.
 8. **Capability needs:** semantic types and any required implementation or
    qualification constraints.
-9. **Evidence policy:** required lineage, validation, reviews, signatures,
-   environments, and retention.
+9. **Evidence policy:** required lineage, validation, qualification,
+   signatures, environments, and retention; plus any optional agent
+   presentation policy kept outside the verdict.
 10. **Completion:** which verdicts fulfill the delivery obligation and what makes
     a campaign invalid or incomplete.
 
 The current `v0.2-draft` schema represents the question, prose assumptions,
-inputs, workflow, requirements, execution policy, and review bindings. Facts,
+inputs, workflow, requirements, execution policy, and optional presentation-gate bindings. Facts,
 system boundary, capability constraints, evidence policy, and completion rules
 remain unrepresented.
 
@@ -52,24 +55,25 @@ contract:  draft → in_review → approved → retired
               │         │          │
               └ reject ─┴ amend ───┘
 
-campaign: planned → approved → running → reviewed → complete
-             │          │          │          │
-             └ cancel ──┴ block ───┴ fail ────┴ invalidate
+campaign: planned → running → complete
+             │         │         │
+             └ cancel ─┴ block ──┴ invalidate
 ```
 
 Contract status describes the governed document only. Template instantiation is
 immutable campaign origin metadata, not an additional contract or campaign
 status. An amendment to a non-draft contract creates a new draft version and
-preserves the old one. An instantiated campaign points to an immutable approved
-contract or template version plus case-specific inputs. Execution never
-silently changes either.
+preserves the old one. An instantiated campaign points to an immutable accepted
+contract or template version plus case-specific inputs. Here `in_review` and
+`approved` are document-owner lifecycle labels, not professional-review gates.
+Execution never silently changes either.
 
 ## Completion versus verdict
 
 These concepts must remain separate:
 
-- **Campaign complete:** every required execution, evidence, and review
-  obligation was satisfied.
+- **Campaign complete:** every required execution and evidence condition was
+  satisfied and every requirement received a technical state.
 - **Requirement verdict:** what the admitted evidence establishes about one
   requirement.
 - **Commercial completion:** the provider fulfilled the agreed evidence
@@ -83,15 +87,14 @@ below a limit is not `PASS` when the contract requires a worst-case bound.
 
 ### PASS
 
-All evidence required to establish satisfaction exists and is admissible, every
-applicable satisfaction review gate is met, and the encoded requirement follows
-within the declared boundary.
+All evidence required to establish satisfaction exists and is admissible, and
+the encoded requirement follows within the declared boundary. Review absence
+cannot suppress this state.
 
 ### FAIL
 
 All evidence required to establish contradiction exists and is admissible, and
-the encoded requirement is contradicted within the declared boundary. Other
-campaign review obligations may still prevent commercial completion.
+the encoded requirement is contradicted within the declared boundary.
 
 ### INCONCLUSIVE
 
@@ -103,8 +106,8 @@ contractually accepted limit of resolution.
 ### NOT_EVALUATED
 
 No verdict was attempted or the prerequisites for evaluation were not met. The
-kernel derives all four states over admitted claim specimens; the scaffold has
-no admitted evidence, so no verdict is shown.
+kernel derives all four states over admitted claims. Missing professional review
+is not a reason for `NOT_EVALUATED`.
 
 Every verdict names the semantic profile, requirement purpose, policy, admitted
 evidence, attestations, assumptions, limitations, and exact comparison rule
@@ -113,9 +116,10 @@ not a standalone claim of scientific truth or certification.
 
 ## Contract templates as product capital
 
-A useful template captures hard-won professional agreement about scope, input
-quality, method selection, evidence, uncertainty, and review. Reuse can reduce
-future scoping and review time—but only within the template’s eligibility rules.
+A useful template captures hard-won knowledge about scope, input quality,
+method selection, evidence, uncertainty, and practical concerns. Reuse can
+reduce future scoping and iteration time—but only within the template’s
+eligibility rules.
 
 Templates require named owners, versioning, validation cases, limitations,
 change control, and retirement. Popularity is not qualification.
@@ -129,7 +133,7 @@ Before execution, the contract should state:
 - fixed, bounded, or variable cost components;
 - treatment of reruns caused by provider error versus changed customer input;
 - evidence ownership and retention;
-- dispute and independent-review mechanisms; and
+- dispute and independent-resolution mechanisms; and
 - liability and regulatory limitations.
 
 None of those commercial terms exist in the `v0.2-draft` software schema yet.

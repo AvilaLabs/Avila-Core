@@ -15,9 +15,9 @@ read an ambient registry, inspect installed software, discover a provider, or
 fill a missing value from machine state. The same bytes and compiler version
 therefore produce the same report.
 
-This boundary cannot execute a capability, qualify a method, determine whether
-a reviewer is eligible, fulfill a review, admit evidence, or emit a requirement
-verdict. A successful compilation means only that the source is internally
+This boundary cannot execute a capability, qualify a method, run an optional
+presentation gate, admit evidence, or emit a requirement verdict. A successful
+compilation means only that the source is internally
 composable under the implemented semantic rules and pinned registry snapshot.
 
 ## Current pipeline
@@ -41,7 +41,7 @@ parameter and reproducibility declaration checks
 slot resolution + role/media checks
               │
               ▼
-role-separated review obligation checks
+optional instructed presentation-gate checks
               │
               ▼
 derived dependency graph + cycle check
@@ -156,58 +156,38 @@ material environment, hardware, ABI, validator, and implementation factors.
 Those factors cannot be checked until package binding exists, so successful
 static compilation is not a package-level reproducibility judgment.
 
-## Review obligations
+## Optional presentation gates
 
-R9 represents review as a capability type, but gives it no privileged power
-over technical claims. Every review type names each required input in the
-exact dossier, emits only one nominal decision record with the `unquantified`
-claim model, declares a closed set of governance dispositions, and says
-whether its reviewer is an `accountable_person` or an `agent`. None of those
-dispositions is a technical `PASS` or `FAIL`.
+R9 represents an optional connected-agent practicality check as a capability
+type. It has no privileged power over technical claims. The type names every
+required input in the exact dossier, emits one unquantified routing record, and
+declares a closed set of dispositions. The only reviewer role in this slice is
+`agent`, and the only permitted dispositions are `present_to_user`,
+`request_changes`, and `abstain`.
 
-The role closes the authority surface. An accountable-person capability must
-remain nondeterministic and may allow `approve_for_use`, `reject_for_use`,
-`request_changes`, or `abstain`; it may not merely recommend another review.
-An agent capability may allow only `recommend_for_accountable_review`,
-`request_changes`, or `abstain`. Offering an agent approval or rejection
-authority is a compile-time refusal. Every agent use must also bind at least
-one nonempty practical instruction.
+Each workflow use binds an agent policy by id, revision, and lowercase SHA-256
+identity plus at least one nonempty practical instruction. The policy may pin
+an exact implementation and its authored checks. Policy bytes and trust
+assertions are not compiler inputs, so compilation does not claim that those
+checks are complete or correct.
 
-Each workflow use binds a reviewer-eligibility policy by id, revision, and
-lowercase SHA-256 identity. The policy bytes, identities, credentials, and
-trust roots are deliberately not compiler inputs. Independence is nevertheless
-explicit in the contract: either `none`, preserving the visible weakening, or
-a nonempty set of minimum person/organization separations from named campaign
-parties. The same binding slot is used for an agent policy, where it pins the
-permitted implementation and instructions rather than professional authority.
+Successful compilation records a `presentation_gate` with state
+`awaiting_agent`, the exact resolved sources, routing-record role and media
+type, dispositions, policy identity, and instructions. Omitting the stage is
+valid. Its presence or absence has no effect on requirement compilation and is
+never an input to campaign evaluation.
 
-Successful compilation records `pending_external_review` for a person or
-`pending_agent_review` for software, along with the exact resolved evidence
-sources, decision role and media type, permitted dispositions, policy identity,
-independence constraints, and instructions. These are obligations for later
-routing or admission. They are not evidence that a review occurred or that any
-reviewer was legitimate. Only the accountable-person obligation participates
-in campaign `PASS` gating; an agent stage can send work back but cannot fulfill
-that obligation or alter a verdict.
+After the technical campaign, the runner materializes a content-identified
+request from the configured gate and evidence actually present. Draft schema
+`avila.core/staged-review-record/v0.1-draft` records the agent's unsigned
+routing result. The surrounding agent may return the candidate to iteration or
+present it to the user. The record remains outside evidence claims and cannot
+override, create, or suppress a Core verdict.
 
-The runner now materializes a content-identified request from each obligation
-and the evidence actually present. Draft schema
-`avila.core/staged-review-record/v0.1-draft` records an unsigned agent routing
-result over that request. The authoritative, signed accountable fulfillment
-record remains intentionally unimplemented. It must eventually bind at least
-the compiled snapshot and review-step identity, exact realized dossier
-identities, one allowed disposition and rationale, eligibility-policy identity,
-signer and organization-scoped eligibility assertions, independence inputs and
-result, canonical payload identity, signature, and supersession or revocation
-state. Neither record may contain a field that overrides a technical verdict.
-
-`CORE-R3401` is reserved for an authored review obligation that is structurally
-incomplete or contradictory. Once a valid obligation has compiled, an absent
-accountable decision withholds `PASS` at campaign evaluation; an absent agent
-record changes no technical verdict. A bad signature, failed eligibility check,
-or failed independence check remains a future admission refusal. Keeping those
-outcomes distinct prevents static composition, software routing, human action,
-and organizational trust from collapsing into one misleading status.
+`CORE-R3401` is reserved for an authored presentation gate that is
+structurally incomplete or contradictory. This separation prevents static
+composition, technical evaluation, presentation routing, user acknowledgement,
+and external organization policy from collapsing into one misleading status.
 
 ## Governed purposes and typed exclusions
 
@@ -335,9 +315,8 @@ Successful output is `avila.core/compiled-contract/v0.2-draft`. It contains:
 - typed parameter values lowered to canonical exact representations;
 - type-level determinism, seeds, material execution factors, and the effective
   contract nondeterminism policy;
-- role-separated pending review obligations, exact presented evidence,
-  external eligibility-policy identities, explicit independence constraints,
-  and agent instructions;
+- optional `presentation_gate` records with exact presented evidence,
+  agent-policy identities, closed routing dispositions, and instructions;
 - governed requirement-purpose identities and output-level explicit
   purpose exclusions;
 - exact requirement limits, and equality tolerances, lowered to canonical

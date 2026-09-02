@@ -32,9 +32,9 @@ pub use predicate::{
 pub use unit::{CanonicalQuantity, KindDefinition, KindRegistry, Quantity, UnitDefinition};
 pub use verdict::{
     Aggregation, AuthoredQuantity, BasisKind, DisplayRounding, EvidenceClaim, EvidenceModel,
-    EvidenceState, KernelRequirement, RequirementBasis, RequirementPolicy, ReviewRequirements,
-    RoundingMode, VerdictCase, VerdictComparison, VerdictEvaluator, VerdictOutput, VerdictReason,
-    VerdictStatus, aggregate_verdicts,
+    EvidenceState, KernelRequirement, RequirementBasis, RequirementPolicy, RoundingMode,
+    VerdictCase, VerdictComparison, VerdictEvaluator, VerdictOutput, VerdictReason, VerdictStatus,
+    aggregate_verdicts,
 };
 
 /// Draft profile implemented incrementally by this kernel.

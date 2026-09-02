@@ -149,5 +149,5 @@
     "The executable digest identifies the bytes that ran; it does not qualify the method.",
     "No sandbox, resource accounting, or signature was applied; the environment was cleared and the working directory confined to the workspace."
   ],
-  "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, professional review, or regulatory suitability."
+  "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, practical suitability, or regulatory suitability."
 }

@@ -22,8 +22,8 @@ Build:
   facts, policy, admission, verdicts, and reuse;
 - schemas, adversarial conformance fixtures, canonical issue reporting, and CLI
   validation;
-- an intellectual-property and prior-art review before publishing enabling
-  details of mechanisms that may warrant protection;
+- an owner-recorded publication, licensing, and intellectual-property handling
+  decision before a specific public release; this does not gate private development;
 - question-first egui workbench;
 - deterministic planning and explicit blocked states;
 - capability protocol threat model and conformance design;
@@ -33,29 +33,33 @@ Build:
 
 Validate:
 
-- 15–25 interviews across requesters, method owners, reviewers, and buyers;
-- at least three detailed examples of an existing painful decision loop;
-- current cycle time, labor, compute, review, and defect/rework baseline; and
+- one bounded benchmark or representative problem with explicit requirements
+  and known negative cases;
+- an autonomous agent loop that iterates through Core without changing those
+  requirements;
+- current cycle time, compute, failure, and rework baseline; and
 - legal and license feasibility for candidate external tools.
 
 Exit gate:
 
-> One organization commits real people, representative non-sensitive data, a
-> method owner, and a reviewer to a bounded design-partner pilot.
+> On one bounded non-sensitive problem, a connected agent uses Core to reject a
+> known shortcut and either finds a candidate that passes every stated gate or
+> exhausts the declared search boundary with reproducible evidence. No
+> professional reviewer is required to exit the stage.
 
 ADR-0006 remains proposed until its written semantics and fixture coverage pass
 the acceptance conditions in that decision. A draft profile is not a scientific
 qualification.
 
-The current repository remains in this stage. Its draft kernel executes 90 pure
+The current repository remains in this stage. Its draft kernel executes 91 pure
 vectors, its static compiler executes 68 fixtures through R10, and its campaign
 harness executes 12 fixtures over the first SC-10/SC-11 slice. That slice
 performs type-level claim admission and verdict derivation. It does not perform
 full package-level evidence admission: the evaluator reads no bytes;
 artifact-byte and receipt verification exist only in the case runner for the
-steps a case declares; package binding beyond an executable digest,
-signatures, qualification and eligibility-policy evaluation, review
-fulfillment, and invalidation remain absent.
+steps a case declares; package binding beyond an executable digest, signatures,
+full qualification admission, trust-policy evaluation, and invalidation remain
+absent.
 
 The repository also carries
 [CASE-000](../../examples/cases/case-000-actinv-aftermatter/README.md), a
@@ -64,17 +68,17 @@ test of the current boundary, not Stage 1: the case runner verifies every
 declared byte, executes both computational steps through case-specific
 adapters under verified execution receipts (ACTINV through Aftermatter's
 frozen R0 builder, then Aftermatter over the fresh inventory), and generates
-every claim from the fresh results (ADR-0007), while both requirements remain
-`NOT_EVALUATED` because qualified review is absent.
+every claim from the fresh results (ADR-0007), and both bounded requirements
+produce technical `PASS` without any review stage.
 
 ## Stage 1 — vertical reference prototype
 
 **Planning range:** approximately months 2–6.
 
-Stage 1 implementation begins only after the Stage 0 exit gate identifies the
-organization, bounded question, method owner, reviewer, representative data,
-and deployment constraints. The selected vertical determines which runner,
-adapter, receipt, and package surfaces are built first.
+Stage 1 implementation begins after the Stage 0 exit gate identifies the
+bounded question, fixed requirement set, representative data or benchmark,
+method records, and deployment constraints. The selected vertical determines
+which runner, adapter, receipt, and package surfaces are built first.
 
 Build only the chosen evidence chain:
 
@@ -85,7 +89,7 @@ Build only the chosen evidence chain:
 - two or more real adapters needed for the chain;
 - immutable artifact store and execution receipts;
 - requirement evaluator with four-state verdict semantics;
-- initial human and machine evidence export; and
+- initial human-readable and machine-verifiable evidence export; and
 - reference cases, negative cases, and fault injection.
 
 Do not call the workflow qualified. Experimental adapters remain visibly
@@ -94,8 +98,8 @@ experimental.
 Exit gate:
 
 > The reference campaign reproduces agreed reference results, rejects known bad
-> cases, preserves complete lineage, and can be reviewed end to end by the named
-> domain professional.
+> cases, preserves complete lineage, and is reproduced by an independent
+> verifier.
 
 ## Stage 2 — useful design-partner alpha
 
@@ -103,10 +107,10 @@ Exit gate:
 
 Build:
 
-- organization-scoped identities and externally governed eligibility policies
-  for requester, method owner, provider, and reviewer;
-- immutable plan attestations and review records bound to the exact compiled
-  dossier, with technical verdict and governance disposition kept separate;
+- organization-scoped identities and externally governed policies for
+  requester, method owner, and provider;
+- immutable plan attestations plus optional presentation-routing and user-
+  acknowledgement records kept strictly separate from technical verdicts;
 - private capability registry snapshot;
 - resumable campaigns, resource controls, and honest estimates;
 - dependency-aware invalidation and selective reruns;
@@ -119,13 +123,14 @@ Commercial proof:
 - complete at least one paid pilot;
 - expose Avila labor and third-party cost explicitly;
 - measure the workflow against the customer’s baseline; and
-- obtain the reviewer’s written assessment of evidence usefulness.
+- obtain the user's measured assessment of iteration speed and evidence
+  usefulness.
 
 Exit gate:
 
-> A design partner uses Core on a real non-safety-critical decision and chooses
-> to repeat the contract because measured total cycle time or cost improved
-> without reducing required reviewability.
+> A design partner or internal benchmark owner repeats a real
+> non-safety-critical contract because measured search time or cost improved
+> without weakening the fixed requirements or evidence boundary.
 
 ## Stage 3 — repeatable platform beta
 
@@ -137,7 +142,7 @@ Build:
 - a second independent implementation that reproduces normative semantic
   vectors without sharing the production kernel;
 - governed contract templates and migrations;
-- signed capability packages, receipts, reviews, and package roots;
+- signed capability packages, receipts, qualifications, and package roots;
 - organization policy engine and separation of duties;
 - private multi-organization registry and provider routing;
 - a second implementation for at least one capability type;
@@ -157,8 +162,8 @@ Commercial proof:
 Exit gate:
 
 > An external provider publishes a conforming capability, an organization admits
-> it through policy, and an independent reviewer verifies the resulting package
-> without founder intervention.
+> it through policy, and an independent implementation verifies the resulting
+> package without founder intervention.
 
 ## Stage 4 — narrow production 1.0
 
@@ -172,7 +177,8 @@ Required product gates:
   satisfied for the supported scope;
 - the schemas and protocol have compatibility and migration commitments;
 - runner isolation and evidence integrity have independent security review;
-- qualification and validation packages have professional approval;
+- qualification and validation packages pass the declared reference,
+  adversarial, and replay criteria;
 - offline verification and disaster recovery are tested;
 - support, vulnerability, update, retention, and deprecation policies operate;
 - customer and provider terms define evidence ownership, responsibility, and
@@ -181,10 +187,11 @@ Required product gates:
 
 Required outcome gates:
 
-- material median reduction in question-to-reviewed-answer cycle time;
+- material median reduction in question-to-evidenced-candidate cycle time;
 - no loss of required evidence compared with the governing baseline;
 - selective reruns demonstrate correct reuse after representative changes;
-- reviewer clarification loops decline rather than move elsewhere;
+- agent iteration converges without rising defect escape or hidden requirement
+  changes;
 - economics work without unpriced founder labor or compute waste; and
 - users can exit Avila while retaining independently verifiable evidence.
 
@@ -211,7 +218,7 @@ launch an empty marketplace or claim a universal engineering platform.
 - `0.3`: controlled runner and artifact receipts;
 - `0.4`: first experimental end-to-end reference campaign;
 - `0.5`: evidence package and offline verifier;
-- `0.6`: design-partner alpha and review workflow;
+- `0.6`: design-partner alpha and optional agent presentation workflow;
 - later `0.x`: invalidation, SDK, qualification, security, enterprise policy,
   remote execution, and provider routing as they pass gates.
 

@@ -5,7 +5,7 @@
 //! output bytes of one step. It is process evidence only. A zero exit status
 //! and matching digests establish that a declared program ran over declared
 //! bytes and wrote these bytes; they do not establish scientific correctness,
-//! qualification, professional review, or regulatory suitability.
+//! qualification, practical suitability, or regulatory suitability.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -18,7 +18,7 @@ use thiserror::Error;
 use crate::package::{IntegrityCheckState, PackageError, hash_confined_file};
 
 pub const EXECUTION_RECEIPT_SCHEMA_VERSION: &str = "avila.core/execution-receipt/v0.1-draft";
-pub const RECEIPT_NOTICE: &str = "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, professional review, or regulatory suitability.";
+pub const RECEIPT_NOTICE: &str = "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, practical suitability, or regulatory suitability.";
 
 /// One step execution, as recorded by the runner that performed it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

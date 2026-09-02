@@ -7,20 +7,20 @@ Core must separate five kinds of responsibility and provenance:
 1. **Contract intent:** what question and policy were approved.
 2. **Semantic rules:** which versioned language gives records and derivations
    their meaning.
-3. **Method qualification:** which professional-owned capability is admissible
+3. **Method qualification:** which owned and validated capability is admissible
    for a context of use.
 4. **Execution provenance:** what inputs, software, data, environment, and
    process actually ran.
 5. **Verdict derivation:** how admitted evidence maps to a requirement state.
 
-No single interface, provider, reviewer, or process may impersonate all five.
-In particular, the compiler checks explicit obligations; it does not decide who
-deserves professional or institutional trust.
+No single interface, provider, agent, or process may impersonate all five. In
+particular, the compiler checks explicit records; it does not invent method
+authority or require a professional reviewer.
 
 ## Target system context
 
 ```text
- Requester / Engineer          Method Owner / Provider          Reviewer
+ Requester / Agent             Method Owner / Provider      Evidence consumer
           │                              │                         │
           └───────────────┬──────────────┴──────────────┬──────────┘
                           ▼                             ▼
@@ -52,7 +52,7 @@ deserves professional or institutional trust.
                          ▼                            │
            ┌─────────────────────────────┐             │
            │ Versioned capability adapters│            │
-           │ solver / data / method / review│          │
+           │ solver / data / method / agent│           │
            └─────────────┬───────────────┘             │
                          ▼                             │
               ┌─────────────────────┐                  │
@@ -115,12 +115,11 @@ dependency graph, validates nominal roles, claim-model sufficiency, and media,
 enforces declared parameter types and domains, and lowers parameters and
 requirement limits through exact kind/unit rules. It also binds each capability
 type's determinism class, seed, and declared material execution factors while
-leaving package-level reproducibility to future package binding. Review types
-lower to role-separated pending obligations containing the exact dossier,
-governance dispositions, digest-pinned external eligibility policy,
-independence constraints, and agent instructions. Accountable people may
-govern use; agents may only route work. The compiler neither evaluates that
-policy nor fulfills the review. Governed nominal requirement purposes are checked
+leaving package-level reproducibility to future package binding. When
+configured, an optional agent practicality type lowers to a
+`presentation_gate` containing the exact dossier, closed routing dispositions,
+a digest-pinned agent policy, and explicit instructions. It never participates
+in a technical verdict, and omitting it is valid. Governed nominal requirement purposes are checked
 against output-level explicit exclusions without interpreting prose or inferring
 purpose hierarchies. It performs no package selection, execution, qualification decision, or
 verdict during compilation. A separate campaign entry point admits an
@@ -133,8 +132,8 @@ admission conditions and derives verdicts with the kernel; see the
 
 Defines draft evidence records, SHA-256 content identities, the case-package
 manifest with its bound capabilities and executions, the execution receipt
-record with its byte-level verification (ADR-0007), and the unsigned staged
-agent routing record (ADR-0009). It has no package writer, signature system,
+record with its byte-level verification (ADR-0007), and the unsigned optional
+agent routing record (ADR-0010). It has no package writer, signature system,
 lineage validator, or independent verifier yet.
 
 ### `avila-core-runner`
@@ -144,9 +143,10 @@ at explicitly supplied roots, stages verified inputs into a fresh workspace,
 runs exact executables through named case-specific adapters, writes and
 verifies execution receipts, reuses steps whose committed receipts still
 describe the planned invocation and names every change by class, generates
-the claims document, hands evaluation to the compiler and kernel, and
-materializes exact content-identified requests for compiled review stages. Its
-report is the single source every front end renders (ADR-0007, ADR-0009).
+the claims document, hands evaluation to the compiler and kernel, and—only when
+configured—materializes an exact content-identified post-campaign presentation
+request. Its report is the single source every front end renders (ADR-0007,
+ADR-0010).
 
 ### `avila-core-cli`
 
@@ -165,7 +165,7 @@ lists the roots and executables its package requests, runs the workflow on a
 background thread through the runner crate, and renders the report stage by
 stage: integrity, compilation, execution with reuse and change classes,
 generated claims and binding, verdicts with their complete boundaries,
-staged-review readiness and instructions, and replay. The specimen view compiles the embedded specimen and renders its
+optional presentation-gate readiness and instructions, and replay. The specimen view compiles the embedded specimen and renders its
 findings with owners and repairs. Every badge and number is read from a
 report; the client performs no calculation and must never grow a separate
 scientific state model.
@@ -217,24 +217,29 @@ construct admissions and verdicts.
 6. Selection ranks only admitted candidates using an explicit ordered policy.
 7. The planner emits an immutable campaign plan with exact capability identities,
    dependencies, expected artifacts, environment policy, and cost estimate.
-8. Required people approve and sign the plan.
+8. The planner binds the exact plan identity; any organization-specific launch
+   authorization is an external policy event, not a Core verdict rule.
 9. The runner stages each step into a fresh controlled workspace, verifies all
    input hashes, invokes the adapter, and captures an execution receipt.
 10. Output validators reject artifacts that do not satisfy the capability contract.
 11. Admission A1–A10 decides whether each produced claim can enter the campaign
     evidence graph.
 12. Evidence records connect outputs to inputs, process receipts, method and data
-   versions, validation evidence, and reviews.
+   versions, and validation evidence.
 13. Verdict logic evaluates only admitted evidence, compares exact canonical
     values, and produces requirement-level states and boundary statements.
 14. The packager writes a human-readable and machine-readable evidence package;
     the independent verifier checks it from the package root.
+15. If configured, a connected agent applies the exact practical presentation
+    instructions and either returns the candidate, presents it to the user, or
+    abstains. This routing record remains outside steps 11 and 13.
 
 Steps 9 to 11 and 13 have first executable slices: for the steps a committed
 case declares, a case-specific runner stages verified bytes, invokes the bound
 executable, and writes a receipt verified from bytes; adapters extract claims
 from declared outputs; type-level admission over the generated claims and
-kernel verdicts with review asymmetry follow. Steps 4 to 8, generic output
+review-independent kernel verdicts follow. Optional presentation requests are
+materialized after evaluation. Steps 4 to 8, generic output
 validators, and step 14 do not exist yet. Any failure before step 13 yields
 no verdict. A completed method that cannot decide the requirement may yield
 `INCONCLUSIVE` when the contract permits it.
@@ -251,7 +256,7 @@ A capability may invoke:
 - a container or batch job;
 - an HPC scheduler;
 - an organization service; or
-- a human review step.
+- an optional connected-agent presentation step.
 
 Core standardizes the boundary and evidence receipt. It does not rewrite a proven
 solver merely to make the implementation homogeneous.
@@ -297,7 +302,7 @@ boundaries are:
 - produced artifact → output validator;
 - evidence graph → verdict evaluator;
 - package → independent verifier; and
-- organization identity → external provider or reviewer eligibility policy.
+- organization identity → external provider or trust policy.
 
 Parsing success, process exit code zero, and a valid signature each establish
 only their narrow claim.
@@ -311,8 +316,8 @@ profile.
 ## Non-negotiable failure behavior
 
 - Unknown schema fields are rejected at authoritative boundaries.
-- Missing capability, dependency, qualification, evidence, or review blocks the
-  affected claim.
+- Missing capability, dependency, qualification, or evidence blocks the
+  affected claim. Missing review never does.
 - No capability can directly set the final verdict badge.
 - No interface, agent, or provider can construct an admission or verdict record
   outside the semantic kernel.

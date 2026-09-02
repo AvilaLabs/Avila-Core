@@ -37,7 +37,7 @@ re-hashes bytes at supplied roots, stages verified inputs into a fresh
 workspace, runs exact executables through adapters, writes and verifies
 receipts, reuses steps whose receipts still hold, and generates the claims
 document before handing evaluation to the compiler and kernel, then
-materializes exact content-identified requests for compiled review stages.
+materializes exact content-identified requests for compiled presentation gates.
 
 **Workbench.** The desktop application. It renders the runner's report and
 the compiler's findings, requests plans and runs, and holds no semantics of
@@ -135,25 +135,26 @@ A nominal basis needs explicit policy permission.
 nondeterministic roles are permitted and whether a nominal basis is allowed.
 Every weakening is visible in the affected verdicts.
 
-**Review obligation.** A compiled, pending request binding a reviewer role, a
-named external eligibility policy, an exact presented dossier,
-governance-only dispositions, independence constraints, and any instructions
-(SC-6 R9). An `accountable_person` obligation must be fulfilled before `PASS`
-can be established. An `agent` obligation is a routing stage and never gates
-or constructs a technical verdict. Compilation never fulfills either kind.
+**Presentation gate.** An optional compiled stage in which a connected agent
+receives an exact post-campaign dossier and explicit practical instructions
+(SC-6 R9). Its state is `awaiting_agent`, and its routing dispositions are
+`present_to_user`, `request_changes`, or `abstain`. Omitting it is valid. It is
+not a claim, qualification, approval, or prerequisite for a technical verdict.
 
-**Eligibility policy.** The external, organization-owned rule for who may
-review, pinned by identity and digest. For an agent stage it binds the
-permitted software identity and practical instructions; that does not turn
-software into an eligible person. Core stores and binds the policy; it does
-not decide that a person is qualified or that an agent's advice is correct.
+**Agent policy.** The hash-bound rule and implementation identity for an
+optional presentation gate. It records the practical instructions and allowed
+routing outcomes. Core binds the policy but does not claim that its checklist
+is complete or that the agent's advice is correct.
 
-**Staged agent review.** A compiled review stage before accountable human
-review in which identified software receives an exact, content-identified
-dossier and explicit practical instructions. It may recommend accountable
-review, request changes, or abstain. It can never approve or reject a result
-for use, fulfill an accountable-person obligation, or change a technical
-verdict. Its current record is unsigned and unverified.
+**Practicality review.** The connected agent's instructed examination of a
+candidate after Core has evaluated it. It may return the candidate to the
+generative loop or present it to the user. It cannot construct, edit, create,
+or suppress a Core verdict. The current routing record is unsigned and
+unverified.
+
+**User acknowledgement.** A separate product-policy event recording that a
+user saw named limitations before acting on or exporting a result. It is not
+professional review and never changes the technical verdict.
 
 **Finding.** One compiler or admission result: a stable code, a class, an
 owner, a JSON Pointer location, related locations, typed repair candidates,
@@ -173,7 +174,8 @@ where the exact bytes are known. The compiler never applies a repair itself.
 **Capability.** A versioned, provider-owned contribution with named input and
 output slots, an explicit method and qualification boundary, and a receipt
 for every execution. A capability may wrap software in any language, a data
-access, a calculation, a physical measurement, or a professional review.
+access, a calculation, a physical measurement, or an optional presentation
+stage.
 
 **Capability type.** The semantic signature of a capability: slots, roles,
 permitted output claim models, typed parameters and domains, determinism
@@ -200,12 +202,12 @@ companions: kinds, roles, purposes, capability types, contract templates with
 their requirement sets, qualification records and validation cases,
 applicability predicates, review policies, and the adapters or packages that
 implement the types, for one domain such as activated-metal disposition or
-shielding margins. A library is what a domain professional publishes so that
+shielding margins. A library is what a named method owner publishes so that
 others can compile contracts in that domain without reinventing its
 vocabulary. Libraries may be open or commercial; either way every entry has
 an owner and every claim in it carries its qualification state. A library is
 not a pile of documents mined from the internet; it is curated content with
-accountable owners.
+attributable owners. Core infers no professional credential from ownership.
 
 **Requirement set.** A library's owned, versioned list of what any contract
 in its domain must address: for each entry, the quantity kind, comparison,
@@ -228,7 +230,7 @@ may tighten but never loosen the policy floor.
 **Qualification.** A method owner's scoped, evidenced claim that a specific
 package is fit for a context of use: predicates over parameters, inputs,
 environment, and facts, with validation evidence, exclusions, uncertainty
-limits, reviewers, and lifecycle (SC-7). Qualification is never a global
+limits, limitations, and lifecycle (SC-7). Qualification is never a global
 "verified" badge, and Core does not create it by storing it.
 
 **Qualification record.** A method owner's document binding one adapter and
@@ -326,8 +328,9 @@ new workspace.
 ## Campaigns and verdicts
 
 **Campaign.** One planned or executed run of a contract's workflow: the
-attested inputs, the claims produced, the review decisions, the admissions,
-and the verdicts, identified as a whole (SC-13).
+attested inputs, claims produced, admissions, and verdicts, identified as a
+whole (SC-13). Optional presentation routing happens after this technical
+record.
 
 **Attestation.** An identity asserted for a contract input or a recorded
 output claim without the runner having produced it in this run. Attestations
@@ -340,7 +343,7 @@ reused outputs, or carried as an attestation for steps that did not run.
 **Admission.** The decision that an artifact may enter the evidence graph
 for a role at a step (SC-11): identity, admitted parents, presence, permitted
 model and shape, media, cardinality, and eventually receipts, packages,
-qualification, policy, reviews, and invalidation. States are `admitted`,
+qualification, policy, and invalidation. States are `admitted`,
 `quarantined`, or `missing`; quarantine is terminal and cascades to
 descendants.
 
@@ -352,14 +355,14 @@ truth, certification, or approval by itself.
 
 **PASS / FAIL / INCONCLUSIVE / NOT_EVALUATED.** Established within the
 limit; established beyond the limit; admitted evidence that neither
-establishes nor contradicts, such as an interval crossing the limit; nothing
-admissible to decide on, including a pending required review. `PASS` requires
-every required review; `FAIL` may be emitted with reviews outstanding.
+establishes nor contradicts, such as an interval crossing the limit; and no
+admissible evidence to decide on. Presentation routing and user acknowledgement
+do not participate in any of the four states.
 
 **Boundary.** What a verdict carries with it: semantic profile, compiler and
-evaluator identities, compiled snapshot and claims identities, review
-attestation status, and the contract's assumptions. Outside its boundary a
-verdict says nothing.
+evaluator identities, compiled snapshot and claims identities, qualification
+position, and the contract's assumptions. Outside its boundary a verdict says
+nothing.
 
 **Replay.** Re-deriving a committed expectation from the same records and
 comparing: the generated claims against the committed claims document, a
@@ -369,7 +372,7 @@ decision to re-freeze.
 
 **Invalidation.** Marking evidence and verdicts as no longer current because
 something they depended on changed: inputs, parameters, methods, data,
-environment, qualification, policy, review, or a discovered defect (SC-12).
+environment, qualification, policy, or a discovered defect (SC-12).
 Default invalidation follows typed dependency edges and fails closed.
 
 **Reuse rule.** An authorized, signed non-dependence claim with scope,
@@ -385,28 +388,28 @@ look similar" is not a reuse rule.
 **Executor.** Whoever runs a campaign and is accountable for the records it
 produces, including attestations.
 
-**Method owner.** The professional who owns a capability type or
-qualification and answers for its applicability boundary.
+**Method owner.** The person or organization that owns a capability type or
+qualification and answers for its applicability boundary. Core does not infer
+a credential requirement from the role.
 
 **Capability provider.** Whoever publishes and supports an implementation.
 
-**Reviewer.** A person eligible under the named external policy who examines
-the exact presented dossier and records a governance disposition:
-approve for use, reject for use, request changes, or abstain.
+**External reviewer.** A person an organization may independently choose to
+consult under its own policy. External review is outside Core's technical
+verdict and is never universally required by Core.
 
 **Designer.** Whoever proposes work: a person, or an AI agent acting for one.
 Designers author contracts, propose candidates, and iterate; they never
-construct an admission or a verdict, and an agent never acts as the
-accountable reviewer.
+construct an admission or a verdict.
 
 **Agent.** Software that authors and drives campaigns through Core's
-interfaces. An agent is a designer, an executor, or a non-accountable
-reviewer, always with a recorded identity, never a source of authority.
+interfaces. An agent may be a designer, executor, or optional practicality
+reviewer. Its identity and instructions are recorded, and its routing result
+cannot override Core's kernel.
 
-**Independence, separation of duties.** Explicit constraints that a reviewer
-be a different person or organization from the requester, method owner,
-provider, or executor, evaluated over signed role assertions, with waivers
-recorded in every affected verdict.
+**Independence, separation of duties.** Optional organization-policy
+constraints between named actors. They may govern an external process, but
+they are not inputs to Core's technical verdict.
 
 ## Vision terms
 
@@ -425,7 +428,7 @@ map of what has to be true and how each thing can be tested, never a store
 of assertions without owners.
 
 **Coverage.** How much of a constellation's requirement set a given contract
-actually establishes, reported so a reviewer's question becomes "what is
+actually establishes, reported so an evidence consumer's question becomes "what is
 missing from this list" rather than "is any of this right". Coverage does
 not certify completeness; no system can.
 

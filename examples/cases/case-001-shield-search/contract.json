@@ -61,14 +61,14 @@
         "reviewer_eligibility_policy": {
           "policy_id": "avila-labs.shielding/practical-agent-review",
           "revision": 1,
-          "sha256": "sha256:3ea229c01bed007dcdb6a47211f12b672e170af7873614b61e59e0461f1d4278"
+          "sha256": "sha256:4242b3af100c4c07aa316a22b883eb50c3e285f74c6d6df99d7b942d6b3cc2ca"
         },
         "independence": { "mode": "none" },
         "instructions": [
           "Use Core's recorded requirement statuses and rules; never derive, edit, or override a technical verdict.",
           "Request changes unless every compiled requirement is PASS.",
           "After technical PASS, request changes for adjacent identical layers, a layer thinner than 10 cm, or liquid water without explicit containment evidence.",
-          "A positive result may only recommend the candidate for accountable human review; never approve or reject it for use."
+      "After technical and practical checks pass, route the candidate to the user without altering Core's verdict."
         ]
       }
     }

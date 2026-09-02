@@ -11,7 +11,7 @@ A Core capability is a versioned, provider-owned contribution with named input
 and output slots. Each slot has a nominal evidence-role type and slot-scoped
 cardinality. The capability operates under an explicit method and qualification
 boundary. It may wrap software, data access, a calculation, a verification
-method, or a professional review.
+method, or an optional agent presentation stage.
 
 The protocol must allow different providers to implement the same semantic
 capability type without requiring Core to understand their internal algorithms.
@@ -24,7 +24,7 @@ The `v0.1` manifest was retired with decision S-016. The current executable
 record is the capability *type* in a registry snapshot: nominal input and
 output slots with roles and media types, permitted output claim models, typed
 parameters and domains, determinism class and material execution factors,
-review semantics, governed-purpose exclusions, non-claims, and owner.
+optional presentation semantics, governed-purpose exclusions, non-claims, and owner.
 
 Package manifests return under SC-5 and must identify the exact implementation
 and declare at least:
@@ -180,7 +180,7 @@ record must state:
 - validation and benchmark evidence;
 - uncertainty and numerical limits;
 - known failure modes and exclusions;
-- owner, reviewer, dates, and expiration/review triggers; and
+- owner, dates, expiration triggers, and validation refresh conditions; and
 - the policy or organization recognizing the qualification.
 
 Core can enforce and preserve this record. It cannot create domain credibility
@@ -192,22 +192,20 @@ provenance requirement. A runner signature establishes who recorded a fact; it
 does not grant that provider authority to assert it. Missing, stale, mismatched,
 or unauthorized facts evaluate to `unknown` and fail closed.
 
-## Human capabilities
+## Optional presentation capabilities
 
-Review, data approval, or professional judgment can be capability steps when the
-contract defines:
+A connected-agent practicality check can be a capability step when the contract
+defines:
 
-- an immutable reference to the external reviewer-eligibility policy;
-- exact evidence presented;
-- governance-only dispositions and rationale fields, kept separate from
-  technical requirement verdicts;
-- independence and conflict rules;
-- identity and signature requirements; and
-- timeout, rejection, and escalation semantics.
+- an immutable reference to the agent policy and implementation identity;
+- the exact post-campaign dossier presented;
+- `present_to_user`, `request_changes`, and `abstain` as the closed routing
+  dispositions;
+- explicit practical instructions; and
+- identity, timeout, refusal, and retry semantics.
 
-Human input is evidence, not an undocumented exception to the workflow.
-The compiler emits a pending obligation and does not decide reviewer
-eligibility. Later admission can check keys, signed policy assertions, the exact
-presented dossier, permitted dispositions, and separation-of-duties rules under
-an organization-selected trust policy. It cannot prove a person's internal
-independence, attention, expertise, or reasoning merely from a signature.
+The compiler emits an optional `presentation_gate` in state `awaiting_agent`.
+The runner materializes the exact request only after campaign evaluation. The
+record is routing history, not technical evidence, and its absence or outcome
+cannot change a verdict. Human acknowledgement or organization-specific
+approval may be recorded separately but is never a universal Core gate.

@@ -1,4 +1,4 @@
-//! Admission of attested inputs, output claims, and review decisions.
+//! Admission of attested inputs and output claims.
 //!
 //! Each admitted record gets an explicit state with reasons. Conditions
 //! checked: the record names something the compiled snapshot has, its
@@ -18,23 +18,19 @@ use crate::compile::registry::RegistryIndex;
 use crate::compile::review::is_sha256_identity;
 use crate::compile::{CompiledContract, CompiledStep};
 use crate::diagnostic::{
-    CORE_E7002, CORE_E7101, CORE_E7103, CORE_E7201, CORE_E7301, CORE_E7401, CORE_S1102,
-    CoreDiagnostic, FindingClass, SourceLocation,
+    CORE_E7002, CORE_E7101, CORE_E7103, CORE_E7201, CORE_E7301, CORE_S1102, CoreDiagnostic,
+    FindingClass, SourceLocation,
 };
 use crate::document::{
-    BoundSide, ClaimModelDeclaration, OutputSlotDefinition, QuantityValue, ReviewDisposition,
-    SourceRef,
+    BoundSide, ClaimModelDeclaration, OutputSlotDefinition, QuantityValue, SourceRef,
 };
-
-/// Admitted review decisions by step: the disposition asserted for it.
-pub(super) type Decisions = BTreeMap<String, ReviewDisposition>;
 
 pub(super) fn admit(
     compiled: &CompiledContract,
     registry: &RegistryIndex<'_>,
     claims: &ClaimsDocument,
     findings: &mut Vec<CoreDiagnostic>,
-) -> (Vec<AdmissionRecord>, Decisions) {
+) -> Vec<AdmissionRecord> {
     let mut records: Vec<AdmissionRecord> = Vec::new();
     let mut admitted: BTreeSet<SourceRef> = BTreeSet::new();
 
@@ -299,52 +295,7 @@ pub(super) fn admit(
         });
     }
 
-    // Review decisions: unverified assertions checked only for structure.
-    let mut decisions = Decisions::new();
-    for (index, decision) in claims.decisions.iter().enumerate() {
-        let obligation = steps
-            .get(decision.step_id.as_str())
-            .and_then(|step| step.review_obligation.as_ref());
-        let Some(obligation) = obligation else {
-            findings.push(CoreDiagnostic::new(
-                CORE_E7401,
-                FindingClass::Invalid,
-                "executor",
-                claims_location(format!("/decisions/{index}/step_id")),
-                format!(
-                    "step `{}` carries no compiled review obligation",
-                    decision.step_id
-                ),
-            ));
-            continue;
-        };
-        if !obligation
-            .allowed_dispositions
-            .contains(&decision.disposition)
-        {
-            findings.push(CoreDiagnostic::new(
-                CORE_E7401,
-                FindingClass::Invalid,
-                "executor",
-                claims_location(format!("/decisions/{index}/disposition")),
-                "the review type does not allow this disposition",
-            ));
-            continue;
-        }
-        if decisions.contains_key(&decision.step_id) {
-            findings.push(CoreDiagnostic::new(
-                CORE_E7401,
-                FindingClass::Invalid,
-                "executor",
-                claims_location(format!("/decisions/{index}")),
-                format!("step `{}` carries more than one decision", decision.step_id),
-            ));
-            continue;
-        }
-        decisions.insert(decision.step_id.clone(), decision.disposition);
-    }
-
-    (records, decisions)
+    records
 }
 
 /// Type-level validation of one claim against its output: permitted model,

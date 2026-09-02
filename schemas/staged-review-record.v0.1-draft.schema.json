@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.avilalabs.com/core/staged-review-record/v0.1-draft.schema.json",
   "title": "Avila Core Staged Review Record v0.1 draft",
-  "description": "An unsigned routing record from a non-accountable agent over one content-identified Core review request. It can recommend accountable review, request changes, or abstain; it can never approve or reject a result for use.",
+  "description": "An unsigned routing record from an optional connected-agent practicality gate over one content-identified Core request. It can present the candidate to the user, request changes, or abstain. It is separate from and cannot alter Core's technical verdict.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -45,7 +45,7 @@
     },
     "disposition": {
       "enum": [
-        "recommend_for_accountable_review",
+        "present_to_user",
         "request_changes",
         "abstain"
       ]
@@ -256,9 +256,9 @@
         "compiled_snapshot_sha256",
         "campaign_sha256",
         "step_id",
-        "fulfillment",
+        "gate_state",
         "reviewer_role",
-        "state",
+        "readiness",
         "presented_evidence",
         "decision_role",
         "decision_media_type",
@@ -280,14 +280,14 @@
         "step_id": {
           "$ref": "#/$defs/nonemptyString"
         },
-        "fulfillment": {
-          "const": "pending_agent_review"
+        "gate_state": {
+          "const": "awaiting_agent"
         },
         "reviewer_role": {
           "const": "agent"
         },
-        "state": {
-          "const": "ready_for_review"
+        "readiness": {
+          "const": "ready_for_agent"
         },
         "presented_evidence": {
           "type": "array",
@@ -308,7 +308,7 @@
           "uniqueItems": true,
           "items": {
             "enum": [
-              "recommend_for_accountable_review",
+              "present_to_user",
               "request_changes",
               "abstain"
             ]

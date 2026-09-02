@@ -252,7 +252,7 @@ fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
                     .workflow
                     .iter()
                     .filter_map(|step| {
-                        step.review_obligation
+                        step.presentation_gate
                             .as_ref()
                             .map(|review| ExpectedReview {
                                 step_id: step.step_id.clone(),

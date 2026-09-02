@@ -11,9 +11,9 @@ command line without re-freezing the package.
 candidate (free input) ─┬─► screen: removal-cross-section attenuation (python3, unqualified, nominal basis)
                         └─► transport: OpenMC slab model (openmc-python, seeded_stochastic, bounded basis)
                                     ↓
-             Avila Core: four requirement verdicts + exact review request
+          Avila Core: four technical verdicts + exact optional presentation request
                                     ↓
-          practical-review agent: request changes or recommend a person's review
+          optional practical-review agent: request changes or present to user
 ```
 
 This is a research specimen over a synthetic plane source. No facility,
@@ -88,8 +88,10 @@ loop: it proposes candidates, screens each, keeps the ones the screen and the
 exact requirements accept, and sends the ones with the most screen margin to
 transport. After each finalist it gives the exact ready dossier to
 `shield_review.py`, writes a staged-review record, returns candidates that need
-changes, and queues only recommendations for a later accountable person. It
-reads reports and never constructs a verdict or approval.
+changes, and places only candidates that pass both the technical requirements
+and the authored practical instructions in the user-presentation queue. It
+reads reports and never constructs or alters a verdict. Core can be used
+without this agent stage by omitting the review capability from the contract.
 
 ## Coverage of the library requirement set
 
@@ -140,37 +142,37 @@ interval that Core refuses to let establish the bounded requirement:
 [FAIL] SHIELD-R4-thickness — bounded.le.exceeds ([150, 150] cm; limit 100 cm; margin -50 cm)
 ```
 
-## Staged agent review
+## Optional practicality presentation gate
 
-The final `practical-review` step is a review capability, but its declared
-reviewer role is `agent`, not `accountable_person`. Its exact dossier is the
-hash-bound reviewer script, candidate, screen result, and transport result.
+The final `practical-review` step is an optional connected-agent capability.
+Its exact dossier is the hash-bound reviewer script, candidate, screen result,
+and transport result.
 The contract and `agent-review-policy.json` bind four practical instructions,
 including the rule that every technical requirement must already be `PASS`.
 Core emits the realized request only after campaign evaluation and identifies
 it canonically:
 
 ```text
-[READY] practical-review — agent; dossier 4 artifact(s); request sha256:f3a95612…
+[READY FOR AGENT] practical-review — optional agent practicality gate; 4/4 dossier artifacts present; request sha256:3c998b6c…
   instruction: Use Core's recorded requirement statuses and rules; never derive, edit, or override a technical verdict.
   instruction: Request changes unless every compiled requirement is PASS.
 ```
 
-The compiler permits this role only
-`recommend_for_accountable_review`, `request_changes`, or `abstain`. It
-refuses `approve_for_use` and `reject_for_use`, and campaign evaluation does
-not let an agent stage gate or create a technical verdict. The committed
+The compiler permits this role only `present_to_user`, `request_changes`, or
+`abstain`. Campaign evaluation never reads the routing record, so the stage
+cannot gate, create, or alter a technical verdict. In a connected generative
+workflow, however, the surrounding agent does not show a candidate to the
+user until this optional stage returns `present_to_user`. The committed
 [`reviews/reference.json`](reviews/reference.json) embeds that exact request
 and records the expected negative route for the reference candidate:
-`request_changes`, because Core reports R2 as `FAIL`. The record is unsigned,
-`unverified`, and explicitly not an approval. CASE-001 has no accountable
-review obligation or decision.
+`request_changes`, because Core reports R2 as `FAIL`. The record is unsigned
+and `unverified`; it is presentation-routing history, not technical evidence.
 
 ## What the package binds
 
 - **Capabilities:** `python3` (the system interpreter, by digest) for the
   screen; `openmc-python` (the OpenMC virtual environment's interpreter, by
-  digest) for transport. Neither is a qualified package. The staged reviewer
+  digest) for transport. Neither is a qualified package. The practical reviewer
   is an input artifact identified by its own digest, not an executable granted
   runner authority.
 - **Artifacts:** the reference candidate, the material table, the source
@@ -178,7 +180,7 @@ review obligation or decision.
   nuclear-data index (identity of the index
   only; the nuclide files it names are not re-hashed), and the reference
   candidate's expected outputs under `expected/`.
-- **Review:** the agent policy and reference routing record as package
+- **Optional practical review:** the agent policy and reference routing record as package
   documents; `practical-review` has no package execution because the runner
   materializes the request and external software consumes it.
 - **Executions:** `screen` through `avila-labs.shielding/screen@1`;
@@ -243,9 +245,9 @@ not met by anything the designer tried; the next moves belong to the designer
 from the table it never combined into a feasible candidate) and to the
 requirement owner, not to Core.
 
-That frozen search predates the staged-review slice, so its historical log is
-not retrofitted with review records. Running the current designer writes a
+That frozen search predates the optional presentation-gate slice, so its historical log is
+not retrofitted with routing records. Running the current designer writes a
 record for every transported finalist and reports separately how many were
-returned and how many were merely recommended into the accountable-person
-queue. Since all three historical finalists were `FAIL` or `INCONCLUSIVE`, the
-bound instructions would return all three rather than place any in that queue.
+returned and how many entered the user-presentation queue. Since all three
+historical finalists were `FAIL` or `INCONCLUSIVE`, the bound instructions
+would return all three rather than present any of them.

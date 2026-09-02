@@ -13,7 +13,7 @@ mod help;
 
 use avila_core_compiler::{
     CompilationStatus, CompileReport, ContractSource, CoreDiagnostic, FindingClass,
-    RepairApplicability, ReviewerRole, compile_documents, explain,
+    RepairApplicability, compile_documents, explain,
 };
 use avila_core_kernel::VerdictStatus;
 use eframe::egui;
@@ -429,7 +429,7 @@ fn show_overview(ui: &mut egui::Ui, specimen: &Specimen) {
         overview_stage(
             &mut columns[0],
             "1  Define",
-            "Question, requirements, inputs, tolerances, assumptions, and review policy.",
+            "Question, requirements, inputs, tolerances, assumptions, and optional presentation policy.",
         );
         overview_stage(
             &mut columns[1],
@@ -438,7 +438,7 @@ fn show_overview(ui: &mut egui::Ui, specimen: &Specimen) {
         );
         overview_stage(
             &mut columns[2],
-            "3  Review",
+            "3  Understand",
             "Receive PASS, FAIL, or INCONCLUSIVE with portable lineage and explicit limitations.",
         );
     });
@@ -721,13 +721,10 @@ fn show_compiled(ui: &mut egui::Ui, report: &CompileReport) {
                     format!("{} ← {}", binding.input_slot, binding.source.label()),
                 );
             }
-            if let Some(review) = &step.review_obligation {
+            if step.presentation_gate.is_some() {
                 badge(
                     ui,
-                    match review.reviewer_role {
-                        ReviewerRole::AccountablePerson => "PENDING ACCOUNTABLE REVIEW",
-                        ReviewerRole::Agent => "PENDING AGENT REVIEW",
-                    },
+                    "OPTIONAL PRACTICALITY GATE",
                     egui::Color32::from_rgb(120, 164, 210),
                 );
             }

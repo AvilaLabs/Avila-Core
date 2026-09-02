@@ -51,7 +51,7 @@
         "evidence_ids": { "type": "array", "items": { "$ref": "#/$defs/nonemptyString" } },
         "verdict": {
           "type": "object",
-          "description": "The kernel's verdict output: status, rule identifier, canonical values used, reasons, and outstanding reviews.",
+          "description": "The kernel's technical verdict output: status, rule identifier, canonical values used, and reasons. Presentation or acknowledgment state is never a verdict input.",
           "required": ["status", "rule"],
           "properties": {
             "status": { "enum": ["pass", "fail", "inconclusive", "not_evaluated"] },
@@ -61,14 +61,13 @@
         "boundary": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["semantic_profile", "compiler", "evaluator", "compiled_snapshot_sha256", "claims_sha256", "review_attestation"],
+          "required": ["semantic_profile", "compiler", "evaluator", "compiled_snapshot_sha256", "claims_sha256"],
           "properties": {
             "semantic_profile": { "const": "avila.core/semantic/0.2-draft" },
             "compiler": { "$ref": "#/$defs/nonemptyString" },
             "evaluator": { "$ref": "#/$defs/nonemptyString" },
             "compiled_snapshot_sha256": { "$ref": "#/$defs/sha256" },
-            "claims_sha256": { "$ref": "#/$defs/sha256" },
-            "review_attestation": { "const": "unverified" }
+            "claims_sha256": { "$ref": "#/$defs/sha256" }
           }
         }
       }

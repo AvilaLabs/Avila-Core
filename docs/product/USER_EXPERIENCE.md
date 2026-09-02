@@ -23,8 +23,9 @@ or an empty automation canvas. Its first question is:
 
 > What do you need to establish?
 
-The interface organizes complexity around a professional decision. Advanced
-solver details remain available, but they are downstream of the contract.
+The interface organizes complexity around a bounded technical question that a
+person or software agent needs answered. Advanced solver details remain
+available, but they are downstream of the contract.
 
 ## Primary journey
 
@@ -38,7 +39,7 @@ screen asks for:
 - inputs and their identities;
 - assumptions, tolerances, and uncertainty sources;
 - permitted methods and data policies;
-- required reviewers; and
+- any optional connected-agent practicality instructions; and
 - the intended decision context.
 
 Core uses ordinary language alongside precise fields. It explains why a field is
@@ -55,14 +56,14 @@ Core separates four kinds of problem:
 - **unsatisfied:** the requested capability graph has no well-typed composition;
   and
 - **inadmissible:** the evidence policy does not permit the available method,
-  data, environment, or reviewer.
+  data, environment, or qualification.
 
 The interface never reduces all four to “error.” It shows the source location,
 stable finding code, owner, and next action for each blocker. Suggested fixes are
 explicit edits; the compiler does not silently change units, kinds, facts, or
 policy.
 
-### 3. Review the campaign plan
+### 3. Inspect the campaign plan
 
 Before execution, the user sees:
 
@@ -70,21 +71,23 @@ Before execution, the user sees:
 - qualification scope and limitations;
 - dependency order and expected outputs;
 - data movement and execution location;
-- estimated time, compute, license, provider, and review cost;
+- estimated time, compute, license, and provider cost;
 - reusable evidence and work that would be rerun; and
-- required human approvals.
+- any optional post-campaign practicality-routing instructions.
 
-The user approves a specific immutable plan. Material changes create a new plan,
-not a silent mutation.
+The runner executes a specific immutable plan under the requester's configured
+authorization. A person may choose to acknowledge or approve a plan under an
+organization's own policy, but Core does not require that acknowledgement for a
+technical verdict. Material changes create a new plan, not a silent mutation.
 
 ### 4. Run and supervise the campaign
 
-Progress is expressed in decision-relevant states: waiting for input, awaiting
-approval, running, blocked, rejected, invalidated, or complete. Logs and solver
-diagnostics are accessible without becoming the primary navigation.
+Progress is expressed in decision-relevant states: waiting for input, running,
+blocked, refused, invalidated, or complete. Logs and solver diagnostics are
+accessible without becoming the primary navigation.
 
 Core may suggest corrective actions, but cannot conceal a failed execution or
-substitute a different method without policy and approval.
+substitute a different method outside the bound contract and policy.
 
 ### 5. Understand the result
 
@@ -100,24 +103,28 @@ Next action  reduce uncertainty in material B or modify the design margin
 ```
 
 Every value links to its producing capability, configuration, inputs, numerical
-error, uncertainty treatment, and reviews. Display formatting never changes the
-exact canonical comparison. The result also names the semantic profile, policy,
-fact providers, and rule that produced it. A simple badge is a summary, never
-the evidence or an unqualified claim of physical truth.
+error, uncertainty treatment, and qualification boundary. Display formatting
+never changes the exact canonical comparison. The result also names the
+semantic profile, policy, fact providers, and rule that produced it. A simple
+badge is a summary, never the evidence or an unqualified claim of physical
+truth.
 
-### 6. Review and export evidence
+### 6. Inspect and export evidence
 
 The evidence view supports both audiences:
 
 - a readable package organized requirement by requirement; and
 - a machine-readable, content-addressed package for independent verification.
 
-The reviewer can annotate, reject, request information, or countersign without
-needing permission to modify the original execution records.
+An independent verifier or evidence consumer can reproduce checks and attach
+separate annotations without permission to modify the original execution
+records. If a connected practicality agent is configured, its separate routing
+record can return the candidate to the design loop, present it to the user, or
+abstain; it cannot change the technical verdict.
 
 ### 7. Change and selectively rerun
 
-When an input, method, dataset, policy, or review changes, Core shows:
+When an input, method, dataset, qualification, or policy changes, Core shows:
 
 - exactly which evidence is invalidated;
 - which conclusions are no longer usable;
@@ -131,8 +138,9 @@ optimized.
 
 ### Requester / engineer
 
-Creates or instantiates contracts, supplies inputs, reviews plans, and receives
-results. The default interface emphasizes requirements and next actions.
+Creates or instantiates contracts, supplies inputs, configures execution, and
+receives results. The default interface emphasizes requirements and next
+actions. The requester may be represented by a software agent.
 
 ### Method owner
 
@@ -145,10 +153,18 @@ Packages an implementation, maintains conformance and qualification evidence,
 and supplies technical support. Cannot alter the requester’s contract or verdict
 policy.
 
-### Reviewer
+### Independent verifier / evidence consumer
 
-Inspects lineage and method applicability, records findings, and countersigns
-where authorized. The evidence viewer should be free and read-only by default.
+Optionally reproduces integrity, compilation, admission, and verdict checks and
+records separate findings. This role is a portability and trust option, not a
+Core verdict prerequisite. The evidence viewer should be free and read-only by
+default.
+
+### Practicality agent
+
+Optionally applies explicit instructions to a technically evaluated finalist.
+It can request another design iteration, present the candidate to the user, or
+abstain. It cannot approve use or alter a Core technical verdict.
 
 ### Organization administrator
 

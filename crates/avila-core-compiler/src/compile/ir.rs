@@ -9,7 +9,7 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 use thiserror::Error;
 
-pub const COMPILE_NOTICE: &str = "Compilation establishes structural and semantic consistency under the named draft profile only. It performs no execution, review fulfillment, reviewer-eligibility or trust evaluation, evidence admission, scientific qualification, or requirement verdict.";
+pub const COMPILE_NOTICE: &str = "Compilation establishes structural and semantic consistency under the named draft profile only. It performs no execution, optional presentation-gate run, agent-identity or trust evaluation, evidence admission, scientific qualification, or requirement verdict.";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -70,13 +70,13 @@ pub struct CompiledStep {
     pub parameters: BTreeMap<String, CompiledParameterValue>,
     pub reproducibility: CompiledReproducibility,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub review_obligation: Option<CompiledReviewObligation>,
+    pub presentation_gate: Option<CompiledPresentationGate>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct CompiledReviewObligation {
-    pub fulfillment: ReviewFulfillment,
+pub struct CompiledPresentationGate {
+    pub state: PresentationGateState,
     pub reviewer_role: ReviewerRole,
     pub presented_evidence: Vec<ResolvedBinding>,
     pub decision_output_slot: String,
@@ -90,9 +90,8 @@ pub struct CompiledReviewObligation {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum ReviewFulfillment {
-    PendingExternalReview,
-    PendingAgentReview,
+pub enum PresentationGateState {
+    AwaitingAgent,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

@@ -33,7 +33,7 @@
     {
       "step_id": "review",
       "capability_type": {
-        "id": "fixture.accountable_review",
+        "id": "fixture.practical_agent_review",
         "major": 1
       },
       "review": {
@@ -50,7 +50,10 @@
               "minimum_separation": "different_person"
             }
           ]
-        }
+        },
+        "instructions": [
+          "Check the exact dossier for practical problems; request changes or route the candidate to the user without altering Core's technical verdict."
+        ]
       }
     }
   ],

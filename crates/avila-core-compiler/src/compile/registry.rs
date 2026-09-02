@@ -7,9 +7,8 @@ use super::findings::{
 use super::values::NOT_DEFINED_PLACEHOLDER;
 use crate::diagnostic::{CoreDiagnostic, FindingClass};
 use crate::document::{
-    CapabilityTypeDefinition, ClaimModelDeclaration, DeterminismClass, ExactBound, ParameterType,
-    PurposeDefinition, QuantityBound, RegistrySnapshot, ReviewDisposition, ReviewerRole,
-    RoleDefinition, VersionedRef,
+    CapabilityTypeDefinition, ClaimModelDeclaration, ExactBound, ParameterType, PurposeDefinition,
+    QuantityBound, RegistrySnapshot, RoleDefinition, VersionedRef,
 };
 use avila_core_kernel::{ExactNumber, KindDefinition, KindRegistry, UnitDefinition};
 use std::cmp::Ordering;
@@ -263,18 +262,6 @@ pub(super) fn validate_review_declaration(
     };
     let review_pointer = format!("/capability_types/{capability_index}/review");
 
-    if review.reviewer_role == ReviewerRole::AccountablePerson
-        && capability.reproducibility.determinism != DeterminismClass::Nondeterministic
-    {
-        review_incomplete(
-            registry_location(format!(
-                "/capability_types/{capability_index}/reproducibility/determinism"
-            )),
-            "an accountable review capability must remain nondeterministic",
-            "registry_owner",
-            findings,
-        );
-    }
     if capability.inputs.is_empty() {
         review_incomplete(
             registry_location(format!("{review_pointer}/presented_input_slots")),
@@ -363,31 +350,6 @@ pub(super) fn validate_review_declaration(
             );
         }
     }
-    match review.reviewer_role {
-        ReviewerRole::AccountablePerson => {
-            if dispositions.contains(&ReviewDisposition::RecommendForAccountableReview) {
-                review_incomplete(
-                    registry_location(format!("{review_pointer}/allowed_dispositions")),
-                    "an accountable person records a use disposition, not a recommendation to another reviewer",
-                    "registry_owner",
-                    findings,
-                );
-            }
-        }
-        ReviewerRole::Agent => {
-            if dispositions.contains(&ReviewDisposition::ApproveForUse)
-                || dispositions.contains(&ReviewDisposition::RejectForUse)
-            {
-                review_incomplete(
-                    registry_location(format!("{review_pointer}/allowed_dispositions")),
-                    "an agent review may recommend, request changes, or abstain, but can never approve or reject for use",
-                    "registry_owner",
-                    findings,
-                );
-            }
-        }
-    }
-
     if review.decision_output_slot.trim().is_empty() {
         review_incomplete(
             registry_location(format!("{review_pointer}/decision_output_slot")),

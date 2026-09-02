@@ -34,5 +34,6 @@ It is not a completed decision loop and never counts toward a discovery target.
 Number participant-backed completed loops from `CASE-001`.
 
 Architecture cannot close a discovery field. An implementation may test a
-hypothesis, but the relevant professional or buyer owns the decision about what
-the workflow requires.
+hypothesis, but the requester or buyer owns the decision about what the workflow
+requires. Discovery evidence informs product selection; it does not gate Core's
+technical verdicts or repository progress.

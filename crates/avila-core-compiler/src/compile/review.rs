@@ -1,18 +1,19 @@
-//! Role-separated accountable-person and agent review obligations.
+//! Optional instructed agent review stages that route candidates after Core's
+//! technical evaluation.
 
 use super::findings::{contract_location, review_incomplete};
-use super::ir::{CompiledReviewObligation, ResolvedBinding, ReviewFulfillment};
+use super::ir::{CompiledPresentationGate, PresentationGateState, ResolvedBinding};
 use super::registry::RegistryIndex;
 use crate::diagnostic::{CORE_R3401, CoreDiagnostic, FindingClass};
-use crate::document::{ContractSource, ReviewIndependence, ReviewParty, ReviewerRole};
+use crate::document::{ContractSource, ReviewIndependence, ReviewParty};
 use std::collections::{BTreeMap, BTreeSet};
 
-pub(super) fn compile_review_obligations(
+pub(super) fn compile_presentation_gates(
     contract: &ContractSource,
     registry: &RegistryIndex<'_>,
     bindings: &BTreeMap<String, Vec<ResolvedBinding>>,
     findings: &mut Vec<CoreDiagnostic>,
-) -> BTreeMap<String, CompiledReviewObligation> {
+) -> BTreeMap<String, CompiledPresentationGate> {
     let mut compiled = BTreeMap::new();
     for (step_index, step) in contract.workflow.iter().enumerate() {
         let Some(capability) = registry.capability_types.get(&step.capability_type) else {
@@ -117,10 +118,10 @@ pub(super) fn compile_review_obligations(
                 valid = false;
             }
         }
-        if declaration.reviewer_role == ReviewerRole::Agent && binding.instructions.is_empty() {
+        if binding.instructions.is_empty() {
             review_incomplete(
                 contract_location(format!("/workflow/{step_index}/review/instructions")),
-                "an agent review requires explicit practical instructions",
+                "an optional agent review requires explicit practical instructions",
                 "policy_owner",
                 findings,
             );
@@ -154,11 +155,8 @@ pub(super) fn compile_review_obligations(
 
         compiled.insert(
             step.step_id.clone(),
-            CompiledReviewObligation {
-                fulfillment: match declaration.reviewer_role {
-                    ReviewerRole::AccountablePerson => ReviewFulfillment::PendingExternalReview,
-                    ReviewerRole::Agent => ReviewFulfillment::PendingAgentReview,
-                },
+            CompiledPresentationGate {
+                state: PresentationGateState::AwaitingAgent,
                 reviewer_role: declaration.reviewer_role,
                 presented_evidence,
                 decision_output_slot: output.slot_id.clone(),

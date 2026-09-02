@@ -2,14 +2,14 @@
 
 **Status:** conceptual model plus minimal draft Rust records, an offline
 case-package integrity slice, and an execution-receipt record verified from
-bytes (ADR-0007), plus an unsigned staged-agent-review routing record
-(ADR-0009).
+bytes (ADR-0007), plus an unsigned optional agent presentation-routing record
+(ADR-0010).
 
 ## Principle
 
 Core does not make an answer trustworthy by putting it in a database. It makes
 the chain inspectable: what was claimed, by which method, from which immutable
-inputs, under which policy and applicability boundary, with which reviews and
+inputs, under which policy and applicability boundary, and with which
 limitations.
 
 ## Evidence graph
@@ -24,16 +24,18 @@ capability package ─────┤                                      │
 method qualification ──┘                                      ▼
                                                         derived evidence
 policy + requirement ──────────────────────────────────────────┤
-review records ────────────────────────────────────────────────┤
                                                                ▼
                                                      requirement verdict
                                                                │
                                                                ▼
                                                         package root
+                                                               │
+                                                               ▼ optional
+                                                   agent presentation routing
 ```
 
 An edge states a specific relationship such as `used`, `generated_by`,
-`qualified_by`, `reviewed_by`, `derived_from`, or `evaluates`. Production design
+`qualified_by`, `derived_from`, `evaluates`, or `routes_for_presentation`. Production design
 should map compatible concepts to W3C PROV and package contextual metadata in a
 standard-friendly form such as RO-Crate where practical.
 
@@ -46,8 +48,7 @@ claim only when Core also knows:
 - from which admitted parents;
 - under which method, environment, and policy;
 - which validator accepted its structure and semantics;
-- its applicability and limitations; and
-- whether required reviews admit it.
+- its applicability and limitations.
 
 A hash establishes byte identity, not truth. A signature establishes that a key
 signed bytes, not that the scientific claim is correct. An exit code establishes
@@ -61,11 +62,11 @@ The draft model includes:
 - plan;
 - execution receipt;
 - output;
-- review;
+- optional presentation routing;
 - verdict; and
 - log.
 
-Likely production additions include contract approval, registry snapshot,
+Likely production additions include contract acceptance, registry snapshot,
 capability package, method qualification, dataset identity, environment image,
 validator report, policy decision, cost receipt, invalidation, amendment,
 countersignature, and package manifest.
@@ -100,7 +101,7 @@ record: capability identity, staged inputs, portable invocation and its
 identity, process outcome, log and output digests, runner identity, and
 limitations. The receipt is re-read and re-hashed before anything is
 promoted. The generated claims document is then bound to the manifest
-digests and review-policy identities before campaign evaluation. This is an
+digests and any configured agent-policy identities before campaign evaluation. This is an
 integrity, execution, and replay spike, not the final portable evidence
 package: it has no archive canonicalization, signed root, trust store,
 redaction semantics, sandbox, or lineage-completeness proof. Environment keys an adapter requires the operator to value are recorded
@@ -110,13 +111,13 @@ inputs; a supplied one is hashed and attested, the steps it reaches have
 their committed claims withheld and bind fresh outputs by receipt, and
 replay is reported not applicable.
 
-After campaign evaluation the runner also realizes every compiled review
+After campaign evaluation the runner also realizes each configured presentation
 dossier from those exact claims. It content-identifies a request containing
 the compiled snapshot and campaign, evidence sources and artifact digests,
-reviewer role, policy, dispositions, independence, and instructions, and says
+agent role, policy, dispositions, and instructions, and says
 whether the dossier is complete. CASE-001's external agent writes an unsigned
-staged-review record over that request. The record is routing history, not a
-review admission or a signed accountable decision, and it cannot alter a
+staged-review record over that request. The record is routing history, not an
+admission or approval, and it cannot alter a
 technical verdict.
 
 ## Requirement verdict
@@ -130,7 +131,7 @@ A verdict record must name:
 - units and comparison semantics;
 - numerical and uncertainty rationale;
 - every supporting and contradicting evidence ID;
-- policy evaluation and required review records;
+- policy and qualification evaluations;
 - boundary and limitations;
 - evaluator capability identity; and
 - creation and invalidation state.
@@ -157,11 +158,11 @@ Potential invalidation triggers include:
 - new solver, method, dataset, adapter, or environment version;
 - expired, revoked, or narrowed qualification;
 - changed organization evidence policy;
-- rejected or withdrawn review;
+- discovered defect in a validation or qualification record;
 - discovered defect or security compromise; and
 - a more conservative dependency discovered after completion.
 
-Selective reuse is allowed only when a typed dependency and reviewed reuse rule
+Selective reuse is allowed only when a typed dependency and validated reuse rule
 show that the changed object cannot affect the evidence. “The files look similar”
 is not a reuse rule.
 
@@ -169,20 +170,22 @@ The case runner implements the execution-memoization half of this: a step is
 reused only when its planned invocation identity equals a committed completed
 receipt's and every recorded output verifies at a bound identity, and any
 difference is reported by change class and reruns the step. Authorized
-non-dependence reuse rules, and invalidation by policy, qualification, review,
+non-dependence reuse rules, and invalidation by policy, qualification,
 or advisory changes, are not implemented.
 
 ## Package contents
 
 A portable package should contain or securely reference:
 
-- contract, requirements, assumptions, and approvals;
+- contract, requirements, assumptions, and owner acceptance records;
 - input manifest and permitted redactions;
 - registry snapshot and selected capability packages/manifests;
 - execution plan, invocations, logs, receipts, and outputs;
 - validation, qualification, uncertainty, and numerical-error evidence;
-- policy decisions, reviews, and countersignatures;
+- policy decisions and qualification records;
 - requirement verdicts and limitations;
+- optional presentation-routing and user-acknowledgement records, explicitly
+  outside the verdict lineage;
 - complete graph and content inventory; and
 - signed package root plus verifier compatibility information.
 
@@ -210,6 +213,6 @@ unqualified promise.
 
 Portability does not require publishing customer data. The package format must
 support encrypted or externally retained artifacts, disclosed metadata, policy-
-permitted redaction, and proofs of exact identity. Reviewers need enough access
-to evaluate the claim; a digest of inaccessible data may preserve identity but
-does not establish credibility.
+permitted redaction, and proofs of exact identity. Evidence consumers need
+enough access to verify the claimed derivation; a digest of inaccessible data
+may preserve identity but does not establish credibility.

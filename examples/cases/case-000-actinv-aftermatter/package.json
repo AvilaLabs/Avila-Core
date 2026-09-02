@@ -7,50 +7,44 @@
       "document_id": "case-000-contract",
       "role": "contract",
       "path": "contract.json",
-      "sha256": "sha256:d3801a2f56aa5adfa215415e903e286a90a1082f13e5cc56ca26c968fac3b826"
+      "sha256": "sha256:6c8718cdd32ae93bd0b9861921aeca37614ffa5a953ad34eaea5cddfe9b2fe93"
     },
     {
       "document_id": "case-000-registry",
       "role": "registry",
       "path": "registry.json",
-      "sha256": "sha256:be754a32c53d86aed6e894e585bde375c4e7d9904187bf3be20dbce693542bc8"
+      "sha256": "sha256:95db065a2354be8f05cb7746beb9f790833c97fb8fbf323c1519e7cf9303e3ab"
     },
     {
       "document_id": "case-000-claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:cc984c1b10a6d1ae6fa9970c4e576a2ab9d67daa97c2152b7ac6885909df8216"
+      "sha256": "sha256:3238e99473190be2065bdee9a3e09a38c7f03f274c571732df68fe73b6d4e9be"
     },
     {
       "document_id": "case-000-expected-campaign",
       "role": "expected_campaign_report",
       "path": "campaign-report.json",
-      "sha256": "sha256:cc63b3bbdcd0be1739ea49bb7b50817c8322dd457075b2572a7fc672b3af99a5"
+      "sha256": "sha256:2ecb5245fc57107fe07e4e26feada08eac8bd1200d29ab44e88650bed64896e5"
     },
     {
       "document_id": "case-000-provenance",
       "role": "provenance",
       "path": "provenance.json",
-      "sha256": "sha256:dcd90f973d0f97b10c65d3bc88dcf7cd6934ac720098f940fd03b1a366869025"
-    },
-    {
-      "document_id": "case-000-reviewer-eligibility",
-      "role": "review_policy",
-      "path": "reviewer-eligibility-policy.md",
-      "sha256": "sha256:5ce3fcac9014d4cc5f6c184eb458911469e879b7ce78f5b42fa118b28652dd16"
+      "sha256": "sha256:b82549b6936ca17a23265ef692670020582ff1869f3766c52be25f3970f7e8e3"
     },
     {
       "document_id": "case-000-activation-receipt",
       "role": "execution_receipt",
       "path": "receipts/activation.json",
-      "sha256": "sha256:fb187dc3c477370cf51fab5518f54514dc0b6b2bd4d638b2b588f08db4426e26",
+      "sha256": "sha256:6c42fcfa4ac4d86e50875c8434b6c0f4eac86cc98220eafbeadf500e82850dab",
       "step_id": "activation"
     },
     {
       "document_id": "case-000-classification-receipt",
       "role": "execution_receipt",
       "path": "receipts/classification.json",
-      "sha256": "sha256:f329bef9612803fd2b958dbbda7cc3d58e7854c19706181f933d39bd5fc0956f",
+      "sha256": "sha256:87fc3a64fc354848977b38b668ab32fe94108a39e8e5a79f8952faaf2e2ce2dd",
       "step_id": "classification"
     }
   ],
@@ -346,6 +340,6 @@
     "CASE-000 is an internal synthetic integration specimen, not pilot or participant evidence.",
     "The five ACTINV data-release artifacts are verified only when that exact release is supplied as the actinv-data source root; the ACTINV 1.0.1 executables only when their release build is supplied as the actinv-release root.",
     "Artifact integrity establishes byte identity only; a verified execution receipt establishes that the bound executable ran over the bound bytes and produced the recorded bytes. Neither establishes scientific correctness, qualification, signature, or regulatory suitability.",
-    "Both computational steps are executed: ACTINV 1.0.1 through Aftermatter's frozen R0 builder under a digest-pinned Python interpreter, and Aftermatter through its digest-pinned executable. The review step is a pending obligation the runner never performs."
+    "Both computational steps are executed: ACTINV 1.0.1 through Aftermatter's frozen R0 builder under a digest-pinned Python interpreter, and Aftermatter through its digest-pinned executable. No human, professional, or agent review is required for Core to compile or evaluate the case."
   ]
 }

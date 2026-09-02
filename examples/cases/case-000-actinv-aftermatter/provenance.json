@@ -152,24 +152,23 @@
     "requirement_verdicts": [
       {
         "requirement_id": "CASE-000-R1",
-        "status": "not_evaluated",
-        "rule": "not_evaluated.review_pending"
+        "status": "pass",
+        "rule": "bounded.lt.within"
       },
       {
         "requirement_id": "CASE-000-R2",
-        "status": "not_evaluated",
-        "rule": "not_evaluated.review_pending"
+        "status": "pass",
+        "rule": "bounded.lt.within"
       }
-    ],
-    "reason": "No qualified independent review decision is present."
+    ]
   },
   "core_boundary": [
     "The standalone Core compiler and campaign evaluator do not read artifact bytes; the case runner re-hashes files under explicitly supplied source roots and reports every omitted root as not_checked.",
-    "A matching artifact digest establishes byte identity only. A verified execution receipt establishes that the bound executable ran over the bound bytes and produced the recorded bytes; it does not verify signatures, qualification, professional judgment, or invalidation.",
+    "A matching artifact digest establishes byte identity only. A verified execution receipt establishes that the bound executable ran over the bound bytes and produced the recorded bytes; it does not verify signatures, qualification, practical suitability, or invalidation.",
     "The activation capability is a digest-pinned Python interpreter running Aftermatter's frozen R0 builder, which drives the digest-pinned ACTINV 1.0.1 executables; none of them is qualified by Core.",
     "Producer identities in the generated claims are the executable digests the runner verified, not signed capability packages.",
     "The current requirement language does not evaluate the categorical waste-class or route-state vocabulary.",
-    "CASE-000 is not discovery evidence, participant evidence, pilot evidence, or a qualification record. Execution does not substitute for qualified review."
+    "CASE-000 is not discovery evidence, participant evidence, pilot evidence, or a qualification record. Its technical PASS means only that the admitted bounded intervals satisfy these exact internal requirements."
   ],
   "execution_recorded_on": "2026-09-02",
   "execution": {
@@ -240,11 +239,6 @@
       }
     ],
     "attested_steps": [],
-    "pending_steps": [
-      {
-        "step_id": "qualified-review",
-        "reason": "pending external review; never executed by the runner"
-      }
-    ]
+    "pending_steps": []
   }
 }

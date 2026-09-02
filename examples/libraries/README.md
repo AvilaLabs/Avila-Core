@@ -18,5 +18,6 @@ CASE-001's transport record lives with the case for now, binds no
 validation evidence, and says so.
 
 Nothing here is qualified. The shielding set is written by the case author for
-a research specimen; a real library's set is owned and reviewed by the domain's
-professionals, and its identity is what a reviewer cites.
+a research specimen; a real library's set has an attributable method owner,
+versioned validation evidence, and explicit limitations. Core does not require
+that owner or an evidence consumer to hold a professional credential.

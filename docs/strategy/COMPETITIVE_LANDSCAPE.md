@@ -82,7 +82,7 @@ Source: [NEAMS technical areas](https://neams.inl.gov/technical-areas/).
 
 **Implication for Core:** Avila should not claim to originate the nuclear
 multiphysics platform category. A credible wedge must address a concrete
-cross-tool evidence and review problem that domain programs and existing
+cross-tool evidence and verification problem that domain programs and existing
 workbenches do not already resolve satisfactorily for the chosen user.
 
 ## Model and workflow interchange standards
@@ -110,9 +110,10 @@ models used in medical-device submissions.
 Source: [FDA computational modeling and simulation credibility guidance](https://www.fda.gov/regulatory-information/search-fda-guidance-documents/assessing-credibility-computational-modeling-and-simulation-medical-device-submissions).
 
 **Implication for Core:** hashes and provenance are necessary but not sufficient.
-Credibility depends on context of use, risk, validation, uncertainty, review, and
-applicability. Core must represent professional assurance processes without
-claiming that its schema creates regulatory acceptance.
+Credibility depends on context of use, risk, validation, uncertainty, and
+applicability. Core may represent organization-specific assurance processes
+without making them universal verdict gates or claiming that its schema creates
+regulatory acceptance.
 
 ## Competitive conclusion
 
@@ -125,9 +126,9 @@ specific combination that still requires proof:
    compute;
 4. preserve complete, portable, independently inspectable evidence;
 5. treat `INCONCLUSIVE` and invalidation as first-class outcomes; and
-6. let evidence consumers and professional method owners govern trust.
+6. let evidence consumers and attributable method owners govern trust without
+   making a professional reviewer mandatory.
 
 Every element exists somewhere. The strategic question is whether this complete
 mechanism solves a sufficiently expensive recurring problem and whether Avila’s
 economic commitments make the whole difficult for existing vendors to copy.
-

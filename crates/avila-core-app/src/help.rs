@@ -179,8 +179,8 @@ const VERIFY_STEPS: [TourStep; 7] = [
     TourStep {
         target: TourTarget::ReportPanel,
         view: Some(HelpView::Case(HelpTab::Verdicts)),
-        title: "NOT EVALUATED is deliberate",
-        instruction: "CASE-000 withholds PASS because its contract requires a qualified independent review that nobody has given. Execution never substitutes for review; the verdict names exactly what is pending.",
+        title: "A technical PASS has a boundary",
+        instruction: "CASE-000 returns PASS because both admitted bounded intervals satisfy the two exact requirements. That verdict needs no professional review, and it does not claim qualification, practical suitability, certification, or regulatory approval.",
     },
     TourStep {
         target: TourTarget::HelpButton,
@@ -609,7 +609,7 @@ fn view_help(view: HelpView) -> (&'static str, &'static str) {
         ),
         HelpView::Case(HelpTab::Verdicts) => (
             "Verdicts",
-            "One four-state verdict per requirement with the rule that decided it, the evidence it used, and the complete boundary it holds under. PASS is withheld while a required review is pending.",
+            "One four-state technical verdict per requirement with the rule that decided it, the evidence it used, and the complete boundary it holds under. Optional agent practicality routing is shown separately and cannot alter the verdict.",
         ),
         HelpView::Specimen => (
             "Specimen compiler",
@@ -628,8 +628,14 @@ struct FaqEntry {
 const FAQ: [FaqEntry; 8] = [
     FaqEntry {
         question: "Why is the verdict NOT EVALUATED?",
-        keywords: &["not evaluated", "verdict", "pass", "review", "pending"],
-        answer: "The contract requires a qualified independent review before any use, and no review decision is present. Core withholds PASS until an approve-for-use decision is admitted; the technical comparison is still visible in the claims. Execution never substitutes for review.",
+        keywords: &[
+            "not evaluated",
+            "verdict",
+            "qualification",
+            "evidence",
+            "applicability",
+        ],
+        answer: "Core could not apply the requirement rule to admitted evidence. Inspect the named reason and boundary: required evidence may be missing or inadmissible, a qualification term may be false, or an upstream result may be unavailable. Review and presentation state never suppress a technical PASS or FAIL.",
     },
     FaqEntry {
         question: "What does REUSED mean?",

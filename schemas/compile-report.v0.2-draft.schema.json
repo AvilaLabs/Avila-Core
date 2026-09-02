@@ -323,17 +323,17 @@
         "reproducibility": {
           "$ref": "#/$defs/compiledReproducibility"
         },
-        "review_obligation": {
-          "$ref": "#/$defs/compiledReviewObligation"
+        "presentation_gate": {
+          "$ref": "#/$defs/compiledPresentationGate"
         }
       }
     },
-    "compiledReviewObligation": {
+    "compiledPresentationGate": {
       "type": "object",
-      "description": "A structurally complete but unfulfilled person or agent review obligation. Reviewer eligibility, signatures, independence, and admission remain external checks.",
+      "description": "A structurally complete optional connected-agent practicality stage. It gates presentation in the surrounding agent workflow, never compilation or the technical verdict.",
       "additionalProperties": false,
       "required": [
-        "fulfillment",
+        "state",
         "reviewer_role",
         "presented_evidence",
         "decision_output_slot",
@@ -345,17 +345,11 @@
         "instructions"
       ],
       "properties": {
-        "fulfillment": {
-          "enum": [
-            "pending_external_review",
-            "pending_agent_review"
-          ]
+        "state": {
+          "const": "awaiting_agent"
         },
         "reviewer_role": {
-          "enum": [
-            "accountable_person",
-            "agent"
-          ]
+          "const": "agent"
         },
         "presented_evidence": {
           "type": "array",
@@ -379,9 +373,7 @@
           "uniqueItems": true,
           "items": {
             "enum": [
-              "approve_for_use",
-              "reject_for_use",
-              "recommend_for_accountable_review",
+              "present_to_user",
               "request_changes",
               "abstain"
             ]

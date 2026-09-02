@@ -2,17 +2,17 @@
 
 ## One sentence
 
-Avila Core turns a bounded technical question into a governed computational
-campaign and a portable package showing exactly what can—and cannot—be
-concluded.
+Avila Core turns a bounded technical question into a strict computational
+oracle that people and agents can iterate against, plus a portable package
+showing exactly what can—and cannot—be concluded.
 
 ## The product promise
 
 A requester should be able to state:
 
 > Establish whether requirement R remains satisfied for this system, under
-> these inputs, assumptions, tolerances, uncertainty sources, methods, and review
-> rules.
+> these inputs, assumptions, tolerances, uncertainty sources, methods, and
+> qualification rules.
 
 Core should then:
 
@@ -20,7 +20,7 @@ Core should then:
 2. compile the contract into canonical, typed records and report semantic or
    policy findings without silently repairing the source;
 3. show an admissible plan before expensive work begins;
-4. select approved implementations of the needed capability types;
+4. select policy-admitted implementations of the needed capability types;
 5. execute them in dependency order in the permitted environment;
 6. preserve input identity, configuration, software, data, logs, outputs, and
    lineage;
@@ -35,8 +35,8 @@ job or a polished report.
 
 A Core verdict is a deterministic derivation from admitted records under a
 named semantic profile. It is not, by itself, proof that every premise is true,
-that a model is adequate outside its qualification, or that a regulator or
-professional must accept the conclusion.
+that a model is adequate outside its qualification, or that a regulator must
+accept the conclusion. It does not require professional review to exist.
 
 ## Core 1.0 target
 
@@ -53,7 +53,7 @@ expected to require a narrow, named domain and all of the following:
 - typed facts with named providers and source requirements;
 - contract lifecycle separated from campaign execution state;
 - reusable contract templates governed by owners;
-- draft, review, approval, retirement, and amendment workflows; and
+- draft, acceptance, retirement, and amendment workflows; and
 - preflight checks that distinguish missing inputs from scientific
   inadmissibility.
 
@@ -80,9 +80,9 @@ expected to require a narrow, named domain and all of the following:
 ### Evidence and verdicts
 
 - complete machine-readable lineage from requirement to raw inputs;
-- human-readable review package;
+- human-readable and agent-readable evidence package;
 - independently usable verifier that does not require an Avila account;
-- signed manifests, receipts, reviews, and package roots;
+- signed manifests, receipts, qualification records, and package roots;
 - explicit numerical error and modeled uncertainty treatment;
 - package-level admissibility that distinguishes a well-typed method from a
   sufficiently qualified method for this contract;
@@ -93,13 +93,18 @@ expected to require a narrow, named domain and all of the following:
 - change-impact analysis that invalidates every affected claim; and
 - no implicit claim of regulatory acceptance.
 
-### Professional workflow
+### Agent and user workflow
 
-- requester, method owner, capability provider, reviewer, and administrator roles;
-- separation of authoring, execution, review, and approval where policy requires;
-- annotations, requests for information, rejected evidence, and countersignature;
-- readable explanations of each verdict and limitation; and
-- measured acceptance by independent professionals in the supported domain.
+- requester, designer agent, method owner, capability provider, and
+  administrator roles;
+- fixed requirement identity while an agent searches and explicit amendments
+  when requirements change;
+- machine-readable findings, exact margins, iteration logs, and selective
+  reruns;
+- an optional instructed connected-agent presentation gate that can return a
+  candidate or present it to the user without altering Core's verdict;
+- optional user acknowledgement kept separate from technical evaluation; and
+- readable explanations of every verdict and limitation.
 
 ### Operations and commercial readiness
 
@@ -117,13 +122,16 @@ The current hypothesis is a shutdown-dose evidence contract for an irradiated
 component. It would compose transport, activation, dose, uncertainty, and
 requirement evaluation. This is a discovery target, not a supported use case.
 
-The slice is acceptable only if a domain professional confirms:
+The slice is acceptable only if evidence shows:
 
-- the question is common and expensive enough;
-- each method has an identifiable owner and qualification path;
+- the question or benchmark is difficult and valuable enough;
+- each method has an identifiable owner, validation evidence, and
+  qualification path;
 - the interfaces carry the information needed without semantic loss;
-- a reviewer values the resulting package; and
-- the end-to-end workflow can be validated against suitable references.
+- the autonomous loop rejects known shortcuts and finds a candidate that
+  satisfies every stated gate; and
+- the end-to-end workflow reproduces suitable references under an independent
+  verifier.
 
 If those conditions fail, Core should retain the mechanism and choose a better
 first contract.
@@ -141,8 +149,8 @@ Core should release useful layers as they become honest:
 - private design-partner pilots.
 
 Version numbers indicate interface maturity, not scientific applicability. A
-stable executable still requires a qualified contract, methods, data, and review
-policy for each use.
+stable executable still requires a sufficiently specified contract, methods,
+data, and qualification records for each claimed use.
 
 ## Out of scope for 1.0
 
@@ -157,10 +165,11 @@ policy for each use.
 
 ## Product-quality test
 
-Core is valuable only when a professional can say:
+Core is valuable only when a user can say:
 
-> I reached the reviewable answer materially faster and at lower total cost,
-> without giving up the evidence or judgment my decision requires.
+> My agent explored the design space, Core told it exactly what failed, and the
+> final candidate satisfied the stated gates with evidence I can independently
+> verify.
 
 Ease of use without that sentence is insufficient. Rigor without improved cycle
 time is also insufficient.

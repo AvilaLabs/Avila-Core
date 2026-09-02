@@ -19,7 +19,7 @@ pub const CASE_PACKAGE_SCHEMA_VERSION: &str = "avila.core/case-package/v0.1-draf
 pub const PACKAGE_INTEGRITY_REPORT_SCHEMA_VERSION: &str =
     "avila.core/package-integrity-report/v0.1-draft";
 
-const INTEGRITY_NOTICE: &str = "Package integrity checks byte identity only. It does not verify schemas, media semantics, execution receipts, signatures, qualification, professional review, or scientific correctness.";
+const INTEGRITY_NOTICE: &str = "Package integrity checks byte identity only. It does not verify schemas, media semantics, execution receipts, signatures, qualification, practical suitability, or scientific correctness.";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

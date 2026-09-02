@@ -1,7 +1,7 @@
 # ADR-0006: Semantic core and evidence-contract language
 
 - Status: proposed; not accepted until the required semantic fixtures and
-  professional reviews exist
+  independent implementation checks exist
 - Date: 2026-08-31
 - Revised: 2026-09-01 after internal architecture review; 2026-09-01 to add
   the compile-time tolerance and coverage rules to R6
@@ -62,8 +62,9 @@ than one historical semantic profile so archived packages remain verifiable.
    explicitly distinct kinds. Every unit factor is an exact rational to the
    canonical unit.
 3. `core.*` kinds are governed by the Core specification. Domain kinds are
-   governed by named domain professionals. Core does not acquire domain
-   authority by storing a kind record.
+   governed by named owners. Core does not acquire domain authority by storing
+   a kind record, and it does not require a professional credential to compile
+   one.
 4. Unit symbols use a restricted, case-sensitive, UCUM-derived profile. Exact
    scaling within one kind is the only implicit conversion.
 5. The kernel normalizes quantities with exact rational arithmetic. A
@@ -187,9 +188,9 @@ or combines them; Core never silently combines them.
    does not replace organization-level admission policy.
 6. Partial results are admitted only for slots the type permits and the receipt
    declares complete.
-7. Review and cross-kind conversion are capability types, not hidden special
-   cases. A compiled review step is a pending obligation, never a fulfilled
-   approval or a technical verdict.
+7. Optional agent practicality checks and cross-kind conversion are capability
+   types, not hidden special cases. A compiled presentation gate is routing
+   metadata, never an approval or a technical verdict.
 
 ### SC-6 Composition rules
 
@@ -203,7 +204,7 @@ or combines them; Core never silently combines them.
 | R6 Requirement binding | A requirement names its metric source or aggregation set; limit kind and unit are compatible; an `equal` comparison carries a nonnegative tolerance of the metric kind and no other comparison carries one; a `coverage` basis is a canonical decimal in `(0, 1]` and appears only on a `bounded` basis. | `CORE-R3301`, `CORE-T2102`, `CORE-T2103`, `CORE-T2104`, `CORE-S1102` |
 | R7 Parameters | Values match kind, unit class, and domain; placeholders exist only in drafts. | `CORE-T2401`, `CORE-T2402`, `CORE-S1301` |
 | R8 Reproducibility | Seeds and every declared material execution factor are bound; policy governs nondeterminism. | `CORE-T2501`, `CORE-A4301` |
-| R9 Accountable review | The complete presented dossier, governance-only dispositions, digest-pinned external eligibility policy, and explicit independence constraints are compiled as a pending obligation. The compiler does not decide reviewer legitimacy or fulfill the review. | `CORE-R3401` |
+| R9 Optional presentation gate | A configured connected-agent practicality stage binds the complete presented dossier, closed routing dispositions, digest-pinned agent policy, and explicit instructions. It compiles as a `presentation_gate` and never participates in a technical verdict. | `CORE-R3401` |
 | R10 Governed purpose exclusions | Every requirement names a resolved nominal purpose; an output cannot serve a purpose it explicitly excludes. Prose is never interpreted, and lack of an exclusion is not positive qualification. | `CORE-T2601` |
 
 The type checker reports independent findings in one pass. It suppresses only a
@@ -243,10 +244,10 @@ pred := all(pred...) | any(pred...) | not(pred)
 
 A qualification record binds an exact package digest to an implemented type,
 method version, context of use, predicates, exclusions, uncertainty and
-numerical limits, known failure modes, validation evidence, owner, reviewers,
-recognition, lifecycle, and signature. Exact digest binding is deliberately
-strict; future reproducible-build or package-family equivalence requires its
-own reviewed rule.
+numerical limits, known failure modes, validation evidence, owner, recognition,
+lifecycle, and signature. Exact digest binding is deliberately strict; future
+reproducible-build or package-family equivalence requires its own separately
+validated rule.
 
 Maturity, qualification, and admission remain separate:
 
@@ -286,8 +287,9 @@ Contract lifecycle and campaign execution are not one state machine.
 2. Template instantiation is immutable origin metadata, not a contract status.
    An instance pins a template digest, parameters, case inputs, and eligibility
    evaluation.
-3. Planning, execution, review, completion, cancellation, and invalidation are
-   campaign states under SC-13.
+3. Planning, execution, completion, cancellation, and invalidation are
+   campaign states under SC-13. Optional presentation routing is a surrounding
+   agent state, not a technical campaign gate.
 4. Any semantic edit to a non-draft contract produces a new draft version with
    a `supersedes` edge and classified change record. No authoritative contract
    is edited in place.
@@ -306,12 +308,13 @@ always conditional on the boundary recorded in the verdict.
 #### Evaluation pipeline
 
 1. Resolve the named metric source or aggregation set.
-2. Refuse missing, quarantined, invalidated, awaiting-review, or duplicate
+2. Refuse missing, quarantined, invalidated, or duplicate
    cardinality-one claims with `NOT_EVALUATED` and reasons.
 3. Reduce the admitted uncertainty claim under SC-3.
 4. Scale evidence and limit exactly to the kind's canonical unit.
 5. Compare exact values; display formatting is not part of the decision.
-6. Apply review asymmetry and emit the complete boundary statement.
+6. Emit the complete boundary statement. Review and presentation state are not
+   verdict inputs.
 
 #### `less_than_or_equal`
 
@@ -364,15 +367,15 @@ outside is FAIL.
   marginal coverage does not imply joint coverage. A qualified aggregation
   capability must emit one interval with a declared joint-coverage method.
 
-PASS requires all evidence and review gates required to establish satisfaction.
-FAIL may be emitted from admitted contradicting evidence while unrelated reviews
-remain outstanding, but the campaign cannot be commercially complete until its
-completion rules are satisfied.
+PASS requires the admitted evidence and qualification state needed to establish
+satisfaction. FAIL is emitted from admitted contradicting evidence. Optional
+agent routing and external organization processes occur after this derivation
+and cannot change it.
 
 Every verdict records the declared and canonical limit, reduced evidence,
 semantic profile and rule, configuration, assumptions and their providers,
 capabilities and package digests, qualification and scope evaluations, coverage
-interpretation, numerical-error treatment, reviews, waivers, next actions,
+interpretation, numerical-error treatment, waivers, next actions,
 invalidation state, and replayability. Its statement must read as a conditional
 derivation, never as unqualified certification or physical truth.
 
@@ -396,14 +399,14 @@ An artifact is admitted for role `r` at step `s` only if all conditions hold:
 | A6 | The role validator accepted the artifact and its declared claim model matches the package declaration. | quarantine |
 | A7 | Qualification scope evaluates true against the actual receipted context, or policy explicitly records qualification as not required. | quarantine |
 | A8 | Bind-time admission remains valid for the recorded policy and as-of snapshot. | invalidated |
-| A9 | Required pre-admission review records are present, bind the exact dossier, and carry a disposition admitted by the named external organization policy. | awaiting review |
+| A9 | If a presentation-routing record is attached, it binds the exact post-campaign dossier and an allowed disposition. Its absence or disposition never changes artifact admission. | routing record quarantined; artifact unchanged |
 | A10 | No current invalidation targets the artifact or an ancestor. | invalidated |
 
 Validation establishes only the validator's declared responsibility. It does not
 turn structure, a digest, or a provider assertion into scientific truth.
 
 Evidence states and every transition are explicit. Quarantine is terminal for
-that artifact; a rerun creates a new artifact. Review, policy, approval,
+that artifact; a rerun creates a new artifact. Policy, presentation,
 selection, preflight, conformance, qualification, and change records are
 evidence-bearing records with their own identities and authority.
 
@@ -419,8 +422,9 @@ identity.
 
 1. Changes are typed: input bytes/metadata, parameters, requirements, quantity
    policy, package or method version, dataset, environment, qualification,
-   organization policy, review, advisory/defect, discovered dependency, and
-   template supersession.
+   organization policy, advisory/defect, discovered dependency, and template
+   supersession. Agent presentation-policy changes affect routing history, not
+   prior technical evidence or verdicts.
 2. Default invalidation follows typed dependency edges and is fail closed.
    Informational explanation edges to rejected candidates do not propagate;
    registry-snapshot, policy, selected-binding, and evidence edges do.
@@ -438,15 +442,15 @@ identity.
 
 ### SC-13 Campaign and step state
 
-Campaign states are `planned | approved | running | blocked | completed |
-cancelled | superseded | invalidated`. Step states are `pending | reused |
-staged | awaiting_approval | running | awaiting_review | collecting |
-validating | admitted | quarantined | failed | skipped`.
+Campaign states are `planned | running | blocked | completed | cancelled |
+superseded | invalidated`. Step states are `pending | reused | staged | running |
+collecting | validating | admitted | quarantined | failed | skipped`.
 
 Every transition is an immutable record by an authorized actor. Resumption is a
 new run over the same bound plan; admitted current work is reused under SC-12.
 An amendment supersedes the campaign and cancels in-flight steps with receipts.
-Human deadlines may trigger escalation but never manufacture a review decision.
+An optional surrounding presentation workflow may wait for an agent or user
+acknowledgement, but it does not modify campaign state or manufacture a verdict.
 
 ### SC-14 Identity, attestations, and organizational trust
 
@@ -458,26 +462,24 @@ authoritative. It compiles requirements for attributable records:
 - execution receipts and sourced facts; and
 - kernel derivations identified by semantic profile and implementation.
 
-Reviewer eligibility is an external, organization-scoped policy input pinned by
-identity and digest. Compilation establishes only that a review obligation is
-complete enough to evaluate later. It does not load a mutable directory, decide
-that a person is qualified, validate a credential, satisfy separation of duties,
-or manufacture a review record.
+Agent presentation policy is an optional, content-identified input outside the
+technical campaign. Compilation establishes only that a configured gate has an
+exact dossier, closed routing dispositions, and instructions. It does not claim
+that the practical checklist is complete or let the routing result alter
+admission or a verdict.
 
-At admission time, software may verify signatures, key-to-role assertions, the
-exact dossier reviewed, and declared independence constraints under the named
-trust policy. Those checks establish attribution and policy conformance, not the
-scientific truth of the reviewed claim. Organizations remain responsible for
-trust roots, key custody, professional eligibility, and accountable decisions.
-No model output, prompt, button click, or interface event is itself an
-attestation.
+Software may verify signatures and key-to-role assertions for technical
+records under a named trust policy. Those checks establish attribution and
+policy conformance, not scientific truth. Organizations remain responsible for
+their trust roots and key custody. A model output, prompt, button click, agent
+routing record, or user acknowledgement is not itself technical evidence.
 
 ### SC-15 Evidence ownership invariants
 
 1. Authoritative records are immutable and superseded by new versions.
 2. Evidence validity depends on the validity of everything it used under the
    named current or historical `as_of` snapshot.
-3. Invalidated, quarantined, superseded, or awaiting-review records cannot
+3. Invalidated, quarantined, or superseded records cannot
    satisfy a role.
 4. Cross-campaign evidence use requires execution memoization or an authorized
    reuse rule.
@@ -541,9 +543,9 @@ This ADR remains proposed until:
 6. a line-count and dependency budget is adopted for the trusted computing base;
 7. a second implementation can reproduce the normative vectors while also
    passing property and adversarial tests; and
-8. named domain professionals review kinds, governed purposes, exclusions,
-   uncertainty claims, applicability, and calculus before any scientific
-   verdict is shown to a design partner.
+8. the supported domain's kinds, purposes, exclusions, uncertainty claims,
+   applicability rules, and calculus pass independent reference, adversarial,
+   and replay checks before Core makes a supported scientific product claim.
 
 ## Consequences
 

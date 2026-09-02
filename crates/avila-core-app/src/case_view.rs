@@ -8,12 +8,12 @@ use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
 
-use avila_core_compiler::{CompileReport, ReviewerRole};
+use avila_core_compiler::CompileReport;
 use avila_core_evidence::{CasePackageManifest, IntegrityCheckState, PackageIntegrityStatus};
 use avila_core_kernel::VerdictStatus;
 use avila_core_runner::{
     BindingStatus, CapabilityCheckState, CaseRunOptions, CaseRunReport, CaseRunStatus,
-    ExecutionStatus, ReviewStageState, StepExecutionState, execute_case, human_summary,
+    ExecutionStatus, PresentationGateReadiness, StepExecutionState, execute_case, human_summary,
 };
 use eframe::egui;
 
@@ -1101,15 +1101,8 @@ fn show_compile(ui: &mut egui::Ui, compile: Option<&CompileReport>, sources: &[(
                             ))
                             .color(muted(ui)),
                         );
-                        if let Some(review) = &step.review_obligation {
-                            badge(
-                                ui,
-                                match review.reviewer_role {
-                                    ReviewerRole::AccountablePerson => "PENDING PERSON REVIEW",
-                                    ReviewerRole::Agent => "PENDING AGENT REVIEW",
-                                },
-                                CORE_ORANGE,
-                            );
+                        if step.presentation_gate.is_some() {
+                            badge(ui, "OPTIONAL PRACTICALITY GATE", CORE_ORANGE);
                         }
                     });
                 }
@@ -1439,7 +1432,6 @@ fn show_claims(ui: &mut egui::Ui, report: &CaseRunReport) {
             "Recorded claims carried",
             &claims.recorded_claims.to_string(),
         );
-        key_value(ui, "Review decisions", &claims.decisions.to_string());
     });
     if let Some(bindings) = &report.bindings {
         ui.add_space(8.0);
@@ -1451,11 +1443,11 @@ fn show_claims(ui: &mut egui::Ui, report: &CaseRunReport) {
                     BindingStatus::Failed => badge(ui, "FAILED", RED),
                 }
                 ui.label(format!(
-                    "{}/{} evidence identities; {}/{} review-policy identities",
+                    "{}/{} evidence identities; {}/{} presentation-policy identities",
                     bindings.bound_evidence_records,
                     bindings.evidence_records,
-                    bindings.bound_review_policies,
-                    bindings.required_review_policies
+                    bindings.bound_presentation_policies,
+                    bindings.required_presentation_policies
                 ));
                 if bindings.receipted_evidence_records > 0 {
                     ui.label(
@@ -1481,38 +1473,35 @@ fn show_claims(ui: &mut egui::Ui, report: &CaseRunReport) {
             }
         });
     }
-    for review in &report.review_stages {
+    for gate in &report.presentation_gates {
         ui.add_space(8.0);
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
-                ui.label(egui::RichText::new(&review.step_id).strong());
+                ui.label(egui::RichText::new(&gate.step_id).strong());
                 badge(
                     ui,
-                    match review.state {
-                        ReviewStageState::ReadyForReview => "READY FOR REVIEW",
-                        ReviewStageState::AwaitingEvidence => "AWAITING EVIDENCE",
+                    match gate.readiness {
+                        PresentationGateReadiness::ReadyForAgent => "READY FOR AGENT",
+                        PresentationGateReadiness::AwaitingEvidence => "AWAITING EVIDENCE",
                     },
-                    match review.state {
-                        ReviewStageState::ReadyForReview => BLUE,
-                        ReviewStageState::AwaitingEvidence => AMBER,
+                    match gate.readiness {
+                        PresentationGateReadiness::ReadyForAgent => BLUE,
+                        PresentationGateReadiness::AwaitingEvidence => AMBER,
                     },
                 );
-                ui.label(match review.reviewer_role {
-                    ReviewerRole::AccountablePerson => "accountable person",
-                    ReviewerRole::Agent => "non-accountable agent",
-                });
+                ui.label("connected agent · presentation routing only");
             });
-            key_value(ui, "Review request", &review.request_sha256);
+            key_value(ui, "Presentation request", &gate.request_sha256);
             key_value(
                 ui,
                 "Dossier",
                 &format!(
                     "{}/{} exact artifacts present",
-                    review.presented_evidence.len(),
-                    review.presented_evidence.len() + review.missing_evidence.len()
+                    gate.presented_evidence.len(),
+                    gate.presented_evidence.len() + gate.missing_evidence.len()
                 ),
             );
-            for instruction in &review.instructions {
+            for instruction in &gate.instructions {
                 ui.label(
                     egui::RichText::new(format!("Instruction: {instruction}")).color(muted(ui)),
                 );
@@ -1597,17 +1586,6 @@ fn show_verdicts(ui: &mut egui::Ui, report: &CaseRunReport) {
                     &reasons.iter().map(compact).collect::<Vec<_>>().join("; "),
                 );
             }
-            if let Some(reviews) = output
-                .get("reviews_outstanding")
-                .and_then(|value| value.as_array())
-                && !reviews.is_empty()
-            {
-                key_value(
-                    ui,
-                    "reviews outstanding",
-                    &reviews.iter().map(compact).collect::<Vec<_>>().join("; "),
-                );
-            }
             key_value(ui, "Evidence", &verdict.evidence_ids.join(", "));
             egui::CollapsingHeader::new("Boundary")
                 .id_salt(("boundary", &verdict.requirement_id))
@@ -1617,11 +1595,6 @@ fn show_verdicts(ui: &mut egui::Ui, report: &CaseRunReport) {
                     key_value(ui, "Evaluator", &verdict.boundary.evaluator);
                     key_value(ui, "Snapshot", &verdict.boundary.compiled_snapshot_sha256);
                     key_value(ui, "Claims", &verdict.boundary.claims_sha256);
-                    key_value(
-                        ui,
-                        "Review attestation",
-                        &format!("{:?}", verdict.boundary.review_attestation).to_lowercase(),
-                    );
                 });
         });
         ui.add_space(6.0);

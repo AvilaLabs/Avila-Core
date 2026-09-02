@@ -1,10 +1,10 @@
 {
-  "fixture_set": "compiler-accountable-review-types",
+  "fixture_set": "compiler-optional-agent-review-types",
   "version": 1,
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "registry": {
     "path": "compiler.review.registry.v1.json",
-    "sha256": "sha256:f7b16204f28e903b28557c93e1282467cbe0556ad011face93564d70ad0fcb7f"
+    "sha256": "sha256:1a4d1dc1a017b29e90bc6c3ef0b2c6eec0acaeb97322bfd80e554f9f4bb22148"
   },
   "fixtures": [
     {
@@ -15,11 +15,11 @@
         "status": "compiled",
         "findings": [],
         "compiled": {
-          "snapshot_sha256": "sha256:56b02127d2882bcdb66d418e4416f2b7853054c219070ef40bf53ee5721cdacc",
+          "snapshot_sha256": "sha256:5cfda41aba2d14d137ca9e2200a35d4abba940abcf796640fec9004aa5b47f74",
           "execution_policy": {
             "permitted_nondeterministic_roles": [
               {
-                "id": "core.review.decision",
+        "id": "core.presentation.routing-record",
                 "major": 1
               }
             ]
@@ -61,8 +61,8 @@
             {
               "step_id": "review",
               "value": {
-                "fulfillment": "pending_external_review",
-                "reviewer_role": "accountable_person",
+                "state": "awaiting_agent",
+                "reviewer_role": "agent",
                 "presented_evidence": [
                   {
                     "input_slot": "trace",
@@ -83,13 +83,12 @@
                 ],
                 "decision_output_slot": "decision",
                 "decision_role": {
-                  "id": "core.review.decision",
+                  "id": "core.presentation.routing-record",
                   "major": 1
                 },
-                "decision_media_type": "application/vnd.avila-core.review-decision+json",
+                "decision_media_type": "application/vnd.avila-core.presentation-routing+json",
                 "allowed_dispositions": [
-                  "approve_for_use",
-                  "reject_for_use",
+                  "present_to_user",
                   "request_changes",
                   "abstain"
                 ],
@@ -111,7 +110,9 @@
                     }
                   ]
                 },
-                "instructions": []
+                "instructions": [
+                  "Check the exact dossier for practical problems; request changes or route the candidate to the user without altering Core's technical verdict."
+                ]
               }
             }
           ],
@@ -135,11 +136,11 @@
         "status": "compiled",
         "findings": [],
         "compiled": {
-          "snapshot_sha256": "sha256:c25f581e7329a73707c83365d6de5be42760216cb3893f77855b4f9564f8346a",
+          "snapshot_sha256": "sha256:7b3cfe6a2bdadf1097576133d8ec0e1f1e91a65175ee7ed6242a02ee1a450679",
           "execution_policy": {
             "permitted_nondeterministic_roles": [
               {
-                "id": "core.review.decision",
+                "id": "core.presentation.routing-record",
                 "major": 1
               }
             ]
@@ -181,8 +182,8 @@
             {
               "step_id": "review",
               "value": {
-                "fulfillment": "pending_external_review",
-                "reviewer_role": "accountable_person",
+                "state": "awaiting_agent",
+                "reviewer_role": "agent",
                 "presented_evidence": [
                   {
                     "input_slot": "trace",
@@ -203,13 +204,12 @@
                 ],
                 "decision_output_slot": "decision",
                 "decision_role": {
-                  "id": "core.review.decision",
+                  "id": "core.presentation.routing-record",
                   "major": 1
                 },
-                "decision_media_type": "application/vnd.avila-core.review-decision+json",
+                "decision_media_type": "application/vnd.avila-core.presentation-routing+json",
                 "allowed_dispositions": [
-                  "approve_for_use",
-                  "reject_for_use",
+                  "present_to_user",
                   "request_changes",
                   "abstain"
                 ],
@@ -221,7 +221,9 @@
                 "independence": {
                   "mode": "none"
                 },
-                "instructions": []
+                "instructions": [
+                  "Check the exact dossier for practical problems; request changes or route the candidate to the user without altering Core's technical verdict."
+                ]
               }
             }
           ],

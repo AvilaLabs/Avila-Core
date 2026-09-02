@@ -1323,7 +1323,7 @@
       "note": "cardinality-one slot with two admitted records: Core never picks"
     },
     {
-      "id": "reviews.pass-withheld",
+      "id": "presentation-policy.not-a-verdict-input",
       "input": {
         "kind": "nuclear.dose_equivalent_rate@1",
         "requirement": {
@@ -1356,28 +1356,21 @@
             },
             "coverage": "0.95"
           }
-        ],
-        "reviews": {
-          "required": [
-            "independent_reviewer"
-          ],
-          "present": []
-        }
+        ]
       },
       "expected": {
-        "status": "not_evaluated",
-        "rule": "not_evaluated.review_pending",
-        "reasons": [
-          {
-            "review_role": "independent_reviewer",
-            "state": "pending"
-          }
-        ],
-        "numbers_present": false
-      }
+        "status": "pass",
+        "rule": "bounded.le.within",
+        "canonical_unit": "Sv/s",
+        "limit_canonical": "1/36000000",
+        "lower_canonical": "61/3600000000",
+        "upper_canonical": "11/450000000",
+        "nominal_canonical": "37/1800000000"
+      },
+      "note": "Presentation and acknowledgment policy are deliberately absent from the verdict kernel."
     },
     {
-      "id": "reviews.fail-emitted-with-outstanding",
+      "id": "presentation-policy.cannot-mask-fail",
       "input": {
         "kind": "nuclear.dose_equivalent_rate@1",
         "requirement": {
@@ -1410,13 +1403,7 @@
             },
             "coverage": "0.95"
           }
-        ],
-        "reviews": {
-          "required": [
-            "independent_reviewer"
-          ],
-          "present": []
-        }
+        ]
       },
       "expected": {
         "status": "fail",
@@ -1425,12 +1412,9 @@
         "limit_canonical": "1/36000000",
         "lower_canonical": "13/450000000",
         "upper_canonical": "131/3600000000",
-        "nominal_canonical": "13/400000000",
-        "reviews_outstanding": [
-          "independent_reviewer"
-        ]
+        "nominal_canonical": "13/400000000"
       },
-      "note": "ADR-0004 asymmetry: contradiction can be stated; completion cannot"
+      "note": "An optional practical-review gate cannot mask or rewrite Core's technical result."
     },
     {
       "id": "display_rounding.does-not-change-verdict",

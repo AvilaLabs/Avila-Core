@@ -1,5 +1,5 @@
 use super::values::NOT_DEFINED_PLACEHOLDER;
-use super::{CompilationStatus, CompileReport, ReviewFulfillment, compile_documents};
+use super::{CompilationStatus, CompileReport, PresentationGateState, compile_documents};
 use crate::diagnostic::{
     CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3401, CORE_R3501,
     CORE_R3601, CORE_R3602, CORE_S1101, CORE_S1102, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103,
@@ -8,8 +8,8 @@ use crate::diagnostic::{
 };
 use crate::document::{
     AuthoredBinding, BasisKind, BoundSide, ClaimModelDeclaration, Comparison, ContractSource,
-    ContractStatus, DeterminismClass, ParameterType, RegistrySnapshot, RequirementBasis,
-    ReviewDisposition, ReviewerRole, SourceRef, TypedQuantity, VersionedRef,
+    ContractStatus, ParameterType, RegistrySnapshot, RequirementBasis, ReviewDisposition,
+    ReviewerRole, SourceRef, TypedQuantity, VersionedRef,
 };
 use avila_core_kernel::ExactNumber;
 use std::collections::BTreeSet;
@@ -322,7 +322,7 @@ fn required_slots_fail_closed_when_unresolved_or_ambiguous() {
 }
 
 #[test]
-fn review_obligation_never_becomes_a_technical_verdict() {
+fn optional_agent_review_never_becomes_a_technical_verdict() {
     let report = compile_documents(REVIEW_CONTRACT, REVIEW_REGISTRY).unwrap();
     assert_eq!(report.status, CompilationStatus::Compiled);
     let compiled = report.compiled.unwrap();
@@ -330,10 +330,10 @@ fn review_obligation_never_becomes_a_technical_verdict() {
         .workflow
         .iter()
         .find(|step| step.step_id == "review")
-        .and_then(|step| step.review_obligation.as_ref())
+        .and_then(|step| step.presentation_gate.as_ref())
         .unwrap();
-    assert_eq!(review.fulfillment, ReviewFulfillment::PendingExternalReview);
-    assert_eq!(review.reviewer_role, ReviewerRole::AccountablePerson);
+    assert_eq!(review.state, PresentationGateState::AwaitingAgent);
+    assert_eq!(review.reviewer_role, ReviewerRole::Agent);
     assert_eq!(review.presented_evidence[0].input_slot, "trace");
     assert_eq!(review.presented_evidence[1].input_slot, "result");
     assert!(compiled.requirements.iter().all(|requirement| {
@@ -345,16 +345,16 @@ fn review_obligation_never_becomes_a_technical_verdict() {
 }
 
 #[test]
-fn agent_review_is_instructed_and_can_never_govern_use() {
+fn agent_review_is_instructed_and_routes_presentation() {
     let mut source = review_contract();
-    let mut registry = review_registry();
-    registry.capability_types[1].reproducibility.determinism = DeterminismClass::Deterministic;
-    registry.capability_types[1]
+    let registry = review_registry();
+
+    source.workflow[1]
         .review
         .as_mut()
         .unwrap()
-        .reviewer_role = ReviewerRole::Agent;
-
+        .instructions
+        .clear();
     let missing_instructions = compile_with_registry(&source, &registry);
     assert!(codes(&missing_instructions).contains(CORE_R3401));
     assert!(
@@ -366,21 +366,6 @@ fn agent_review_is_instructed_and_can_never_govern_use() {
 
     source.workflow[1].review.as_mut().unwrap().instructions =
         vec!["Critique practical implementation and never construct a technical verdict.".into()];
-    let forbidden_authority = compile_with_registry(&source, &registry);
-    assert!(codes(&forbidden_authority).contains(CORE_R3401));
-    assert!(forbidden_authority.findings.iter().any(|finding| {
-        finding.primary.pointer == "/capability_types/1/review/allowed_dispositions"
-    }));
-
-    registry.capability_types[1]
-        .review
-        .as_mut()
-        .unwrap()
-        .allowed_dispositions = vec![
-        ReviewDisposition::RecommendForAccountableReview,
-        ReviewDisposition::RequestChanges,
-        ReviewDisposition::Abstain,
-    ];
     let report = compile_with_registry(&source, &registry);
     assert_eq!(report.status, CompilationStatus::Compiled);
     let review = report
@@ -389,35 +374,27 @@ fn agent_review_is_instructed_and_can_never_govern_use() {
         .workflow
         .into_iter()
         .find(|step| step.step_id == "review")
-        .and_then(|step| step.review_obligation)
+        .and_then(|step| step.presentation_gate)
         .unwrap();
-    assert_eq!(review.fulfillment, ReviewFulfillment::PendingAgentReview);
+    assert_eq!(review.state, PresentationGateState::AwaitingAgent);
     assert_eq!(review.reviewer_role, ReviewerRole::Agent);
     assert_eq!(
         review.instructions,
         source.workflow[1].review.as_ref().unwrap().instructions
     );
-    assert!(
-        !review
-            .allowed_dispositions
-            .contains(&ReviewDisposition::ApproveForUse)
-    );
-    assert!(
-        !review
-            .allowed_dispositions
-            .contains(&ReviewDisposition::RejectForUse)
+    assert_eq!(
+        review.allowed_dispositions,
+        vec![
+            ReviewDisposition::PresentToUser,
+            ReviewDisposition::RequestChanges,
+            ReviewDisposition::Abstain,
+        ]
     );
 }
 
 #[test]
 fn incomplete_review_type_declarations_fail_closed() {
     let source = review_contract();
-
-    let mut deterministic = review_registry();
-    deterministic.capability_types[1]
-        .reproducibility
-        .determinism = DeterminismClass::Deterministic;
-    assert!(codes(&compile_with_registry(&source, &deterministic)).contains(CORE_R3401));
 
     let mut hidden_input = review_registry();
     hidden_input.capability_types[1]

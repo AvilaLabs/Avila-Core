@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Non-accountable practical review for CASE-001 shielding finalists.
+"""Optional practicality presentation gate for CASE-001 shielding finalists.
 
-The reviewer consumes the exact review request materialized by Avila Core and
+The agent consumes the exact presentation request materialized by Avila Core and
 the candidate a designer proposed. It reads Core's verdicts; it never derives
-or edits one. Its only positive disposition is a recommendation that a person
-review the candidate. It can request changes or abstain, but can never approve
-or reject a design for use.
+or edits one. It can return the candidate to iteration, route it to the user,
+or abstain. Omitting this stage never prevents Core from compiling or producing
+a technical verdict.
 """
 
 import argparse
@@ -17,16 +17,15 @@ from pathlib import Path
 
 SCHEMA_VERSION = "avila.core/staged-review-record/v0.1-draft"
 REVIEW_STEP_ID = "practical-review"
-FORBIDDEN_AGENT_DISPOSITIONS = {"approve_for_use", "reject_for_use"}
 ROUTING_DISPOSITIONS = {
-    "recommend_for_accountable_review",
+    "present_to_user",
     "request_changes",
     "abstain",
 }
 LIMITATIONS = [
-    "This is an unsigned, non-accountable agent routing record; it is not an approval for use.",
-    "The reviewer reads Core's verdicts and applies the bound practical instructions; it does not construct, alter, or validate a technical verdict.",
-    "A recommendation only places a candidate before an eligible accountable person under a separate review obligation.",
+    "This is an unsigned routing record from an optional connected-agent practicality gate.",
+    "The agent reads Core's verdicts and applies the bound practical instructions; it does not construct, alter, or validate a technical verdict.",
+    "The present_to_user disposition means the candidate passed these authored practical instructions; it is not certification or a change to Core's verdict.",
 ]
 
 
@@ -72,34 +71,32 @@ def load_policy(path):
     return json.loads(path.read_text()), file_identity(path)
 
 
-def _review_request(report):
+def _presentation_request(report):
     matches = [
         stage
-        for stage in report.get("review_stages", [])
+        for stage in report.get("presentation_gates", [])
         if stage.get("step_id") == REVIEW_STEP_ID
     ]
     if len(matches) != 1:
         raise ValueError(
-            f"Core report must contain exactly one {REVIEW_STEP_ID!r} review stage"
+            f"Core report must contain exactly one {REVIEW_STEP_ID!r} presentation gate"
         )
     request = matches[0]
     if request.get("reviewer_role") != "agent":
-        raise ValueError("practical review is not compiled for the agent reviewer role")
-    if request.get("fulfillment") != "pending_agent_review":
-        raise ValueError("practical review does not carry a pending agent obligation")
-    if request.get("state") != "ready_for_review":
+        raise ValueError("practicality routing is not compiled for the agent role")
+    if request.get("gate_state") != "awaiting_agent":
+        raise ValueError("practical review is not an awaiting-agent presentation gate")
+    if request.get("readiness") != "ready_for_agent":
         missing = request.get("missing_evidence", [])
         raise ValueError(f"practical review dossier is incomplete: {missing}")
     if not request.get("instructions"):
         raise ValueError("practical review has no compiled instructions")
     allowed = set(request.get("allowed_dispositions", []))
-    if allowed & FORBIDDEN_AGENT_DISPOSITIONS:
-        raise ValueError("agent review was given authority to approve or reject for use")
     if not ROUTING_DISPOSITIONS.issuperset(allowed):
         raise ValueError(f"agent review contains an unknown routing disposition: {allowed}")
     body = {key: value for key, value in request.items() if key != "request_sha256"}
     if identity(body) != request.get("request_sha256"):
-        raise ValueError("Core review request identity does not match its body")
+        raise ValueError("Core presentation request identity does not match its body")
     return request
 
 
@@ -111,7 +108,7 @@ def _presented_sha256(request, input_slot):
     ]
     if len(matches) != 1:
         raise ValueError(
-            f"review request must contain exactly one {input_slot!r} dossier artifact"
+            f"presentation request must contain exactly one {input_slot!r} dossier artifact"
         )
     return matches[0]["sha256"]
 
@@ -120,22 +117,22 @@ def _verify_policy(request, policy, policy_sha256, reviewer_sha256):
     expected = request["reviewer_eligibility_policy"]
     if policy_sha256 != expected["sha256"]:
         raise ValueError(
-            f"review policy bytes are {policy_sha256}, expected {expected['sha256']}"
+            f"presentation policy bytes are {policy_sha256}, expected {expected['sha256']}"
         )
     if policy.get("policy_id") != expected["policy_id"]:
-        raise ValueError("review policy id does not match the compiled obligation")
+        raise ValueError("presentation policy id does not match the compiled gate")
     if policy.get("revision") != expected["revision"]:
-        raise ValueError("review policy revision does not match the compiled obligation")
+        raise ValueError("presentation policy revision does not match the compiled gate")
     if policy.get("reviewer_role") != "agent":
-        raise ValueError("review policy is not for an agent")
+        raise ValueError("presentation policy is not for an agent")
     if policy.get("eligible_reviewer", {}).get("identity") != reviewer_sha256:
         raise ValueError("this reviewer implementation is not the policy's bound agent")
     if _presented_sha256(request, "reviewer") != reviewer_sha256:
         raise ValueError("this reviewer implementation is not the request's dossier agent")
     if policy.get("instructions") != request["instructions"]:
-        raise ValueError("policy and compiled review instructions differ")
+        raise ValueError("policy and compiled presentation instructions differ")
     if policy.get("allowed_dispositions") != request["allowed_dispositions"]:
-        raise ValueError("policy and compiled review dispositions differ")
+        raise ValueError("policy and compiled presentation dispositions differ")
 
 
 def _verified_campaign(report, request):
@@ -143,9 +140,9 @@ def _verified_campaign(report, request):
     if not isinstance(campaign, dict) or campaign.get("status") != "evaluated":
         raise ValueError("Core report does not contain an evaluated campaign")
     if campaign.get("campaign_sha256") != request["campaign_sha256"]:
-        raise ValueError("campaign identity does not match the review request")
+        raise ValueError("campaign identity does not match the presentation request")
     if campaign.get("compiled_snapshot_sha256") != request["compiled_snapshot_sha256"]:
-        raise ValueError("campaign snapshot does not match the review request")
+        raise ValueError("campaign snapshot does not match the presentation request")
     identity_fields = (
         "schema_version",
         "semantic_profile",
@@ -192,7 +189,7 @@ def _technical_actions(campaign):
             )
         elif status == "not_evaluated":
             actions.append(
-                f"Resolve {requirement_id}: Core reports NOT_EVALUATED under {rule}; supply admissible evidence inside its qualification before review."
+                f"Resolve {requirement_id}: Core reports NOT_EVALUATED under {rule}; supply admissible evidence inside its qualification before presentation."
             )
         else:
             actions.append(
@@ -204,7 +201,7 @@ def _technical_actions(campaign):
 def _practical_actions(candidate):
     layers = candidate.get("layers")
     if not isinstance(layers, list) or not layers:
-        return ["Return the candidate: it has no reviewable layer stack."]
+        return ["Return the candidate: it has no usable layer stack."]
     actions = []
     for index, layer in enumerate(layers):
         material = layer.get("material")
@@ -237,7 +234,7 @@ def review_candidate(
     reviewer_sha256,
 ):
     """Return one content-identified routing record for a Core run report."""
-    request = _review_request(report)
+    request = _presentation_request(report)
     _verify_policy(request, policy, policy_sha256, reviewer_sha256)
     if _presented_sha256(request, "candidate") != candidate_sha256:
         raise ValueError("candidate bytes do not match the request's dossier candidate")
@@ -246,19 +243,15 @@ def review_candidate(
     actions = _technical_actions(campaign)
     if not actions:
         actions.extend(_practical_actions(candidate))
-    disposition = (
-        "request_changes" if actions else "recommend_for_accountable_review"
-    )
+    disposition = "request_changes" if actions else "present_to_user"
     if disposition not in request["allowed_dispositions"]:
-        raise ValueError(f"compiled review does not allow {disposition}")
-    if disposition in FORBIDDEN_AGENT_DISPOSITIONS:
-        raise AssertionError("an agent reviewer cannot govern use")
+        raise ValueError(f"compiled presentation gate does not allow {disposition}")
 
     candidate_id = candidate.get("candidate_id", "unknown")
     rationale = (
         f"Return {candidate_id} to the designer with {len(actions)} recorded action(s)."
         if actions
-        else f"No bound technical or practical routing issue was found for {candidate_id}; send it to an accountable person without approving it."
+        else f"No bound technical or practical routing issue was found for {candidate_id}; present it to the user."
     )
     record = {
         "schema_version": SCHEMA_VERSION,

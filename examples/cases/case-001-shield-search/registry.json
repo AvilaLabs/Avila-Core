@@ -332,18 +332,18 @@
         }
       ],
       "non_claims": [
-        "An implementation digest identifies the reviewing software; it grants no professional authority."
+        "An implementation digest identifies the connected reviewing software; it does not create or alter a Core verdict."
       ]
     },
     {
       "role": {
-        "id": "core.review.routing-decision",
+        "id": "core.presentation.routing-record",
         "major": 1
       },
       "owner": "avila-labs.core",
-      "validator": "core.validate.staged-review@1",
+      "validator": "core.validate.presentation-routing@1",
       "accepted_media_types": [
-        "application/vnd.avila-core.staged-review+json"
+        "application/vnd.avila-core.presentation-routing+json"
       ],
       "permitted_claim_models": [
         {
@@ -351,7 +351,7 @@
         }
       ],
       "non_claims": [
-        "An agent routing decision can return work or recommend accountable review; it never approves or rejects a result for use."
+        "An agent routing decision can return work or present a candidate to the user; it never creates or alters a technical verdict."
       ]
     }
   ],
@@ -673,10 +673,10 @@
         {
           "slot_id": "decision",
           "role": {
-            "id": "core.review.routing-decision",
+            "id": "core.presentation.routing-record",
             "major": 1
           },
-          "media_type": "application/vnd.avila-core.staged-review+json",
+          "media_type": "application/vnd.avila-core.presentation-routing+json",
           "permitted_claim_models": [
             {
               "model": "unquantified"
@@ -694,13 +694,13 @@
         ],
         "decision_output_slot": "decision",
         "allowed_dispositions": [
-          "recommend_for_accountable_review",
+          "present_to_user",
           "request_changes",
           "abstain"
         ]
       },
       "non_claims": [
-        "This stage applies CASE-001's practical routing instructions. It reads Core's verdicts, can return a candidate, and can only recommend a separate accountable review."
+        "This optional stage applies CASE-001's practical instructions after Core evaluates the requirements. It can return a candidate or route it to the user, but cannot change a technical verdict."
       ]
     }
   ]

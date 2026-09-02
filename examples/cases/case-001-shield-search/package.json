@@ -7,19 +7,19 @@
       "document_id": "case-001-contract",
       "role": "contract",
       "path": "contract.json",
-      "sha256": "sha256:f3dd4e6e1d2035ba0824ea5aad6fe2435d57e1332eff9a8eba121381169a3f2b"
+      "sha256": "sha256:c689f46058d8e3aa93ca4f398d5b0ca2115b975ec187a10f1e1a788471bf472f"
     },
     {
       "document_id": "case-001-registry",
       "role": "registry",
       "path": "registry.json",
-      "sha256": "sha256:e8d757235d265cc023dac8397f8b3696f9b2f1a30ab2474be905ae06e461b8cf"
+      "sha256": "sha256:23bb7a7e7ab55c2fb84630f3c49d9df3973dc648cdff2b1be2c5d26ba16c339f"
     },
     {
       "document_id": "case-001-claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:2b79b344fd91a9edd0c340d6f620f5b5e463ce0962dc3b24eeb4b20542cf62e4"
+      "sha256": "sha256:d64c659a4fda0904ac1b507e210723daa15e2a4883f5c284da243c8385d0a047"
     },
     {
       "document_id": "case-001-requirement-set",
@@ -37,32 +37,32 @@
       "document_id": "case-001-agent-review-policy",
       "role": "review_policy",
       "path": "agent-review-policy.json",
-      "sha256": "sha256:3ea229c01bed007dcdb6a47211f12b672e170af7873614b61e59e0461f1d4278"
+      "sha256": "sha256:4242b3af100c4c07aa316a22b883eb50c3e285f74c6d6df99d7b942d6b3cc2ca"
     },
     {
       "document_id": "case-001-reference-staged-review",
       "role": "staged_review_record",
       "path": "reviews/reference.json",
-      "sha256": "sha256:1ab5753fca911bab34e05655f8738a994516d4cebdbaa858a03d9b847078836b"
+      "sha256": "sha256:4b953f08107d802de10b67dd8f2f2d49de4921f89c7f0982b465c96277c95bc2"
     },
     {
       "role": "expected_campaign_report",
       "document_id": "case-001-expected-campaign",
       "path": "campaign-report.json",
-      "sha256": "sha256:db61ce030155d0b12539ec3341db6f25139e8071f69c1a19905769cbe061f128"
+      "sha256": "sha256:76b136163dfbea6d0e86dab6a5d7dc4c4d34b470455e30a69762f35231accf5f"
     },
     {
       "role": "execution_receipt",
       "document_id": "case-001-screen-receipt",
       "path": "receipts/screen.json",
-      "sha256": "sha256:f8af5f1870323e724a35ac9f9f05df4ca30289f6f78632bf176a2e5060e4e9cc",
+      "sha256": "sha256:c0563a263988ee1c1c0b34600ef1319bcaf9b16a544787ad6cba15567884443c",
       "step_id": "screen"
     },
     {
       "role": "execution_receipt",
       "document_id": "case-001-transport-receipt",
       "path": "receipts/transport.json",
-      "sha256": "sha256:464774fa8e0a2aae42d62abc6777ca98dd38740c2942a8d531c5cc75cae05a4a",
+      "sha256": "sha256:c00a7c23d9e20bfef15ca59b39009a3ab1ad76683d74a5f1124b77773ebd4094",
       "step_id": "transport"
     }
   ],
@@ -119,7 +119,7 @@
       ],
       "source_root": "agents",
       "path": "shield_review.py",
-      "sha256": "sha256:8bb09398fb77a1f2417a38523bd3035a6dcfa7ac6d8e8cfed75387e90eb3cf68"
+      "sha256": "sha256:3a0dee30ebb247df36ddec543fcf88c9c48fa0eecc3b5e71dd5b0bfb90574a34"
     },
     {
       "artifact_id": "cross-section-index",
@@ -288,6 +288,6 @@
     "The screening capability is unqualified and evaluated on a nominal basis; only the transport capability produces a bounded claim, and its interval covers statistical error only.",
     "Executables are bound by digest: a system Python interpreter for the screen and the OpenMC environment's interpreter for transport; neither is a qualified package.",
     "The nuclear data library is identified by the digest of its index; the nuclide files it names are not re-hashed by this case.",
-    "A non-accountable agent review is compiled with exact practical instructions and a hash-bound implementation. Its recommendation only routes a finalist to a person and can never approve or reject it for use; no accountable review obligation is present."
+    "An optional connected-agent practicality gate is compiled with exact instructions and a hash-bound implementation. It returns unsuitable finalists to iteration and routes a passing finalist to the user; it never changes Core's technical verdict, and Core does not require the stage when a contract omits it."
   ]
 }

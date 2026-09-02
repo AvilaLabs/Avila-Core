@@ -33,11 +33,10 @@
           {
             "requirement_id": "R-001",
             "status": "pass",
-            "rule": "bounded.le.within",
-            "reviews_outstanding": []
+            "rule": "bounded.le.within"
           }
         ],
-        "campaign_sha256": "sha256:da43cf3558f1b2c88493f9204fadb4f3fcfd30c5b41c59a5ddd39f328dfa1170"
+        "campaign_sha256": "sha256:155af9a250982301dcaceb93061159530ea5fe8ee06a3f7b1ac6fb31d25de988"
       }
     },
     {
@@ -70,11 +69,10 @@
           {
             "requirement_id": "R-001",
             "status": "inconclusive",
-            "rule": "bounded.le.crossing",
-            "reviews_outstanding": []
+            "rule": "bounded.le.crossing"
           }
         ],
-        "campaign_sha256": "sha256:44a61d9dd7198d7c54a20d83495444b51f99ccb36bb77f48dd91ec1d008af409"
+        "campaign_sha256": "sha256:acda398b85f48d853b4e60c366341ea661eebf5de0a34c06027b2d2296e91135"
       }
     },
     {
@@ -107,11 +105,10 @@
           {
             "requirement_id": "R-001",
             "status": "fail",
-            "rule": "bounded.le.exceeds",
-            "reviews_outstanding": []
+            "rule": "bounded.le.exceeds"
           }
         ],
-        "campaign_sha256": "sha256:b91a011b3a4ae0e4c92372dd995d2c003b79f611af50ce576134f781ef9dae2a"
+        "campaign_sha256": "sha256:5d90f93d1733137ccea46b5a6c73f6de05d9463df69f6e04236d6ba74157e4e0"
       }
     },
     {
@@ -144,11 +141,10 @@
           {
             "requirement_id": "R-001",
             "status": "pass",
-            "rule": "bounded.le.within",
-            "reviews_outstanding": []
+            "rule": "bounded.le.within"
           }
         ],
-        "campaign_sha256": "sha256:59a76833e6a6ed17c37e9aa428a187c59b3cd1911b826879e7b4830e672b31dd"
+        "campaign_sha256": "sha256:45ca165e9a63ce3568c66a6c1b00fb850afa02bf26f07fbc7606aa805dd3e050"
       }
     },
     {
@@ -215,11 +211,10 @@
           {
             "requirement_id": "R-001",
             "status": "not_evaluated",
-            "rule": "not_evaluated.quarantined",
-            "reviews_outstanding": []
+            "rule": "not_evaluated.quarantined"
           }
         ],
-        "campaign_sha256": "sha256:ce831662c5066c3a0b5e703751a1396315a9c55de192cc2f38fe03d89a85d26b"
+        "campaign_sha256": "sha256:a14f904287029eaec3fcdfd6603287bed8b46f9bde3474bb5b0dd05869158baa"
       }
     },
     {
@@ -264,11 +259,10 @@
           {
             "requirement_id": "R-001",
             "status": "not_evaluated",
-            "rule": "not_evaluated.quarantined",
-            "reviews_outstanding": []
+            "rule": "not_evaluated.quarantined"
           }
         ],
-        "campaign_sha256": "sha256:e3ec410f42496627b1f6ae5f29cf12a0b7592461a81904e30ebdeeae9af26ba7"
+        "campaign_sha256": "sha256:638b7dcb32d5285b5c666e06708b1b91c7f9b6fbad9a68aa5b6bba308238c761"
       }
     },
     {
@@ -313,11 +307,10 @@
           {
             "requirement_id": "R-001",
             "status": "not_evaluated",
-            "rule": "not_evaluated.quarantined",
-            "reviews_outstanding": []
+            "rule": "not_evaluated.quarantined"
           }
         ],
-        "campaign_sha256": "sha256:fdb94c86030c5132ba965d5b77101bfa0ce7f48681f729ed0ea47e85cf20b4dc"
+        "campaign_sha256": "sha256:69a26655b3c24b0ebfdeb5e29a1f404c3060f4ae09c96a2d739348b3b7349170"
       }
     },
     {
@@ -378,11 +371,10 @@
           {
             "requirement_id": "R-001",
             "status": "not_evaluated",
-            "rule": "not_evaluated.quarantined",
-            "reviews_outstanding": []
+            "rule": "not_evaluated.quarantined"
           }
         ],
-        "campaign_sha256": "sha256:72a3bf118f3596e1d9e25bb3857f4cbf68b9156f242fcf97c9170ea8fb36565c"
+        "campaign_sha256": "sha256:b6b116ee3f6dffba047f69887bf29c9025288ca128d270ec89091ba3afc308be"
       }
     },
     {
@@ -409,43 +401,11 @@
       }
     },
     {
-      "fixture_id": "campaign.review-pending.not_evaluated",
+      "fixture_id": "campaign.practical-review.pass",
       "clause": "SC-10 and SC-11",
       "contract": "../types/types.R9.review-bound.pass.contract.json",
       "registry": "../types/compiler.review.registry.v1.json",
-      "claims": "campaign.review-pending.not_evaluated.claims.json",
-      "expected": {
-        "status": "evaluated",
-        "findings": [],
-        "admissions": [
-          {
-            "evidence_id": "dose",
-            "state": "admitted",
-            "reasons": []
-          },
-          {
-            "evidence_id": "trace",
-            "state": "admitted",
-            "reasons": []
-          }
-        ],
-        "verdicts": [
-          {
-            "requirement_id": "R-001",
-            "status": "not_evaluated",
-            "rule": "not_evaluated.review_pending",
-            "reviews_outstanding": []
-          }
-        ],
-        "campaign_sha256": "sha256:b48a98c309abf019ec7d07de404c91f212ec6c55ec61b458be45d534847184d0"
-      }
-    },
-    {
-      "fixture_id": "campaign.review-approved.pass",
-      "clause": "SC-10 and SC-11",
-      "contract": "../types/types.R9.review-bound.pass.contract.json",
-      "registry": "../types/compiler.review.registry.v1.json",
-      "claims": "campaign.review-approved.pass.claims.json",
+      "claims": "campaign.practical-review.pass.claims.json",
       "expected": {
         "status": "evaluated",
         "findings": [],
@@ -465,19 +425,18 @@
           {
             "requirement_id": "R-001",
             "status": "pass",
-            "rule": "bounded.le.within",
-            "reviews_outstanding": []
+            "rule": "bounded.le.within"
           }
         ],
-        "campaign_sha256": "sha256:93ffb600344568508ce7299075ded9828b9ad8091ab9c741d6f90797facac499"
+        "campaign_sha256": "sha256:a9c749fc639605088608b67321ffa43e96edd41af4438f2914b78195d7b33135"
       }
     },
     {
-      "fixture_id": "campaign.review-fail-with-review-outstanding.fail",
+      "fixture_id": "campaign.practical-review.fail",
       "clause": "SC-10 and SC-11",
       "contract": "../types/types.R9.review-bound.pass.contract.json",
       "registry": "../types/compiler.review.registry.v1.json",
-      "claims": "campaign.review-fail-with-review-outstanding.fail.claims.json",
+      "claims": "campaign.practical-review.fail.claims.json",
       "expected": {
         "status": "evaluated",
         "findings": [],
@@ -497,13 +456,10 @@
           {
             "requirement_id": "R-001",
             "status": "fail",
-            "rule": "bounded.le.exceeds",
-            "reviews_outstanding": [
-              "review"
-            ]
+            "rule": "bounded.le.exceeds"
           }
         ],
-        "campaign_sha256": "sha256:0203b00bc632f224daf5c7519ad813cf039504c4b0d72889be106de7183f6dc8"
+        "campaign_sha256": "sha256:3ba9e41d1f56850b2fddf11674f806df08d9ea8d6483d5ee3adc59955f843adc"
       }
     },
     {
@@ -536,11 +492,10 @@
           {
             "requirement_id": "R-001",
             "status": "not_evaluated",
-            "rule": "not_evaluated.outside_qualification",
-            "reviews_outstanding": []
+            "rule": "not_evaluated.outside_qualification"
           }
         ],
-        "campaign_sha256": "sha256:22a3d18173bada92773ef7f4ed1d68dea5acd096013f6389dfac794c2ef6e169"
+        "campaign_sha256": "sha256:30b00ad18d236eba32ac9296d2626120ac208604325d4fefe20962003ce5a1a6"
       }
     }
   ]

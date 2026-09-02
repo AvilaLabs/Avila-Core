@@ -53,7 +53,7 @@ fn campaign_fixtures_are_executable() {
     assert_eq!(suite.fixture_set, "campaign-evaluation");
     assert_eq!(suite.version, 1);
     assert_eq!(suite.semantic_profile, SEMANTIC_PROFILE);
-    assert_eq!(suite.fixtures.len(), 13);
+    assert_eq!(suite.fixtures.len(), 12);
 
     for case in suite.fixtures {
         assert!(!case.clause.is_empty(), "{} has no clause", case.fixture_id);
@@ -126,7 +126,6 @@ fn campaign_fixtures_are_executable() {
                     "requirement_id": record["requirement_id"],
                     "status": record["verdict"]["status"],
                     "rule": record["verdict"]["rule"],
-                    "reviews_outstanding": record["verdict"]["reviews_outstanding"].as_array().cloned().unwrap_or_default(),
                 })
             })
             .collect();
@@ -153,34 +152,23 @@ fn campaign_fixtures_are_executable() {
 }
 
 #[test]
-fn pending_agent_review_routes_work_but_does_not_withhold_a_technical_pass() {
+fn optional_agent_review_is_not_a_technical_verdict_input() {
     let root = fixture_root();
-    let mut contract: Value = serde_json::from_slice(
+    let contract: Value = serde_json::from_slice(
         &fs::read(root.join("../types/types.R9.review-bound.pass.contract.json")).unwrap(),
     )
     .unwrap();
-    contract["workflow"][1]["review"]["instructions"] = json!([
-        "Read the recorded verdict and practical evidence; never construct or override a verdict.",
-        "Recommend only for accountable review, request changes, or abstain."
-    ]);
-    let mut registry: Value = serde_json::from_slice(
+    let registry: Value = serde_json::from_slice(
         &fs::read(root.join("../types/compiler.review.registry.v1.json")).unwrap(),
     )
     .unwrap();
-    registry["capability_types"][1]["reproducibility"]["determinism"] = json!("deterministic");
-    registry["capability_types"][1]["review"]["reviewer_role"] = json!("agent");
-    registry["capability_types"][1]["review"]["allowed_dispositions"] = json!([
-        "recommend_for_accountable_review",
-        "request_changes",
-        "abstain"
-    ]);
 
     let contract = serde_json::to_vec(&contract).unwrap();
     let registry = serde_json::to_vec(&registry).unwrap();
     let compile = compile_documents(&contract, &registry).unwrap();
     let snapshot = compile.compiled.unwrap().snapshot_sha256;
     let mut claims: Value = serde_json::from_slice(
-        &fs::read(root.join("campaign.review-pending.not_evaluated.claims.json")).unwrap(),
+        &fs::read(root.join("campaign.practical-review.pass.claims.json")).unwrap(),
     )
     .unwrap();
     claims["compiled_snapshot_sha256"] = json!(snapshot);
@@ -193,5 +181,4 @@ fn pending_agent_review_routes_work_but_does_not_withhold_a_technical_pass() {
         report.verdicts[0].verdict.status,
         avila_core_kernel::VerdictStatus::Pass
     );
-    assert!(report.verdicts[0].verdict.reviews_outstanding.is_empty());
 }

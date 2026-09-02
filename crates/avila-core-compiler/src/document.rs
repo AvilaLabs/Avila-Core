@@ -255,21 +255,19 @@ pub struct ReviewDeclaration {
     pub allowed_dispositions: Vec<ReviewDisposition>,
 }
 
-/// Who may fulfill a review capability. An agent may make a routing
-/// recommendation, but it is never the accountable reviewer for use.
+/// Practical review is performed by a connected agent after Core has produced
+/// its technical verdicts. The whole stage is optional; when present it gates
+/// presentation to the user, never compilation or a technical verdict.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ReviewerRole {
-    AccountablePerson,
     Agent,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ReviewDisposition {
-    ApproveForUse,
-    RejectForUse,
-    RecommendForAccountableReview,
+    PresentToUser,
     RequestChanges,
     Abstain,
 }

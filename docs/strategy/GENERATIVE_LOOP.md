@@ -17,19 +17,23 @@ evidence compiler with an iterating agent, can discover designs in complex
 areas that have not received a solution because nobody has combined the two
 before. Core is not at that vision yet; it is where Core is going.
 
-The example given: a designer with an AI agent says "here is what I want";
-the agent, working within Core, runs through thousands of iterations until
-one satisfies every condition; before the result reaches the designer, a
-staged review with specific practical instructions can send it back; and a
-person makes the accountable review at the end.
+The concrete example is Tony Stark telling his connected AI agent, "build me
+an Iron Man suit." The agent can run thousands of candidate designs through
+Core until the compiler, evidence, qualification, coverage, and requirement
+gates pass. Core may still lack an authored requirement for an obvious
+practical problem—for example, placing a lithium-ion battery near the wearer's
+crotch. If the user configures it, the connected agent therefore performs one
+post-campaign practicality check with explicit instructions. It either returns
+the candidate to iteration or presents it to the user. There is no mandatory
+professional at the end, and Core also works without an AI integration.
 
 ## What must hold for the loop to mean anything
 
-1. **The agent searches inside requirements it does not own.** The
-   requester owns the contract and its requirement set, and a person has
-   reviewed it. The designer, human or agent, proposes candidates and
-   parameters. An agent that writes the requirements it then satisfies moves
-   the goalposts; Core's roles exist to prevent that.
+1. **The agent searches inside fixed, attributable requirements.** The
+   requester owns and versions the contract and requirement set. The designer,
+   human or agent, proposes candidates and parameters. An agent must not
+   silently rewrite the requirements it is trying to satisfy; any authorized
+   amendment is a new, visible contract identity.
 2. **The last mile is qualified.** Evaluation cost bounds brute force: a
    transport calculation is minutes to hours. The loop therefore has two
    fidelities. Cheap screening methods guide thousands of candidates, but
@@ -39,7 +43,8 @@ person makes the accountable review at the end.
 3. **Coverage is safety, not decoration.** A search optimizes exactly what is
    written. A missing requirement produces an "optimal" design that is wrong
    for a reason nobody stated. Coverage against a library's requirement set,
-   reviewed by a person, is what makes the search's optimum meaningful.
+   with every omission explicitly accepted by the requester, makes the search's
+   optimum meaningful without inventing a universal reviewer role.
 4. **Beyond a validation envelope, Core says so.** Where no qualified method
    exists, a requirement stays `NOT_EVALUATED` with the missing capability
    named. For a search that is a result, not a dead end: it names the
@@ -50,6 +55,12 @@ person makes the accountable review at the end.
    raw material of the engineering constellation and of any optimizer that
    learns from it. Reuse keeps the cost of a one-parameter change at the
    steps it reaches.
+6. **Presentation is separate from technical truth.** Core finishes its
+   verdict before any optional practicality stage. A configured connected
+   agent can apply user-authored sanity checks and route the candidate back or
+   forward, but its routing record is not a claim, qualification, approval, or
+   verdict. Without that integration, Core simply returns its technical result
+   and evidence package to the caller.
 
 ## Why this is not fantasy, and where the honest limits are
 
@@ -66,11 +77,12 @@ not from computation escaping physics.
 
 ## The falsifiable milestone
 
-On one bounded domain, an agent given an objective and Core produces a
-candidate whose evidence package a domain reviewer accepts without redoing
-the work, and Core refuses at least one agent shortcut along the way. If that
-cannot be shown on something the size of a shielding configuration search,
-the vision is off. If it can, the rest is scale.
+On one bounded domain, an agent given an objective and Core autonomously
+produces a candidate that satisfies every stated technical gate, survives an
+optional instructed practicality gate, and yields a package an independent
+verifier reproduces. Core must refuse at least one agent shortcut along the
+way. If that cannot be shown on something the size of a shielding
+configuration search, the vision is off. If it can, the rest is scale.
 
 ## First domain
 
@@ -81,7 +93,8 @@ bounded one. The executable slices, in order: free inputs so a candidate can
 vary without re-freezing the package; margins and machine-readable reasons
 on every verdict; a campaign log per candidate; a scripted agent that drives
 the two-fidelity loop; coverage against a library requirement set;
-qualification envelopes; staged agent review; then physical evidence.
+qualification envelopes; an optional agent presentation gate; then physical
+  evidence.
 
 ## What has landed (2026-09-02)
 
@@ -135,20 +148,19 @@ exactly what fell short and by how much, and the log holds every candidate.
   "beyond a validation envelope, Core says so" rule, minus the validation
   evidence itself, which the first record honestly does not bind.
 
-- **Staged agent review.** The contract ends with a non-accountable review
-  capability over the exact reviewer implementation, candidate, screen
-  result, and transport result. The compiler requires explicit practical
-  instructions and refuses approval or rejection authority for the agent.
-  After evaluation the runner content-identifies the realized dossier; the
-  scripted designer records either `request_changes` or
-  `recommend_for_accountable_review`. Agent review never changes a Core
-  verdict, and a recommendation is only entry to a future person's queue.
-  The committed reference record demonstrates the negative route: R2 is
-  `FAIL`, so the candidate is returned with that recorded action.
+- **Optional presentation gate.** CASE-001 configures a connected-agent
+  practicality capability over the exact reviewer implementation, candidate,
+  screen result, and transport result. The compiler requires explicit
+  instructions and permits only `present_to_user`, `request_changes`, or
+  `abstain`. After evaluation the runner content-identifies the realized
+  dossier. The gate never changes a Core verdict and is absent entirely when a
+  caller does not configure it. The committed record demonstrates the return
+  path: R2 is `FAIL`, so the agent sends the candidate back with that action;
+  the unit tests also exercise the presentation path after all technical and
+  practical checks pass.
 
 Not yet: validation evidence behind an envelope, enforcement of
 qualification for every bounded verdict, physical evidence as a capability,
-an accountable review fulfillment for CASE-001, and any optimizer or
-constellation view over the log. The workbench exposes free inputs,
-environment values, margins, coverage, and staged-review requests, but cannot
+and any optimizer or constellation view over the log. The workbench exposes free inputs,
+environment values, margins, coverage, and presentation requests, but cannot
 yet drive a search itself.

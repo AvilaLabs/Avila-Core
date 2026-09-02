@@ -8,7 +8,7 @@
   "execution_policy": {
     "permitted_nondeterministic_roles": [
       {
-        "id": "core.review.decision",
+        "id": "core.presentation.routing-record",
         "major": 1
       }
     ]
@@ -41,7 +41,7 @@
     {
       "step_id": "review",
       "capability_type": {
-        "id": "fixture.accountable_review",
+        "id": "fixture.practical_agent_review",
         "major": 1
       },
       "review": {
@@ -52,7 +52,10 @@
         },
         "independence": {
           "mode": "none"
-        }
+        },
+        "instructions": [
+          "Check the exact dossier for practical problems; request changes or route the candidate to the user without altering Core's technical verdict."
+        ]
       }
     }
   ],

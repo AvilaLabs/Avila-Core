@@ -20,7 +20,10 @@
         },
         "independence": {
           "mode": "none"
-        }
+        },
+        "instructions": [
+          "Check the exact dossier for practical problems; request changes or route the candidate to the user without altering Core's technical verdict."
+        ]
       }
     }
   ],

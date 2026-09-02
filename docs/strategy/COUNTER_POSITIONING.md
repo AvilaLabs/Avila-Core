@@ -24,8 +24,8 @@ system while being economically reluctant to copy all of those sacrifices.
 | Deliberate compute minimization | Lower cost and faster selective reruns | Conflicts with revenue tied to core-hours, cloud consumption, or job volume |
 | Independent local verifier | Evidence consumers do not have to trust Avila’s screen | Relinquishes control over interpretation and ongoing access |
 | Free local execution boundary | Bottom-up use and air-gapped compatibility | Cannibalizes seat, platform, or hosted-access models |
-| External professionals own and monetize methods | Broader specialist supply; authority remains visible | Shares economics and control with small providers |
-| Inspectable qualification scope and limitations | Authorized buyers and reviewers can compare admissibility, not brand alone | Exposes method boundaries vendors may prefer to package opaquely |
+| External capability authors own and monetize methods | Broader specialist supply; method ownership remains visible | Shares economics and control with small providers |
+| Inspectable qualification scope and limitations | Buyers and independent verifiers can compare admissibility, not brand alone | Exposes method boundaries vendors may prefer to package opaquely |
 
 Any commitment Avila routinely waives for a large customer is not a strategic
 position.
@@ -41,7 +41,7 @@ Avila must be willing to:
 - publish limitations that may reduce short-term sales;
 - minimize runs even when more jobs would create more revenue elsewhere;
 - make the semantic profile, package boundary, and viewer/verifier independently
-  implementable after appropriate intellectual-property review;
+  implementable after an explicit owner-recorded publication and licensing decision;
 - give capability authors meaningful economics; and
 - refuse unsupported work instead of disguising custom consulting as platform
   coverage.
@@ -67,10 +67,11 @@ unit.
 
 ### Avila is not expert in every supported field
 
-Therefore Core must encode professional ownership rather than founder authority.
-Capability manifests should name method owners, reviewers, scope, evidence, and
-limitations. External experts become the supply side of the product, not advisory
-decoration.
+Therefore Core must encode attributable method ownership rather than founder
+authority. Capability manifests should name method owners, scope, validation
+evidence, qualification envelopes, and limitations. External capability authors
+can become the supply side of the product without becoming a reviewer required
+for every campaign.
 
 ### Avila has no large installed base
 
@@ -88,15 +89,15 @@ brand and sales force.
 ### Avila has no recognized assurance brand
 
 Therefore it cannot ask users to “trust Avila.” It must make evidence portable,
-signed, inspectable, reproducible, and countersignable by people the customer
-already trusts.
+signed, inspectable, reproducible, and independently verifiable by tools or
+people the customer chooses.
 
 ### Avila can publish the judgment boundary
 
 Therefore it can seek adoption as a protocol steward rather than monetizing a
 secret badge. This gives customers and evidence consumers a credible exit path.
 It also raises the burden on Avila: open semantics do not create a moat by
-themselves, so the provider ecosystem, professional governance, qualification
+themselves, so the provider ecosystem, attributable governance, qualification
 coverage, conformance corpus, and operational reliability must compound faster
 than a competitor can reproduce them.
 

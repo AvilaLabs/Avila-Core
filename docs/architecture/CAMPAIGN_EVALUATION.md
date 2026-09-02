@@ -14,10 +14,11 @@ supplied documents compile to a different snapshot, the whole document is
 refused with `CORE-E7001`; nothing in it can be attributed to this campaign.
 
 The slice does not read artifact bytes, verify execution receipts, signatures,
-or package identities, evaluate qualification or policy snapshots, or
-invalidate anything. Review decisions are recorded as unverified assertions.
-No verdict it produces is scientific truth, certification, or regulatory
-approval; every verdict names the boundary it holds under.
+or package identities, evaluate policy snapshots, or invalidate anything. It
+does evaluate qualification positions already carried by claims. Review and
+presentation records are not claims-document inputs. No verdict it produces is
+scientific truth, certification, or regulatory approval; every verdict names
+the boundary it holds under.
 
 `avila-core run` composes this evaluator with a separate case-package layer.
 That layer re-hashes explicitly resolved bytes, executes the steps a case
@@ -41,9 +42,7 @@ A claims document carries:
   requirement whose admitted evidence is outside its envelope, or of
   unknown position, is `NOT_EVALUATED` under `CORE-A4401` before the kernel
   is asked, see ADR-0008): `exact`, `interval`, `coverage_interval`,
-  `worst_case`, or `unquantified`; and
-- **review decisions**: for each accountable-review step, one asserted
-  disposition with a rationale and a reviewer identity, marked `unverified`.
+  `worst_case`, or `unquantified`.
 
 Quantities are exact strings with units; the kernel scales them into the
 role's canonical unit exactly, so a claim in `Sv/s` and a limit in `uSv/h`
@@ -63,7 +62,6 @@ conditions checked are the type-level subset of SC-11:
 | A5 | a claim exists for the output | verdict `not_evaluated.missing` |
 | A6, type level | the claim model is permitted by the output, its shape satisfies the model, quantities scale in the role's kind, bounds are ordered, a nominal lies inside its interval, coverage is in `(0, 1]`, and the media type matches | `CORE-E7201` |
 | cardinality | exactly one claim per output slot; a duplicate quarantines every claim for the slot | `CORE-E7301` |
-| A9, structural | a decision names a compiled review step with an allowed disposition, once | `CORE-E7401` |
 
 A quarantined parent quarantines its descendants. That cascade is intended:
 each claim's state must be explicit, and a claim computed from inadmissible
@@ -78,39 +76,34 @@ reduced under SC-3, scaled exactly, and compared under the SC-10 tables:
 `bounded.le.within`, `bounded.le.crossing`, `bounded.le.exceeds`, and the
 rest.
 
-Accountable review is asymmetric, as SC-10 requires. Every compiled
-`accountable_person` obligation is a required review; `PASS` is withheld as
-`not_evaluated.review_pending` until an `approve_for_use` decision is present,
-while `FAIL` is emitted from contradicting evidence with the review still
-outstanding and listed. A decision is an unverified assertion here;
-eligibility, signatures, and independence are later admission checks.
-
-An `agent` obligation is not a required review for verdict purposes. It may
-route a candidate back or recommend that an accountable person review it, but
-pending or completed agent work neither withholds nor creates a technical
-verdict. The compiler forbids agent `approve_for_use` and `reject_for_use`
-dispositions, and campaign evaluation filters by reviewer role rather than by
-step naming convention.
+Technical verdicts are review-independent. Campaign evaluation does not read a
+review record, human acknowledgement, or presentation disposition, so none can
+create, suppress, or alter `PASS`, `FAIL`, `INCONCLUSIVE`, or
+`NOT_EVALUATED`. Qualification can still make bounded evidence
+`NOT_EVALUATED` when the method is outside its recorded envelope; that is an
+evidence-applicability rule, not professional review.
 
 A `nominal` basis is evaluated only when the contract's execution policy
 permits it; the compiler refuses the contract otherwise with `CORE-A4201`.
 
-## Realized review requests
+## Optional presentation gates
 
-`avila-core run` resolves each compiled review dossier against the claims it
-generated and emits a `review_stages` entry after campaign evaluation. The
-entry binds the compiled snapshot and campaign identities; each presented
-artifact's source, evidence id, digest, and media type; the policy,
-dispositions, independence declaration, and instructions; and a canonical
-`request_sha256`. Its state is `ready_for_review` only when every compiled
+When a contract configures one, `avila-core run` resolves the connected
+agent's practical dossier against the claims it generated and emits a
+`presentation_gates` entry after campaign evaluation. The entry binds the compiled
+snapshot and campaign identities; each presented artifact's source, evidence
+id, digest, and media type; the policy, routing dispositions, and instructions;
+and a canonical `request_sha256`. The compiled `presentation_gate` is
+`awaiting_agent`; the realized dossier is `ready_for_agent` only when every
 source is present, otherwise `awaiting_evidence` with the missing sources
-listed. Readiness is not fulfillment.
+listed. Omitting the gate is valid and produces no pending state.
 
-The runner does not execute a reviewer or ingest the resulting agent record.
-CASE-001's external scripted designer passes the exact ready request to its
-hash-bound reviewer and records an unsigned
-`avila.core/staged-review-record/v0.1-draft` beside the campaign. That record
-is routing history, not an admitted decision and not accountable approval.
+The runner does not execute the connected agent or ingest its routing record.
+CASE-001's scripted designer passes the exact ready request to its hash-bound
+practicality agent and records an unsigned
+`avila.core/staged-review-record/v0.1-draft` beside the campaign. The record may
+`present_to_user`, `request_changes`, or `abstain`; it is routing history, not
+admitted evidence, approval, or a technical verdict.
 
 ## Identity
 
@@ -124,7 +117,8 @@ produce the same report and the same identity.
 `fixtures/semantic-core/campaigns/campaign-cases.v1.json` pins twelve cases:
 the three bounded outcomes, exact unit scaling, a missing parent, a model the
 output does not permit, inverted bounds, a duplicate claim, a snapshot
-mismatch, and the three review states. The harness in
+mismatch, qualification outside the envelope, and two cases proving that an
+optional presentation gate cannot alter PASS or FAIL. The harness in
 `crates/avila-core-compiler/tests/campaign_fixtures.rs` executes them and
 pins every campaign identity.
 
@@ -144,20 +138,21 @@ the signed half of A2, and the change classes a receipt cannot see.
 ## First composed internal case
 
 [CASE-000](../../examples/cases/case-000-actinv-aftermatter/README.md) applies
-this slice to a synthetic ACTINV 1.0.1 → Aftermatter R0 chain. Twelve
+this slice to a synthetic ACTINV 1.0.1 → Aftermatter R0 chain. Fourteen
 input attestations and six output claims admit under the type-level rules,
 every output claim extracted by the case runner from the results it executes:
 the ACTINV problem, inventory, and decay metadata from the frozen R0 builder,
 and the two Class A fractions plus the route result from Aftermatter.
-Both bounded fraction claims have upper bounds below their frozen limits, but
-the campaign returns `NOT_EVALUATED / not_evaluated.review_pending` for both
-requirements because no qualified-review decision is asserted.
+Both bounded fraction claims have upper bounds below their frozen limits, so
+the campaign returns `PASS / bounded.lt.within` for both requirements. No
+human, professional, or agent review is needed to establish those technical
+verdicts.
 
 The case deliberately retains the Aftermatter route result as unquantified:
 all three modeled routes are unresolved, and the current numeric requirement
 language has no categorical route-state semantics. CASE-000 therefore records
 both what the executable slice can establish and the next vertical gaps
-without pretending the upstream bytes, packages, qualification, or review have
+without pretending the upstream bytes, packages, or qualification have
 been verified. The case runner makes the byte boundary visible: nine
 artifacts are re-hashed from the Aftermatter checkout and five ACTINV
 data-release artifacts from that checkout's data directory when the

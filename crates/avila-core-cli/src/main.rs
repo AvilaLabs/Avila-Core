@@ -402,7 +402,7 @@ mod tests {
         assert_eq!(report.implemented_vector_sets.len(), 4);
         assert_eq!(report.total_compiler_fixtures, 68);
         assert_eq!(report.implemented_compiler_fixture_sets.len(), 5);
-        assert_eq!(report.total_campaign_fixtures, 13);
+        assert_eq!(report.total_campaign_fixtures, 12);
         assert_eq!(report.implemented_campaign_fixture_sets.len(), 1);
         assert!(
             report

@@ -1,0 +1,229 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "case-000.actinv-aftermatter-r0",
+  "revision": 1,
+  "status": "draft",
+  "question": "Under the frozen synthetic Aftermatter R0 basis, do the 50-year Table 1 and Table 2 Class A mixture fractions remain strictly below 1, with use withheld pending qualified independent review?",
+  "assumptions": [
+    "The specimen is the synthetic 100 kg activated-316L case frozen by Aftermatter R0.",
+    "The activation inventory is the hash-bound ACTINV 1.0.1 result recorded by Aftermatter; Core does not rerun ACTINV.",
+    "The Aftermatter result is reproduced at commit 70a1c341d478bc37bf1ed0206dad4ee507cf743d; Core does not rerun Aftermatter.",
+    "The intervals bound only Aftermatter's recorded decimal-floor and rounding error. Nuclear-data, activation-model, regulatory-model, and scenario uncertainty are not evaluated.",
+    "All facility routes remain unresolved at 50 years. Their categorical states are retained in the route-result artifact and are not converted into numeric requirement claims.",
+    "This contract is an internal integration specimen, not a regulatory classification, facility-acceptance, packaging, transportation, shipment, safety, or operational decision."
+  ],
+  "execution_policy": {
+    "permitted_nondeterministic_roles": [
+      {
+        "id": "core.review.decision",
+        "major": 1
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "input_id": "actinv-problem",
+      "role": { "id": "actinv.problem", "major": 1 },
+      "media_type": "application/vnd.actinv.problem+json",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "actinv-activation-library",
+      "role": { "id": "actinv.activation-library", "major": 1 },
+      "media_type": "application/vnd.numpy.npz",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "actinv-library-index",
+      "role": { "id": "actinv.library-index", "major": 1 },
+      "media_type": "application/json",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "actinv-decay-primary",
+      "role": { "id": "actinv.decay-data", "major": 1 },
+      "media_type": "application/octet-stream",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "actinv-decay-fallback",
+      "role": { "id": "actinv.decay-data", "major": 1 },
+      "media_type": "application/octet-stream",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "actinv-data-notice",
+      "role": { "id": "actinv.data-notice", "major": 1 },
+      "media_type": "text/markdown",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "aftermatter-case",
+      "role": { "id": "aftermatter.project", "major": 1 },
+      "media_type": "application/vnd.aftermatter.project+json",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "aftermatter-decay-metadata",
+      "role": { "id": "aftermatter.decay-metadata", "major": 1 },
+      "media_type": "application/vnd.aftermatter.decay-metadata+json",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "aftermatter-federal-rulepack",
+      "role": { "id": "aftermatter.rulepack", "major": 1 },
+      "media_type": "application/vnd.aftermatter.rulepack+json",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "aftermatter-clive-rulepack",
+      "role": { "id": "aftermatter.rulepack", "major": 1 },
+      "media_type": "application/vnd.aftermatter.rulepack+json",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "aftermatter-wcs-rulepack",
+      "role": { "id": "aftermatter.rulepack", "major": 1 },
+      "media_type": "application/vnd.aftermatter.rulepack+json",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "aftermatter-sources-manifest",
+      "role": { "id": "aftermatter.source-manifest", "major": 1 },
+      "media_type": "application/vnd.aftermatter.source-manifest+json",
+      "claim_model": { "model": "unquantified" }
+    }
+  ],
+  "workflow": [
+    {
+      "step_id": "activation",
+      "capability_type": { "id": "actinv.activation-inventory", "major": 1 },
+      "bindings": [
+        {
+          "input_slot": "problem",
+          "source": { "source": "contract_input", "input_id": "actinv-problem" }
+        },
+        {
+          "input_slot": "activation-library",
+          "source": { "source": "contract_input", "input_id": "actinv-activation-library" }
+        },
+        {
+          "input_slot": "library-index",
+          "source": { "source": "contract_input", "input_id": "actinv-library-index" }
+        },
+        {
+          "input_slot": "decay-primary",
+          "source": { "source": "contract_input", "input_id": "actinv-decay-primary" }
+        },
+        {
+          "input_slot": "decay-fallback",
+          "source": { "source": "contract_input", "input_id": "actinv-decay-fallback" }
+        },
+        {
+          "input_slot": "data-notice",
+          "source": { "source": "contract_input", "input_id": "actinv-data-notice" }
+        }
+      ]
+    },
+    {
+      "step_id": "classification",
+      "capability_type": { "id": "aftermatter.activated-metal-disposition", "major": 1 },
+      "bindings": [
+        {
+          "input_slot": "inventory",
+          "source": { "source": "step_output", "step_id": "activation", "output_slot": "inventory" }
+        },
+        {
+          "input_slot": "case",
+          "source": { "source": "contract_input", "input_id": "aftermatter-case" }
+        },
+        {
+          "input_slot": "decay-metadata",
+          "source": { "source": "contract_input", "input_id": "aftermatter-decay-metadata" }
+        },
+        {
+          "input_slot": "federal-rulepack",
+          "source": { "source": "contract_input", "input_id": "aftermatter-federal-rulepack" }
+        },
+        {
+          "input_slot": "clive-rulepack",
+          "source": { "source": "contract_input", "input_id": "aftermatter-clive-rulepack" }
+        },
+        {
+          "input_slot": "wcs-rulepack",
+          "source": { "source": "contract_input", "input_id": "aftermatter-wcs-rulepack" }
+        },
+        {
+          "input_slot": "sources-manifest",
+          "source": { "source": "contract_input", "input_id": "aftermatter-sources-manifest" }
+        }
+      ],
+      "parameters": {
+        "checkpoint_id": "cool-50y"
+      }
+    },
+    {
+      "step_id": "qualified-review",
+      "capability_type": { "id": "core.accountable-review", "major": 1 },
+      "bindings": [
+        {
+          "input_slot": "table-1-fraction",
+          "source": { "source": "step_output", "step_id": "classification", "output_slot": "table-1-class-a-fraction" }
+        },
+        {
+          "input_slot": "table-2-fraction",
+          "source": { "source": "step_output", "step_id": "classification", "output_slot": "table-2-class-a-fraction" }
+        },
+        {
+          "input_slot": "route-result",
+          "source": { "source": "step_output", "step_id": "classification", "output_slot": "route-result" }
+        }
+      ],
+      "review": {
+        "reviewer_eligibility_policy": {
+          "policy_id": "avila-labs.internal/case-000-reviewer-eligibility",
+          "revision": 1,
+          "sha256": "sha256:5ce3fcac9014d4cc5f6c184eb458911469e879b7ce78f5b42fa118b28652dd16"
+        },
+        "independence": {
+          "mode": "constraints",
+          "requirements": [
+            { "separated_from": "requester", "minimum_separation": "different_person" },
+            { "separated_from": "method_owner", "minimum_separation": "different_person" },
+            { "separated_from": "capability_provider", "minimum_separation": "different_person" },
+            { "separated_from": "executor", "minimum_separation": "different_person" }
+          ]
+        }
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "CASE-000-R1",
+      "statement": "At the frozen 50-year checkpoint, the bounded Table 1 Class A mixture fraction is strictly less than 1.",
+      "purpose": { "id": "avila-labs.core.internal-integration", "major": 1 },
+      "metric": {
+        "source": "step_output",
+        "step_id": "classification",
+        "output_slot": "table-1-class-a-fraction"
+      },
+      "comparison": "less_than",
+      "limit": { "kind": "core.dimensionless-ratio", "value": "1", "unit": "1" },
+      "basis": { "kind": "bounded" }
+    },
+    {
+      "requirement_id": "CASE-000-R2",
+      "statement": "At the frozen 50-year checkpoint, the bounded Table 2 Class A mixture fraction is strictly less than 1.",
+      "purpose": { "id": "avila-labs.core.internal-integration", "major": 1 },
+      "metric": {
+        "source": "step_output",
+        "step_id": "classification",
+        "output_slot": "table-2-class-a-fraction"
+      },
+      "comparison": "less_than",
+      "limit": { "kind": "core.dimensionless-ratio", "value": "1", "unit": "1" },
+      "basis": { "kind": "bounded" }
+    }
+  ]
+}

@@ -39,6 +39,10 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   the kernel derives one `PASS`, `FAIL`, `INCONCLUSIVE`, or `NOT_EVALUATED`
   verdict per requirement, with review asymmetry and a content-identified
   report;
+- the first composed internal case, `CASE-000`, which pins an existing
+  synthetic ACTINV 1.0.1 → Aftermatter R0 chain, admits 12 source attestations
+  and 4 output claims, and truthfully withholds both otherwise-within-limit
+  requirements for absent qualified review;
 - a draft portable evidence model and SHA-256 utility;
 - JSON Schemas that the compiler embeds and enforces as its source layer, and
   a deliberately non-executable specimen contract and registry snapshot;
@@ -62,7 +66,8 @@ It does **not** run scientific software, calculate a physical quantity, select
 or bind capability packages, read artifact bytes, verify receipts or
 signatures, evaluate a scientifically qualified requirement, certify a
 design, or produce decision-grade evidence. The specimen contract is an
-incomplete draft on purpose.
+incomplete draft on purpose. CASE-000 evaluates recorded claims rather than
+invoking ACTINV or Aftermatter and does not change this boundary.
 
 ## Core objects
 
@@ -104,6 +109,11 @@ cargo run -p avila-core-cli -- compile \
   --contract examples/contracts/shutdown-dose-specimen.json \
   --registry examples/registry/shutdown-dose-specimen.registry.json
 
+cargo run -p avila-core-cli -- evaluate \
+  --contract examples/cases/case-000-actinv-aftermatter/contract.json \
+  --registry examples/cases/case-000-actinv-aftermatter/registry.json \
+  --claims examples/cases/case-000-actinv-aftermatter/claims.json
+
 cargo run -p avila-core-app
 ```
 
@@ -139,7 +149,7 @@ docs/
   roadmap/                staged validation and 1.0 planning hypotheses
   adr/                    durable architectural decisions
 schemas/                  machine-readable interchange drafts
-examples/                 an unqualified specimen contract and registry snapshot
+examples/                 unqualified documents, including composed CASE-000
 assets/branding/          provisional Avila Core mark
 fixtures/semantic-core/   proposed semantic-profile coverage, vectors, and campaigns
 ```

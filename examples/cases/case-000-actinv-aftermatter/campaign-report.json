@@ -1,0 +1,153 @@
+{
+  "schema_version": "avila.core/campaign-report/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "status": "evaluated",
+  "compiled_snapshot_sha256": "sha256:c742b277c45deae6ba9935a1729d254eae22fffc8e4311ac5e30bfcd5c975c95",
+  "claims_sha256": "sha256:0879a5771c676795f14fbf965e881369a4083d486f4a2b9cc74c64fdea66d5bc",
+  "admissions": [
+    {
+      "evidence_id": "input:actinv-activation-library",
+      "source": { "source": "contract_input", "input_id": "actinv-activation-library" },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:actinv-data-notice",
+      "source": { "source": "contract_input", "input_id": "actinv-data-notice" },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:actinv-decay-fallback",
+      "source": { "source": "contract_input", "input_id": "actinv-decay-fallback" },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:actinv-decay-primary",
+      "source": { "source": "contract_input", "input_id": "actinv-decay-primary" },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:actinv-library-index",
+      "source": { "source": "contract_input", "input_id": "actinv-library-index" },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:actinv-problem",
+      "source": { "source": "contract_input", "input_id": "actinv-problem" },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:aftermatter-case",
+      "source": { "source": "contract_input", "input_id": "aftermatter-case" },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:aftermatter-clive-rulepack",
+      "source": { "source": "contract_input", "input_id": "aftermatter-clive-rulepack" },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:aftermatter-decay-metadata",
+      "source": { "source": "contract_input", "input_id": "aftermatter-decay-metadata" },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:aftermatter-federal-rulepack",
+      "source": { "source": "contract_input", "input_id": "aftermatter-federal-rulepack" },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:aftermatter-sources-manifest",
+      "source": { "source": "contract_input", "input_id": "aftermatter-sources-manifest" },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:aftermatter-wcs-rulepack",
+      "source": { "source": "contract_input", "input_id": "aftermatter-wcs-rulepack" },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "actinv-r0-inventory",
+      "source": { "source": "step_output", "step_id": "activation", "output_slot": "inventory" },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "aftermatter-r0-table-1-class-a-fraction",
+      "source": {
+        "source": "step_output",
+        "step_id": "classification",
+        "output_slot": "table-1-class-a-fraction"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "aftermatter-r0-table-2-class-a-fraction",
+      "source": {
+        "source": "step_output",
+        "step_id": "classification",
+        "output_slot": "table-2-class-a-fraction"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "aftermatter-r0-route-result",
+      "source": { "source": "step_output", "step_id": "classification", "output_slot": "route-result" },
+      "state": "admitted"
+    }
+  ],
+  "verdicts": [
+    {
+      "requirement_id": "CASE-000-R1",
+      "statement": "At the frozen 50-year checkpoint, the bounded Table 1 Class A mixture fraction is strictly less than 1.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "classification",
+        "output_slot": "table-1-class-a-fraction"
+      },
+      "evidence_ids": ["aftermatter-r0-table-1-class-a-fraction"],
+      "verdict": {
+        "status": "not_evaluated",
+        "rule": "not_evaluated.review_pending",
+        "numbers_present": false,
+        "reasons": [
+          { "review_role": "qualified-review", "state": "pending" }
+        ]
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:c742b277c45deae6ba9935a1729d254eae22fffc8e4311ac5e30bfcd5c975c95",
+        "claims_sha256": "sha256:0879a5771c676795f14fbf965e881369a4083d486f4a2b9cc74c64fdea66d5bc",
+        "review_attestation": "unverified"
+      }
+    },
+    {
+      "requirement_id": "CASE-000-R2",
+      "statement": "At the frozen 50-year checkpoint, the bounded Table 2 Class A mixture fraction is strictly less than 1.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "classification",
+        "output_slot": "table-2-class-a-fraction"
+      },
+      "evidence_ids": ["aftermatter-r0-table-2-class-a-fraction"],
+      "verdict": {
+        "status": "not_evaluated",
+        "rule": "not_evaluated.review_pending",
+        "numbers_present": false,
+        "reasons": [
+          { "review_role": "qualified-review", "state": "pending" }
+        ]
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:c742b277c45deae6ba9935a1729d254eae22fffc8e4311ac5e30bfcd5c975c95",
+        "claims_sha256": "sha256:0879a5771c676795f14fbf965e881369a4083d486f4a2b9cc74c64fdea66d5bc",
+        "review_attestation": "unverified"
+      }
+    }
+  ],
+  "campaign_sha256": "sha256:bebcc9c99c95836921eb4d61139eaf4fef9cd33488155aea08de92380f1d79f2",
+  "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked, and review decisions are unverified assertions. No verdict here is scientific truth, certification, or regulatory approval."
+}

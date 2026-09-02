@@ -28,6 +28,11 @@ Use stable coded references so evidence can be reconciled without copying it:
 `INT-###` for interviews, `CASE-###` for completed decision loops, and
 `ART-###` for artifacts in the approved system of record.
 
+`CASE-000` is reserved for the repository's synthetic
+[ACTINV → Aftermatter integration specimen](../../examples/cases/case-000-actinv-aftermatter/README.md).
+It is not a completed decision loop and never counts toward a discovery target.
+Number participant-backed completed loops from `CASE-001`.
+
 Architecture cannot close a discovery field. An implementation may test a
 hypothesis, but the relevant professional or buyer owns the decision about what
 the workflow requires.

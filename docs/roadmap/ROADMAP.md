@@ -55,6 +55,13 @@ full package-level evidence admission: package binding, artifact-byte and
 receipt verification, signatures, qualification and eligibility-policy
 evaluation, review fulfillment, and invalidation remain absent.
 
+The repository also carries
+[CASE-000](../../examples/cases/case-000-actinv-aftermatter/README.md), a frozen
+synthetic ACTINV 1.0.1 → Aftermatter R0 composition. It is an internal pressure
+test of the current boundary, not Stage 1: Core admits recorded hash
+attestations but does not run the tools or verify their bytes, and both
+requirements remain `NOT_EVALUATED` because qualified review is absent.
+
 ## Stage 1 — vertical reference prototype
 
 **Planning range:** approximately months 2–6.

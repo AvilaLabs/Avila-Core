@@ -32,7 +32,8 @@ professional gate.
 | Canonical semantic kernel | Partial | 90 pure vectors: canonical values, exact unit scaling, three-valued predicates, and four-state verdict calculus | Total archive/package canonicalization, remaining predicate and aggregation boundaries, and independent implementation |
 | Static contract compiler | Partial | 68 fixtures across R1–R10, deterministic source diagnostics, exact lowering, and content-identified compiled snapshots | Package binding halves, qualification, organization policy, selection, lifecycle, and accepted profile |
 | Diagnostic contract | Implemented for current compiler slice | 35 catalogued finding codes, anchored JSON Pointers, typed RFC 6902 repairs, and mutation tests | Real-contract defect corpus, fixture coverage checker, and measured false-block/clarification outcomes |
-| Campaign evaluation | Partial | 12 fixtures for snapshot binding, type-level admission, quarantine propagation, exact verdicts, and review asymmetry | Artifact bytes, receipts, package identities, A2/A4/A7/A8/A10, signed review fulfillment, qualification, policy, and invalidation |
+| Campaign evaluation | Partial | 12 fixtures for snapshot binding, type-level admission, quarantine propagation, exact verdicts, and review asymmetry; CASE-000 adds one pinned ACTINV → Aftermatter composition | Artifact bytes, receipts, package identities, A2/A4/A7/A8/A10, signed review fulfillment, qualification, policy, and invalidation |
+| Internal composed case | Implemented as an unqualified specimen | CASE-000 pins 12 source attestations and 4 output claims; every record admits and both requirements stop at `NOT_EVALUATED / review_pending` | Tool invocation, package binding, external-byte verification, categorical route verdicts, qualified review, and any participant-backed applicability decision |
 | Evidence records | Concept only | Minimal record types and SHA-256 helper | Canonical package format, writer, lineage validation, signatures, redaction, package root, and offline verifier |
 | Planning and selection | Planned | Static type satisfiability only | Bound plans, package discovery, admissibility before ranking, deterministic selection, estimates, and approvals |
 | Execution | Planned | None | Controlled workspace, adapter lifecycle, artifact store, receipts, isolation, cancellation, and recovery |
@@ -93,7 +94,9 @@ that point:
    licensing, data-boundary, and qualification gates.
 4. If it survives, freeze one non-sensitive reference case and derive the
    smallest vertical backlog: bound plan, required adapters, controlled receipt,
-   package identity, offline package, and typed invalidation.
+   package identity, offline package, and typed invalidation. Use CASE-000 as a
+   pressure test for those boundaries, not as the committed representative
+   case.
 5. If it fails, record the falsifier and evaluate another recurring technical
    question without preserving the nuclear wedge by inertia.
 

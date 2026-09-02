@@ -101,3 +101,19 @@ campaign report; the manifest is its identity. The next steps that make this
 complete are execution receipts and package identities for A2 and A4, and
 typed invalidation so a changed input or method names exactly which
 verdicts no longer stand.
+
+## First composed internal case
+
+[CASE-000](../../examples/cases/case-000-actinv-aftermatter/README.md) applies
+this slice to a frozen synthetic ACTINV 1.0.1 → Aftermatter R0 chain. Twelve
+input attestations and four output claims admit under the type-level rules.
+Both bounded fraction claims have upper bounds below their frozen limits, but
+the campaign returns `NOT_EVALUATED / not_evaluated.review_pending` for both
+requirements because no qualified-review decision is asserted.
+
+The case deliberately retains the Aftermatter route result as unquantified:
+all three modeled routes are unresolved, and the current numeric requirement
+language has no categorical route-state semantics. CASE-000 therefore records
+both what the executable slice can establish and the next vertical gaps
+without pretending the upstream bytes, packages, qualification, or review have
+been verified.

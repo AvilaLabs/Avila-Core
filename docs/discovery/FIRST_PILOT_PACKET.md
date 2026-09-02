@@ -13,6 +13,19 @@ Use coded identifiers and sanitized summaries here. Store detailed notes and
 restricted artifacts in their approved system of record as described in the
 [discovery information boundary](README.md#information-boundary).
 
+## Internal pressure-test specimen
+
+[CASE-000](../../examples/cases/case-000-actinv-aftermatter/README.md) freezes a
+synthetic ACTINV 1.0.1 → Aftermatter R0 chain and runs its recorded claims
+through the current Core compiler and campaign evaluator. It exists to expose
+the smallest real semantic and evidence gaps: artifact bytes and receipts are
+not verified, package implementations are not bound, categorical route states
+are not requirement values, and qualified review remains external.
+
+CASE-000 is not a completed decision loop, participant observation,
+representative customer case, pilot selection, or evidence for H1–H6. It does
+not replace any unknown field or open box below.
+
 ## Evidence notation
 
 | State | Meaning |

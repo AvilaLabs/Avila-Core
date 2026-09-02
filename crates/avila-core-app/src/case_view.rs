@@ -6,7 +6,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, channel};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use avila_core_compiler::CompileReport;
 use avila_core_evidence::{CasePackageManifest, IntegrityCheckState, PackageIntegrityStatus};
@@ -17,7 +17,8 @@ use avila_core_runner::{
 };
 use eframe::egui;
 
-use crate::{CORE_ORANGE, TEXT_MUTED, badge, card, key_value, section_heading, show_finding};
+use crate::help::{HelpTab, TourTarget, TourTargets};
+use crate::{CORE_ORANGE, badge, card, key_value, muted, section_heading, show_finding};
 
 const GREEN: egui::Color32 = egui::Color32::from_rgb(95, 197, 128);
 const RED: egui::Color32 = egui::Color32::from_rgb(232, 102, 102);
@@ -60,6 +61,28 @@ impl CaseTab {
             .into_iter()
             .find(|tab| tab.label().eq_ignore_ascii_case(name))
     }
+
+    const fn help_tab(self) -> HelpTab {
+        match self {
+            Self::Overview => HelpTab::Overview,
+            Self::Integrity => HelpTab::Integrity,
+            Self::Compile => HelpTab::Compile,
+            Self::Execute => HelpTab::Execute,
+            Self::Claims => HelpTab::Claims,
+            Self::Verdicts => HelpTab::Verdicts,
+        }
+    }
+
+    const fn from_help(tab: HelpTab) -> Self {
+        match tab {
+            HelpTab::Overview => Self::Overview,
+            HelpTab::Integrity => Self::Integrity,
+            HelpTab::Compile => Self::Compile,
+            HelpTab::Execute => Self::Execute,
+            HelpTab::Claims => Self::Claims,
+            HelpTab::Verdicts => Self::Verdicts,
+        }
+    }
 }
 
 /// The bundled egui fonts have no glyph for the arrow that case titles use;
@@ -91,6 +114,10 @@ pub struct CaseSetup {
     pub screenshot: Option<String>,
     /// The tab to open first (a development aid with `--screenshot`).
     pub tab: Option<String>,
+    /// Start in light mode.
+    pub light: bool,
+    /// Start a walkthrough immediately, by its first word or full title.
+    pub tour: Option<String>,
 }
 
 impl CaseSetup {
@@ -121,6 +148,8 @@ impl CaseSetup {
                 "--auto-plan" => setup.auto_run = Some(true),
                 "--screenshot" => setup.screenshot = Some(value()?),
                 "--tab" => setup.tab = Some(value()?),
+                "--light" => setup.light = true,
+                "--tour" => setup.tour = Some(value()?),
                 other => return Err(format!("unknown argument `{other}`")),
             }
         }
@@ -207,6 +236,8 @@ pub struct CaseView {
     summary: String,
     settled_frames: u32,
     screenshot_requested: bool,
+    started: Option<Instant>,
+    last_duration: Option<Duration>,
 }
 
 impl CaseView {
@@ -235,7 +266,22 @@ impl CaseView {
             summary: String::new(),
             settled_frames: 0,
             screenshot_requested: false,
+            started: None,
+            last_duration: None,
         }
+    }
+
+    pub fn help_tab(&self) -> HelpTab {
+        self.tab.help_tab()
+    }
+
+    pub fn show_help_tab(&mut self, tab: HelpTab) {
+        self.tab = CaseTab::from_help(tab);
+    }
+
+    fn finish(&mut self) {
+        self.running = None;
+        self.last_duration = self.started.take().map(|started| started.elapsed());
     }
 
     /// Start the automatic run requested on the command line, once.
@@ -316,6 +362,7 @@ impl CaseView {
         self.last_plan_only = plan_only;
         self.running = Some(receiver);
         self.run_error = None;
+        self.started = Some(Instant::now());
     }
 
     fn poll(&mut self, context: &egui::Context) {
@@ -326,23 +373,23 @@ impl CaseView {
             Ok(Ok(report)) => {
                 self.summary = human_summary(&report);
                 self.report = Some(report);
-                self.running = None;
+                self.finish();
             }
             Ok(Err(error)) => {
                 self.run_error = Some(error);
-                self.running = None;
+                self.finish();
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => {
                 context.request_repaint_after(Duration::from_millis(120));
             }
             Err(std::sync::mpsc::TryRecvError::Disconnected) => {
                 self.run_error = Some("the run thread ended without a report".into());
-                self.running = None;
+                self.finish();
             }
         }
     }
 
-    pub fn ui(&mut self, ui: &mut egui::Ui) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, targets: &mut TourTargets) {
         self.start_automatic();
         self.poll(ui.ctx());
         self.drive_screenshot(ui.ctx());
@@ -352,99 +399,114 @@ impl CaseView {
                 ui.set_min_width(340.0);
                 egui::ScrollArea::vertical()
                     .auto_shrink([false, false])
-                    .show(ui, |ui| self.setup_panel(ui));
+                    .show(ui, |ui| self.setup_panel(ui, targets));
             });
         egui::CentralPanel::default().show(ui, |ui| {
-            ui.horizontal_wrapped(|ui| {
+            let tabs = ui.horizontal_wrapped(|ui| {
                 for tab in CaseTab::ALL {
                     if ui.selectable_label(self.tab == tab, tab.label()).clicked() {
                         self.tab = tab;
                     }
                 }
             });
+            targets.set(TourTarget::Tabs, tabs.response.rect);
             ui.separator();
-            egui::ScrollArea::vertical()
+            let panel = egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
-                .show(ui, |ui| self.report_panel(ui));
+                .show(ui, |ui| self.report_panel(ui, targets));
+            targets.set(TourTarget::ReportPanel, panel.inner_rect);
         });
     }
 
-    fn setup_panel(&mut self, ui: &mut egui::Ui) {
+    fn setup_panel(&mut self, ui: &mut egui::Ui, targets: &mut TourTargets) {
         ui.add_space(4.0);
-        ui.label(
-            egui::RichText::new("CASE")
-                .size(10.0)
-                .strong()
-                .color(TEXT_MUTED),
-        );
-        ui.horizontal(|ui| {
-            ui.add(
-                egui::TextEdit::singleline(&mut self.setup.case_dir).desired_width(f32::INFINITY),
+        let case = ui.scope(|ui| {
+            ui.label(
+                egui::RichText::new("CASE")
+                    .size(10.0)
+                    .strong()
+                    .color(muted(ui)),
             );
-        });
-        ui.horizontal(|ui| {
-            if ui.button("Open").clicked() {
-                self.open_case();
+            ui.horizontal(|ui| {
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.setup.case_dir)
+                        .desired_width(f32::INFINITY),
+                );
+            });
+            ui.horizontal(|ui| {
+                if ui.button("Open").clicked() {
+                    self.open_case();
+                }
+                if let Some(manifest) = &self.manifest {
+                    ui.label(
+                        egui::RichText::new(display(&format!(
+                            "{} — {}",
+                            manifest.case_id, manifest.title
+                        )))
+                        .color(muted(ui)),
+                    );
+                }
+            });
+            if let Some(error) = &self.inspect_error {
+                ui.colored_label(RED, error);
             }
             if let Some(manifest) = &self.manifest {
                 ui.label(
-                    egui::RichText::new(display(&format!(
-                        "{} — {}",
-                        manifest.case_id, manifest.title
-                    )))
-                    .color(TEXT_MUTED),
+                    egui::RichText::new(format!(
+                        "{} documents, {} artifacts, {} capabilities, {} executions declared",
+                        manifest.documents.len(),
+                        manifest.artifacts.len(),
+                        manifest.capabilities.len(),
+                        manifest.executions.len()
+                    ))
+                    .color(muted(ui))
+                    .size(11.0),
                 );
             }
         });
-        if let Some(error) = &self.inspect_error {
-            ui.colored_label(RED, error);
-        }
-        if let Some(manifest) = &self.manifest {
-            ui.label(
-                egui::RichText::new(format!(
-                    "{} documents, {} artifacts, {} capabilities, {} executions declared",
-                    manifest.documents.len(),
-                    manifest.artifacts.len(),
-                    manifest.capabilities.len(),
-                    manifest.executions.len()
-                ))
-                .color(TEXT_MUTED)
-                .size(11.0),
-            );
-        }
+        targets.set(TourTarget::CaseInput, case.response.rect);
 
         ui.add_space(8.0);
-        named_paths(ui, "SOURCE ROOTS", "roots", &mut self.setup.source_roots);
+        let roots = ui.scope(|ui| {
+            named_paths(ui, "SOURCE ROOTS", "roots", &mut self.setup.source_roots);
+        });
+        targets.set(TourTarget::SourceRoots, roots.response.rect);
         ui.add_space(8.0);
-        named_paths(
-            ui,
-            "CAPABILITIES",
-            "capabilities",
-            &mut self.setup.capabilities,
-        );
-
-        ui.add_space(8.0);
-        ui.label(
-            egui::RichText::new("OPTIONS")
-                .size(10.0)
-                .strong()
-                .color(TEXT_MUTED),
-        );
-        ui.checkbox(
-            &mut self.setup.reuse,
-            "Reuse steps whose committed receipt still verifies",
-        );
-        ui.horizontal(|ui| {
-            ui.label("Workspace");
-            ui.add(
-                egui::TextEdit::singleline(&mut self.setup.workspace)
-                    .hint_text("workspaces/<case>/<run> by default")
-                    .desired_width(f32::INFINITY),
+        let capabilities = ui.scope(|ui| {
+            named_paths(
+                ui,
+                "CAPABILITIES",
+                "capabilities",
+                &mut self.setup.capabilities,
             );
         });
+        targets.set(TourTarget::Capabilities, capabilities.response.rect);
+
+        ui.add_space(8.0);
+        let options = ui.scope(|ui| {
+            ui.label(
+                egui::RichText::new("OPTIONS")
+                    .size(10.0)
+                    .strong()
+                    .color(muted(ui)),
+            );
+            ui.checkbox(
+                &mut self.setup.reuse,
+                "Reuse steps whose committed receipt still verifies",
+            );
+            ui.horizontal(|ui| {
+                ui.label("Workspace");
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.setup.workspace)
+                        .hint_text("workspaces/<case>/<run> by default")
+                        .desired_width(f32::INFINITY),
+                );
+            });
+        });
+        targets.set(TourTarget::Options, options.response.rect);
 
         ui.add_space(10.0);
-        ui.horizontal(|ui| {
+        let buttons = ui.horizontal(|ui| {
             let idle = self.running.is_none();
             if ui
                 .add_enabled(idle, egui::Button::new("Plan"))
@@ -462,13 +524,33 @@ impl CaseView {
             }
             if !idle {
                 ui.spinner();
-                ui.label(if self.last_plan_only {
-                    "planning…"
-                } else {
-                    "running…"
-                });
+                let elapsed = self
+                    .started
+                    .map_or(0.0, |started| started.elapsed().as_secs_f32());
+                ui.label(format!(
+                    "{} {elapsed:.1} s",
+                    if self.last_plan_only {
+                        "planning…"
+                    } else {
+                        "running…"
+                    }
+                ));
+            } else if let Some(duration) = self.last_duration {
+                ui.label(
+                    egui::RichText::new(format!(
+                        "{} in {:.2} s",
+                        if self.last_plan_only {
+                            "planned"
+                        } else {
+                            "ran"
+                        },
+                        duration.as_secs_f32()
+                    ))
+                    .color(muted(ui)),
+                );
             }
         });
+        targets.set(TourTarget::RunButtons, buttons.response.rect);
         if let Some(error) = &self.run_error {
             ui.colored_label(RED, format!("The runner could not run: {error}"));
         }
@@ -484,12 +566,12 @@ impl CaseView {
             egui::RichText::new(
                 "Omitted roots are reported as not checked and omitted executables as not run. A supplied root or executable that does not match fails closed.",
             )
-            .color(TEXT_MUTED)
+            .color(muted(ui))
             .size(11.0),
         );
     }
 
-    fn report_panel(&mut self, ui: &mut egui::Ui) {
+    fn report_panel(&mut self, ui: &mut egui::Ui, targets: &mut TourTargets) {
         let Some(report) = &self.report else {
             section_heading(
                 ui,
@@ -502,7 +584,7 @@ impl CaseView {
             return;
         };
         match self.tab {
-            CaseTab::Overview => show_overview(ui, report, &self.summary),
+            CaseTab::Overview => show_overview(ui, report, &self.summary, targets),
             CaseTab::Integrity => show_integrity(ui, report),
             CaseTab::Compile => show_compile(ui, report.compile.as_ref()),
             CaseTab::Execute => show_execute(ui, report),
@@ -517,7 +599,7 @@ fn named_paths(ui: &mut egui::Ui, title: &str, id: &str, rows: &mut Vec<NamedPat
         egui::RichText::new(title)
             .size(10.0)
             .strong()
-            .color(TEXT_MUTED),
+            .color(muted(ui)),
     );
     let mut remove = None;
     for (index, row) in rows.iter_mut().enumerate() {
@@ -532,7 +614,7 @@ fn named_paths(ui: &mut egui::Ui, title: &str, id: &str, rows: &mut Vec<NamedPat
                     remove = Some(index);
                 }
                 if row.path.trim().is_empty() {
-                    badge(ui, "NOT SUPPLIED", TEXT_MUTED);
+                    badge(ui, "NOT SUPPLIED", muted(ui));
                 }
             });
             ui.add(
@@ -592,7 +674,7 @@ fn show_manifest(ui: &mut egui::Ui, manifest: &CasePackageManifest) {
                 .join(", "),
         );
         for limitation in &manifest.limitations {
-            ui.label(egui::RichText::new(limitation).color(TEXT_MUTED).size(11.0));
+            ui.label(egui::RichText::new(limitation).color(muted(ui)).size(11.0));
         }
     });
 }
@@ -608,7 +690,7 @@ fn outcome_badge(ui: &mut egui::Ui, status: CaseRunStatus) {
 fn integrity_badge(ui: &mut egui::Ui, state: IntegrityCheckState) {
     match state {
         IntegrityCheckState::Verified => badge(ui, "VERIFIED", GREEN),
-        IntegrityCheckState::NotChecked => badge(ui, "NOT CHECKED", TEXT_MUTED),
+        IntegrityCheckState::NotChecked => badge(ui, "NOT CHECKED", muted(ui)),
         IntegrityCheckState::Missing => badge(ui, "MISSING", RED),
         IntegrityCheckState::Mismatch => badge(ui, "MISMATCH", RED),
     }
@@ -619,7 +701,7 @@ fn step_badge(ui: &mut egui::Ui, state: StepExecutionState) {
         StepExecutionState::Executed => badge(ui, "EXECUTED", GREEN),
         StepExecutionState::Reused => badge(ui, "REUSED", BLUE),
         StepExecutionState::Planned => badge(ui, "PLANNED", CORE_ORANGE),
-        StepExecutionState::NotRun => badge(ui, "NOT RUN", TEXT_MUTED),
+        StepExecutionState::NotRun => badge(ui, "NOT RUN", muted(ui)),
         StepExecutionState::Refused => badge(ui, "REFUSED", RED),
         StepExecutionState::Failed => badge(ui, "FAILED", RED),
     }
@@ -630,7 +712,7 @@ fn verdict_badge(ui: &mut egui::Ui, verdict: VerdictStatus) {
         VerdictStatus::Pass => badge(ui, "PASS", GREEN),
         VerdictStatus::Fail => badge(ui, "FAIL", RED),
         VerdictStatus::Inconclusive => badge(ui, "INCONCLUSIVE", CORE_ORANGE),
-        VerdictStatus::NotEvaluated => badge(ui, "NOT EVALUATED", TEXT_MUTED),
+        VerdictStatus::NotEvaluated => badge(ui, "NOT EVALUATED", muted(ui)),
     }
 }
 
@@ -638,11 +720,16 @@ fn stage_row(ui: &mut egui::Ui, title: &str, label: &str, color: egui::Color32, 
     ui.horizontal_wrapped(|ui| {
         ui.label(egui::RichText::new(title).strong());
         badge(ui, label, color);
-        ui.label(egui::RichText::new(detail).color(TEXT_MUTED));
+        ui.label(egui::RichText::new(detail).color(muted(ui)));
     });
 }
 
-fn show_overview(ui: &mut egui::Ui, report: &CaseRunReport, summary: &str) {
+fn show_overview(
+    ui: &mut egui::Ui,
+    report: &CaseRunReport,
+    summary: &str,
+    targets: &mut TourTargets,
+) {
     section_heading(ui, &display(&report.title), &report.case_id);
     card(ui, |ui| {
         ui.horizontal(|ui| {
@@ -708,7 +795,7 @@ fn show_overview(ui: &mut egui::Ui, report: &CaseRunReport, summary: &str) {
                         .map_or(0, |compile| compile.findings.len())
                 ),
             ),
-            None => stage_row(ui, "2. Compile", "NOT RUN", TEXT_MUTED, ""),
+            None => stage_row(ui, "2. Compile", "NOT RUN", muted(ui), ""),
         }
         match &report.execution {
             Some(execution) => {
@@ -716,7 +803,7 @@ fn show_overview(ui: &mut egui::Ui, report: &CaseRunReport, summary: &str) {
                     ExecutionStatus::Executed => ("EXECUTED", GREEN),
                     ExecutionStatus::Reused => ("REUSED", BLUE),
                     ExecutionStatus::Planned => ("PLANNED", CORE_ORANGE),
-                    ExecutionStatus::NotRun => ("NOT RUN", TEXT_MUTED),
+                    ExecutionStatus::NotRun => ("NOT RUN", muted(ui)),
                     ExecutionStatus::Partial => ("PARTIAL", CORE_ORANGE),
                     ExecutionStatus::Refused => ("REFUSED", RED),
                     ExecutionStatus::Failed => ("FAILED", RED),
@@ -729,7 +816,7 @@ fn show_overview(ui: &mut egui::Ui, report: &CaseRunReport, summary: &str) {
                     .join(", ");
                 stage_row(ui, "3. Execute", label, color, &detail);
             }
-            None => stage_row(ui, "3. Execute", "NOT RUN", TEXT_MUTED, ""),
+            None => stage_row(ui, "3. Execute", "NOT RUN", muted(ui), ""),
         }
         match &report.claims {
             Some(claims) => stage_row(
@@ -749,7 +836,7 @@ fn show_overview(ui: &mut egui::Ui, report: &CaseRunReport, summary: &str) {
                     claims.recorded_claims
                 ),
             ),
-            None => stage_row(ui, "4. Claims", "NOT RUN", TEXT_MUTED, ""),
+            None => stage_row(ui, "4. Claims", "NOT RUN", muted(ui), ""),
         }
         match &report.campaign {
             Some(campaign) => {
@@ -762,12 +849,12 @@ fn show_overview(ui: &mut egui::Ui, report: &CaseRunReport, summary: &str) {
                                 "{} — {}",
                                 verdict.requirement_id, verdict.verdict.rule
                             ))
-                            .color(TEXT_MUTED),
+                            .color(muted(ui)),
                         );
                     });
                 }
             }
-            None => stage_row(ui, "5. Evaluate", "NOT RUN", TEXT_MUTED, ""),
+            None => stage_row(ui, "5. Evaluate", "NOT RUN", muted(ui), ""),
         }
         match &report.replay {
             Some(replay) => stage_row(
@@ -777,15 +864,16 @@ fn show_overview(ui: &mut egui::Ui, report: &CaseRunReport, summary: &str) {
                 if replay.matches { GREEN } else { RED },
                 "generated campaign report against the committed expectation",
             ),
-            None => stage_row(ui, "6. Replay", "NOT RUN", TEXT_MUTED, ""),
+            None => stage_row(ui, "6. Replay", "NOT RUN", muted(ui), ""),
         }
     });
     ui.add_space(8.0);
-    ui.label(
+    let notice = ui.label(
         egui::RichText::new(&report.notice)
-            .color(TEXT_MUTED)
+            .color(muted(ui))
             .size(11.0),
     );
+    targets.set(TourTarget::OverviewText, notice.rect);
     ui.add_space(8.0);
     egui::CollapsingHeader::new("Text summary (identical to the CLI)")
         .default_open(false)
@@ -809,7 +897,7 @@ fn show_integrity(ui: &mut egui::Ui, report: &CaseRunReport) {
         egui::Grid::new("documents").striped(true).show(ui, |ui| {
             for check in &integrity.documents {
                 ui.label(&check.document_id);
-                ui.label(egui::RichText::new(&check.role).color(TEXT_MUTED));
+                ui.label(egui::RichText::new(&check.role).color(muted(ui)));
                 ui.label(&check.path);
                 integrity_badge(ui, check.state);
                 ui.end_row();
@@ -821,7 +909,7 @@ fn show_integrity(ui: &mut egui::Ui, report: &CaseRunReport) {
         egui::Grid::new("artifacts").striped(true).show(ui, |ui| {
             for check in &integrity.artifacts {
                 ui.label(&check.artifact_id);
-                ui.label(egui::RichText::new(&check.source_root).color(TEXT_MUTED));
+                ui.label(egui::RichText::new(&check.source_root).color(muted(ui)));
                 ui.label(&check.path);
                 integrity_badge(ui, check.state);
                 ui.end_row();
@@ -829,7 +917,7 @@ fn show_integrity(ui: &mut egui::Ui, report: &CaseRunReport) {
         });
     });
     for limitation in &integrity.limitations {
-        ui.label(egui::RichText::new(limitation).color(TEXT_MUTED).size(11.0));
+        ui.label(egui::RichText::new(limitation).color(muted(ui)).size(11.0));
     }
 }
 
@@ -865,7 +953,7 @@ fn show_compile(ui: &mut egui::Ui, compile: Option<&CompileReport>) {
                                 "{}@{}",
                                 step.capability_type.id, step.capability_type.major
                             ))
-                            .color(TEXT_MUTED),
+                            .color(muted(ui)),
                         );
                         if step.review_obligation.is_some() {
                             badge(ui, "PENDING REVIEW", CORE_ORANGE);
@@ -911,7 +999,7 @@ fn show_execute(ui: &mut egui::Ui, report: &CaseRunReport) {
             ui.horizontal_wrapped(|ui| {
                 ui.label(egui::RichText::new(&step.step_id).size(17.0).strong());
                 step_badge(ui, step.state);
-                ui.label(egui::RichText::new(&step.adapter).color(TEXT_MUTED));
+                ui.label(egui::RichText::new(&step.adapter).color(muted(ui)));
             });
             if let Some(capability) = &step.capability {
                 ui.horizontal_wrapped(|ui| {
@@ -924,7 +1012,7 @@ fn show_execute(ui: &mut egui::Ui, report: &CaseRunReport) {
                         CapabilityCheckState::Verified => badge(ui, "DIGEST VERIFIED", GREEN),
                         CapabilityCheckState::Mismatch => badge(ui, "DIGEST MISMATCH", RED),
                         CapabilityCheckState::Missing => badge(ui, "EXECUTABLE MISSING", RED),
-                        CapabilityCheckState::NotSupplied => badge(ui, "NOT SUPPLIED", TEXT_MUTED),
+                        CapabilityCheckState::NotSupplied => badge(ui, "NOT SUPPLIED", muted(ui)),
                     }
                 });
                 key_value(ui, "Bound executable", &capability.expected_sha256);
@@ -971,7 +1059,7 @@ fn show_execute(ui: &mut egui::Ui, report: &CaseRunReport) {
                                 for input in &step.inputs {
                                     ui.label(&input.input_slot);
                                     ui.label(
-                                        egui::RichText::new(&input.evidence_id).color(TEXT_MUTED),
+                                        egui::RichText::new(&input.evidence_id).color(muted(ui)),
                                     );
                                     ui.label(&input.workspace_path);
                                     integrity_badge(ui, input.integrity);
@@ -991,7 +1079,7 @@ fn show_execute(ui: &mut egui::Ui, report: &CaseRunReport) {
                 });
                 ui.label(
                     egui::RichText::new(output.sha256.as_deref().unwrap_or("missing"))
-                        .color(TEXT_MUTED)
+                        .color(muted(ui))
                         .size(11.0),
                 );
             }
@@ -1026,8 +1114,8 @@ fn show_execute(ui: &mut egui::Ui, report: &CaseRunReport) {
     for step in &execution.not_executed {
         ui.horizontal_wrapped(|ui| {
             ui.label(egui::RichText::new(&step.step_id).strong());
-            badge(ui, "NOT EXECUTED", TEXT_MUTED);
-            ui.label(egui::RichText::new(&step.reason).color(TEXT_MUTED));
+            badge(ui, "NOT EXECUTED", muted(ui));
+            ui.label(egui::RichText::new(&step.reason).color(muted(ui)));
         });
     }
 }
@@ -1128,7 +1216,7 @@ fn show_verdicts(ui: &mut egui::Ui, report: &CaseRunReport) {
                         .strong(),
                 );
                 verdict_badge(ui, verdict.verdict.status);
-                ui.label(egui::RichText::new(&verdict.verdict.rule).color(TEXT_MUTED));
+                ui.label(egui::RichText::new(&verdict.verdict.rule).color(muted(ui)));
             });
             ui.label(&verdict.statement);
             let output = serde_json::to_value(&verdict.verdict).unwrap_or_default();
@@ -1198,7 +1286,7 @@ fn show_verdicts(ui: &mut egui::Ui, report: &CaseRunReport) {
     ui.add_space(8.0);
     ui.label(
         egui::RichText::new(&campaign.notice)
-            .color(TEXT_MUTED)
+            .color(muted(ui))
             .size(11.0),
     );
 }

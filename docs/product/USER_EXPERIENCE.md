@@ -8,7 +8,11 @@ package requests, plans or runs the workflow through the same runner the CLI
 uses, and renders integrity, compilation, execution (reused, executed,
 planned, not run, refused, failed, with every change named by class),
 generated claims, requirement verdicts with their complete boundaries, and
-replay. Contract authoring, preflight editing, plan approval, and campaign
+replay. Guided help is built in: contextual explanations per view, bundled
+answers to the questions the interface itself raises, and spotlight
+walkthroughs for the use cases above that dim everything but the control
+being explained while leaving it live. Dark and light themes are provided.
+Contract authoring, preflight editing, plan approval, and campaign
 supervision beyond one run are not implemented; nothing in the interface has
 semantics the runner and kernel do not.
 

@@ -9,6 +9,7 @@
 //! own.
 
 mod case_view;
+mod help;
 
 use avila_core_compiler::{
     CompilationStatus, CompileReport, ContractSource, CoreDiagnostic, FindingClass,
@@ -16,9 +17,18 @@ use avila_core_compiler::{
 };
 use avila_core_kernel::VerdictStatus;
 use eframe::egui;
+use help::{GuidedHelp, HelpView, TourTarget, TourTargets};
 
 const CORE_ORANGE: egui::Color32 = egui::Color32::from_rgb(255, 140, 0);
-const TEXT_MUTED: egui::Color32 = egui::Color32::from_rgb(168, 173, 184);
+
+/// Muted text for the active theme.
+fn muted(ui: &egui::Ui) -> egui::Color32 {
+    if ui.visuals().dark_mode {
+        egui::Color32::from_rgb(168, 173, 184)
+    } else {
+        egui::Color32::from_rgb(96, 100, 110)
+    }
+}
 const LOGO_PNG: &[u8] = include_bytes!("../../../assets/branding/Avila_Core_Logo.png");
 const CONTRACT_JSON: &[u8] =
     include_bytes!("../../../examples/contracts/shutdown-dose-specimen.json");
@@ -103,43 +113,53 @@ struct CoreApp {
     logo: Option<egui::TextureHandle>,
     specimen: Result<Specimen, String>,
     case: case_view::CaseView,
+    help: GuidedHelp,
 }
 
 impl CoreApp {
     fn new(context: &egui::Context, setup: case_view::CaseSetup) -> Self {
+        if setup.light {
+            context.set_theme(egui::Theme::Light);
+        }
+        let mut help = GuidedHelp::default();
+        if let Some(guide) = setup.tour.as_deref().and_then(help::GuideKind::by_name) {
+            help.start_tour(guide);
+        }
         Self {
             mode: Mode::Case,
             workspace: Workspace::Overview,
             logo: load_logo_texture(context).ok(),
             specimen: load_specimen(),
             case: case_view::CaseView::new(setup),
+            help,
         }
     }
-}
 
-impl eframe::App for CoreApp {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        show_header(ui, self.logo.as_ref());
-        ui.add_space(8.0);
-        ui.horizontal(|ui| {
-            for (mode, label) in [
-                (Mode::Case, "Case workbench"),
-                (Mode::Specimen, "Specimen compiler"),
-            ] {
-                if ui.selectable_label(self.mode == mode, label).clicked() {
-                    self.mode = mode;
-                }
-            }
-        });
-        ui.separator();
-        if self.mode == Mode::Case {
-            self.case.ui(ui);
-            return;
+    fn current_view(&self) -> HelpView {
+        match self.mode {
+            Mode::Case => HelpView::Case(self.case.help_tab()),
+            Mode::Specimen => HelpView::Specimen,
         }
-        show_scaffold_notice(ui);
+    }
+
+    /// A tour step may ask for a mode and tab so its target is on screen.
+    fn apply_requested_view(&mut self) {
+        match self.help.requested_view() {
+            Some(HelpView::Case(tab)) => {
+                self.mode = Mode::Case;
+                self.case.show_help_tab(tab);
+            }
+            Some(HelpView::Specimen) => self.mode = Mode::Specimen,
+            None => {}
+        }
+    }
+
+    fn specimen_ui(&mut self, ui: &mut egui::Ui, targets: &mut TourTargets) {
+        let notice = ui.scope(show_scaffold_notice);
+        targets.set(TourTarget::SpecimenNotice, notice.response.rect);
         ui.add_space(8.0);
 
-        ui.horizontal_wrapped(|ui| {
+        let navigation = ui.horizontal_wrapped(|ui| {
             for workspace in Workspace::ALL {
                 if ui
                     .selectable_label(self.workspace == workspace, workspace.label())
@@ -149,6 +169,7 @@ impl eframe::App for CoreApp {
                 }
             }
         });
+        targets.set(TourTarget::SpecimenNavigation, navigation.response.rect);
         ui.separator();
 
         let specimen = match &self.specimen {
@@ -175,6 +196,43 @@ impl eframe::App for CoreApp {
     }
 }
 
+impl eframe::App for CoreApp {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        if ui.input(|input| input.key_pressed(egui::Key::F1)) {
+            self.help.toggle_center();
+        }
+        self.apply_requested_view();
+        let mut targets = TourTargets::default();
+
+        // Paint the root background from the active theme; the window's clear
+        // color does not follow a theme switch.
+        ui.painter()
+            .rect_filled(ui.max_rect(), 0.0, ui.visuals().panel_fill);
+        show_header(ui, self.logo.as_ref(), &mut self.help, &mut targets);
+        ui.add_space(8.0);
+        let switch = ui.horizontal(|ui| {
+            for (mode, label) in [
+                (Mode::Case, "Case workbench"),
+                (Mode::Specimen, "Specimen compiler"),
+            ] {
+                if ui.selectable_label(self.mode == mode, label).clicked() {
+                    self.mode = mode;
+                }
+            }
+        });
+        targets.set(TourTarget::ModeSwitch, switch.response.rect);
+        ui.separator();
+        if self.mode == Mode::Case {
+            self.case.ui(ui, &mut targets);
+        } else {
+            self.specimen_ui(ui, &mut targets);
+        }
+        let view = self.current_view();
+        self.help.show_center(ui.ctx(), view);
+        self.help.show_tour(ui.ctx(), &targets);
+    }
+}
+
 fn load_specimen() -> Result<Specimen, String> {
     let contract: ContractSource =
         serde_json::from_slice(CONTRACT_JSON).map_err(|error| error.to_string())?;
@@ -193,69 +251,132 @@ fn load_logo_texture(context: &egui::Context) -> Result<egui::TextureHandle, Str
 }
 
 fn configure_style(context: &egui::Context) {
-    let mut visuals = egui::Visuals::dark();
-    visuals.panel_fill = egui::Color32::from_rgb(18, 18, 18);
-    visuals.window_fill = egui::Color32::from_rgb(24, 24, 24);
-    visuals.extreme_bg_color = egui::Color32::from_rgb(12, 12, 12);
-    visuals.faint_bg_color = egui::Color32::from_rgb(31, 31, 31);
-    visuals.selection.bg_fill = egui::Color32::from_rgb(126, 70, 4);
-    visuals.selection.stroke = egui::Stroke::new(1.0, CORE_ORANGE);
-    context.set_visuals(visuals);
+    let mut dark = egui::Visuals::dark();
+    dark.panel_fill = egui::Color32::from_rgb(18, 18, 18);
+    dark.window_fill = egui::Color32::from_rgb(24, 24, 24);
+    dark.extreme_bg_color = egui::Color32::from_rgb(12, 12, 12);
+    dark.faint_bg_color = egui::Color32::from_rgb(31, 31, 31);
+    dark.selection.bg_fill = egui::Color32::from_rgb(126, 70, 4);
+    dark.selection.stroke = egui::Stroke::new(1.0, CORE_ORANGE);
+    context.set_visuals_of(egui::Theme::Dark, dark);
+    let mut light = egui::Visuals::light();
+    light.panel_fill = egui::Color32::from_rgb(246, 246, 247);
+    light.window_fill = egui::Color32::WHITE;
+    light.extreme_bg_color = egui::Color32::WHITE;
+    light.faint_bg_color = egui::Color32::from_rgb(236, 236, 238);
+    light.selection.bg_fill = egui::Color32::from_rgb(255, 214, 160);
+    light.selection.stroke = egui::Stroke::new(1.0, CORE_ORANGE);
+    context.set_visuals_of(egui::Theme::Light, light);
+    context.set_theme(egui::Theme::Dark);
     context.global_style_mut(|style| {
         style.spacing.item_spacing = egui::vec2(10.0, 9.0);
         style.spacing.button_padding = egui::vec2(13.0, 7.0);
     });
 }
 
-fn show_header(ui: &mut egui::Ui, logo: Option<&egui::TextureHandle>) {
+fn show_header(
+    ui: &mut egui::Ui,
+    logo: Option<&egui::TextureHandle>,
+    help: &mut GuidedHelp,
+    targets: &mut TourTargets,
+) {
+    let dark = ui.visuals().dark_mode;
     egui::Frame::new()
-        .fill(egui::Color32::from_rgb(27, 27, 27))
+        .fill(if dark {
+            egui::Color32::from_rgb(27, 27, 27)
+        } else {
+            egui::Color32::from_rgb(235, 235, 237)
+        })
         .corner_radius(10)
         .inner_margin(egui::Margin::symmetric(16, 12))
         .show(ui, |ui| {
-            ui.horizontal(|ui| {
-                if let Some(logo) = logo {
-                    ui.add(
-                        egui::Image::from_texture(logo)
-                            .uv(egui::Rect::from_min_max(
-                                egui::pos2(0.02, 0.25),
-                                egui::pos2(0.98, 0.62),
-                            ))
-                            .fit_to_exact_size(egui::vec2(260.0, 100.0)),
+            let (brand_rect, (theme_rect, help_rect)) = egui::Sides::new().show(
+                ui,
+                |ui| {
+                    let brand = ui.horizontal(|ui| {
+                        match logo {
+                            Some(logo) => {
+                                // The asset is a square canvas with the wordmark in
+                                // its middle band; crop to the brackets exactly.
+                                ui.add(
+                                    egui::Image::from_texture(logo)
+                                        .uv(egui::Rect::from_min_max(
+                                            egui::pos2(0.04, 0.32),
+                                            egui::pos2(0.96, 0.70),
+                                        ))
+                                        .fit_to_exact_size(egui::vec2(206.0, 85.0))
+                                        .corner_radius(6),
+                                );
+                            }
+                            None => {
+                                ui.label(
+                                    egui::RichText::new("[ Avila Core ]")
+                                        .size(27.0)
+                                        .strong()
+                                        .color(CORE_ORANGE),
+                                );
+                            }
+                        }
+                        ui.add_space(6.0);
+                        ui.vertical(|ui| {
+                            ui.label(
+                                egui::RichText::new("SEMANTIC COMPILER AND CASE RUNNER")
+                                    .size(10.0)
+                                    .strong()
+                                    .color(muted(ui)),
+                            );
+                            ui.label(
+                                egui::RichText::new(
+                                    "Resolve a technical question into reviewable evidence",
+                                )
+                                .size(18.0)
+                                .strong(),
+                            );
+                            ui.label(
+                                egui::RichText::new(
+                                    "Contract-first compilation for portable computational evidence",
+                                )
+                                .color(muted(ui)),
+                            );
+                        });
+                    });
+                    brand.response.rect
+                },
+                |ui| {
+                    let row = ui.with_layout(
+                        egui::Layout::right_to_left(egui::Align::Min),
+                        |ui| {
+                            badge(ui, "SCAFFOLD", CORE_ORANGE);
+                            let help_button = ui
+                                .add(
+                                    egui::Button::new(
+                                        egui::RichText::new("?").size(16.0).strong(),
+                                    )
+                                    .min_size(egui::vec2(34.0, 30.0)),
+                                )
+                                .on_hover_text("Help, walkthroughs, and bundled answers (F1)");
+                            if help_button.clicked() {
+                                help.toggle_center();
+                            }
+                            let theme = ui
+                                .button(if dark { "Light mode" } else { "Dark mode" })
+                                .on_hover_text("Switch the interface theme");
+                            if theme.clicked() {
+                                ui.ctx().set_theme(if dark {
+                                    egui::Theme::Light
+                                } else {
+                                    egui::Theme::Dark
+                                });
+                            }
+                            (theme.rect, help_button.rect)
+                        },
                     );
-                } else {
-                    ui.label(
-                        egui::RichText::new("[ Avila Core ]")
-                            .size(27.0)
-                            .strong()
-                            .color(CORE_ORANGE),
-                    );
-                }
-                ui.vertical(|ui| {
-                    ui.label(
-                        egui::RichText::new("SEMANTIC COMPILER AND CASE RUNNER")
-                            .size(10.0)
-                            .strong()
-                            .color(TEXT_MUTED),
-                    );
-                    ui.label(
-                        egui::RichText::new(
-                            "Resolve a technical question into reviewable evidence",
-                        )
-                        .size(18.0)
-                        .strong(),
-                    );
-                    ui.label(
-                        egui::RichText::new(
-                            "Contract-first compilation for portable computational evidence",
-                        )
-                        .color(TEXT_MUTED),
-                    );
-                });
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    badge(ui, "SCAFFOLD", CORE_ORANGE);
-                });
-            });
+                    row.inner
+                },
+            );
+            targets.set(TourTarget::Brand, brand_rect);
+            targets.set(TourTarget::ThemeButton, theme_rect);
+            targets.set(TourTarget::HelpButton, help_rect);
         });
 }
 
@@ -294,14 +415,10 @@ fn show_overview(ui: &mut egui::Ui, specimen: &Specimen) {
             badge(
                 ui,
                 &format!("{} REQUIREMENT", contract.requirements.len()),
-                TEXT_MUTED,
+                muted(ui),
             );
-            badge(
-                ui,
-                &format!("{} STEPS", contract.workflow.len()),
-                TEXT_MUTED,
-            );
-            badge(ui, &format!("{} INPUTS", contract.inputs.len()), TEXT_MUTED);
+            badge(ui, &format!("{} STEPS", contract.workflow.len()), muted(ui));
+            badge(ui, &format!("{} INPUTS", contract.inputs.len()), muted(ui));
         });
     });
 
@@ -383,7 +500,7 @@ fn show_contract(ui: &mut egui::Ui, contract: &ContractSource) {
         key_value(ui, "Status", "DRAFT / NOT APPROVED");
         key_value(ui, "Question", &contract.question);
         for assumption in &contract.assumptions {
-            ui.colored_label(TEXT_MUTED, format!("Assumes: {assumption}"));
+            ui.colored_label(muted(ui), format!("Assumes: {assumption}"));
         }
     });
     ui.add_space(10.0);
@@ -394,7 +511,7 @@ fn show_contract(ui: &mut egui::Ui, contract: &ContractSource) {
                 ui.separator();
                 ui.label(egui::RichText::new(&input.input_id).strong());
                 ui.colored_label(
-                    TEXT_MUTED,
+                    muted(ui),
                     format!(
                         "{}@{}  ·  {}",
                         input.role.id, input.role.major, input.media_type
@@ -408,11 +525,11 @@ fn show_contract(ui: &mut egui::Ui, contract: &ContractSource) {
                 ui.separator();
                 ui.label(egui::RichText::new(&step.step_id).strong());
                 ui.colored_label(
-                    TEXT_MUTED,
+                    muted(ui),
                     format!("{}@{}", step.capability_type.id, step.capability_type.major),
                 );
                 for (parameter, value) in &step.parameters {
-                    ui.colored_label(TEXT_MUTED, format!("{parameter} = {value}"));
+                    ui.colored_label(muted(ui), format!("{parameter} = {value}"));
                 }
             }
         });
@@ -429,7 +546,7 @@ fn show_contract(ui: &mut egui::Ui, contract: &ContractSource) {
             ui.label(egui::RichText::new(&requirement.requirement_id).strong());
             ui.label(&requirement.statement);
             ui.colored_label(
-                TEXT_MUTED,
+                muted(ui),
                 format!(
                     "Limit: {} {} ({})  ·  purpose {}@{}",
                     requirement.limit.value,
@@ -470,7 +587,7 @@ fn show_finding(ui: &mut egui::Ui, finding: &CoreDiagnostic) {
                     .strong()
                     .color(CORE_ORANGE),
             );
-            ui.colored_label(TEXT_MUTED, format!("owner: {}", finding.owner));
+            ui.colored_label(muted(ui), format!("owner: {}", finding.owner));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.monospace(format!(
                     "{}:{}",
@@ -481,7 +598,7 @@ fn show_finding(ui: &mut egui::Ui, finding: &CoreDiagnostic) {
         ui.label(&finding.message);
         for related in &finding.related {
             ui.colored_label(
-                TEXT_MUTED,
+                muted(ui),
                 format!("related: {}:{}", related.document, related.pointer),
             );
         }
@@ -497,7 +614,7 @@ fn show_finding(ui: &mut egui::Ui, finding: &CoreDiagnostic) {
             });
         }
         if let Some(entry) = explain(&finding.code) {
-            ui.colored_label(TEXT_MUTED, format!("Next action: {}", entry.next_action));
+            ui.colored_label(muted(ui), format!("Next action: {}", entry.next_action));
         }
     });
 }
@@ -519,7 +636,7 @@ fn show_compiled(ui: &mut egui::Ui, report: &CompileReport) {
         for identity in &report.source_identities {
             key_value(ui, &identity.document, &identity.sha256);
         }
-        ui.colored_label(TEXT_MUTED, &report.notice);
+        ui.colored_label(muted(ui), &report.notice);
     });
     let Some(compiled) = &report.compiled else {
         ui.add_space(10.0);
@@ -549,7 +666,7 @@ fn show_compiled(ui: &mut egui::Ui, report: &CompileReport) {
                 ui.vertical(|ui| {
                     ui.label(egui::RichText::new(&step.step_id).strong());
                     ui.colored_label(
-                        TEXT_MUTED,
+                        muted(ui),
                         format!(
                             "{}@{}  ·  {:?}",
                             step.capability_type.id,
@@ -561,7 +678,7 @@ fn show_compiled(ui: &mut egui::Ui, report: &CompileReport) {
             });
             for binding in &step.bindings {
                 ui.colored_label(
-                    TEXT_MUTED,
+                    muted(ui),
                     format!("{} ← {}", binding.input_slot, binding.source.label()),
                 );
             }
@@ -592,7 +709,7 @@ fn show_results(ui: &mut egui::Ui, contract: &ContractSource) {
             });
             ui.label(&requirement.statement);
             ui.colored_label(
-                TEXT_MUTED,
+                muted(ui),
                 "No observed value, uncertainty bound, or admissible evidence exists.",
             );
         });
@@ -625,7 +742,7 @@ fn show_evidence(ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new("EVIDENCE PACKAGE").small().strong());
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                badge(ui, "NOT CREATED", TEXT_MUTED);
+                badge(ui, "NOT CREATED", muted(ui));
             });
         });
         ui.heading("No evidence exists for this specimen campaign");
@@ -639,14 +756,26 @@ fn show_evidence(ui: &mut egui::Ui) {
 fn section_heading(ui: &mut egui::Ui, title: &str, subtitle: &str) {
     ui.add_space(8.0);
     ui.heading(egui::RichText::new(title).size(25.0));
-    ui.label(egui::RichText::new(subtitle).color(TEXT_MUTED));
+    ui.label(egui::RichText::new(subtitle).color(muted(ui)));
     ui.add_space(10.0);
 }
 
 fn card(ui: &mut egui::Ui, contents: impl FnOnce(&mut egui::Ui)) {
+    let dark = ui.visuals().dark_mode;
     egui::Frame::new()
-        .fill(egui::Color32::from_rgb(29, 29, 29))
-        .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(52, 52, 52)))
+        .fill(if dark {
+            egui::Color32::from_rgb(29, 29, 29)
+        } else {
+            egui::Color32::WHITE
+        })
+        .stroke(egui::Stroke::new(
+            1.0,
+            if dark {
+                egui::Color32::from_rgb(52, 52, 52)
+            } else {
+                egui::Color32::from_rgb(214, 214, 218)
+            },
+        ))
         .corner_radius(8)
         .inner_margin(egui::Margin::same(14))
         .show(ui, contents);
@@ -676,7 +805,7 @@ fn class_badge(ui: &mut egui::Ui, class: FindingClass) {
         FindingClass::Invalid => ("INVALID", egui::Color32::from_rgb(232, 102, 102)),
         FindingClass::Unsatisfied => ("UNSATISFIED", CORE_ORANGE),
         FindingClass::Inadmissible => ("INADMISSIBLE", egui::Color32::from_rgb(190, 120, 220)),
-        FindingClass::Notice => ("NOTICE", TEXT_MUTED),
+        FindingClass::Notice => ("NOTICE", muted(ui)),
     };
     badge(ui, label, color);
 }
@@ -686,7 +815,7 @@ fn verdict_badge(ui: &mut egui::Ui, verdict: VerdictStatus) {
         VerdictStatus::Pass => ("PASS", egui::Color32::from_rgb(95, 197, 128)),
         VerdictStatus::Fail => ("FAIL", egui::Color32::from_rgb(232, 102, 102)),
         VerdictStatus::Inconclusive => ("INCONCLUSIVE", CORE_ORANGE),
-        VerdictStatus::NotEvaluated => ("NOT EVALUATED", TEXT_MUTED),
+        VerdictStatus::NotEvaluated => ("NOT EVALUATED", muted(ui)),
     };
     badge(ui, label, color);
 }

@@ -153,9 +153,16 @@ cargo run -p avila-core-app -- \
 The workbench opens on the case: roots and capabilities the package requests
 are listed for you to point at local paths, `Plan` reports what would be
 reused or rerun and why, and `Run` performs the workflow and renders every
-stage. `--auto-run` or `--auto-plan` starts immediately and `--screenshot
-PNG` saves the rendered window and closes, which is how the view is reviewed
-without a hand.
+stage. The `?` button (or F1) opens contextual help, bundled answers, and
+spotlight walkthroughs for five use cases: verifying a frozen case, seeing
+what a change would rerun, executing the tools afresh, reading a verdict, and
+compiling the specimen. The header switches between dark and light mode.
+`--auto-run` or `--auto-plan` starts immediately, `--tour NAME` starts a
+walkthrough, `--light` starts in light mode, and `--screenshot PNG` saves the
+rendered window and closes, which is how the view is reviewed without a hand.
+Dependencies are optimized even in `cargo run`'s dev profile, so re-hashing
+the bound data releases takes a fraction of a second; a release build is not
+needed for the workbench to feel immediate.
 
 Compiling the specimen returns `"status": "rejected"` with only `missing`
 findings, one for each value the draft declares `not_defined`. That is the

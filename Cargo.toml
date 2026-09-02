@@ -31,6 +31,13 @@ serde_path_to_error = "0.1"
 sha2 = "0.10"
 thiserror = "2"
 
+# Dependencies are optimized even in the dev profile: hashing hundreds of
+# megabytes of bound artifacts, canonical JSON, and the egui renderer are all
+# in dependencies, and an unoptimized `cargo run` made the workbench feel
+# slow. Workspace crates keep full debug information.
+[profile.dev.package."*"]
+opt-level = 3
+
 [profile.release]
 codegen-units = 1
 lto = "thin"

@@ -250,21 +250,35 @@ pub fn verify_case_package(
         });
     }
 
+    // Artifacts under supplied roots are hashed in parallel: the bound data
+    // releases run to hundreds of megabytes, and every run re-hashes them.
+    let checks: Vec<Result<(Option<String>, IntegrityCheckState), PackageError>> =
+        std::thread::scope(|scope| {
+            let handles: Vec<_> = manifest
+                .artifacts
+                .iter()
+                .map(|artifact| {
+                    let root = canonical_source_roots.get(&artifact.source_root);
+                    scope.spawn(move || match root {
+                        Some(root) => check_file(root, &artifact.path, &artifact.sha256),
+                        None => Ok((None, IntegrityCheckState::NotChecked)),
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|handle| {
+                    handle.join().unwrap_or_else(|_| {
+                        Err(PackageError::InvalidManifest(
+                            "an artifact hashing thread panicked".into(),
+                        ))
+                    })
+                })
+                .collect()
+        });
     let mut artifacts = Vec::with_capacity(manifest.artifacts.len());
-    for artifact in &manifest.artifacts {
-        let Some(root) = canonical_source_roots.get(&artifact.source_root) else {
-            artifacts.push(ArtifactCheck {
-                artifact_id: artifact.artifact_id.clone(),
-                evidence_ids: artifact.evidence_ids.clone(),
-                source_root: artifact.source_root.clone(),
-                path: artifact.path.clone(),
-                expected_sha256: artifact.sha256.clone(),
-                actual_sha256: None,
-                state: IntegrityCheckState::NotChecked,
-            });
-            continue;
-        };
-        let (actual_sha256, state) = check_file(root, &artifact.path, &artifact.sha256)?;
+    for (artifact, check) in manifest.artifacts.iter().zip(checks) {
+        let (actual_sha256, state) = check?;
         artifacts.push(ArtifactCheck {
             artifact_id: artifact.artifact_id.clone(),
             evidence_ids: artifact.evidence_ids.clone(),

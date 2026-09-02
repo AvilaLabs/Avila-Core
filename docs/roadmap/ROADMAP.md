@@ -61,11 +61,11 @@ The repository also carries
 [CASE-000](../../examples/cases/case-000-actinv-aftermatter/README.md), a
 synthetic ACTINV 1.0.1 → Aftermatter R0 composition. It is an internal pressure
 test of the current boundary, not Stage 1: the case runner verifies every
-declared byte, executes the Aftermatter step through a case-specific adapter
-under a verified execution receipt, and generates its claims from the fresh
-result (ADR-0007), while the ACTINV inventory remains a recorded attestation
-and both requirements remain `NOT_EVALUATED` because qualified review is
-absent.
+declared byte, executes both computational steps through case-specific
+adapters under verified execution receipts (ACTINV through Aftermatter's
+frozen R0 builder, then Aftermatter over the fresh inventory), and generates
+every claim from the fresh results (ADR-0007), while both requirements remain
+`NOT_EVALUATED` because qualified review is absent.
 
 ## Stage 1 — vertical reference prototype
 

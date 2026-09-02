@@ -40,10 +40,11 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   verdict per requirement, with review asymmetry and a content-identified
   report;
 - the first composed internal case, `CASE-000`, which binds an existing
-  synthetic ACTINV 1.0.1 → Aftermatter R0 chain, executes the Aftermatter
-  step, generates its output claims from the fresh result, admits 12 source
-  attestations and 4 output claims, and truthfully withholds both
-  otherwise-within-limit requirements for absent qualified review;
+  synthetic ACTINV 1.0.1 → Aftermatter R0 chain, executes both computational
+  steps (ACTINV through Aftermatter's frozen R0 builder, then Aftermatter over
+  the fresh inventory), generates every output claim from the fresh results,
+  admits 14 source attestations and 6 output claims, and truthfully withholds
+  both otherwise-within-limit requirements for absent qualified review;
 - a case-package workflow that re-hashes package documents, re-hashes
   external artifact bytes only from explicitly supplied roots, executes the
   steps the package declares through a named case-specific adapter over an
@@ -78,11 +79,11 @@ packages beyond an executable digest, verify signatures, evaluate a
 scientifically qualified requirement, certify a design, or produce
 decision-grade evidence. The standalone `compile` and `evaluate` commands do
 not read artifact bytes. The `run` command re-hashes bytes at explicitly
-resolved roots and, where a case declares it, runs one exact executable
-through a case-specific adapter; a matching hash establishes identity only,
-and a verified receipt establishes process provenance only. In CASE-000 the
-Aftermatter step is executed and its claims are extracted from the fresh
-result, while the ACTINV inventory is still a recorded attestation.
+resolved roots and, where a case declares it, runs exact executables through
+case-specific adapters; a matching hash establishes identity only, and a
+verified receipt establishes process provenance only. In CASE-000 both the
+ACTINV build and the Aftermatter classification are executed and every output
+claim is extracted from the fresh results; qualified review remains external.
 
 ## Core objects
 
@@ -133,6 +134,8 @@ cargo run -p avila-core-cli -- run \
   examples/cases/case-000-actinv-aftermatter \
   --source-root aftermatter=../project-aftermatter \
   --source-root actinv-data=../project-aftermatter/.data/actinv/v1.0.0 \
+  --source-root actinv-release=../../actinv/target/release \
+  --capability python3=/usr/bin/python3 \
   --capability aftermatter-cli=../project-aftermatter/target/release/aftermatter
 
 cargo run -p avila-core-app
@@ -155,8 +158,8 @@ The `run` command is the concise end-to-end view: integrity, compiled
 workflow, execution with a verified receipt, generated claims, identity
 binding, admissions, verdicts, and replay against the committed claims,
 receipt, and campaign report. Omit `--source-root` to see every external
-artifact reported as `not_checked`; omit `--capability` to see the executed
-step reported `NOT RUN` with its committed claims evaluated as recorded
+artifact reported as `not_checked`; omit a `--capability` to see that step
+reported `NOT RUN` with its committed claims evaluated as recorded
 attestations; add `--json` for the complete machine-readable run report. A
 supplied root or executable that does not match fails closed.
 

@@ -166,15 +166,56 @@
   "core_boundary": [
     "The standalone Core compiler and campaign evaluator do not read artifact bytes; the case runner re-hashes files under explicitly supplied source roots and reports every omitted root as not_checked.",
     "A matching artifact digest establishes byte identity only. A verified execution receipt establishes that the bound executable ran over the bound bytes and produced the recorded bytes; it does not verify signatures, qualification, professional judgment, or invalidation.",
-    "Producer identities in the generated claims are the executable digest the runner verified, not a signed capability package.",
+    "The activation capability is a digest-pinned Python interpreter running Aftermatter's frozen R0 builder, which drives the digest-pinned ACTINV 1.0.1 executables; none of them is qualified by Core.",
+    "Producer identities in the generated claims are the executable digests the runner verified, not signed capability packages.",
     "The current requirement language does not evaluate the categorical waste-class or route-state vocabulary.",
     "CASE-000 is not discovery evidence, participant evidence, pilot evidence, or a qualification record. Execution does not substitute for qualified review."
   ],
   "execution_recorded_on": "2026-09-02",
   "execution": {
     "milestone": "CASE-000E",
+    "contract_revision": 2,
     "runner": "avila.core/cli-rust@0.1.0",
     "executed_steps": [
+      {
+        "step_id": "activation",
+        "adapter": "avila-labs.aftermatter/build-r0-case@1",
+        "capability": {
+          "capability_id": "python3",
+          "package_id": "org.python/cpython@3.14.4",
+          "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+        },
+        "staged_tools": {
+          "builder": {
+            "path": "tools/build_r0_case.py",
+            "sha256": "0b3438e6a88ac97fabd3a9b24f53a048c9541b1373113633a55fb0c167a6f5db",
+            "source": "Aftermatter commit 70a1c341d478bc37bf1ed0206dad4ee507cf743d"
+          },
+          "actinv": {
+            "path": "tools/actinv",
+            "sha256": "46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426",
+            "source": "ACTINV v1.0.1 release build recorded by the R0 result"
+          },
+          "dump": {
+            "path": "tools/dump",
+            "sha256": "651694c29051f6b05a786c17f9597ebc17acc016b2cbe3b1503d3099a0f41084",
+            "source": "ACTINV 1.0.1 source-tree build recorded by Aftermatter"
+          }
+        },
+        "receipt": "receipts/activation.json",
+        "invocation_sha256": "ae39d59e9a484ee07f8237fb804ea2e3be9c5ec90802879011d922dc1395e7bb",
+        "fresh_outputs": {
+          "problem": "010d95e23cff58144a8a977b61d980d87ef22396f5e64b0ce4272577aa1d6151",
+          "inventory": "3942d6f3337b786c018ac28474f4e7206d4d49301317812e7aef80058ca62bc8",
+          "decay-metadata": "d80f972fe26608139cb26d5a31a9a2bfc7a461be928fb8984f71830bf505535c"
+        },
+        "reproduces_frozen_artifacts": true,
+        "claims_extracted": [
+          "actinv-r0-problem",
+          "actinv-r0-inventory",
+          "actinv-r0-decay-metadata"
+        ]
+      },
       {
         "step_id": "classification",
         "adapter": "avila-labs.aftermatter/evaluate@1",
@@ -186,9 +227,11 @@
           "executable_sha256": "7f5067fead9fb1a25ec3937877a24a54533769515996ce0f4038bce2d8b05943"
         },
         "receipt": "receipts/classification.json",
-        "invocation_sha256": "1c4295bb60863084660b6ce8b2d410c675ea65f889afd8326fdab27f1d10e599",
-        "fresh_output_sha256": "3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718",
-        "reproduces_frozen_artifact": true,
+        "invocation_sha256": "e74b4164a8548a3f6b7cc97bb2e44f48e01869f96227828b7d309041f8d11095",
+        "fresh_outputs": {
+          "route-result": "3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718"
+        },
+        "reproduces_frozen_artifacts": true,
         "claims_extracted": [
           "aftermatter-r0-table-1-class-a-fraction",
           "aftermatter-r0-table-2-class-a-fraction",
@@ -196,12 +239,7 @@
         ]
       }
     ],
-    "attested_steps": [
-      {
-        "step_id": "activation",
-        "reason": "ACTINV 1.0.1 is not executed by Core in CASE-000; the normalized inventory is carried as a recorded attestation whose bytes are verified against the Aftermatter checkout."
-      }
-    ],
+    "attested_steps": [],
     "pending_steps": [
       {
         "step_id": "qualified-review",

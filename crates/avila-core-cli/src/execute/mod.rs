@@ -4,6 +4,7 @@
 //! execution receipt. It is deliberately case-specific: the only adapters it
 //! knows are the ones a committed case declares.
 
+pub mod actinv_build;
 #[cfg(test)]
 mod adversarial_tests;
 pub mod aftermatter;
@@ -47,12 +48,14 @@ pub struct ExtractedClaim {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Adapter {
     AftermatterEvaluate,
+    ActinvBuild,
 }
 
 impl Adapter {
     pub fn by_id(id: &str) -> Option<Self> {
         match id {
             aftermatter::ADAPTER_ID => Some(Self::AftermatterEvaluate),
+            actinv_build::ADAPTER_ID => Some(Self::ActinvBuild),
             _ => None,
         }
     }
@@ -60,6 +63,7 @@ impl Adapter {
     pub const fn id(self) -> &'static str {
         match self {
             Self::AftermatterEvaluate => aftermatter::ADAPTER_ID,
+            Self::ActinvBuild => actinv_build::ADAPTER_ID,
         }
     }
 
@@ -69,30 +73,47 @@ impl Adapter {
                 id: aftermatter::CAPABILITY_TYPE_ID.into(),
                 major: aftermatter::CAPABILITY_TYPE_MAJOR,
             },
+            Self::ActinvBuild => CapabilityTypeRef {
+                id: actinv_build::CAPABILITY_TYPE_ID.into(),
+                major: actinv_build::CAPABILITY_TYPE_MAJOR,
+            },
         }
     }
 
     pub const fn input_slots(self) -> &'static [&'static str] {
         match self {
             Self::AftermatterEvaluate => aftermatter::INPUT_SLOTS,
+            Self::ActinvBuild => actinv_build::INPUT_SLOTS,
         }
     }
 
     pub const fn outputs(self) -> &'static [AdapterOutput] {
         match self {
             Self::AftermatterEvaluate => aftermatter::OUTPUTS,
+            Self::ActinvBuild => actinv_build::OUTPUTS,
         }
     }
 
     pub const fn output_slots(self) -> &'static [&'static str] {
         match self {
             Self::AftermatterEvaluate => aftermatter::OUTPUT_SLOTS,
+            Self::ActinvBuild => actinv_build::OUTPUT_SLOTS,
         }
     }
 
     pub const fn timeout(self) -> Duration {
         match self {
             Self::AftermatterEvaluate => aftermatter::TIMEOUT,
+            Self::ActinvBuild => actinv_build::TIMEOUT,
+        }
+    }
+
+    /// The environment passed to the program. The runner clears everything
+    /// else; whatever an adapter needs is declared here and recorded.
+    pub fn environment(self) -> BTreeMap<String, String> {
+        match self {
+            Self::AftermatterEvaluate => BTreeMap::new(),
+            Self::ActinvBuild => actinv_build::environment(),
         }
     }
 
@@ -100,6 +121,7 @@ impl Adapter {
     pub fn arguments(self, staged: &BTreeMap<String, String>) -> Result<Vec<String>, String> {
         match self {
             Self::AftermatterEvaluate => aftermatter::arguments(staged),
+            Self::ActinvBuild => actinv_build::arguments(staged),
         }
     }
 
@@ -110,6 +132,7 @@ impl Adapter {
     ) -> Result<Vec<ExtractedClaim>, String> {
         match self {
             Self::AftermatterEvaluate => aftermatter::extract_claims(outputs, parameters),
+            Self::ActinvBuild => actinv_build::extract_claims(outputs, parameters),
         }
     }
 }
@@ -198,6 +221,7 @@ pub fn execute_step(
 
     let arguments = request.adapter.arguments(&staged_paths)?;
     let timeout = request.adapter.timeout();
+    let environment = request.adapter.environment();
     let program = request
         .executable
         .file_name()
@@ -207,7 +231,7 @@ pub fn execute_step(
         program,
         arguments: arguments.clone(),
         working_directory: ".".into(),
-        environment: BTreeMap::new(),
+        environment: environment.clone(),
         timeout_ms: u64::try_from(timeout.as_millis()).unwrap_or(u64::MAX),
     };
     let invocation_sha256 = invocation_identity(
@@ -228,6 +252,7 @@ pub fn execute_step(
         .args(&arguments)
         .current_dir(step_dir)
         .env_clear()
+        .envs(&environment)
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout))
         .stderr(Stdio::from(stderr))

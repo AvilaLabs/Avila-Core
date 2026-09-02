@@ -48,15 +48,17 @@ impl Drop for TestDir {
     }
 }
 
-const INPUT_IDS: [&str; 12] = [
-    "actinv-problem",
+const INPUT_IDS: [&str; 14] = [
     "actinv-activation-library",
     "actinv-library-index",
     "actinv-decay-primary",
     "actinv-decay-fallback",
     "actinv-data-notice",
+    "r0-builder",
+    "actinv-executable",
+    "actinv-dump-helper",
+    "fns-spectrum",
     "aftermatter-case",
-    "aftermatter-decay-metadata",
     "aftermatter-federal-rulepack",
     "aftermatter-clive-rulepack",
     "aftermatter-wcs-rulepack",
@@ -136,6 +138,8 @@ fn build_package(dir: &Path, stub: &Path) -> Synthetic {
     }
     fs::copy(&canned, root.join("route-result.json")).unwrap();
     fs::write(root.join("inventory.json"), b"{\"stub\":\"inventory\"}").unwrap();
+    fs::write(root.join("problem.json"), b"{\"stub\":\"problem\"}").unwrap();
+    fs::write(root.join("decay.json"), b"{\"stub\":\"decay\"}").unwrap();
 
     let contract: Value =
         serde_json::from_slice(&fs::read(case_dir.join("contract.json")).unwrap()).unwrap();
@@ -163,13 +167,19 @@ fn build_package(dir: &Path, stub: &Path) -> Synthetic {
             "sha256": digest(&path),
         }));
     }
-    artifacts.push(json!({
-        "artifact_id": "inventory",
-        "evidence_ids": ["actinv-r0-inventory"],
-        "source_root": "stub",
-        "path": "inventory.json",
-        "sha256": digest(&root.join("inventory.json")),
-    }));
+    for (artifact_id, claim_id, file) in [
+        ("inventory", "actinv-r0-inventory", "inventory.json"),
+        ("problem", "actinv-r0-problem", "problem.json"),
+        ("decay", "actinv-r0-decay-metadata", "decay.json"),
+    ] {
+        artifacts.push(json!({
+            "artifact_id": artifact_id,
+            "evidence_ids": [claim_id],
+            "source_root": "stub",
+            "path": file,
+            "sha256": digest(&root.join(file)),
+        }));
+    }
     artifacts.push(json!({
         "artifact_id": "route-result",
         "evidence_ids": [
@@ -183,7 +193,7 @@ fn build_package(dir: &Path, stub: &Path) -> Synthetic {
     }));
 
     // The committed claims document before blessing carries only what is
-    // never regenerated: the recorded activation claim.
+    // never regenerated here: the recorded activation claims.
     let claims = json!({
         "schema_version": "avila.core/evidence-claims/v0.2-draft",
         "semantic_profile": "avila.core/semantic/0.2-draft",
@@ -192,13 +202,29 @@ fn build_package(dir: &Path, stub: &Path) -> Synthetic {
             "input_id": id,
             "artifact": { "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "media_type": media_types[*id] }
         })).collect::<Vec<_>>(),
-        "claims": [{
-            "claim_id": "actinv-r0-inventory",
-            "step_id": "activation",
-            "output_slot": "inventory",
-            "artifact": { "sha256": digest(&root.join("inventory.json")), "media_type": "application/vnd.aftermatter.inventory+json" },
-            "claim": { "model": "unquantified" }
-        }],
+        "claims": [
+            {
+                "claim_id": "actinv-r0-problem",
+                "step_id": "activation",
+                "output_slot": "problem",
+                "artifact": { "sha256": digest(&root.join("problem.json")), "media_type": "application/vnd.actinv.problem+json" },
+                "claim": { "model": "unquantified" }
+            },
+            {
+                "claim_id": "actinv-r0-inventory",
+                "step_id": "activation",
+                "output_slot": "inventory",
+                "artifact": { "sha256": digest(&root.join("inventory.json")), "media_type": "application/vnd.aftermatter.inventory+json" },
+                "claim": { "model": "unquantified" }
+            },
+            {
+                "claim_id": "actinv-r0-decay-metadata",
+                "step_id": "activation",
+                "output_slot": "decay-metadata",
+                "artifact": { "sha256": digest(&root.join("decay.json")), "media_type": "application/vnd.aftermatter.decay-metadata+json" },
+                "claim": { "model": "unquantified" }
+            }
+        ],
         "decisions": []
     });
     fs::write(
@@ -381,8 +407,8 @@ fn honest_execution_generates_claims_and_replays() {
     let claims = report.claims.as_ref().unwrap();
     assert!(claims.matches_committed);
     assert_eq!(claims.executed_claims, 3);
-    assert_eq!(claims.recorded_claims, 1);
-    assert_eq!(claims.input_attestations, 12);
+    assert_eq!(claims.recorded_claims, 3);
+    assert_eq!(claims.input_attestations, 14);
     let campaign = report.campaign.as_ref().unwrap();
     assert!(
         campaign
@@ -645,7 +671,7 @@ fn an_adapter_bound_to_the_wrong_step_type_is_refused() {
         step(&report)
             .issues
             .iter()
-            .any(|issue| issue.contains("compiles to `actinv.activation-inventory@1`"))
+            .any(|issue| issue.contains("compiles to `aftermatter.r0-inventory-build@1`"))
     );
     assert!(report.campaign.is_none());
 }

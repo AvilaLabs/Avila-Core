@@ -1,0 +1,168 @@
+{
+  "schema_version": "avila.core/execution-receipt/v0.1-draft",
+  "case_id": "CASE-000",
+  "compiled_snapshot_sha256": "sha256:09f116476fce3645728925f0c396bc968a5767f9b6875c8c4ce9809e9d888a74",
+  "step_id": "activation",
+  "capability_type": {
+    "id": "aftermatter.r0-inventory-build",
+    "major": 1
+  },
+  "adapter": "avila-labs.aftermatter/build-r0-case@1",
+  "capability": {
+    "capability_id": "python3",
+    "package_id": "org.python/cpython@3.14.4",
+    "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+  },
+  "parameters": {},
+  "inputs": [
+    {
+      "input_slot": "actinv-dump-helper",
+      "evidence_id": "input:actinv-dump-helper",
+      "workspace_path": "tools/dump",
+      "media_type": "application/x-executable",
+      "sha256": "sha256:651694c29051f6b05a786c17f9597ebc17acc016b2cbe3b1503d3099a0f41084",
+      "bytes": 2252312
+    },
+    {
+      "input_slot": "actinv-executable",
+      "evidence_id": "input:actinv-executable",
+      "workspace_path": "tools/actinv",
+      "media_type": "application/x-executable",
+      "sha256": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426",
+      "bytes": 9442064
+    },
+    {
+      "input_slot": "activation-library",
+      "evidence_id": "input:actinv-activation-library",
+      "workspace_path": ".data/actinv/v1.0.0/activation/tendl-2025-neutron-709g.npz",
+      "media_type": "application/vnd.numpy.npz",
+      "sha256": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44",
+      "bytes": 123897743
+    },
+    {
+      "input_slot": "builder",
+      "evidence_id": "input:r0-builder",
+      "workspace_path": "tools/build_r0_case.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:0b3438e6a88ac97fabd3a9b24f53a048c9541b1373113633a55fb0c167a6f5db",
+      "bytes": 19014
+    },
+    {
+      "input_slot": "data-notice",
+      "evidence_id": "input:actinv-data-notice",
+      "workspace_path": ".data/actinv/v1.0.0/ACTINV-DATA-NOTICE.md",
+      "media_type": "text/markdown",
+      "sha256": "sha256:191117ff8aaff8d9981a93c9bb59b418cfe54505dc7363128d2bc5e728a6a62c",
+      "bytes": 3538
+    },
+    {
+      "input_slot": "decay-fallback",
+      "evidence_id": "input:actinv-decay-fallback",
+      "workspace_path": ".data/actinv/v1.0.0/decay/jeff-3-3_decay.dat",
+      "media_type": "application/octet-stream",
+      "sha256": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123",
+      "bytes": 45718116
+    },
+    {
+      "input_slot": "decay-primary",
+      "evidence_id": "input:actinv-decay-primary",
+      "workspace_path": ".data/actinv/v1.0.0/decay/endf-b-viii-0_decay.dat",
+      "media_type": "application/octet-stream",
+      "sha256": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb",
+      "bytes": 68313052
+    },
+    {
+      "input_slot": "library-index",
+      "evidence_id": "input:actinv-library-index",
+      "workspace_path": ".data/actinv/v1.0.0/activation/tendl-2025-neutron-709g_index.json",
+      "media_type": "application/json",
+      "sha256": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb",
+      "bytes": 2653304
+    },
+    {
+      "input_slot": "spectrum",
+      "evidence_id": "input:fns-spectrum",
+      "workspace_path": "cases/r0/input/fns-spectrum.json",
+      "media_type": "application/vnd.aftermatter.spectrum+json",
+      "sha256": "sha256:8ba5f9856176afe48d6b67fa0a9f568c16eeab76ace29e776d3076a947ed4532",
+      "bytes": 9311
+    }
+  ],
+  "invocation": {
+    "program": "python3.14",
+    "arguments": [
+      "tools/build_r0_case.py",
+      "--actinv",
+      "tools/actinv",
+      "--dump",
+      "tools/dump",
+      "--data-root",
+      ".data/actinv/v1.0.0"
+    ],
+    "working_directory": ".",
+    "environment": {
+      "ACTINV_CACHE_DIR": ".cache/actinv"
+    },
+    "timeout_ms": 1800000
+  },
+  "invocation_sha256": "sha256:ae39d59e9a484ee07f8237fb804ea2e3be9c5ec90802879011d922dc1395e7bb",
+  "process": {
+    "started_at": "2026-09-02T13:47:39.144Z",
+    "finished_at": "2026-09-02T13:47:43.504Z",
+    "duration_ms": 4360,
+    "exit_status": 0,
+    "timed_out": false
+  },
+  "logs": [
+    {
+      "stream": "stdout",
+      "workspace_path": "logs/stdout.log",
+      "sha256": "sha256:d1dc86245bedb20b911d2b95826fa83f8b80b6b9845b634cdd33917e1b596978",
+      "bytes": 376
+    },
+    {
+      "stream": "stderr",
+      "workspace_path": "logs/stderr.log",
+      "sha256": "sha256:4469fedc427bb916ee8f610a04f4b3cb437408e4ccf18220ccb9d19dcf404716",
+      "bytes": 76
+    }
+  ],
+  "outputs": [
+    {
+      "output_id": "problem",
+      "workspace_path": "cases/r0/input/actinv-problem.json",
+      "media_type": "application/vnd.actinv.problem+json",
+      "state": "collected",
+      "sha256": "sha256:010d95e23cff58144a8a977b61d980d87ef22396f5e64b0ce4272577aa1d6151",
+      "bytes": 11891
+    },
+    {
+      "output_id": "inventory",
+      "workspace_path": "cases/r0/reference/actinv-result.json",
+      "media_type": "application/vnd.aftermatter.inventory+json",
+      "state": "collected",
+      "sha256": "sha256:3942d6f3337b786c018ac28474f4e7206d4d49301317812e7aef80058ca62bc8",
+      "bytes": 147839
+    },
+    {
+      "output_id": "decay-metadata",
+      "workspace_path": "cases/r0/reference/decay-half-lives.json",
+      "media_type": "application/vnd.aftermatter.decay-metadata+json",
+      "state": "collected",
+      "sha256": "sha256:d80f972fe26608139cb26d5a31a9a2bfc7a461be928fb8984f71830bf505535c",
+      "bytes": 89846
+    }
+  ],
+  "runner": {
+    "runner": "avila.core/cli-rust@0.1.0",
+    "os": "linux",
+    "arch": "x86_64"
+  },
+  "status": "completed",
+  "limitations": [
+    "Exit status and output digests are process evidence, not scientific success.",
+    "The executable digest identifies the bytes that ran; it does not qualify the method.",
+    "No sandbox, resource accounting, or signature was applied; the environment was cleared and the working directory confined to the workspace."
+  ],
+  "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, professional review, or regulatory suitability."
+}

@@ -2,8 +2,8 @@
   "schema_version": "avila.core/campaign-report/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "status": "evaluated",
-  "compiled_snapshot_sha256": "sha256:c742b277c45deae6ba9935a1729d254eae22fffc8e4311ac5e30bfcd5c975c95",
-  "claims_sha256": "sha256:f0ed5e0f6af817e004f8fef9e42f03442e7f67f2f0964c32076c510943e45a07",
+  "compiled_snapshot_sha256": "sha256:09f116476fce3645728925f0c396bc968a5767f9b6875c8c4ce9809e9d888a74",
+  "claims_sha256": "sha256:591d005b195bc7f531e3eb469c170efded8acf37d1b21e3f97af486fde876c94",
   "admissions": [
     {
       "evidence_id": "input:actinv-activation-library",
@@ -38,18 +38,26 @@
       "state": "admitted"
     },
     {
-      "evidence_id": "input:actinv-library-index",
+      "evidence_id": "input:actinv-dump-helper",
       "source": {
         "source": "contract_input",
-        "input_id": "actinv-library-index"
+        "input_id": "actinv-dump-helper"
       },
       "state": "admitted"
     },
     {
-      "evidence_id": "input:actinv-problem",
+      "evidence_id": "input:actinv-executable",
       "source": {
         "source": "contract_input",
-        "input_id": "actinv-problem"
+        "input_id": "actinv-executable"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:actinv-library-index",
+      "source": {
+        "source": "contract_input",
+        "input_id": "actinv-library-index"
       },
       "state": "admitted"
     },
@@ -66,14 +74,6 @@
       "source": {
         "source": "contract_input",
         "input_id": "aftermatter-clive-rulepack"
-      },
-      "state": "admitted"
-    },
-    {
-      "evidence_id": "input:aftermatter-decay-metadata",
-      "source": {
-        "source": "contract_input",
-        "input_id": "aftermatter-decay-metadata"
       },
       "state": "admitted"
     },
@@ -102,11 +102,45 @@
       "state": "admitted"
     },
     {
+      "evidence_id": "input:fns-spectrum",
+      "source": {
+        "source": "contract_input",
+        "input_id": "fns-spectrum"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:r0-builder",
+      "source": {
+        "source": "contract_input",
+        "input_id": "r0-builder"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "actinv-r0-problem",
+      "source": {
+        "source": "step_output",
+        "step_id": "activation",
+        "output_slot": "problem"
+      },
+      "state": "admitted"
+    },
+    {
       "evidence_id": "actinv-r0-inventory",
       "source": {
         "source": "step_output",
         "step_id": "activation",
         "output_slot": "inventory"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "actinv-r0-decay-metadata",
+      "source": {
+        "source": "step_output",
+        "step_id": "activation",
+        "output_slot": "decay-metadata"
       },
       "state": "admitted"
     },
@@ -165,8 +199,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:c742b277c45deae6ba9935a1729d254eae22fffc8e4311ac5e30bfcd5c975c95",
-        "claims_sha256": "sha256:f0ed5e0f6af817e004f8fef9e42f03442e7f67f2f0964c32076c510943e45a07",
+        "compiled_snapshot_sha256": "sha256:09f116476fce3645728925f0c396bc968a5767f9b6875c8c4ce9809e9d888a74",
+        "claims_sha256": "sha256:591d005b195bc7f531e3eb469c170efded8acf37d1b21e3f97af486fde876c94",
         "review_attestation": "unverified"
       }
     },
@@ -196,12 +230,12 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:c742b277c45deae6ba9935a1729d254eae22fffc8e4311ac5e30bfcd5c975c95",
-        "claims_sha256": "sha256:f0ed5e0f6af817e004f8fef9e42f03442e7f67f2f0964c32076c510943e45a07",
+        "compiled_snapshot_sha256": "sha256:09f116476fce3645728925f0c396bc968a5767f9b6875c8c4ce9809e9d888a74",
+        "claims_sha256": "sha256:591d005b195bc7f531e3eb469c170efded8acf37d1b21e3f97af486fde876c94",
         "review_attestation": "unverified"
       }
     }
   ],
-  "campaign_sha256": "sha256:47e2f12001d4fed93e9184ccceb52679479c700b3bbf619d369c6620ad1d9d97",
+  "campaign_sha256": "sha256:564d7626e0970267eb79c810db7eea00a64a04202e454a2d1c2c102587a54a67",
   "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked, and review decisions are unverified assertions. No verdict here is scientific truth, certification, or regulatory approval."
 }

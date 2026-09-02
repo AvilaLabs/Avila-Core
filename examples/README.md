@@ -14,9 +14,10 @@ integrations, safety analyses, or evidence of compliance.
 - `cases/case-000-actinv-aftermatter/` is the first complete but still
   unqualified composed case. It binds an existing synthetic ACTINV 1.0.1 →
   Aftermatter R0 evidence chain, carries the draft case-package manifest with
-  its bound executable and execution declaration, executes the Aftermatter
-  step under a verified receipt, generates its claims from the fresh result,
-  and deliberately returns `NOT_EVALUATED` because qualified review is absent.
+  its bound executables and execution declarations, executes the ACTINV build
+  and the Aftermatter classification under verified receipts, generates every
+  output claim from the fresh results, and deliberately returns
+  `NOT_EVALUATED` because qualified review is absent.
 
 The dose limit, unit factors, parameter domains, and every capability
 description are hypothetical. They must never be used for engineering or
@@ -25,9 +26,9 @@ rather than types, return under ADR-0006 SC-5.
 
 CASE-000 is more concrete than the invented shutdown-dose specimen. `avila-core
 run` re-hashes external artifact bytes from roots supplied by the operator,
-reports omitted roots as `not_checked`, executes the Aftermatter step through
-a case-specific adapter when its bound executable is supplied, and extracts
-the output claims from the fresh bytes; ACTINV is still not invoked, and the
-campaign evaluator itself consumes only the generated claims document. A
-matching hash proves byte identity and a verified receipt proves process
-provenance, not scientific validity.
+reports omitted roots as `not_checked`, executes the ACTINV build and the
+Aftermatter classification through case-specific adapters when their bound
+executables are supplied, and extracts the output claims from the fresh
+bytes; the campaign evaluator itself consumes only the generated claims
+document. A matching hash proves byte identity and a verified receipt proves
+process provenance, not scientific validity.

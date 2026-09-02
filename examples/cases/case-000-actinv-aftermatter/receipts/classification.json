@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/execution-receipt/v0.1-draft",
   "case_id": "CASE-000",
-  "compiled_snapshot_sha256": "sha256:c742b277c45deae6ba9935a1729d254eae22fffc8e4311ac5e30bfcd5c975c95",
+  "compiled_snapshot_sha256": "sha256:09f116476fce3645728925f0c396bc968a5767f9b6875c8c4ce9809e9d888a74",
   "step_id": "classification",
   "capability_type": {
     "id": "aftermatter.activated-metal-disposition",
@@ -40,7 +40,7 @@
     },
     {
       "input_slot": "decay-metadata",
-      "evidence_id": "input:aftermatter-decay-metadata",
+      "evidence_id": "actinv-r0-decay-metadata",
       "workspace_path": "cases/r0/reference/decay-half-lives.json",
       "media_type": "application/vnd.aftermatter.decay-metadata+json",
       "sha256": "sha256:d80f972fe26608139cb26d5a31a9a2bfc7a461be928fb8984f71830bf505535c",
@@ -106,10 +106,10 @@
     "environment": {},
     "timeout_ms": 600000
   },
-  "invocation_sha256": "sha256:1c4295bb60863084660b6ce8b2d410c675ea65f889afd8326fdab27f1d10e599",
+  "invocation_sha256": "sha256:e74b4164a8548a3f6b7cc97bb2e44f48e01869f96227828b7d309041f8d11095",
   "process": {
-    "started_at": "2026-09-02T13:30:21.183Z",
-    "finished_at": "2026-09-02T13:30:21.204Z",
+    "started_at": "2026-09-02T13:47:49.168Z",
+    "finished_at": "2026-09-02T13:47:49.188Z",
     "duration_ms": 20,
     "exit_status": 0,
     "timed_out": false

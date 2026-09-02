@@ -32,7 +32,7 @@ fn case_000_is_reproducible_and_review_blocked() {
     assert_eq!(actual, expected, "committed campaign report drifted");
 
     let admissions = actual["admissions"].as_array().unwrap();
-    assert_eq!(admissions.len(), 16);
+    assert_eq!(admissions.len(), 20);
     assert!(
         admissions
             .iter()

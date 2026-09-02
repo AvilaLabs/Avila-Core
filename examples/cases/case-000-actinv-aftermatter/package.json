@@ -7,31 +7,31 @@
       "document_id": "case-000-contract",
       "role": "contract",
       "path": "contract.json",
-      "sha256": "sha256:4e35a463b475a91518d1328f8edb00b5a6be336faf7d92f93601487eb52bbf11"
+      "sha256": "sha256:d3801a2f56aa5adfa215415e903e286a90a1082f13e5cc56ca26c968fac3b826"
     },
     {
       "document_id": "case-000-registry",
       "role": "registry",
       "path": "registry.json",
-      "sha256": "sha256:0b675426678c344be683265d3f63d6ee245b59bf15591bf4f56ca6be9188f98c"
+      "sha256": "sha256:fe12b0a4c3cffa103fc5b555964d1079ec950cff7f6eef9a31390ac8f7416e60"
     },
     {
       "document_id": "case-000-claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:0dd182084cb5585e2d7bf2d45311407e116fb0818c82119913a34a1487ca92c9"
+      "sha256": "sha256:54ae8d15f0b60395d8449a10477c37f9c4ff2998a7ddaa297efc572807a35e39"
     },
     {
       "document_id": "case-000-expected-campaign",
       "role": "expected_campaign_report",
       "path": "campaign-report.json",
-      "sha256": "sha256:742af1845c3dedb8ee8c0333376dadc1a18b6af9bd044b0bfc30bd95f1380536"
+      "sha256": "sha256:a34cd6454b6a47babb608ca71ce4849ff5217e7de0d31b6f0ce7ab637f001e7e"
     },
     {
       "document_id": "case-000-provenance",
       "role": "provenance",
       "path": "provenance.json",
-      "sha256": "sha256:2211df8b94ec6f75f189d50a5ac8b9b60b7c2d5622ce9a7cf9025b6e56d106b3"
+      "sha256": "sha256:dcd90f973d0f97b10c65d3bc88dcf7cd6934ac720098f940fd03b1a366869025"
     },
     {
       "document_id": "case-000-reviewer-eligibility",
@@ -40,10 +40,17 @@
       "sha256": "sha256:5ce3fcac9014d4cc5f6c184eb458911469e879b7ce78f5b42fa118b28652dd16"
     },
     {
+      "document_id": "case-000-activation-receipt",
+      "role": "execution_receipt",
+      "path": "receipts/activation.json",
+      "sha256": "sha256:3f38d0d2e632486795fe6d65791e863997f4f43a1ee0ba98b98d8dcf9767a51d",
+      "step_id": "activation"
+    },
+    {
       "document_id": "case-000-classification-receipt",
       "role": "execution_receipt",
       "path": "receipts/classification.json",
-      "sha256": "sha256:569dabb1ad3dffc394f2b48709535bd33bd3f7f69400dd1de6b73c3e02eacab4",
+      "sha256": "sha256:f290596c51be863296dce509a78909c8150bc10241af23c020f44296720bad5f",
       "step_id": "classification"
     }
   ],
@@ -51,7 +58,7 @@
     {
       "artifact_id": "actinv-problem",
       "evidence_ids": [
-        "input:actinv-problem"
+        "actinv-r0-problem"
       ],
       "source_root": "aftermatter",
       "path": "cases/r0/input/actinv-problem.json",
@@ -103,6 +110,42 @@
       "sha256": "sha256:191117ff8aaff8d9981a93c9bb59b418cfe54505dc7363128d2bc5e728a6a62c"
     },
     {
+      "artifact_id": "r0-builder",
+      "evidence_ids": [
+        "input:r0-builder"
+      ],
+      "source_root": "aftermatter",
+      "path": "tools/build_r0_case.py",
+      "sha256": "sha256:0b3438e6a88ac97fabd3a9b24f53a048c9541b1373113633a55fb0c167a6f5db"
+    },
+    {
+      "artifact_id": "fns-spectrum",
+      "evidence_ids": [
+        "input:fns-spectrum"
+      ],
+      "source_root": "aftermatter",
+      "path": "cases/r0/input/fns-spectrum.json",
+      "sha256": "sha256:8ba5f9856176afe48d6b67fa0a9f568c16eeab76ace29e776d3076a947ed4532"
+    },
+    {
+      "artifact_id": "actinv-executable",
+      "evidence_ids": [
+        "input:actinv-executable"
+      ],
+      "source_root": "actinv-release",
+      "path": "actinv",
+      "sha256": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426"
+    },
+    {
+      "artifact_id": "actinv-dump-helper",
+      "evidence_ids": [
+        "input:actinv-dump-helper"
+      ],
+      "source_root": "actinv-release",
+      "path": "dump",
+      "sha256": "sha256:651694c29051f6b05a786c17f9597ebc17acc016b2cbe3b1503d3099a0f41084"
+    },
+    {
       "artifact_id": "aftermatter-case",
       "evidence_ids": [
         "input:aftermatter-case"
@@ -114,7 +157,7 @@
     {
       "artifact_id": "aftermatter-decay-metadata",
       "evidence_ids": [
-        "input:aftermatter-decay-metadata"
+        "actinv-r0-decay-metadata"
       ],
       "source_root": "aftermatter",
       "path": "cases/r0/reference/decay-half-lives.json",
@@ -179,6 +222,11 @@
   ],
   "capabilities": [
     {
+      "capability_id": "python3",
+      "package_id": "org.python/cpython@3.14.4",
+      "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+    },
+    {
       "capability_id": "aftermatter-cli",
       "package_id": "avila-labs.aftermatter/aftermatter-cli@0.1.0",
       "source_repository": "https://github.com/AvilaLabs/Aftermatter",
@@ -187,6 +235,63 @@
     }
   ],
   "executions": [
+    {
+      "step_id": "activation",
+      "adapter": "avila-labs.aftermatter/build-r0-case@1",
+      "capability_id": "python3",
+      "inputs": [
+        {
+          "input_slot": "builder",
+          "workspace_path": "tools/build_r0_case.py"
+        },
+        {
+          "input_slot": "actinv-executable",
+          "workspace_path": "tools/actinv"
+        },
+        {
+          "input_slot": "actinv-dump-helper",
+          "workspace_path": "tools/dump"
+        },
+        {
+          "input_slot": "spectrum",
+          "workspace_path": "cases/r0/input/fns-spectrum.json"
+        },
+        {
+          "input_slot": "activation-library",
+          "workspace_path": ".data/actinv/v1.0.0/activation/tendl-2025-neutron-709g.npz"
+        },
+        {
+          "input_slot": "library-index",
+          "workspace_path": ".data/actinv/v1.0.0/activation/tendl-2025-neutron-709g_index.json"
+        },
+        {
+          "input_slot": "decay-primary",
+          "workspace_path": ".data/actinv/v1.0.0/decay/endf-b-viii-0_decay.dat"
+        },
+        {
+          "input_slot": "decay-fallback",
+          "workspace_path": ".data/actinv/v1.0.0/decay/jeff-3-3_decay.dat"
+        },
+        {
+          "input_slot": "data-notice",
+          "workspace_path": ".data/actinv/v1.0.0/ACTINV-DATA-NOTICE.md"
+        }
+      ],
+      "outputs": [
+        {
+          "output_slot": "problem",
+          "claim_id": "actinv-r0-problem"
+        },
+        {
+          "output_slot": "inventory",
+          "claim_id": "actinv-r0-inventory"
+        },
+        {
+          "output_slot": "decay-metadata",
+          "claim_id": "actinv-r0-decay-metadata"
+        }
+      ]
+    },
     {
       "step_id": "classification",
       "adapter": "avila-labs.aftermatter/evaluate@1",
@@ -239,8 +344,8 @@
   ],
   "limitations": [
     "CASE-000 is an internal synthetic integration specimen, not pilot or participant evidence.",
-    "The five ACTINV data-release artifacts are verified only when that exact release is supplied as the actinv-data source root; they live outside the Aftermatter checkout.",
-    "Artifact integrity establishes byte identity only; a verified execution receipt establishes that the bound Aftermatter executable ran over the bound bytes and produced the recorded bytes. Neither establishes scientific correctness, qualification, signature, or regulatory suitability.",
-    "Only the classification step is executed. The activation step's ACTINV inventory is a recorded attestation, and the review step is a pending obligation the runner never performs."
+    "The five ACTINV data-release artifacts are verified only when that exact release is supplied as the actinv-data source root; the ACTINV 1.0.1 executables only when their release build is supplied as the actinv-release root.",
+    "Artifact integrity establishes byte identity only; a verified execution receipt establishes that the bound executable ran over the bound bytes and produced the recorded bytes. Neither establishes scientific correctness, qualification, signature, or regulatory suitability.",
+    "Both computational steps are executed: ACTINV 1.0.1 through Aftermatter's frozen R0 builder under a digest-pinned Python interpreter, and Aftermatter through its digest-pinned executable. The review step is a pending obligation the runner never performs."
   ]
 }

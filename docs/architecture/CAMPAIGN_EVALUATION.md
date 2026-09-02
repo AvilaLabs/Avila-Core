@@ -115,10 +115,10 @@ a changed input or method names exactly which verdicts no longer stand.
 
 [CASE-000](../../examples/cases/case-000-actinv-aftermatter/README.md) applies
 this slice to a synthetic ACTINV 1.0.1 → Aftermatter R0 chain. Twelve
-input attestations and four output claims admit under the type-level rules;
-the three classification claims are extracted by the case runner from the
-Aftermatter result it executes, and the inventory claim is a recorded
-attestation.
+input attestations and six output claims admit under the type-level rules,
+every output claim extracted by the case runner from the results it executes:
+the ACTINV problem, inventory, and decay metadata from the frozen R0 builder,
+and the two Class A fractions plus the route result from Aftermatter.
 Both bounded fraction claims have upper bounds below their frozen limits, but
 the campaign returns `NOT_EVALUATED / not_evaluated.review_pending` for both
 requirements because no qualified-review decision is asserted.
@@ -132,6 +132,7 @@ been verified. The case runner makes the byte boundary visible: nine
 artifacts are re-hashed from the Aftermatter checkout and five ACTINV
 data-release artifacts from that checkout's data directory when the
 `actinv-data` root is supplied, and every root left unsupplied stays
-`not_checked`. With both roots and the bound executable supplied, the fresh
-Aftermatter result reproduces the frozen artifact byte for byte and the fresh
-receipt matches the committed one.
+`not_checked`, as do the ACTINV release builds under the `actinv-release`
+root. With all three roots and both bound executables supplied, every fresh
+result reproduces its frozen artifact byte for byte and both fresh receipts
+match the committed ones.

@@ -2,7 +2,7 @@
   "schema_version": "avila.core/registry-snapshot/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "registry_id": "case-000.actinv-aftermatter.registry",
-  "revision": 1,
+  "revision": 2,
   "kinds": [
     {
       "kind_id": "core.dimensionless-ratio",
@@ -61,6 +61,43 @@
       "validator": "actinv.validate.data-notice@1",
       "accepted_media_types": ["text/markdown"],
       "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "actinv.executable", "major": 1 },
+      "owner": "avila-labs.actinv",
+      "validator": "actinv.validate.executable@1",
+      "accepted_media_types": ["application/x-executable"],
+      "permitted_claim_models": [{ "model": "unquantified" }],
+      "non_claims": [
+        "An executable's digest identifies the bytes that run; it does not qualify the method they implement."
+      ]
+    },
+    {
+      "role": { "id": "actinv.dump-helper", "major": 1 },
+      "owner": "avila-labs.actinv",
+      "validator": "actinv.validate.dump-helper@1",
+      "accepted_media_types": ["application/x-executable"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "aftermatter.r0-builder", "major": 1 },
+      "owner": "avila-labs.aftermatter",
+      "validator": "aftermatter.validate.r0-builder@1",
+      "accepted_media_types": ["text/x-python"],
+      "permitted_claim_models": [{ "model": "unquantified" }],
+      "non_claims": [
+        "The builder is Aftermatter's frozen R0 tool that generates the ACTINV problem, drives ACTINV, and normalizes its result; it is research-only."
+      ]
+    },
+    {
+      "role": { "id": "aftermatter.spectrum", "major": 1 },
+      "owner": "avila-labs.aftermatter",
+      "validator": "aftermatter.validate.spectrum@1",
+      "accepted_media_types": ["application/vnd.aftermatter.spectrum+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }],
+      "non_claims": [
+        "The 709-group spectrum shape is reused from the ACTINV validation corpus; the R0 total flux, composition, and schedule are synthetic."
+      ]
     },
     {
       "role": { "id": "aftermatter.project", "major": 1 },
@@ -140,14 +177,29 @@
   ],
   "capability_types": [
     {
-      "capability_type": { "id": "actinv.activation-inventory", "major": 1 },
-      "owner": "avila-labs.actinv",
+      "capability_type": { "id": "aftermatter.r0-inventory-build", "major": 1 },
+      "owner": "avila-labs.aftermatter",
       "reproducibility": { "determinism": "deterministic" },
       "inputs": [
         {
-          "slot_id": "problem",
-          "role": { "id": "actinv.problem", "major": 1 },
-          "accepted_media_types": ["application/vnd.actinv.problem+json"]
+          "slot_id": "builder",
+          "role": { "id": "aftermatter.r0-builder", "major": 1 },
+          "accepted_media_types": ["text/x-python"]
+        },
+        {
+          "slot_id": "actinv-executable",
+          "role": { "id": "actinv.executable", "major": 1 },
+          "accepted_media_types": ["application/x-executable"]
+        },
+        {
+          "slot_id": "actinv-dump-helper",
+          "role": { "id": "actinv.dump-helper", "major": 1 },
+          "accepted_media_types": ["application/x-executable"]
+        },
+        {
+          "slot_id": "spectrum",
+          "role": { "id": "aftermatter.spectrum", "major": 1 },
+          "accepted_media_types": ["application/vnd.aftermatter.spectrum+json"]
         },
         {
           "slot_id": "activation-library",
@@ -177,6 +229,15 @@
       ],
       "outputs": [
         {
+          "slot_id": "problem",
+          "role": { "id": "actinv.problem", "major": 1 },
+          "media_type": "application/vnd.actinv.problem+json",
+          "permitted_claim_models": [{ "model": "unquantified" }],
+          "excluded_purposes": [
+            { "id": "nuclear.regulatory-or-operational-use", "major": 1 }
+          ]
+        },
+        {
           "slot_id": "inventory",
           "role": { "id": "aftermatter.inventory", "major": 1 },
           "media_type": "application/vnd.aftermatter.inventory+json",
@@ -184,10 +245,19 @@
           "excluded_purposes": [
             { "id": "nuclear.regulatory-or-operational-use", "major": 1 }
           ]
+        },
+        {
+          "slot_id": "decay-metadata",
+          "role": { "id": "aftermatter.decay-metadata", "major": 1 },
+          "media_type": "application/vnd.aftermatter.decay-metadata+json",
+          "permitted_claim_models": [{ "model": "unquantified" }],
+          "excluded_purposes": [
+            { "id": "nuclear.regulatory-or-operational-use", "major": 1 }
+          ]
         }
       ],
       "non_claims": [
-        "The type records the frozen ACTINV-to-Aftermatter inventory boundary; Core does not invoke or qualify ACTINV in CASE-000."
+        "The type wraps ACTINV 1.0.1 through Aftermatter's frozen R0 builder: it generates the problem, validates and runs ACTINV, and normalizes the projection. Core verifies every executable and input by digest and qualifies none of them, the nuclear data, or the activation model."
       ]
     },
     {
@@ -271,7 +341,7 @@
         }
       ],
       "non_claims": [
-        "The type exposes frozen R0 claims only; Core does not invoke or qualify Aftermatter in CASE-000.",
+        "Core executes Aftermatter for this type by verified digest; it does not qualify Aftermatter, its rulepacks, or the result.",
         "The result is not a regulatory classification or facility-acceptance decision."
       ]
     },

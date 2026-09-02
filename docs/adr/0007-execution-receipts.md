@@ -107,12 +107,16 @@ method into a qualified one.
 
 ## Consequences
 
-- CASE-000 executes Aftermatter and generates its output claims; its
-  `claims.json`, `campaign-report.json`, and
-  `receipts/classification.json` are emitted by `avila-core run` and
-  committed as expectations, not written by hand.
-- Adding a second executed step means adding a named adapter and an
-  execution declaration, not a runner feature. The next candidate is the
-  ACTINV activation step.
+- CASE-000 executes both computational steps and generates every output
+  claim; its `claims.json`, `campaign-report.json`, and the receipts under
+  `receipts/` are emitted by `avila-core run` and committed as expectations,
+  not written by hand.
+- Adding an executed step means adding a named adapter and an execution
+  declaration, not a runner feature. The second adapter,
+  `avila-labs.aftermatter/build-r0-case@1`, runs Aftermatter's frozen R0
+  builder under a digest-pinned Python interpreter with the builder script and
+  the ACTINV executables as hash-bound inputs; the interpreter is pinned by
+  digest like any other executable, which is exact but machine-specific until
+  reproducible builds or a package identity exist.
 - The receipt schema, the case-package schema, this ADR, and the adversarial
   execution tests move together.

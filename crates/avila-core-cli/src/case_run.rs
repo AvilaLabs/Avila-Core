@@ -1631,7 +1631,14 @@ pub fn human_summary(report: &CaseRunReport) -> String {
         }
         Some(ExecutionStatus::Refused) => "execution was refused",
         Some(ExecutionStatus::Failed) => "execution failed",
-        None => "no execution is declared",
+        None if report
+            .compile
+            .as_ref()
+            .is_some_and(|compile| compile.compiled.is_some()) =>
+        {
+            "no execution is declared"
+        }
+        None => "execution was not reached",
     };
     let _ = writeln!(
         out,
@@ -1714,30 +1721,36 @@ mod tests {
         assert!(claims.matches_committed);
         let bindings = report.bindings.as_ref().unwrap();
         assert_eq!(bindings.status, BindingStatus::Verified);
-        assert_eq!(bindings.bound_evidence_records, 16);
+        assert_eq!(bindings.bound_evidence_records, 20);
         assert_eq!(bindings.bound_review_policies, 1);
         assert_eq!(report.campaign.as_ref().unwrap().verdicts.len(), 2);
         assert!(report.replay.as_ref().unwrap().matches);
 
         let summary = human_summary(&report);
-        assert!(summary.contains("activation [actinv.activation-inventory@1]"));
+        assert!(summary.contains("activation [aftermatter.r0-inventory-build@1]"));
+        assert!(summary.contains("[NOT RUN] activation"));
         assert!(summary.contains("[NOT RUN] classification"));
         assert!(summary.contains("CASE-000-R1 — not_evaluated.review_pending"));
-        assert!(summary.contains("source root(s) actinv-data, aftermatter"));
+        assert!(summary.contains("source root(s) actinv-data, actinv-release, aftermatter"));
     }
 
-    /// Executes CASE-000 for real when the bound Aftermatter executable and
-    /// both artifact roots are available locally. Set
-    /// `AVILA_CORE_CASE_000_AFTERMATTER` (the executable),
-    /// `AVILA_CORE_CASE_000_AFTERMATTER_ROOT` (the checkout), and
-    /// `AVILA_CORE_CASE_000_ACTINV_DATA` (the data release) to run it; it is
-    /// skipped, visibly, otherwise.
+    /// Executes CASE-000 for real when the bound executables and artifact
+    /// roots are available locally. Set `AVILA_CORE_CASE_000_AFTERMATTER`
+    /// (the Aftermatter executable), `AVILA_CORE_CASE_000_PYTHON3` (the
+    /// interpreter that runs the R0 builder),
+    /// `AVILA_CORE_CASE_000_AFTERMATTER_ROOT` (the Aftermatter checkout),
+    /// `AVILA_CORE_CASE_000_ACTINV_DATA` (the data release), and
+    /// `AVILA_CORE_CASE_000_ACTINV_RELEASE` (the directory holding the
+    /// `actinv` and `dump` release builds) to run it; it is skipped, visibly,
+    /// otherwise.
     #[test]
-    fn case_000_executes_aftermatter_when_available() {
-        let (Ok(executable), Ok(aftermatter), Ok(actinv_data)) = (
+    fn case_000_executes_both_tools_when_available() {
+        let (Ok(executable), Ok(python3), Ok(aftermatter), Ok(actinv_data), Ok(actinv_release)) = (
             std::env::var("AVILA_CORE_CASE_000_AFTERMATTER"),
+            std::env::var("AVILA_CORE_CASE_000_PYTHON3"),
             std::env::var("AVILA_CORE_CASE_000_AFTERMATTER_ROOT"),
             std::env::var("AVILA_CORE_CASE_000_ACTINV_DATA"),
+            std::env::var("AVILA_CORE_CASE_000_ACTINV_RELEASE"),
         ) else {
             eprintln!("skipped: AVILA_CORE_CASE_000_* not set; CASE-000 was not executed");
             return;
@@ -1749,11 +1762,12 @@ mod tests {
             source_roots: BTreeMap::from([
                 ("aftermatter".to_string(), PathBuf::from(aftermatter)),
                 ("actinv-data".to_string(), PathBuf::from(actinv_data)),
+                ("actinv-release".to_string(), PathBuf::from(actinv_release)),
             ]),
-            capabilities: BTreeMap::from([(
-                "aftermatter-cli".to_string(),
-                PathBuf::from(executable),
-            )]),
+            capabilities: BTreeMap::from([
+                ("aftermatter-cli".to_string(), PathBuf::from(executable)),
+                ("python3".to_string(), PathBuf::from(python3)),
+            ]),
             workspace: Some(workspace.clone()),
         };
         let report = execute_case(&case_000(), &options).unwrap();
@@ -1762,11 +1776,22 @@ mod tests {
         assert_eq!(report.integrity.status, PackageIntegrityStatus::Complete);
         let execution = report.execution.as_ref().unwrap();
         assert_eq!(execution.status, ExecutionStatus::Executed);
-        let step = &execution.steps[0];
-        assert_eq!(step.outputs[0].reproduces_bound_artifact, Some(true));
-        assert!(step.replay.as_ref().unwrap().matches);
-        assert!(report.claims.as_ref().unwrap().matches_committed);
+        assert_eq!(execution.steps.len(), 2);
+        for step in &execution.steps {
+            assert_eq!(step.state, StepExecutionState::Executed, "{summary}");
+            assert!(
+                step.outputs
+                    .iter()
+                    .all(|output| output.reproduces_bound_artifact == Some(true))
+            );
+            assert!(step.replay.as_ref().unwrap().matches);
+        }
+        let claims = report.claims.as_ref().unwrap();
+        assert!(claims.matches_committed);
+        assert_eq!(claims.executed_claims, 6);
+        assert_eq!(claims.recorded_claims, 0);
         assert!(report.replay.as_ref().unwrap().matches);
+        assert!(summary.contains("[EXECUTED] activation via python3"));
         assert!(summary.contains("[EXECUTED] classification via aftermatter-cli"));
         let _ = fs::remove_dir_all(&workspace);
     }

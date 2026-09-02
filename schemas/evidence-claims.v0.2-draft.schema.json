@@ -59,7 +59,21 @@
         "output_slot": { "$ref": "#/$defs/nonemptyString" },
         "artifact": { "$ref": "#/$defs/artifactIdentity" },
         "producer": { "$ref": "#/$defs/producerIdentity" },
-        "claim": { "$ref": "#/$defs/claimValue" }
+        "claim": { "$ref": "#/$defs/claimValue" },
+        "qualification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["qualification_id", "revision", "sha256", "state"],
+          "description": "The producing capability's qualification envelope evaluated for this run.",
+          "properties": {
+            "qualification_id": { "$ref": "#/$defs/nonemptyString" },
+            "revision": { "type": "integer", "minimum": 1 },
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "state": { "enum": ["inside", "outside", "unknown"] },
+            "terms": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["predicate", "result"],
+              "properties": { "predicate": { "type": "string" }, "result": { "enum": ["true", "false", "unknown"] } } } }
+          }
+        }
       }
     },
     "claimValue": {

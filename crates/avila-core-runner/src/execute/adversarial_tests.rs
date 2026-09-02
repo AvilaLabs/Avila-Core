@@ -1370,3 +1370,166 @@ fn case_001_carries_the_library_requirement_set_byte_for_byte() {
         ))
     );
 }
+
+/// Bind a qualification for the synthetic `stub` capability whose envelope
+/// is written over the generic facts every adapter reports.
+fn declare_qualification(
+    synthetic: &Synthetic,
+    media_types: &[&str],
+    executable_sha256: Option<&str>,
+) {
+    let package_value: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    let bound_sha256 = package_value["capabilities"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|capability| capability["capability_id"] == "stub")
+        .map(|capability| {
+            capability["executable_sha256"]
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
+        .unwrap();
+    let record = json!({
+        "schema_version": "avila.core/qualification/v0.1-draft",
+        "qualification_id": "test/stub-classification", "revision": 1, "owner": "test",
+        "adapter": "avila-labs.aftermatter/evaluate@1",
+        "capability": { "capability_id": "stub", "executable_sha256": executable_sha256.unwrap_or(&bound_sha256) },
+        "statement": "the stub is claimed applicable to JSON cases only",
+        "scope": { "all": [
+            { "input_attribute_in": { "slot": "case", "attribute": "media_type", "values": media_types } },
+            { "fact": { "name": "inputs.count", "op": "ge", "value": 1,
+                        "source_requirement": { "class": "runner_measured", "validator": "avila-labs.aftermatter/evaluate@1" } } }
+        ] }
+    });
+    fs::write(
+        synthetic.case_dir.join("qualification.json"),
+        serde_json::to_vec_pretty(&record).unwrap(),
+    )
+    .unwrap();
+    let mut package = package_value;
+    let documents = package["documents"].as_array_mut().unwrap();
+    documents.retain(|document| document["document_id"] != "qualification");
+    documents.push(json!({
+        "document_id": "qualification", "role": "qualification", "path": "qualification.json",
+        "sha256": digest(&synthetic.case_dir.join("qualification.json"))
+    }));
+    fs::write(
+        synthetic.case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+}
+
+#[test]
+fn a_run_inside_the_envelope_carries_the_qualification_on_its_claims() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    // The envelope admits exactly the media type the contract declares for
+    // the case input; the adapter reports it as an attribute of that slot.
+    let contract: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("contract.json")).unwrap())
+            .unwrap();
+    let media_type = contract["inputs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|input| input["input_id"] == "aftermatter-case")
+        .map(|input| input["media_type"].as_str().unwrap().to_string())
+        .unwrap();
+    declare_qualification(&synthetic, &[media_type.as_str()], None);
+    let workspace = dir.workspace();
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, workspace.clone()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let assessment = step(&report)
+        .qualification
+        .as_ref()
+        .expect("envelope assessed");
+    assert_eq!(
+        assessment.state,
+        avila_core_compiler::EnvelopeState::Inside,
+        "{summary}"
+    );
+    assert!(summary.contains("[INSIDE] 2/2 terms hold"), "{summary}");
+    // Every generated claim of the step carries the envelope; the committed
+    // claims, written before the qualification was bound, no longer match.
+    let claims: Value =
+        serde_json::from_slice(&fs::read(workspace.join("claims.json")).unwrap()).unwrap();
+    let step_claims: Vec<&Value> = claims["claims"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|claim| claim["step_id"] == "classification")
+        .collect();
+    assert!(!step_claims.is_empty());
+    for claim in step_claims {
+        assert_eq!(claim["qualification"]["state"], "inside", "{claim}");
+        assert_eq!(
+            claim["qualification"]["qualification_id"],
+            "test/stub-classification"
+        );
+    }
+    assert!(!report.claims.as_ref().unwrap().matches_committed);
+}
+
+#[test]
+fn a_run_outside_the_envelope_cannot_establish_a_bounded_requirement() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    declare_qualification(&synthetic, &["text/plain"], None);
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let assessment = step(&report)
+        .qualification
+        .as_ref()
+        .expect("envelope assessed");
+    assert_eq!(
+        assessment.state,
+        avila_core_compiler::EnvelopeState::Outside,
+        "{summary}"
+    );
+    assert!(summary.contains("[OUTSIDE] 1/2 terms hold"), "{summary}");
+    // CASE-000's requirements also await qualified review, which is reported
+    // first; the envelope reason is carried on every bounded verdict.
+    let campaign = report.campaign.as_ref().expect("campaign evaluated");
+    for verdict in &campaign.verdicts {
+        assert_eq!(
+            verdict.verdict.status,
+            VerdictStatus::NotEvaluated,
+            "{summary}"
+        );
+        let reasons = serde_json::to_string(&verdict.verdict.reasons).unwrap();
+        assert!(reasons.contains("CORE-A4401"), "{reasons}");
+        assert!(reasons.contains("outside_qualification"), "{reasons}");
+    }
+    assert!(summary.contains("because:"), "{summary}");
+}
+
+#[test]
+fn a_qualification_for_a_different_executable_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    declare_qualification(
+        &synthetic,
+        &["text/plain"],
+        Some("sha256:0000000000000000000000000000000000000000000000000000000000000000"),
+    );
+    let error = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(error.contains("covers executable"), "{error}");
+}

@@ -158,6 +158,38 @@ impl Adapter {
         }
     }
 
+    /// Facts about this step for a qualification envelope, as the kernel's
+    /// applicability context in JSON. Every adapter contributes the media
+    /// type and identity of each staged input; the transport adapter adds
+    /// what it reads from the source and candidate documents. Facts carry
+    /// the input's identity as provenance and the adapter as validator.
+    pub fn applicability(
+        self,
+        staged: &[(String, String, String, Vec<u8>)],
+        invocation_sha256: &str,
+    ) -> Result<serde_json::Value, String> {
+        let mut inputs = serde_json::Map::new();
+        for (slot, media_type, sha256, _) in staged {
+            inputs.insert(
+                slot.clone(),
+                serde_json::json!({ "attributes": { "media_type": media_type, "sha256": sha256 } }),
+            );
+        }
+        let mut facts = serde_json::Map::new();
+        facts.insert(
+            "inputs.count".into(),
+            serde_json::json!({
+                "value": staged.len(),
+                "source": { "class": "runner_measured", "identity": "runner:local",
+                            "validator": self.id(), "receipt": format!("plan:{invocation_sha256}") }
+            }),
+        );
+        if self == Self::ShieldingTransport {
+            shielding::transport_facts(staged, invocation_sha256, &mut facts, &mut inputs)?;
+        }
+        Ok(serde_json::json!({ "facts": facts, "inputs": inputs }))
+    }
+
     /// The portable argument list: relative workspace paths only.
     pub fn arguments(
         self,

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/qualification/v0.1-draft.schema.json",
+  "title": "Avila Core Qualification v0.1 draft",
+  "description": "A method owner's scoped statement of where one exact capability implementation's evidence may be trusted: a closed applicability predicate over facts an adapter extracts from verified inputs. Evaluated before a step runs; a claim from outside the envelope, or of unknown position, cannot establish a bounded requirement.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "qualification_id", "revision", "owner", "adapter", "capability", "statement", "scope"],
+  "properties": {
+    "schema_version": { "const": "avila.core/qualification/v0.1-draft" },
+    "qualification_id": { "type": "string", "minLength": 1 },
+    "revision": { "type": "integer", "minimum": 1 },
+    "owner": { "type": "string", "minLength": 1 },
+    "adapter": { "type": "string", "minLength": 1, "description": "The adapter identifier the qualification covers." },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability_id", "executable_sha256"],
+      "properties": {
+        "capability_id": { "type": "string", "minLength": 1 },
+        "executable_sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    },
+    "statement": { "type": "string", "minLength": 1 },
+    "scope": { "type": "object", "description": "A kernel applicability predicate: all, any, not, param_in_range, input_attribute_in, environment_image_in, fact." },
+    "fact_kinds": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Quantity kind for each quantity-valued fact the scope names." },
+    "validation_evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description", "sha256"],
+        "properties": { "description": { "type": "string" }, "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+      }
+    },
+    "limitations": { "type": "array", "items": { "type": "string" } }
+  }
+}

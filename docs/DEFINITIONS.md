@@ -219,6 +219,17 @@ environment, and facts, with validation evidence, exclusions, uncertainty
 limits, reviewers, and lifecycle (SC-7). Qualification is never a global
 "verified" badge, and Core does not create it by storing it.
 
+**Qualification record.** A method owner's document binding one adapter and
+one exact executable to an applicability predicate (its envelope) over
+facts, with the validation evidence it rests on and its limitations. Bound
+by a case package as a `qualification` document. Schema
+`avila.core/qualification/v0.1-draft`.
+
+**Envelope.** The qualification record's scope evaluated over one run's
+facts: `inside`, `outside`, or `unknown`, with each top-level term's result.
+Recorded on the step and on every claim it produces. Outside or unknown
+evidence cannot establish a bounded requirement.
+
 **Applicability predicate.** A closed, non-Turing-complete expression over
 parameters, input attributes, environment, and sourced facts that evaluates
 to `true`, `false`, or `unknown`. `unknown` never counts as `true`.

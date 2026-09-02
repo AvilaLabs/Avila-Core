@@ -46,6 +46,10 @@ pub struct OutputClaim {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub producer: Option<ProducerIdentity>,
     pub claim: ClaimValue,
+    /// The producer's qualification envelope evaluated for this run, when
+    /// the package bound a qualification for the producing capability.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub qualification: Option<crate::qualification::ClaimQualification>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

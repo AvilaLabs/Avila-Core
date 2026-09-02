@@ -103,6 +103,46 @@
         "package_id": "org.python/cpython@3.12.13+openmc-0.15.3",
         "sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
       },
+      "qualification": {
+        "qualification_id": "avila-labs.shielding/slab-transport-openmc",
+        "revision": 1,
+        "sha256": "sha256:f81ad3813faa0d1908be3309305bad195d5a973f3fcc279efed465dcf6673912",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.energy\",\"op\":\"ge\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@1\"},\"value\":{\"unit\":\"MeV\",\"value\":\"0.1\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.energy\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@1\"},\"value\":{\"unit\":\"MeV\",\"value\":\"20\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.geometry\",\"op\":\"eq\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@1\"},\"value\":\"plane\"}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@1\"},\"value\":{\"unit\":\"cm\",\"value\":\"120\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@1\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
       "step_id": "transport"
     },
     {
@@ -119,10 +159,50 @@
         "package_id": "org.python/cpython@3.12.13+openmc-0.15.3",
         "sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
       },
+      "qualification": {
+        "qualification_id": "avila-labs.shielding/slab-transport-openmc",
+        "revision": 1,
+        "sha256": "sha256:f81ad3813faa0d1908be3309305bad195d5a973f3fcc279efed465dcf6673912",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.energy\",\"op\":\"ge\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@1\"},\"value\":{\"unit\":\"MeV\",\"value\":\"0.1\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.energy\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@1\"},\"value\":{\"unit\":\"MeV\",\"value\":\"20\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.geometry\",\"op\":\"eq\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@1\"},\"value\":\"plane\"}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@1\"},\"value\":{\"unit\":\"cm\",\"value\":\"120\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@1\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
       "step_id": "transport"
     }
   ],
-  "compiled_snapshot_sha256": "sha256:90f2c4b79ce0c60671c502f63702461fbbd7835cb8d039e25753eb23a346121d",
+  "compiled_snapshot_sha256": "sha256:199c4c6bb0c5f11b37b828aadeea3da45e9c70dd998ec8b4b20eb19018da4f07",
   "decisions": [],
   "inputs": [
     {

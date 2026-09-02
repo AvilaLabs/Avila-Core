@@ -12,6 +12,7 @@ mod compile;
 mod coverage;
 mod diagnostic;
 mod document;
+mod qualification;
 mod render;
 
 pub use campaign::{
@@ -52,6 +53,11 @@ pub use document::{
     RequirementBasis, RequirementSource, ReviewDeclaration, ReviewDisposition, ReviewIndependence,
     ReviewParty, ReviewPolicyBinding, RoleDefinition, SeparationLevel, SourceRef, TypedQuantity,
     UnitRecord, VersionedRef, WorkflowStep, current_profile_contract,
+};
+pub use qualification::{
+    ClaimQualification, EnvelopeAssessment, EnvelopeState, EnvelopeTerm,
+    QUALIFICATION_SCHEMA_VERSION, QualificationRecord, QualifiedCapability, ValidationEvidence,
+    evaluate_envelope, parse_qualification, registry_kinds,
 };
 pub use render::{
     SourceSpan, locate, render_campaign_report, render_compile_report, render_findings,

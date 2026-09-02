@@ -1256,6 +1256,43 @@ fn show_execute(ui: &mut egui::Ui, report: &CaseRunReport) {
             }
             if !step.changes.is_empty() {
                 ui.label(egui::RichText::new("Changes since the committed receipt").strong());
+                if let Some(assessment) = &step.qualification {
+                    let (label, color) = match assessment.state {
+                        avila_core_compiler::EnvelopeState::Inside => ("INSIDE", GREEN),
+                        avila_core_compiler::EnvelopeState::Outside => ("OUTSIDE", RED),
+                        avila_core_compiler::EnvelopeState::Unknown => ("UNKNOWN", AMBER),
+                    };
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label(egui::RichText::new("Qualification envelope:").strong());
+                        badge(ui, label, color);
+                        ui.label(
+                            egui::RichText::new(format!(
+                                "{} rev {}; {}/{} terms hold",
+                                assessment.qualification_id,
+                                assessment.revision,
+                                assessment
+                                    .terms
+                                    .iter()
+                                    .filter(
+                                        |term| term.result == avila_core_kernel::TruthValue::True
+                                    )
+                                    .count(),
+                                assessment.terms.len()
+                            ))
+                            .color(muted(ui)),
+                        );
+                    });
+                    for term in assessment
+                        .terms
+                        .iter()
+                        .filter(|term| term.result != avila_core_kernel::TruthValue::True)
+                    {
+                        ui.colored_label(RED, format!("{:?}: {}", term.result, term.predicate));
+                    }
+                    for issue in &assessment.issues {
+                        ui.colored_label(RED, issue);
+                    }
+                }
                 for change in &step.changes {
                     ui.horizontal_wrapped(|ui| {
                         badge(

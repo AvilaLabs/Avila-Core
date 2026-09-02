@@ -1,0 +1,19 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "outside-envelope-150",
+  "description": "Three 50 cm polyethylene layers: 150 cm total, beyond the 120 cm the transport qualification covers and beyond the 100 cm the contract allows. Transport runs and produces an interval; Core refuses to let it establish the bounded requirement.",
+  "layers": [
+    {
+      "material": "polyethylene",
+      "thickness_cm": "50"
+    },
+    {
+      "material": "polyethylene",
+      "thickness_cm": "50"
+    },
+    {
+      "material": "polyethylene",
+      "thickness_cm": "50"
+    }
+  ]
+}

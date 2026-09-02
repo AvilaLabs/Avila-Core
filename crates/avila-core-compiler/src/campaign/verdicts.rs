@@ -13,7 +13,9 @@ use super::document::{ClaimValue, ClaimsDocument};
 use super::{AdmissionRecord, AdmissionState, VerdictBoundary, VerdictRecord};
 use crate::compile::registry::RegistryIndex;
 use crate::compile::{CanonicalTypedQuantity, CompiledContract};
+use crate::diagnostic::CORE_A4401;
 use crate::document::{BasisKind, Comparison, QuantityValue, ReviewDisposition, SourceRef};
+use crate::qualification::{ClaimQualification, EnvelopeState};
 
 pub(super) fn evaluate(
     compiled: &CompiledContract,
@@ -94,28 +96,47 @@ pub(super) fn evaluate(
                     present: present_reviews.clone(),
                 },
             };
-            let verdict = evaluator
-                .evaluate(&case)
-                .unwrap_or_else(|error| VerdictOutput {
-                    status: VerdictStatus::NotEvaluated,
-                    rule: "not_evaluated.kernel_refusal".into(),
-                    aggregation: None,
-                    canonical_unit: None,
-                    limit_canonical: None,
-                    lower_canonical: None,
-                    upper_canonical: None,
-                    nominal_canonical: None,
-                    tolerance_canonical: None,
-                    coverage: None,
-                    basis_visible: None,
-                    numbers_present: Some(false),
-                    reasons: vec![VerdictReason::CodeOwner {
-                        code: error.code().into(),
-                        owner: "executor".into(),
-                    }],
-                    reviews_outstanding: Vec::new(),
-                    display_upper_text: None,
-                });
+            // A claim from outside its producer's qualification envelope, or
+            // of unknown position, cannot establish a bounded requirement.
+            // Outstanding review is reported first; the envelope reason is
+            // appended so it is visible either way.
+            let quarantined = quarantined_by_qualification(requirement, claims, admissions);
+            let reviews_satisfied = required_reviews
+                .iter()
+                .all(|step_id| present_reviews.contains(step_id));
+            let verdict = if !quarantined.is_empty()
+                && requirement.basis.kind != BasisKind::Nominal
+                && reviews_satisfied
+            {
+                qualification_verdict(&quarantined)
+            } else {
+                let mut output = evaluator
+                    .evaluate(&case)
+                    .unwrap_or_else(|error| VerdictOutput {
+                        status: VerdictStatus::NotEvaluated,
+                        rule: "not_evaluated.kernel_refusal".into(),
+                        aggregation: None,
+                        canonical_unit: None,
+                        limit_canonical: None,
+                        lower_canonical: None,
+                        upper_canonical: None,
+                        nominal_canonical: None,
+                        tolerance_canonical: None,
+                        coverage: None,
+                        basis_visible: None,
+                        numbers_present: Some(false),
+                        reasons: vec![VerdictReason::CodeOwner {
+                            code: error.code().into(),
+                            owner: "executor".into(),
+                        }],
+                        reviews_outstanding: Vec::new(),
+                        display_upper_text: None,
+                    });
+                if !quarantined.is_empty() && requirement.basis.kind != BasisKind::Nominal {
+                    output.reasons.extend(qualification_reasons(&quarantined));
+                }
+                output
+            };
             VerdictRecord {
                 requirement_id: requirement.requirement_id.clone(),
                 statement: requirement.statement.clone(),
@@ -126,6 +147,88 @@ pub(super) fn evaluate(
             }
         })
         .collect()
+}
+
+/// Admitted claims for the requirement's metric whose producer's envelope
+/// did not contain this run.
+fn quarantined_by_qualification(
+    requirement: &crate::compile::CompiledRequirement,
+    claims: &ClaimsDocument,
+    admissions: &[AdmissionRecord],
+) -> Vec<(String, ClaimQualification)> {
+    admissions
+        .iter()
+        .filter(|record| record.source == requirement.metric)
+        .filter(|record| record.state == AdmissionState::Admitted)
+        .filter_map(|record| {
+            claims
+                .claims
+                .iter()
+                .find(|claim| claim.claim_id == record.evidence_id)
+                .and_then(|claim| claim.qualification.clone())
+                .filter(|qualification| qualification.state != EnvelopeState::Inside)
+                .map(|qualification| (record.evidence_id.clone(), qualification))
+        })
+        .collect()
+}
+
+fn qualification_reasons(quarantined: &[(String, ClaimQualification)]) -> Vec<VerdictReason> {
+    let mut reasons = vec![VerdictReason::CodeOwner {
+        code: CORE_A4401.into(),
+        owner: "method_owner".into(),
+    }];
+    for (evidence_id, qualification) in quarantined {
+        let state = match qualification.state {
+            EnvelopeState::Outside => "outside_qualification",
+            EnvelopeState::Unknown => "qualification_unknown",
+            EnvelopeState::Inside => "inside_qualification",
+        };
+        let failed = qualification.failed_terms();
+        reasons.push(VerdictReason::EvidenceState {
+            evidence_id: evidence_id.clone(),
+            state: if failed.is_empty() {
+                format!(
+                    "{state} ({} rev {})",
+                    qualification.qualification_id, qualification.revision
+                )
+            } else {
+                format!(
+                    "{state} ({} rev {}): {}",
+                    qualification.qualification_id,
+                    qualification.revision,
+                    failed.join("; ")
+                )
+            },
+        });
+    }
+    reasons
+}
+
+fn qualification_verdict(quarantined: &[(String, ClaimQualification)]) -> VerdictOutput {
+    let outside = quarantined
+        .iter()
+        .any(|(_, qualification)| qualification.state == EnvelopeState::Outside);
+    VerdictOutput {
+        status: VerdictStatus::NotEvaluated,
+        rule: if outside {
+            "not_evaluated.outside_qualification".into()
+        } else {
+            "not_evaluated.qualification_unknown".into()
+        },
+        aggregation: None,
+        canonical_unit: None,
+        limit_canonical: None,
+        lower_canonical: None,
+        upper_canonical: None,
+        nominal_canonical: None,
+        tolerance_canonical: None,
+        coverage: None,
+        basis_visible: None,
+        numbers_present: Some(false),
+        reasons: qualification_reasons(quarantined),
+        reviews_outstanding: Vec::new(),
+        display_upper_text: None,
+    }
 }
 
 fn evidence_claim(evidence_id: &str, state: EvidenceState, claim: &ClaimValue) -> EvidenceClaim {

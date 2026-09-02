@@ -505,6 +505,43 @@
         ],
         "campaign_sha256": "sha256:1fee0dda16fa6275c95fe0be4113a990506dd4b0d35efaa2e92bdbee42f887ad"
       }
+    },
+    {
+      "fixture_id": "campaign.outside-qualification.not_evaluated",
+      "clause": "SC-10 A7",
+      "contract": "../types/types.R1.resolved.pass.contract.json",
+      "registry": "../types/compiler.registry.v1.json",
+      "claims": "campaign.outside-qualification.not_evaluated.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [],
+        "admissions": [
+          {
+            "evidence_id": "input:case",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "calculated",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "bounded",
+            "state": "admitted",
+            "reasons": []
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "not_evaluated",
+            "rule": "not_evaluated.outside_qualification",
+            "reviews_outstanding": []
+          }
+        ],
+        "campaign_sha256": "sha256:22a3d18173bada92773ef7f4ed1d68dea5acd096013f6389dfac794c2ef6e169"
+      }
     }
   ]
 }

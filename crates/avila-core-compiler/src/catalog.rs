@@ -35,6 +35,13 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         next_action: "Add each produced role to the execution policy, accepting that execution memoization stays disabled for the step, or choose a deterministic or seeded-stochastic type. The owner is the policy owner.",
     },
     DiagnosticExplanation {
+        code: "CORE-A4401",
+        title: "Evidence outside its qualification envelope",
+        rule: "SC-10 A7",
+        meaning: "A bounded or enclosure requirement depends on a claim whose producing capability carries a qualification, and this run's facts fall outside that envelope or their position is unknown: a fact is missing, comes from a weaker source than the envelope requires, or a term evaluates false. The calculation may be fine; it is not qualified here, so the requirement is not evaluated on it.",
+        next_action: "Bring the case inside the envelope, extend the qualification with validation evidence for the new range, or supply the missing fact from an admissible source. The owner is the method owner.",
+    },
+    DiagnosticExplanation {
         code: "CORE-E7001",
         title: "Claims bind a different snapshot",
         rule: "SC-11",

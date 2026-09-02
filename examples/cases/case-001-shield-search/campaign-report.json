@@ -2,8 +2,8 @@
   "schema_version": "avila.core/campaign-report/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "status": "evaluated",
-  "compiled_snapshot_sha256": "sha256:90f2c4b79ce0c60671c502f63702461fbbd7835cb8d039e25753eb23a346121d",
-  "claims_sha256": "sha256:667d2d836d5f31091586e35fbe0ae5234c86eb130383ffe700b1d1e1c963130f",
+  "compiled_snapshot_sha256": "sha256:199c4c6bb0c5f11b37b828aadeea3da45e9c70dd998ec8b4b20eb19018da4f07",
+  "claims_sha256": "sha256:c6c26f17919b79c966ac09db8a2548a7687f15211d2f7cc43eab52fe0d5c937b",
   "admissions": [
     {
       "evidence_id": "input:candidate",
@@ -132,8 +132,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:90f2c4b79ce0c60671c502f63702461fbbd7835cb8d039e25753eb23a346121d",
-        "claims_sha256": "sha256:667d2d836d5f31091586e35fbe0ae5234c86eb130383ffe700b1d1e1c963130f",
+        "compiled_snapshot_sha256": "sha256:199c4c6bb0c5f11b37b828aadeea3da45e9c70dd998ec8b4b20eb19018da4f07",
+        "claims_sha256": "sha256:c6c26f17919b79c966ac09db8a2548a7687f15211d2f7cc43eab52fe0d5c937b",
         "review_attestation": "unverified"
       }
     },
@@ -161,8 +161,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:90f2c4b79ce0c60671c502f63702461fbbd7835cb8d039e25753eb23a346121d",
-        "claims_sha256": "sha256:667d2d836d5f31091586e35fbe0ae5234c86eb130383ffe700b1d1e1c963130f",
+        "compiled_snapshot_sha256": "sha256:199c4c6bb0c5f11b37b828aadeea3da45e9c70dd998ec8b4b20eb19018da4f07",
+        "claims_sha256": "sha256:c6c26f17919b79c966ac09db8a2548a7687f15211d2f7cc43eab52fe0d5c937b",
         "review_attestation": "unverified"
       }
     },
@@ -190,8 +190,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:90f2c4b79ce0c60671c502f63702461fbbd7835cb8d039e25753eb23a346121d",
-        "claims_sha256": "sha256:667d2d836d5f31091586e35fbe0ae5234c86eb130383ffe700b1d1e1c963130f",
+        "compiled_snapshot_sha256": "sha256:199c4c6bb0c5f11b37b828aadeea3da45e9c70dd998ec8b4b20eb19018da4f07",
+        "claims_sha256": "sha256:c6c26f17919b79c966ac09db8a2548a7687f15211d2f7cc43eab52fe0d5c937b",
         "review_attestation": "unverified"
       }
     },
@@ -219,12 +219,12 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:90f2c4b79ce0c60671c502f63702461fbbd7835cb8d039e25753eb23a346121d",
-        "claims_sha256": "sha256:667d2d836d5f31091586e35fbe0ae5234c86eb130383ffe700b1d1e1c963130f",
+        "compiled_snapshot_sha256": "sha256:199c4c6bb0c5f11b37b828aadeea3da45e9c70dd998ec8b4b20eb19018da4f07",
+        "claims_sha256": "sha256:c6c26f17919b79c966ac09db8a2548a7687f15211d2f7cc43eab52fe0d5c937b",
         "review_attestation": "unverified"
       }
     }
   ],
-  "campaign_sha256": "sha256:eec220eb9a2ed634b1d222d1751ec38645263cd62cd08a921ddfcbf2d061df00",
+  "campaign_sha256": "sha256:146ffc171d4af6778c00ff4ac81f6deba102be2102c289a6a3d94bc5e38b8998",
   "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked, and review decisions are unverified assertions. No verdict here is scientific truth, certification, or regulatory approval."
 }

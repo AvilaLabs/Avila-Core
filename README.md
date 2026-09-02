@@ -64,6 +64,12 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   satisfies the bounded one, every verdict carries its exact margin, and
   `--log` appends one line per run to a campaign log that a scripted
   designer in `examples/agents/` drives through the two-fidelity loop;
+- qualification envelopes: a method owner's record binds an exact executable
+  and adapter to a kernel applicability predicate over facts the adapter
+  reads from verified inputs; the runner evaluates it before a step runs and
+  attaches it to the step's claims, and a bounded requirement whose evidence
+  lies outside the envelope is `NOT_EVALUATED` with the failed term named,
+  even though the calculation ran;
 - requirement-set coverage: a library states what any contract in its domain
   must address (`examples/libraries/`), the case declares what covers each
   entry and why the rest are omitted with an accepting owner, and `run`
@@ -85,7 +91,7 @@ conformance-vector corpus. The Rust kernel executes all 91 current pure vectors:
 12 canonical-value, 10 unit-scaling, 19 scope-predicate, 42 requirement-verdict,
 and 8 aggregate-verdict cases. A separate compiler harness executes 68 current
 type fixtures across five pinned registry snapshots, and a campaign harness
-executes 12 claim-admission and verdict fixtures. The first R1–R10 static
+executes 13 claim-admission and verdict fixtures. The first R1–R10 static
 compiler frontier and a type-level SC-10/SC-11 campaign slice are implemented,
 but package-level rule halves, other normative fixture families, full
 package-level admission, invalidation, and package semantics remain proposed

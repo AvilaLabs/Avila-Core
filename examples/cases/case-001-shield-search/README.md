@@ -104,6 +104,35 @@ Remove one omission from `package.json` and the run stops there with
 best neutron shield it could inside a question that, by its own declaration,
 does not ask about capture photons.
 
+## Qualification envelope
+
+`qualification.json` is a qualification record for the transport capability:
+this exact interpreter and script, over a plane source of 0.1 to 20 MeV
+neutrons, through at most three layers of the listed materials, at most
+120 cm in total. It binds no validation evidence and says so in its
+limitations; it exists so that Core can refuse what lies beyond it and so a
+real qualification has a place to go. Before the transport step runs, the
+adapter reports the source energy and geometry, the slab's thickness and
+layer count, and each layer's material as facts with the input's identity as
+provenance, and the kernel evaluates the scope:
+
+```text
+envelope avila-labs.shielding/slab-transport-openmc rev 1: [INSIDE] 8/8 terms hold
+```
+
+`candidates/outside-envelope.json` is 150 cm of polyethylene in three layers.
+Planning it already reports `[OUTSIDE] 7/8 terms hold` and names the
+thickness term. Running it through transport produces a perfectly good
+interval that Core refuses to let establish the bounded requirement:
+
+```text
+[PASS] SHIELD-R1-screen — nominal.le.within (nominal ~0.0128 uSv/h; …)
+[NOT_EVALUATED] SHIELD-R2-transport — not_evaluated.outside_qualification
+   because: CORE-A4401 (owner method_owner); transport-dose-rate: outside_qualification (avila-labs.shielding/slab-transport-openmc rev 1): {"fact":{"name":"slab.total_thickness","op":"le",…"value":{"unit":"cm","value":"120"}}} -> False
+[PASS] SHIELD-R3-mass — bounded.le.within ([1410, 1410] kg; limit 1500 kg; margin 90 kg)
+[FAIL] SHIELD-R4-thickness — bounded.le.exceeds ([150, 150] cm; limit 100 cm; margin -50 cm)
+```
+
 ## What the package binds
 
 - **Capabilities:** `python3` (the system interpreter, by digest) for the

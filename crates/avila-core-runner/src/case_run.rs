@@ -15,10 +15,12 @@ use std::path::{Path, PathBuf};
 
 use avila_core_compiler::Comparison;
 use avila_core_compiler::{
-    AdmissionState, BasisKind, CampaignReport, CampaignStatus, ClaimsDocument, CompilationStatus,
-    CompileReport, CompiledContract, CompiledStep, CoverageDeclaration, CoverageReport,
-    CoverageState, CoverageStatus, DeclaredOmission, SourceRef, assess_coverage, compile_documents,
-    evaluate_campaign, parse_requirement_set, render_campaign_report, render_compile_report,
+    AdmissionState, BasisKind, CampaignReport, CampaignStatus, ClaimQualification, ClaimsDocument,
+    CompilationStatus, CompileReport, CompiledContract, CompiledStep, CoverageDeclaration,
+    CoverageReport, CoverageState, CoverageStatus, DeclaredOmission, EnvelopeAssessment,
+    EnvelopeState, QualificationRecord, SourceRef, assess_coverage, compile_documents,
+    evaluate_campaign, evaluate_envelope, parse_qualification, parse_requirement_set,
+    registry_kinds, render_campaign_report, render_compile_report,
 };
 use avila_core_evidence::PackageArtifact;
 use avila_core_evidence::{
@@ -28,7 +30,7 @@ use avila_core_evidence::{
     ReceiptOutput, ReceiptStatus, VerifiedCasePackage, parse_receipt, sha256_file,
     verify_case_package, verify_receipt,
 };
-use avila_core_kernel::{ExactNumber, VerdictStatus};
+use avila_core_kernel::{ExactNumber, KindRegistry, TruthValue, VerdictStatus};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -309,6 +311,10 @@ pub struct StepExecutionReport {
     /// The committed receipt document this step was reused from.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reused_receipt: Option<String>,
+    /// The producing capability's qualification envelope evaluated over this
+    /// run's facts, when the package binds a qualification for it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub qualification: Option<EnvelopeAssessment>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub receipt: Option<ReceiptSummary>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -571,6 +577,10 @@ pub fn execute_case(
     // stops the workflow: no claim is generated over an unverified run.
     let mut executed_claims = Vec::new();
     let mut workspace = None;
+    let envelopes = Envelopes {
+        records: load_qualifications(&package)?,
+        kinds: registry_kinds(registry)?,
+    };
     if !package.manifest.executions.is_empty() {
         let mut runner = Runner::new(
             &package,
@@ -579,6 +589,7 @@ pub fn execute_case(
             &committed_claims,
             &supplied_inputs,
             replay_applicable,
+            &envelopes,
         );
         let execution = runner.run_all()?;
         executed_claims = runner.claims;
@@ -1068,6 +1079,85 @@ struct Runner<'a> {
     supplied: BTreeMap<String, PathBuf>,
     /// Whether committed receipts describe this run's candidate.
     replay_applicable: bool,
+    /// The package's qualification records and the kinds their facts scale by.
+    envelopes: &'a Envelopes,
+    /// The envelope assessment of the step being run, attached to its claims.
+    current_qualification: Option<Value>,
+}
+
+/// A qualification record the package binds, already checked against the
+/// capability it names.
+pub struct BoundQualification {
+    pub sha256: String,
+    pub record: QualificationRecord,
+}
+
+/// What envelope evaluation needs: the bound records and the registry's
+/// quantity kinds.
+pub struct Envelopes {
+    pub records: Vec<BoundQualification>,
+    pub kinds: KindRegistry,
+}
+
+/// Load the package's `qualification` documents and refuse any whose bound
+/// executable is not the one the package binds under that capability id.
+fn load_qualifications(
+    package: &VerifiedCasePackage,
+) -> Result<Vec<BoundQualification>, Box<dyn Error>> {
+    let mut bound = Vec::new();
+    for document in package
+        .manifest
+        .documents
+        .iter()
+        .filter(|document| document.role == "qualification")
+    {
+        let bytes = package
+            .document_by_id(&document.document_id)
+            .ok_or_else(|| {
+                format!(
+                    "qualification document `{}` has no bytes",
+                    document.document_id
+                )
+            })?;
+        let record = parse_qualification(bytes)
+            .map_err(|error| format!("document `{}`: {error}", document.document_id))?;
+        let capability = package
+            .manifest
+            .capabilities
+            .iter()
+            .find(|capability| capability.capability_id == record.capability.capability_id)
+            .ok_or_else(|| {
+                format!(
+                    "qualification `{}` names capability `{}`, which the package does not bind",
+                    record.qualification_id, record.capability.capability_id
+                )
+            })?;
+        if capability.executable_sha256 != record.capability.executable_sha256 {
+            return Err(format!(
+                "qualification `{}` covers executable {} but the package binds {} as `{}`",
+                record.qualification_id,
+                record.capability.executable_sha256,
+                capability.executable_sha256,
+                capability.capability_id
+            )
+            .into());
+        }
+        if !package.manifest.executions.iter().any(|execution| {
+            execution.adapter == record.adapter
+                && execution.capability_id == record.capability.capability_id
+        }) {
+            return Err(format!(
+                "qualification `{}` covers adapter `{}` under `{}`, but no execution uses that pair",
+                record.qualification_id, record.adapter, record.capability.capability_id
+            )
+            .into());
+        }
+        bound.push(BoundQualification {
+            sha256: document.sha256.clone(),
+            record,
+        });
+    }
+    Ok(bound)
 }
 
 impl<'a> Runner<'a> {
@@ -1078,6 +1168,7 @@ impl<'a> Runner<'a> {
         committed_claims: &'a Value,
         supplied_inputs: &[SuppliedInput],
         replay_applicable: bool,
+        envelopes: &'a Envelopes,
     ) -> Self {
         let artifact_checks = package
             .integrity
@@ -1114,6 +1205,8 @@ impl<'a> Runner<'a> {
                 .map(|input| (input.evidence_id.clone(), PathBuf::from(&input.path)))
                 .collect(),
             replay_applicable,
+            envelopes,
+            current_qualification: None,
         }
     }
 
@@ -1159,6 +1252,7 @@ impl<'a> Runner<'a> {
                     planned_invocation_sha256: None,
                     changes: Vec::new(),
                     reused_receipt: None,
+            qualification: None,
                     receipt: None,
                     outputs: Vec::new(),
                     verification: None,
@@ -1224,6 +1318,7 @@ impl<'a> Runner<'a> {
             planned_invocation_sha256: None,
             changes: Vec::new(),
             reused_receipt: None,
+            qualification: None,
             receipt: None,
             outputs: Vec::new(),
             verification: None,
@@ -1446,6 +1541,43 @@ impl<'a> Runner<'a> {
             }
         };
         report.planned_invocation_sha256 = Some(plan.invocation_sha256.clone());
+
+        // The producer's qualification envelope over this run's facts, when
+        // the package binds one for this adapter and capability. Evaluated
+        // before anything runs so a plan can already say "outside".
+        if let Some(bound) = self.envelopes.records.iter().find(|bound| {
+            bound.record.adapter == execution.adapter
+                && bound.record.capability.capability_id == execution.capability_id
+        }) {
+            let mut staged_bytes = Vec::with_capacity(staged.len());
+            for input in &staged {
+                staged_bytes.push((
+                    input.input_slot.clone(),
+                    input.media_type.clone(),
+                    input.expected_sha256.clone(),
+                    fs::read(&input.source_path)?,
+                ));
+            }
+            match adapter.applicability(&staged_bytes, &plan.invocation_sha256) {
+                Ok(context) => {
+                    report.qualification = Some(evaluate_envelope(
+                        &bound.record,
+                        &bound.sha256,
+                        &self.envelopes.kinds,
+                        &context,
+                    ));
+                }
+                Err(error) => {
+                    report
+                        .issues
+                        .push(format!("facts for the qualification envelope: {error}"));
+                    return Ok(report);
+                }
+            }
+        }
+        self.current_qualification = report.qualification.as_ref().map(|assessment| {
+            serde_json::to_value(ClaimQualification::from(assessment)).unwrap_or(Value::Null)
+        });
 
         // Compare with the committed receipt: what changed, by class.
         let committed = self.committed_receipt(&step.step_id)?;
@@ -1763,6 +1895,7 @@ impl<'a> Runner<'a> {
         produced: &[(ReceiptOutput, PathBuf)],
         reused: bool,
     ) -> Result<(), Box<dyn Error>> {
+        let qualification = self.current_qualification.clone();
         for claim in extracted {
             let (output, path) = produced
                 .iter()
@@ -1793,6 +1926,7 @@ impl<'a> Runner<'a> {
                 producer_package_id: identity.package_id.clone(),
                 producer_sha256: identity.executable_sha256.clone(),
                 claim: claim.claim.clone(),
+                qualification: qualification.clone(),
                 reused,
             });
         }
@@ -2616,6 +2750,35 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                             .join("; ")
                     );
                 }
+                if let Some(assessment) = &step.qualification {
+                    let state = match assessment.state {
+                        EnvelopeState::Inside => "INSIDE",
+                        EnvelopeState::Outside => "OUTSIDE",
+                        EnvelopeState::Unknown => "UNKNOWN",
+                    };
+                    let failed: Vec<String> = assessment
+                        .terms
+                        .iter()
+                        .filter(|term| term.result != TruthValue::True)
+                        .map(|term| format!("{} -> {:?}", term.predicate, term.result))
+                        .collect();
+                    let _ = writeln!(
+                        out,
+                        "      envelope {} rev {}: [{state}] {}/{} terms hold{}",
+                        assessment.qualification_id,
+                        assessment.revision,
+                        assessment.terms.len() - failed.len(),
+                        assessment.terms.len(),
+                        if failed.is_empty() {
+                            String::new()
+                        } else {
+                            format!("; {}", failed.join("; "))
+                        }
+                    );
+                    for issue in &assessment.issues {
+                        let _ = writeln!(out, "         issue: {issue}");
+                    }
+                }
                 for issue in &step.issues {
                     let _ = writeln!(out, "      issue: {issue}");
                 }
@@ -2793,6 +2956,23 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                     verdict.requirement_id,
                     verdict.verdict.rule
                 );
+                let reasons: Vec<String> = verdict
+                    .verdict
+                    .reasons
+                    .iter()
+                    .filter_map(|reason| match reason {
+                        avila_core_kernel::VerdictReason::EvidenceState { evidence_id, state } => {
+                            Some(format!("{evidence_id}: {state}"))
+                        }
+                        avila_core_kernel::VerdictReason::CodeOwner { code, owner } => {
+                            Some(format!("{code} (owner {owner})"))
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                if verdict.verdict.status == VerdictStatus::NotEvaluated && !reasons.is_empty() {
+                    let _ = writeln!(out, "      because: {}", reasons.join("; "));
+                }
             }
             if let Some(identity) = &campaign.campaign_sha256 {
                 let _ = writeln!(out, "   campaign {identity}");

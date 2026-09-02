@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/execution-receipt/v0.1-draft",
   "case_id": "CASE-001",
-  "compiled_snapshot_sha256": "sha256:90f2c4b79ce0c60671c502f63702461fbbd7835cb8d039e25753eb23a346121d",
+  "compiled_snapshot_sha256": "sha256:199c4c6bb0c5f11b37b828aadeea3da45e9c70dd998ec8b4b20eb19018da4f07",
   "step_id": "transport",
   "capability_type": {
     "id": "shielding.slab-transport",
@@ -101,9 +101,9 @@
   },
   "invocation_sha256": "sha256:06ec7d8ab3ee1273760887ebff1aa941d82b92b4c249f3af79578009c649adfb",
   "process": {
-    "started_at": "2026-09-02T18:56:54.174Z",
-    "finished_at": "2026-09-02T18:57:47.929Z",
-    "duration_ms": 53754,
+    "started_at": "2026-09-02T19:52:03.382Z",
+    "finished_at": "2026-09-02T19:52:55.964Z",
+    "duration_ms": 52581,
     "exit_status": 0,
     "timed_out": false
   },

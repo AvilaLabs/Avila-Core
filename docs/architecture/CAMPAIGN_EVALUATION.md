@@ -36,7 +36,11 @@ A claims document carries:
   (`sha256:` digest and media type) that stood for it;
 - **output claims**: for each executed step output, the artifact identity, an
   optional producer identity, and the uncertainty claim in one of the SC-3
-  models the kernel reduces: `exact`, `interval`, `coverage_interval`,
+  models the kernel reduces (an output claim may also carry the producing
+  capability's evaluated qualification envelope; a bounded or enclosure
+  requirement whose admitted evidence is outside its envelope, or of
+  unknown position, is `NOT_EVALUATED` under `CORE-A4401` before the kernel
+  is asked, see ADR-0008): `exact`, `interval`, `coverage_interval`,
   `worst_case`, or `unquantified`; and
 - **review decisions**: for each accountable-review step, one asserted
   disposition with a rationale and a reviewer identity, marked `unverified`.

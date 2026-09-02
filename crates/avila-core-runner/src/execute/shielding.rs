@@ -300,3 +300,141 @@ mod tests {
         assert_eq!(claims[0].claim["coverage"], json!("0.95"));
     }
 }
+
+/// Facts the transport qualification can be written over: the source energy
+/// and geometry, the slab's total thickness and layer count, and each
+/// layer's material as an attribute of the candidate input (absent layers
+/// read `none`, so an envelope can list them explicitly).
+pub fn transport_facts(
+    staged: &[(String, String, String, Vec<u8>)],
+    invocation_sha256: &str,
+    facts: &mut serde_json::Map<String, Value>,
+    inputs: &mut serde_json::Map<String, Value>,
+) -> Result<(), String> {
+    let receipt = format!("plan:{invocation_sha256}");
+    let source_of = |identity: &str| {
+        json!({ "class": "validated_input", "identity": identity,
+                "validator": TRANSPORT_ADAPTER_ID, "receipt": receipt })
+    };
+    for (slot, _, sha256, bytes) in staged {
+        match slot.as_str() {
+            "source" => {
+                let document: Value = serde_json::from_slice(bytes)
+                    .map_err(|error| format!("source document: {error}"))?;
+                if let Some(energy) = document.get("energy_MeV").and_then(Value::as_str) {
+                    facts.insert(
+                        "source.energy".into(),
+                        json!({ "value": { "value": energy, "unit": "MeV" }, "source": source_of(sha256) }),
+                    );
+                }
+                facts.insert(
+                    "source.geometry".into(),
+                    json!({ "value": "plane", "source": source_of(sha256) }),
+                );
+            }
+            "candidate" => {
+                let document: Value = serde_json::from_slice(bytes)
+                    .map_err(|error| format!("candidate document: {error}"))?;
+                let layers = document
+                    .get("layers")
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_default();
+                let mut total = Decimal::ZERO;
+                let mut attributes = serde_json::Map::new();
+                for (index, layer) in layers.iter().enumerate() {
+                    let thickness = layer
+                        .get("thickness_cm")
+                        .and_then(Value::as_str)
+                        .ok_or_else(|| format!("layer {} has no thickness_cm", index + 1))?;
+                    total = total
+                        .checked_add(&Decimal::parse(thickness)?)
+                        .ok_or("thickness overflow")?;
+                    attributes.insert(
+                        format!("layer.{}.material", index + 1),
+                        json!(layer.get("material").and_then(Value::as_str).unwrap_or("")),
+                    );
+                }
+                for index in layers.len()..3 {
+                    attributes.insert(format!("layer.{}.material", index + 1), json!("none"));
+                }
+                facts.insert(
+                    "slab.total_thickness".into(),
+                    json!({ "value": { "value": total.to_string(), "unit": "cm" }, "source": source_of(sha256) }),
+                );
+                facts.insert(
+                    "slab.layer_count".into(),
+                    json!({ "value": layers.len(), "source": source_of(sha256) }),
+                );
+                let entry = inputs
+                    .entry("candidate".to_string())
+                    .or_insert_with(|| json!({ "attributes": {} }));
+                if let Some(existing) = entry.get_mut("attributes").and_then(Value::as_object_mut) {
+                    existing.extend(attributes);
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+/// A minimal exact decimal for summing authored thicknesses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Decimal {
+    /// Value times 10^scale.
+    units: i128,
+    scale: u32,
+}
+
+impl Decimal {
+    const ZERO: Self = Self { units: 0, scale: 0 };
+
+    fn parse(text: &str) -> Result<Self, String> {
+        let text = text.trim();
+        let (whole, fraction) = text.split_once('.').unwrap_or((text, ""));
+        if whole.is_empty() && fraction.is_empty()
+            || !whole.chars().all(|c| c.is_ascii_digit())
+            || !fraction.chars().all(|c| c.is_ascii_digit())
+        {
+            return Err(format!("`{text}` is not a plain non-negative decimal"));
+        }
+        let digits = format!("{whole}{fraction}");
+        let units = digits
+            .parse::<i128>()
+            .map_err(|_| format!("`{text}` is too large"))?;
+        Ok(Self {
+            units,
+            scale: u32::try_from(fraction.len()).map_err(|_| "scale overflow".to_string())?,
+        })
+    }
+
+    fn checked_add(self, other: &Self) -> Option<Self> {
+        let scale = self.scale.max(other.scale);
+        let lift = |value: Self| {
+            value
+                .units
+                .checked_mul(10_i128.checked_pow(scale - value.scale)?)
+        };
+        Some(Self {
+            units: lift(self)?.checked_add(lift(*other)?)?,
+            scale,
+        })
+    }
+}
+
+impl std::fmt::Display for Decimal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.scale == 0 {
+            return write!(f, "{}", self.units);
+        }
+        let digits = format!("{:0width$}", self.units, width = self.scale as usize + 1);
+        let (whole, fraction) = digits.split_at(digits.len() - self.scale as usize);
+        let fraction = fraction.trim_end_matches('0');
+        if fraction.is_empty() {
+            write!(f, "{whole}")
+        } else {
+            write!(f, "{whole}.{fraction}")
+        }
+    }
+}

@@ -125,7 +125,18 @@ exactly what fell short and by how much, and the log holds every candidate.
   the set's minimum (the screen's nominal basis, for example) does not count.
   The search's optimum is now qualified by what it did not ask.
 
-Not yet: qualification envelopes, physical evidence as a capability, staged
-agent review, and any optimizer or constellation view over the log. The
+- **Qualification envelopes.** The transport capability carries a
+  qualification record whose scope is a kernel predicate over facts the
+  adapter reads from the verified source and candidate: energy range, plane
+  geometry, at most three layers of listed materials, at most 120 cm. The
+  runner evaluates it before the step runs, `--plan` already says
+  `OUTSIDE` and names the term, and a bounded requirement whose evidence
+  lies outside is `NOT_EVALUATED` even though transport ran. This is the
+  "beyond a validation envelope, Core says so" rule, minus the validation
+  evidence itself, which the first record honestly does not bind.
+
+Not yet: validation evidence behind an envelope, enforcement of
+qualification for every bounded verdict, physical evidence as a capability,
+staged agent review, and any optimizer or constellation view over the log. The
 workbench exposes free inputs, environment values, margins, and coverage,
 but cannot yet drive a search itself.

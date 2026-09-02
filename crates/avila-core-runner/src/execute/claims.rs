@@ -30,6 +30,8 @@ pub struct GeneratedClaim {
     pub producer_package_id: String,
     pub producer_sha256: String,
     pub claim: Value,
+    /// The producer's envelope for this run, when the package qualifies it.
+    pub qualification: Option<Value>,
     /// Whether the output was reused from a committed receipt rather than
     /// produced by a fresh execution in this run.
     pub reused: bool,
@@ -133,6 +135,11 @@ pub fn generate_claims(
                     "producer": { "package_id": claim.producer_package_id, "sha256": claim.producer_sha256 },
                     "claim": claim.claim,
                 }));
+                if let Some(qualification) = &claim.qualification
+                    && let Some(object) = claims.last_mut().and_then(Value::as_object_mut)
+                {
+                    object.insert("qualification".into(), qualification.clone());
+                }
             }
         } else {
             for claim in committed_claims.iter().filter(|claim| {

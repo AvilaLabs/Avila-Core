@@ -13,6 +13,10 @@ omitted, with the owner who accepted each omission. `avila-core run` assesses
 that coverage after compiling and before executing anything; an entry the set
 says must be stated, left uncovered without a statement, stops the run.
 
+A library also owns its capabilities' qualification records (ADR-0008):
+CASE-001's transport record lives with the case for now, binds no
+validation evidence, and says so.
+
 Nothing here is qualified. The shielding set is written by the case author for
 a research specimen; a real library's set is owned and reviewed by the domain's
 professionals, and its identity is what a reviewer cites.

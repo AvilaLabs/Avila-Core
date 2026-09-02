@@ -72,12 +72,14 @@ The scaffold deliberately implements only the shaded foundation implied below:
 
 ```text
 avila-core-kernel            (first canonical-value semantic slice)
-    └── avila-core-compiler  (v0.2-draft document types, static compilation,
-        │                     semantic IR, and the diagnostic catalog)
-        ├── avila-core-cli   (canonicalize, compile, evaluate, explain)
-        └── avila-core-app   (thin client rendering compile reports)
-
-avila-core-evidence          (record model + hashing only)
+    ├── avila-core-compiler  (v0.2-draft document types, static compilation,
+    │   │                     semantic IR, campaign evaluation, and the
+    │   │                     diagnostic catalog)
+    │   ├── avila-core-cli   (canonicalize, compile, evaluate, explain, and
+    │   │                     the case runner with case-specific adapters)
+    │   └── avila-core-app   (thin client rendering compile reports)
+    └── avila-core-evidence  (record model, hashing, case-package integrity,
+                              and execution receipts)
 ```
 
 The `v0.1` contract model and planner were retired once the compiler's
@@ -127,17 +129,22 @@ admission conditions and derives verdicts with the kernel; see the
 
 ### `avila-core-evidence`
 
-Defines draft evidence records and SHA-256 content identities. It has no package
+Defines draft evidence records, SHA-256 content identities, the case-package
+manifest with its bound capabilities and executions, and the execution
+receipt record with its byte-level verification (ADR-0007). It has no package
 writer, signature system, lineage validator, or independent verifier yet.
 
 ### `avila-core-cli`
 
 Provides authoritative JSON canonicalization, embedded semantic-profile and
 vector-set identities, `v0.2-draft` compilation with a nonzero exit status for
-a rejected contract, campaign evaluation over a claims document, and the
-diagnostic catalog through `explain`. All output
-explicitly distinguishes software conformance or structural validity from
-scientific validity.
+a rejected contract, campaign evaluation over a claims document, the
+diagnostic catalog through `explain`, and the composed case workflow through
+`run`: integrity, compilation, execution of declared steps through named
+case-specific adapters over exact executables, receipt verification, claim
+generation, binding, evaluation, and replay. All output explicitly
+distinguishes software conformance, structural validity, and process
+provenance from scientific validity.
 
 ### `avila-core-app`
 
@@ -206,10 +213,14 @@ construct admissions and verdicts.
 14. The packager writes a human-readable and machine-readable evidence package;
     the independent verifier checks it from the package root.
 
-Steps 11 and 13 have a first executable slice: type-level admission over a
-claims document and kernel verdicts with review asymmetry. Steps 4 to 10 and
-14 do not exist yet. Any failure before step 13 yields no verdict. A completed method that cannot decide
-the requirement may yield `INCONCLUSIVE` when the contract permits it.
+Steps 9 to 11 and 13 have first executable slices: for the steps a committed
+case declares, a case-specific runner stages verified bytes, invokes the bound
+executable, and writes a receipt verified from bytes; adapters extract claims
+from declared outputs; type-level admission over the generated claims and
+kernel verdicts with review asymmetry follow. Steps 4 to 8, generic output
+validators, and step 14 do not exist yet. Any failure before step 13 yields
+no verdict. A completed method that cannot decide the requirement may yield
+`INCONCLUSIVE` when the contract permits it.
 
 ## Execution neutrality
 

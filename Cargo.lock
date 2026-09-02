@@ -488,6 +488,7 @@ dependencies = [
  "clap",
  "serde",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]
@@ -506,6 +507,7 @@ dependencies = [
 name = "avila-core-evidence"
 version = "0.1.0"
 dependencies = [
+ "avila-core-kernel",
  "serde",
  "serde_json",
  "sha2",

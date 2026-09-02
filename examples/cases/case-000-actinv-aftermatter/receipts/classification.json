@@ -1,0 +1,153 @@
+{
+  "schema_version": "avila.core/execution-receipt/v0.1-draft",
+  "case_id": "CASE-000",
+  "compiled_snapshot_sha256": "sha256:c742b277c45deae6ba9935a1729d254eae22fffc8e4311ac5e30bfcd5c975c95",
+  "step_id": "classification",
+  "capability_type": {
+    "id": "aftermatter.activated-metal-disposition",
+    "major": 1
+  },
+  "adapter": "avila-labs.aftermatter/evaluate@1",
+  "capability": {
+    "capability_id": "aftermatter-cli",
+    "package_id": "avila-labs.aftermatter/aftermatter-cli@0.1.0",
+    "source_repository": "https://github.com/AvilaLabs/Aftermatter",
+    "source_commit": "70a1c341d478bc37bf1ed0206dad4ee507cf743d",
+    "executable_sha256": "sha256:7f5067fead9fb1a25ec3937877a24a54533769515996ce0f4038bce2d8b05943"
+  },
+  "parameters": {
+    "checkpoint_id": {
+      "type": "text",
+      "value": "cool-50y"
+    }
+  },
+  "inputs": [
+    {
+      "input_slot": "case",
+      "evidence_id": "input:aftermatter-case",
+      "workspace_path": "cases/r0/case.json",
+      "media_type": "application/vnd.aftermatter.project+json",
+      "sha256": "sha256:5b63361ac78e2090c556f5d67dba5033c385dbdfc606566c130cf72f553f007b",
+      "bytes": 2896
+    },
+    {
+      "input_slot": "clive-rulepack",
+      "evidence_id": "input:aftermatter-clive-rulepack",
+      "workspace_path": "rulepacks/facilities/clive-bwf-rev11-r0.json",
+      "media_type": "application/vnd.aftermatter.rulepack+json",
+      "sha256": "sha256:22d6cc2b045227073faa56654bf7a70938eef04c323823b7e5771472aa5fed3c",
+      "bytes": 1015
+    },
+    {
+      "input_slot": "decay-metadata",
+      "evidence_id": "input:aftermatter-decay-metadata",
+      "workspace_path": "cases/r0/reference/decay-half-lives.json",
+      "media_type": "application/vnd.aftermatter.decay-metadata+json",
+      "sha256": "sha256:d80f972fe26608139cb26d5a31a9a2bfc7a461be928fb8984f71830bf505535c",
+      "bytes": 89846
+    },
+    {
+      "input_slot": "federal-rulepack",
+      "evidence_id": "input:aftermatter-federal-rulepack",
+      "workspace_path": "rulepacks/us/10-cfr-61.55-r0.json",
+      "media_type": "application/vnd.aftermatter.rulepack+json",
+      "sha256": "sha256:c9ef110349c22de71eb6677c9a85bdc39b250ba4368246c18d701b236542bd49",
+      "bytes": 2530
+    },
+    {
+      "input_slot": "inventory",
+      "evidence_id": "actinv-r0-inventory",
+      "workspace_path": "cases/r0/reference/actinv-result.json",
+      "media_type": "application/vnd.aftermatter.inventory+json",
+      "sha256": "sha256:3942d6f3337b786c018ac28474f4e7206d4d49301317812e7aef80058ca62bc8",
+      "bytes": 147839
+    },
+    {
+      "input_slot": "sources-manifest",
+      "evidence_id": "input:aftermatter-sources-manifest",
+      "workspace_path": "sources/MANIFEST.json",
+      "media_type": "application/vnd.aftermatter.source-manifest+json",
+      "sha256": "sha256:50faba035c762f7e47ed1624a6b78064809e43b6e8f835c083c195e4743816b1",
+      "bytes": 7623
+    },
+    {
+      "input_slot": "wcs-rulepack",
+      "evidence_id": "input:aftermatter-wcs-rulepack",
+      "workspace_path": "rulepacks/facilities/wcs-cwf-rev11-r0.json",
+      "media_type": "application/vnd.aftermatter.rulepack+json",
+      "sha256": "sha256:eb9142992c0963b7cf0fab47eac9cdbc79ba20f9bf0509554b200b02c902d52c",
+      "bytes": 1283
+    }
+  ],
+  "invocation": {
+    "program": "aftermatter",
+    "arguments": [
+      "evaluate",
+      "--root",
+      ".",
+      "--case",
+      "cases/r0/case.json",
+      "--inventory",
+      "cases/r0/reference/actinv-result.json",
+      "--decay",
+      "cases/r0/reference/decay-half-lives.json",
+      "--rulepack",
+      "rulepacks/us/10-cfr-61.55-r0.json",
+      "--rulepack",
+      "rulepacks/facilities/clive-bwf-rev11-r0.json",
+      "--rulepack",
+      "rulepacks/facilities/wcs-cwf-rev11-r0.json",
+      "--sources-manifest",
+      "sources/MANIFEST.json",
+      "--output",
+      "outputs/route-result.json"
+    ],
+    "working_directory": ".",
+    "environment": {},
+    "timeout_ms": 600000
+  },
+  "invocation_sha256": "sha256:1c4295bb60863084660b6ce8b2d410c675ea65f889afd8326fdab27f1d10e599",
+  "process": {
+    "started_at": "2026-09-02T13:30:21.183Z",
+    "finished_at": "2026-09-02T13:30:21.204Z",
+    "duration_ms": 20,
+    "exit_status": 0,
+    "timed_out": false
+  },
+  "logs": [
+    {
+      "stream": "stdout",
+      "workspace_path": "logs/stdout.log",
+      "sha256": "sha256:9e8508b741d0059c8bddbcfe75ce9e3f59d9c31209bb73e9d8166c6b1f44e1d1",
+      "bytes": 99
+    },
+    {
+      "stream": "stderr",
+      "workspace_path": "logs/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "outputs": [
+    {
+      "output_id": "route-result",
+      "workspace_path": "outputs/route-result.json",
+      "media_type": "application/vnd.aftermatter.route-result+json",
+      "state": "collected",
+      "sha256": "sha256:3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718",
+      "bytes": 260304
+    }
+  ],
+  "runner": {
+    "runner": "avila.core/cli-rust@0.1.0",
+    "os": "linux",
+    "arch": "x86_64"
+  },
+  "status": "completed",
+  "limitations": [
+    "Exit status and output digests are process evidence, not scientific success.",
+    "The executable digest identifies the bytes that ran; it does not qualify the method.",
+    "No sandbox, resource accounting, or signature was applied; the environment was cleared and the working directory confined to the workspace."
+  ],
+  "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, professional review, or regulatory suitability."
+}

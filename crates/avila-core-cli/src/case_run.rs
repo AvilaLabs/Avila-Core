@@ -1,3 +1,12 @@
+//! The composed case workflow behind `avila-core run`.
+//!
+//! Stages, in order: package integrity, compilation, execution of the steps
+//! the package declares (through case-specific adapters over exact
+//! executables), generation of the claims document from package identities
+//! and fresh outputs, identity binding, campaign evaluation, and replay
+//! against the committed expectations. Every stage fails closed; a later
+//! stage never runs over the output of a failed earlier one.
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt::Write as _;
@@ -6,17 +15,32 @@ use std::path::{Path, PathBuf};
 
 use avila_core_compiler::{
     AdmissionState, CampaignReport, CampaignStatus, ClaimsDocument, CompilationStatus,
-    CompileReport, CompiledContract, compile_documents, evaluate_campaign,
+    CompileReport, CompiledContract, CompiledStep, SourceRef, compile_documents, evaluate_campaign,
 };
 use avila_core_evidence::{
-    CasePackageManifest, IntegrityCheckState, PackageIntegrityReport, PackageIntegrityStatus,
-    VerifiedCasePackage, verify_case_package,
+    ArtifactCheck, CapabilityIdentity, CasePackageManifest, ExecutionReceipt, ExpectedInput,
+    IntegrityCheckState, OutputState, PackageExecution, PackageIntegrityReport,
+    PackageIntegrityStatus, ReceiptCheck, ReceiptCheckState, ReceiptExpectations, ReceiptStatus,
+    VerifiedCasePackage, parse_receipt, sha256_file, verify_case_package, verify_receipt,
 };
 use avila_core_kernel::VerdictStatus;
 use serde::Serialize;
+use serde_json::Value;
 
-const CASE_RUN_REPORT_SCHEMA_VERSION: &str = "avila.core/case-run-report/v0.1-draft";
-const CASE_RUN_NOTICE: &str = "This workflow separates byte-integrity checks from semantic compilation and campaign evaluation. Re-hashing bytes proves identity only; structural admission and a Core verdict do not establish scientific correctness, qualification, certification, or regulatory approval.";
+use crate::execute::claims::{GeneratedClaim, canonical_identity, generate_claims};
+use crate::execute::{Adapter, ExecutionRequest, StagedInput, execute_step, rfc3339_now};
+
+const CASE_RUN_REPORT_SCHEMA_VERSION: &str = "avila.core/case-run-report/v0.2-draft";
+const CASE_RUN_NOTICE: &str = "This workflow separates byte-integrity checks, semantic compilation, controlled execution with receipts, claim generation, identity binding, campaign evaluation, and replay. Re-hashing bytes proves identity only; a verified receipt proves that a named executable ran over named bytes and produced named bytes; structural admission and a Core verdict do not establish scientific correctness, qualification, certification, or regulatory approval.";
+
+/// How the runner is pointed at the outside world: named artifact roots,
+/// named executables, and where to put the workspace.
+#[derive(Debug, Clone, Default)]
+pub struct CaseRunOptions {
+    pub source_roots: BTreeMap<String, PathBuf>,
+    pub capabilities: BTreeMap<String, PathBuf>,
+    pub workspace: Option<PathBuf>,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -51,6 +75,151 @@ pub struct ReplayReport {
     pub matches: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExecutionStatus {
+    /// Every declared execution ran and its receipt verified.
+    Executed,
+    /// No executable was supplied; committed claims are evaluated as recorded.
+    NotRun,
+    /// Some declared executions ran and others were not supplied.
+    Partial,
+    /// An execution could not be attempted safely: unknown adapter, wrong
+    /// capability identity, or unchecked input bytes.
+    Refused,
+    /// An execution ran but did not complete with a verified receipt.
+    Failed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StepExecutionState {
+    Executed,
+    NotRun,
+    Refused,
+    Failed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CapabilityCheckState {
+    Verified,
+    Mismatch,
+    Missing,
+    NotSupplied,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct CapabilityCheck {
+    pub capability_id: String,
+    pub package_id: String,
+    pub expected_sha256: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub actual_sha256: Option<String>,
+    pub state: CapabilityCheckState,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct StagedInputReport {
+    pub input_slot: String,
+    pub evidence_id: String,
+    pub workspace_path: String,
+    pub sha256: String,
+    pub integrity: IntegrityCheckState,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReceiptSummary {
+    pub workspace_path: String,
+    pub sha256: String,
+    pub invocation_sha256: String,
+    pub status: ReceiptStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exit_status: Option<i32>,
+    pub duration_ms: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct OutputReport {
+    pub output_id: String,
+    pub workspace_path: String,
+    pub state: OutputState,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sha256: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bytes: Option<u64>,
+    /// Whether the fresh bytes equal the identity the package bound for the
+    /// claims this output carries. `None` when nothing binds it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reproduces_bound_artifact: Option<bool>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReceiptReplayReport {
+    pub document_id: String,
+    pub matches: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub differences: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct StepExecutionReport {
+    pub step_id: String,
+    pub adapter: String,
+    pub capability_id: String,
+    pub state: StepExecutionState,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub capability: Option<CapabilityCheck>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub inputs: Vec<StagedInputReport>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub receipt: Option<ReceiptSummary>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub outputs: Vec<OutputReport>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verification: Option<ReceiptCheck>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub replay: Option<ReceiptReplayReport>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub issues: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NotExecutedStep {
+    pub step_id: String,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExecutionReport {
+    pub status: ExecutionStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub workspace: Option<String>,
+    pub steps: Vec<StepExecutionReport>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub not_executed: Vec<NotExecutedStep>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ClaimsReport {
+    pub generated_sha256: String,
+    pub committed_sha256: String,
+    pub matches_committed: bool,
+    pub input_attestations: usize,
+    pub executed_claims: usize,
+    pub recorded_claims: usize,
+    pub decisions: usize,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct CaseRunReport {
@@ -60,9 +229,13 @@ pub struct CaseRunReport {
     pub status: CaseRunStatus,
     pub integrity: PackageIntegrityReport,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bindings: Option<BindingReport>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub compile: Option<CompileReport>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub execution: Option<ExecutionReport>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub claims: Option<ClaimsReport>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bindings: Option<BindingReport>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub campaign: Option<CampaignReport>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -76,30 +249,45 @@ impl CaseRunReport {
     }
 }
 
-pub fn parse_source_roots(values: &[String]) -> Result<BTreeMap<String, PathBuf>, Box<dyn Error>> {
-    let mut roots = BTreeMap::new();
+/// Parse repeated `NAME=PATH` arguments.
+pub fn parse_named_paths(
+    values: &[String],
+    what: &str,
+    example: &str,
+) -> Result<BTreeMap<String, PathBuf>, Box<dyn Error>> {
+    let mut paths = BTreeMap::new();
     for value in values {
         let Some((name, path)) = value.split_once('=') else {
             return Err(format!(
-                "source root `{value}` must have the form NAME=PATH (for example, aftermatter=../project-aftermatter)"
+                "{what} `{value}` must have the form NAME=PATH (for example, {example})"
             )
             .into());
         };
         if name.is_empty() || path.is_empty() {
-            return Err(
-                format!("source root `{value}` must contain a non-empty name and path").into(),
-            );
+            return Err(format!("{what} `{value}` must contain a non-empty name and path").into());
         }
-        if roots.insert(name.into(), PathBuf::from(path)).is_some() {
-            return Err(format!("source root `{name}` was supplied more than once").into());
+        if paths.insert(name.into(), PathBuf::from(path)).is_some() {
+            return Err(format!("{what} `{name}` was supplied more than once").into());
         }
     }
-    Ok(roots)
+    Ok(paths)
+}
+
+pub fn parse_source_roots(values: &[String]) -> Result<BTreeMap<String, PathBuf>, Box<dyn Error>> {
+    parse_named_paths(values, "source root", "aftermatter=../project-aftermatter")
+}
+
+pub fn parse_capabilities(values: &[String]) -> Result<BTreeMap<String, PathBuf>, Box<dyn Error>> {
+    parse_named_paths(
+        values,
+        "capability",
+        "aftermatter-cli=../project-aftermatter/target/release/aftermatter",
+    )
 }
 
 pub fn execute_case(
     case_or_manifest: &Path,
-    source_roots: &BTreeMap<String, PathBuf>,
+    options: &CaseRunOptions,
 ) -> Result<CaseRunReport, Box<dyn Error>> {
     let manifest_path = if case_or_manifest.is_dir() {
         case_or_manifest.join("package.json")
@@ -111,7 +299,7 @@ pub fn execute_case(
         .parent()
         .filter(|path| !path.as_os_str().is_empty())
         .unwrap_or_else(|| Path::new("."));
-    let package = verify_case_package(&manifest_bytes, package_root, source_roots)?;
+    let package = verify_case_package(&manifest_bytes, package_root, &options.source_roots)?;
 
     let mut report = CaseRunReport {
         schema_version: CASE_RUN_REPORT_SCHEMA_VERSION.into(),
@@ -119,22 +307,25 @@ pub fn execute_case(
         title: package.manifest.title.clone(),
         status: CaseRunStatus::Rejected,
         integrity: package.integrity.clone(),
-        bindings: None,
         compile: None,
+        execution: None,
+        claims: None,
+        bindings: None,
         campaign: None,
         replay: None,
         notice: CASE_RUN_NOTICE.into(),
     };
 
     // A missing root is an explicit partial check. A supplied-but-missing or
-    // different artifact is a failed integrity gate and compilation stops.
+    // different artifact is a failed integrity gate and nothing else runs.
     if package.integrity.status == PackageIntegrityStatus::Failed {
         return Ok(report);
     }
 
     let contract = required_document(&package, "contract")?;
     let registry = required_document(&package, "registry")?;
-    let claims_bytes = required_document(&package, "claims")?;
+    let committed_claims_bytes = required_document(&package, "claims")?;
+    let committed_claims: Value = serde_json::from_slice(committed_claims_bytes)?;
 
     let compile = compile_documents(contract, registry)?;
     if compile.status == CompilationStatus::Rejected {
@@ -145,24 +336,93 @@ pub fn execute_case(
         .compiled
         .as_ref()
         .ok_or("compiler reported `compiled` without a compiled snapshot")?;
-    let claims: ClaimsDocument = serde_json::from_slice(claims_bytes)?;
+
+    // Execute the steps the package declares. A refused or failed execution
+    // stops the workflow: no claim is generated over an unverified run.
+    let mut executed_claims = Vec::new();
+    let mut workspace = None;
+    if !package.manifest.executions.is_empty() {
+        let mut runner = Runner::new(&package, compiled, options, &committed_claims);
+        let execution = runner.run_all()?;
+        executed_claims = runner.claims;
+        workspace = runner.workspace;
+        let stop = matches!(
+            execution.status,
+            ExecutionStatus::Refused | ExecutionStatus::Failed
+        );
+        report.execution = Some(execution);
+        report.compile = Some(compile.clone());
+        if stop {
+            write_run_report(workspace.as_deref(), &report);
+            return Ok(report);
+        }
+    } else {
+        report.compile = Some(compile.clone());
+    }
+
+    // Generate the claims document from the package identities, the fresh
+    // outputs, and the recorded attestations for steps that did not run.
+    let generated = generate_claims(
+        compiled,
+        &package.manifest,
+        &committed_claims,
+        &executed_claims,
+    )?;
+    let committed_sha256 = canonical_identity(committed_claims_bytes)?;
+    let claims_match = generated.canonical_sha256 == committed_sha256;
+    report.claims = Some(ClaimsReport {
+        generated_sha256: generated.canonical_sha256.clone(),
+        committed_sha256,
+        matches_committed: claims_match,
+        input_attestations: generated.input_attestations,
+        executed_claims: generated.executed_claims,
+        recorded_claims: generated.recorded_claims,
+        decisions: generated.decisions,
+    });
+    if let Some(workspace) = workspace.as_deref() {
+        let _ = fs::write(workspace.join("claims.json"), &generated.bytes);
+    }
+
+    let claims: ClaimsDocument = serde_json::from_slice(&generated.bytes)?;
     let bindings = verify_bindings(&package.manifest, &claims, compiled);
     let bindings_failed = bindings.status == BindingStatus::Failed;
     report.bindings = Some(bindings);
-    report.compile = Some(compile);
     if bindings_failed {
+        write_run_report(workspace.as_deref(), &report);
         return Ok(report);
     }
 
-    let campaign = evaluate_campaign(contract, registry, claims_bytes)?;
+    let campaign = evaluate_campaign(contract, registry, &generated.bytes)?;
     let campaign_rejected = campaign.status == CampaignStatus::Rejected;
     report.replay = replay_expected(&package, &campaign)?;
     let replay_failed = report.replay.as_ref().is_some_and(|replay| !replay.matches);
+    if let Some(workspace) = workspace.as_deref()
+        && let Ok(mut bytes) = serde_json::to_vec_pretty(&campaign)
+    {
+        bytes.push(b'\n');
+        let _ = fs::write(workspace.join("campaign-report.json"), bytes);
+    }
     report.campaign = Some(campaign);
-    if !campaign_rejected && !replay_failed {
+    let receipts_drifted = report.execution.as_ref().is_some_and(|execution| {
+        execution
+            .steps
+            .iter()
+            .any(|step| step.replay.as_ref().is_some_and(|replay| !replay.matches))
+    });
+    if !campaign_rejected && !replay_failed && claims_match && !receipts_drifted {
         report.status = CaseRunStatus::Evaluated;
     }
+    write_run_report(workspace.as_deref(), &report);
     Ok(report)
+}
+
+fn write_run_report(workspace: Option<&Path>, report: &CaseRunReport) {
+    if let Some(workspace) = workspace
+        && let Ok(mut bytes) = serde_json::to_vec_pretty(report)
+    {
+        bytes.push(b'\n');
+        let _ = fs::write(workspace.join("run-report.json"), bytes);
+    }
 }
 
 fn required_document<'a>(
@@ -172,6 +432,722 @@ fn required_document<'a>(
     package
         .document_by_role(role)
         .ok_or_else(|| format!("verified package has no readable `{role}` document").into())
+}
+
+/// A fresh output of an executed step, available to later steps and to
+/// claim generation.
+#[derive(Debug, Clone)]
+struct FreshOutput {
+    evidence_id: String,
+    path: PathBuf,
+    sha256: String,
+    media_type: String,
+}
+
+/// A resolved artifact for a step input: where the verified bytes are and
+/// what identity they must have.
+#[derive(Debug, Clone)]
+struct ResolvedArtifact {
+    evidence_id: String,
+    path: PathBuf,
+    sha256: String,
+    media_type: String,
+    integrity: IntegrityCheckState,
+}
+
+struct Runner<'a> {
+    package: &'a VerifiedCasePackage,
+    compiled: &'a CompiledContract,
+    options: &'a CaseRunOptions,
+    committed_claims: &'a Value,
+    artifact_checks: BTreeMap<String, &'a ArtifactCheck>,
+    canonical_roots: BTreeMap<String, PathBuf>,
+    fresh_outputs: BTreeMap<(String, String), FreshOutput>,
+    workspace: Option<PathBuf>,
+    claims: Vec<GeneratedClaim>,
+}
+
+impl<'a> Runner<'a> {
+    fn new(
+        package: &'a VerifiedCasePackage,
+        compiled: &'a CompiledContract,
+        options: &'a CaseRunOptions,
+        committed_claims: &'a Value,
+    ) -> Self {
+        let artifact_checks = package
+            .integrity
+            .artifacts
+            .iter()
+            .flat_map(|check| {
+                check
+                    .evidence_ids
+                    .iter()
+                    .map(move |evidence_id| (evidence_id.clone(), check))
+            })
+            .collect();
+        let canonical_roots = options
+            .source_roots
+            .iter()
+            .filter_map(|(name, path)| {
+                fs::canonicalize(path)
+                    .ok()
+                    .map(|canonical| (name.clone(), canonical))
+            })
+            .collect();
+        Self {
+            package,
+            compiled,
+            options,
+            committed_claims,
+            artifact_checks,
+            canonical_roots,
+            fresh_outputs: BTreeMap::new(),
+            workspace: None,
+            claims: Vec::new(),
+        }
+    }
+
+    fn run_all(&mut self) -> Result<ExecutionReport, Box<dyn Error>> {
+        let executions: BTreeMap<&str, &PackageExecution> = self
+            .package
+            .manifest
+            .executions
+            .iter()
+            .map(|execution| (execution.step_id.as_str(), execution))
+            .collect();
+        let mut steps = Vec::new();
+        let mut not_executed = Vec::new();
+        // Compiled order is topological, so a fresh output exists before any
+        // later executed step binds it.
+        for step in &self.compiled.workflow {
+            match executions.get(step.step_id.as_str()) {
+                Some(execution) => steps.push(self.run_step(step, execution)?),
+                None => not_executed.push(NotExecutedStep {
+                    step_id: step.step_id.clone(),
+                    reason: if step.review_obligation.is_some() {
+                        "pending external review; never executed by the runner".into()
+                    } else {
+                        "no execution declared; the committed claim is evaluated as a recorded attestation".into()
+                    },
+                }),
+            }
+        }
+        for execution in &self.package.manifest.executions {
+            if !self
+                .compiled
+                .workflow
+                .iter()
+                .any(|step| step.step_id == execution.step_id)
+            {
+                steps.push(StepExecutionReport {
+                    step_id: execution.step_id.clone(),
+                    adapter: execution.adapter.clone(),
+                    capability_id: execution.capability_id.clone(),
+                    state: StepExecutionState::Refused,
+                    capability: None,
+                    inputs: Vec::new(),
+                    receipt: None,
+                    outputs: Vec::new(),
+                    verification: None,
+                    replay: None,
+                    issues: vec![format!(
+                        "step `{}` is declared for execution but the compiled workflow has no such step",
+                        execution.step_id
+                    )],
+                });
+            }
+        }
+
+        let states: Vec<StepExecutionState> = steps.iter().map(|step| step.state).collect();
+        let status = if states.contains(&StepExecutionState::Refused) {
+            ExecutionStatus::Refused
+        } else if states.contains(&StepExecutionState::Failed) {
+            ExecutionStatus::Failed
+        } else if states
+            .iter()
+            .all(|state| *state == StepExecutionState::NotRun)
+        {
+            ExecutionStatus::NotRun
+        } else if states
+            .iter()
+            .all(|state| *state == StepExecutionState::Executed)
+        {
+            ExecutionStatus::Executed
+        } else {
+            ExecutionStatus::Partial
+        };
+        Ok(ExecutionReport {
+            status,
+            workspace: self
+                .workspace
+                .as_ref()
+                .map(|path| path.display().to_string()),
+            steps,
+            not_executed,
+        })
+    }
+
+    fn run_step(
+        &mut self,
+        step: &CompiledStep,
+        execution: &PackageExecution,
+    ) -> Result<StepExecutionReport, Box<dyn Error>> {
+        let mut report = StepExecutionReport {
+            step_id: step.step_id.clone(),
+            adapter: execution.adapter.clone(),
+            capability_id: execution.capability_id.clone(),
+            state: StepExecutionState::Refused,
+            capability: None,
+            inputs: Vec::new(),
+            receipt: None,
+            outputs: Vec::new(),
+            verification: None,
+            replay: None,
+            issues: Vec::new(),
+        };
+
+        let Some(declared) = self
+            .package
+            .manifest
+            .capabilities
+            .iter()
+            .find(|capability| capability.capability_id == execution.capability_id)
+        else {
+            report.issues.push(format!(
+                "capability `{}` is not declared",
+                execution.capability_id
+            ));
+            return Ok(report);
+        };
+        let identity = CapabilityIdentity {
+            capability_id: declared.capability_id.clone(),
+            package_id: declared.package_id.clone(),
+            source_repository: declared.source_repository.clone(),
+            source_commit: declared.source_commit.clone(),
+            executable_sha256: declared.executable_sha256.clone(),
+        };
+
+        // Without an executable there is nothing to run: the recorded claims
+        // stand as attestations and the gap is reported, not hidden.
+        let Some(executable) = self.options.capabilities.get(&execution.capability_id) else {
+            report.capability = Some(CapabilityCheck {
+                capability_id: declared.capability_id.clone(),
+                package_id: declared.package_id.clone(),
+                expected_sha256: declared.executable_sha256.clone(),
+                actual_sha256: None,
+                state: CapabilityCheckState::NotSupplied,
+            });
+            report.state = StepExecutionState::NotRun;
+            return Ok(report);
+        };
+
+        let Some(adapter) = Adapter::by_id(&execution.adapter) else {
+            report.issues.push(format!(
+                "adapter `{}` is not known to this runner",
+                execution.adapter
+            ));
+            return Ok(report);
+        };
+        let expected_type = adapter.capability_type();
+        if step.capability_type.id != expected_type.id
+            || step.capability_type.major != expected_type.major
+        {
+            report.issues.push(format!(
+                "adapter `{}` implements `{}@{}`, but step `{}` compiles to `{}@{}`",
+                execution.adapter,
+                expected_type.id,
+                expected_type.major,
+                step.step_id,
+                step.capability_type.id,
+                step.capability_type.major
+            ));
+        }
+        if step.review_obligation.is_some() {
+            report
+                .issues
+                .push("a review obligation is never executed by the runner".into());
+        }
+
+        // The executable must be exactly the bytes the package binds. It is
+        // resolved to an absolute path first: the child runs inside the
+        // workspace, so a relative path would otherwise be resolved there.
+        let executable = fs::canonicalize(executable).unwrap_or_else(|_| executable.clone());
+        let capability_check = match sha256_file(&executable) {
+            Ok((actual, _)) => {
+                let state = if actual == declared.executable_sha256 {
+                    CapabilityCheckState::Verified
+                } else {
+                    CapabilityCheckState::Mismatch
+                };
+                CapabilityCheck {
+                    capability_id: declared.capability_id.clone(),
+                    package_id: declared.package_id.clone(),
+                    expected_sha256: declared.executable_sha256.clone(),
+                    actual_sha256: Some(actual),
+                    state,
+                }
+            }
+            Err(_) => CapabilityCheck {
+                capability_id: declared.capability_id.clone(),
+                package_id: declared.package_id.clone(),
+                expected_sha256: declared.executable_sha256.clone(),
+                actual_sha256: None,
+                state: CapabilityCheckState::Missing,
+            },
+        };
+        match capability_check.state {
+            CapabilityCheckState::Verified => {}
+            CapabilityCheckState::Mismatch => report.issues.push(format!(
+                "executable `{}` hashes to {}, but the package binds {}",
+                executable.display(),
+                capability_check.actual_sha256.as_deref().unwrap_or("?"),
+                declared.executable_sha256
+            )),
+            _ => report.issues.push(format!(
+                "executable `{}` cannot be read",
+                executable.display()
+            )),
+        }
+        report.capability = Some(capability_check);
+
+        // Every bound input slot must be staged from verified bytes.
+        let staging: BTreeMap<&str, &str> = execution
+            .inputs
+            .iter()
+            .map(|input| (input.input_slot.as_str(), input.workspace_path.as_str()))
+            .collect();
+        let bound_slots: BTreeSet<&str> = step
+            .bindings
+            .iter()
+            .map(|binding| binding.input_slot.as_str())
+            .collect();
+        for slot in staging.keys() {
+            if !bound_slots.contains(slot) {
+                report.issues.push(format!(
+                    "package stages input slot `{slot}`, which the compiled step does not bind"
+                ));
+            }
+        }
+        let mut staged = Vec::new();
+        for binding in &step.bindings {
+            let Some(workspace_path) = staging.get(binding.input_slot.as_str()) else {
+                report.issues.push(format!(
+                    "bound input slot `{}` has no staging path in the package",
+                    binding.input_slot
+                ));
+                continue;
+            };
+            if !adapter.input_slots().contains(&binding.input_slot.as_str()) {
+                report.issues.push(format!(
+                    "adapter `{}` does not accept input slot `{}`",
+                    execution.adapter, binding.input_slot
+                ));
+                continue;
+            }
+            match self.resolve_source(&binding.source) {
+                Ok(artifact) => {
+                    if artifact.integrity != IntegrityCheckState::Verified {
+                        report.issues.push(format!(
+                            "input slot `{}` bytes (`{}`) were not verified: {:?}; the runner does not execute over unchecked bytes",
+                            binding.input_slot, artifact.evidence_id, artifact.integrity
+                        ));
+                    }
+                    report.inputs.push(StagedInputReport {
+                        input_slot: binding.input_slot.clone(),
+                        evidence_id: artifact.evidence_id.clone(),
+                        workspace_path: (*workspace_path).to_string(),
+                        sha256: artifact.sha256.clone(),
+                        integrity: artifact.integrity,
+                    });
+                    staged.push(StagedInput {
+                        input_slot: binding.input_slot.clone(),
+                        evidence_id: artifact.evidence_id,
+                        source_path: artifact.path,
+                        workspace_path: (*workspace_path).to_string(),
+                        media_type: artifact.media_type,
+                        expected_sha256: artifact.sha256,
+                    });
+                }
+                Err(issue) => report
+                    .issues
+                    .push(format!("input slot `{}`: {issue}", binding.input_slot)),
+            }
+        }
+        let declared_slots: BTreeSet<&str> = execution
+            .outputs
+            .iter()
+            .map(|output| output.output_slot.as_str())
+            .collect();
+        let adapter_slots: BTreeSet<&str> = adapter.output_slots().iter().copied().collect();
+        if declared_slots != adapter_slots {
+            report.issues.push(format!(
+                "package binds output slots {:?}, but adapter `{}` produces {:?}",
+                declared_slots, execution.adapter, adapter_slots
+            ));
+        }
+        if !report.issues.is_empty() {
+            return Ok(report);
+        }
+
+        // Run.
+        let workspace = self.workspace_dir()?;
+        let step_dir = workspace.join(&step.step_id);
+        let parameters: BTreeMap<String, Value> = step
+            .parameters
+            .iter()
+            .map(|(id, value)| serde_json::to_value(value).map(|value| (id.clone(), value)))
+            .collect::<Result<_, _>>()?;
+        let request = ExecutionRequest {
+            case_id: self.package.manifest.case_id.clone(),
+            compiled_snapshot_sha256: self.compiled.snapshot_sha256.clone(),
+            step_id: step.step_id.clone(),
+            adapter,
+            capability: identity.clone(),
+            executable: executable.clone(),
+            parameters: parameters.clone(),
+            inputs: staged.clone(),
+        };
+        let outcome = match execute_step(&step_dir, &request) {
+            Ok(outcome) => outcome,
+            Err(error) => {
+                report
+                    .issues
+                    .push(format!("execution could not be completed: {error}"));
+                report.state = StepExecutionState::Failed;
+                return Ok(report);
+            }
+        };
+
+        // Verify from bytes, not from memory: re-read the receipt the runner
+        // wrote and re-hash everything it names.
+        let receipt_bytes = fs::read(&outcome.receipt_path)?;
+        let receipt = parse_receipt(&receipt_bytes)?;
+        let (receipt_sha256, _) = sha256_file(&outcome.receipt_path)?;
+        report.receipt = Some(ReceiptSummary {
+            workspace_path: format!("{}/receipt.json", step.step_id),
+            sha256: receipt_sha256,
+            invocation_sha256: receipt.invocation_sha256.clone(),
+            status: receipt.status,
+            exit_status: receipt.process.exit_status,
+            duration_ms: receipt.process.duration_ms,
+        });
+        let expectations = ReceiptExpectations {
+            case_id: self.package.manifest.case_id.clone(),
+            compiled_snapshot_sha256: self.compiled.snapshot_sha256.clone(),
+            step_id: step.step_id.clone(),
+            capability_type: expected_type,
+            adapter: adapter.id().into(),
+            capability: identity.clone(),
+            inputs: staged
+                .iter()
+                .map(|input| {
+                    (
+                        input.input_slot.clone(),
+                        ExpectedInput {
+                            evidence_id: input.evidence_id.clone(),
+                            sha256: input.expected_sha256.clone(),
+                            media_type: input.media_type.clone(),
+                        },
+                    )
+                })
+                .collect(),
+            outputs: adapter
+                .outputs()
+                .iter()
+                .map(|output| output.output_id.to_string())
+                .collect(),
+        };
+        let verification = verify_receipt(&receipt, &outcome.step_dir, &expectations)?;
+        let verified = verification.state == ReceiptCheckState::Verified;
+        report.issues.extend(verification.issues.iter().cloned());
+        report.verification = Some(verification);
+
+        // Bound identities for the outputs: which claim ids each output
+        // carries and what identity the package binds for them.
+        let claim_ids_by_slot: BTreeMap<&str, &str> = execution
+            .outputs
+            .iter()
+            .map(|output| (output.output_slot.as_str(), output.claim_id.as_str()))
+            .collect();
+
+        let mut extracted = Vec::new();
+        if verified {
+            let mut output_bytes = BTreeMap::new();
+            for output in &receipt.outputs {
+                if output.state == OutputState::Collected {
+                    output_bytes.insert(
+                        output.output_id.clone(),
+                        fs::read(outcome.step_dir.join(&output.workspace_path))?,
+                    );
+                }
+            }
+            match adapter.extract_claims(&output_bytes, &parameters) {
+                Ok(claims) => extracted = claims,
+                Err(issue) => report.issues.push(format!("claim extraction: {issue}")),
+            }
+            let extracted_slots: BTreeSet<&str> = extracted
+                .iter()
+                .map(|claim| claim.output_slot.as_str())
+                .collect();
+            if !extracted.is_empty() && extracted_slots != adapter_slots {
+                report.issues.push(format!(
+                    "adapter extracted claims for {:?}, but declares {:?}",
+                    extracted_slots, adapter_slots
+                ));
+            }
+        }
+
+        for output in &receipt.outputs {
+            let bound: BTreeSet<&str> = extracted
+                .iter()
+                .filter(|claim| claim.output_id == output.output_id)
+                .filter_map(|claim| claim_ids_by_slot.get(claim.output_slot.as_str()).copied())
+                .collect();
+            let bound_identities: BTreeSet<&str> = bound
+                .iter()
+                .filter_map(|claim_id| self.artifact_checks.get(*claim_id))
+                .map(|check| check.expected_sha256.as_str())
+                .collect();
+            let reproduces_bound_artifact = match (&output.sha256, bound_identities.len()) {
+                (Some(sha256), 1) => Some(bound_identities.contains(sha256.as_str())),
+                _ => None,
+            };
+            report.outputs.push(OutputReport {
+                output_id: output.output_id.clone(),
+                workspace_path: output.workspace_path.clone(),
+                state: output.state,
+                sha256: output.sha256.clone(),
+                bytes: output.bytes,
+                reproduces_bound_artifact,
+            });
+        }
+
+        report.replay = self.replay_receipt(&step.step_id, &receipt)?;
+
+        if !verified || !report.issues.is_empty() {
+            report.state = StepExecutionState::Failed;
+            return Ok(report);
+        }
+
+        // Promote: fresh outputs become available to later steps and to the
+        // generated claims document.
+        for claim in &extracted {
+            let output = receipt
+                .outputs
+                .iter()
+                .find(|output| output.output_id == claim.output_id)
+                .ok_or_else(|| format!("adapter named unknown output `{}`", claim.output_id))?;
+            let sha256 = output
+                .sha256
+                .clone()
+                .ok_or_else(|| format!("collected output `{}` has no digest", claim.output_id))?;
+            let claim_id = claim_ids_by_slot
+                .get(claim.output_slot.as_str())
+                .ok_or_else(|| format!("output slot `{}` has no claim id", claim.output_slot))?;
+            self.fresh_outputs.insert(
+                (step.step_id.clone(), claim.output_slot.clone()),
+                FreshOutput {
+                    evidence_id: (*claim_id).to_string(),
+                    path: outcome.step_dir.join(&output.workspace_path),
+                    sha256: sha256.clone(),
+                    media_type: output.media_type.clone(),
+                },
+            );
+            self.claims.push(GeneratedClaim {
+                claim_id: (*claim_id).to_string(),
+                step_id: step.step_id.clone(),
+                output_slot: claim.output_slot.clone(),
+                artifact_sha256: sha256,
+                media_type: output.media_type.clone(),
+                producer_package_id: identity.package_id.clone(),
+                producer_sha256: identity.executable_sha256.clone(),
+                claim: claim.claim.clone(),
+            });
+        }
+        report.state = StepExecutionState::Executed;
+        Ok(report)
+    }
+
+    fn workspace_dir(&mut self) -> Result<PathBuf, Box<dyn Error>> {
+        if let Some(workspace) = &self.workspace {
+            return Ok(workspace.clone());
+        }
+        let workspace = match &self.options.workspace {
+            Some(path) => path.clone(),
+            None => {
+                let stamp: String = rfc3339_now()
+                    .chars()
+                    .filter(|character| character.is_ascii_alphanumeric())
+                    .collect();
+                PathBuf::from("workspaces")
+                    .join(&self.package.manifest.case_id)
+                    .join(format!("{stamp}-{}", std::process::id()))
+            }
+        };
+        if workspace.exists() && fs::read_dir(&workspace)?.next().is_some() {
+            return Err(format!(
+                "workspace `{}` exists and is not empty; the runner never reuses a workspace",
+                workspace.display()
+            )
+            .into());
+        }
+        fs::create_dir_all(&workspace)?;
+        self.workspace = Some(workspace.clone());
+        Ok(workspace)
+    }
+
+    fn resolve_source(&self, source: &SourceRef) -> Result<ResolvedArtifact, String> {
+        match source {
+            SourceRef::ContractInput { input_id } => {
+                let media_type = self
+                    .compiled
+                    .inputs
+                    .iter()
+                    .find(|input| &input.input_id == input_id)
+                    .map(|input| input.media_type.clone())
+                    .ok_or_else(|| format!("contract input `{input_id}` is not compiled"))?;
+                self.resolve_artifact(&format!("input:{input_id}"), media_type)
+            }
+            SourceRef::StepOutput {
+                step_id,
+                output_slot,
+            } => {
+                if let Some(fresh) = self
+                    .fresh_outputs
+                    .get(&(step_id.clone(), output_slot.clone()))
+                {
+                    return Ok(ResolvedArtifact {
+                        evidence_id: fresh.evidence_id.clone(),
+                        path: fresh.path.clone(),
+                        sha256: fresh.sha256.clone(),
+                        media_type: fresh.media_type.clone(),
+                        integrity: IntegrityCheckState::Verified,
+                    });
+                }
+                let recorded = self
+                    .committed_claims
+                    .get("claims")
+                    .and_then(Value::as_array)
+                    .into_iter()
+                    .flatten()
+                    .find(|claim| {
+                        claim.get("step_id").and_then(Value::as_str) == Some(step_id)
+                            && claim.get("output_slot").and_then(Value::as_str)
+                                == Some(output_slot)
+                    })
+                    .ok_or_else(|| {
+                        format!(
+                            "step `{step_id}` output `{output_slot}` was neither executed nor recorded in the committed claims"
+                        )
+                    })?;
+                let claim_id = recorded
+                    .get("claim_id")
+                    .and_then(Value::as_str)
+                    .ok_or("recorded claim has no claim_id")?;
+                let media_type = recorded
+                    .pointer("/artifact/media_type")
+                    .and_then(Value::as_str)
+                    .ok_or("recorded claim has no artifact media type")?;
+                self.resolve_artifact(claim_id, media_type.to_string())
+            }
+        }
+    }
+
+    fn resolve_artifact(
+        &self,
+        evidence_id: &str,
+        media_type: String,
+    ) -> Result<ResolvedArtifact, String> {
+        let check = self
+            .artifact_checks
+            .get(evidence_id)
+            .ok_or_else(|| format!("evidence record `{evidence_id}` has no package artifact"))?;
+        let path = self
+            .canonical_roots
+            .get(&check.source_root)
+            .map(|root| root.join(&check.path))
+            .unwrap_or_default();
+        Ok(ResolvedArtifact {
+            evidence_id: evidence_id.to_string(),
+            path,
+            sha256: check.expected_sha256.clone(),
+            media_type,
+            integrity: check.state,
+        })
+    }
+
+    /// Compare a fresh receipt with the receipt the package committed for
+    /// the same step: same request identity, same capability, same outputs.
+    /// Timestamps and durations are observations and are not compared.
+    fn replay_receipt(
+        &self,
+        step_id: &str,
+        fresh: &ExecutionReceipt,
+    ) -> Result<Option<ReceiptReplayReport>, Box<dyn Error>> {
+        let Some(document) = self.package.manifest.documents.iter().find(|document| {
+            document.role == "execution_receipt" && document.step_id.as_deref() == Some(step_id)
+        }) else {
+            return Ok(None);
+        };
+        let bytes = self
+            .package
+            .document_by_id(&document.document_id)
+            .ok_or("committed receipt was not readable after package verification")?;
+        let committed = parse_receipt(bytes)?;
+        let mut differences = Vec::new();
+        if committed.invocation_sha256 != fresh.invocation_sha256 {
+            differences.push(format!(
+                "invocation identity {} → {}",
+                committed.invocation_sha256, fresh.invocation_sha256
+            ));
+        }
+        if committed.capability != fresh.capability {
+            differences.push(format!(
+                "capability {} → {}",
+                committed.capability.executable_sha256, fresh.capability.executable_sha256
+            ));
+        }
+        if committed.status != fresh.status {
+            differences.push(format!(
+                "status {:?} → {:?}",
+                committed.status, fresh.status
+            ));
+        }
+        let outputs = |receipt: &ExecutionReceipt| -> BTreeMap<String, Option<String>> {
+            receipt
+                .outputs
+                .iter()
+                .map(|output| (output.output_id.clone(), output.sha256.clone()))
+                .collect()
+        };
+        let committed_outputs = outputs(&committed);
+        let fresh_outputs = outputs(fresh);
+        for (output_id, sha256) in &committed_outputs {
+            match fresh_outputs.get(output_id) {
+                Some(actual) if actual == sha256 => {}
+                Some(actual) => differences.push(format!(
+                    "output `{output_id}` {} → {}",
+                    sha256.as_deref().unwrap_or("missing"),
+                    actual.as_deref().unwrap_or("missing")
+                )),
+                None => differences.push(format!(
+                    "output `{output_id}` is absent from the fresh receipt"
+                )),
+            }
+        }
+        for output_id in fresh_outputs.keys() {
+            if !committed_outputs.contains_key(output_id) {
+                differences.push(format!(
+                    "output `{output_id}` is absent from the committed receipt"
+                ));
+            }
+        }
+        Ok(Some(ReceiptReplayReport {
+            document_id: document.document_id.clone(),
+            matches: differences.is_empty(),
+            differences,
+        }))
+    }
 }
 
 fn verify_bindings(
@@ -294,7 +1270,7 @@ fn replay_expected(
     let bytes = package
         .document_by_id(&document.document_id)
         .ok_or("expected campaign report was not readable after package verification")?;
-    let expected: serde_json::Value = serde_json::from_slice(bytes)?;
+    let expected: Value = serde_json::from_slice(bytes)?;
     let actual = serde_json::to_value(campaign)?;
     Ok(Some(ReplayReport {
         document_id: document.document_id.clone(),
@@ -383,28 +1359,7 @@ pub fn human_summary(report: &CaseRunReport) -> String {
         );
     }
 
-    let _ = writeln!(out, "\n2. IDENTITY BINDING");
-    match &report.bindings {
-        Some(bindings) => {
-            let _ = writeln!(
-                out,
-                "   [{}] {}/{} evidence identities; {}/{} review-policy identities",
-                binding_label(bindings.status),
-                bindings.bound_evidence_records,
-                bindings.evidence_records,
-                bindings.bound_review_policies,
-                bindings.required_review_policies
-            );
-            for issue in &bindings.issues {
-                let _ = writeln!(out, "   issue: {issue}");
-            }
-        }
-        None => {
-            let _ = writeln!(out, "   [NOT RUN] package integrity did not pass its gate");
-        }
-    }
-
-    let _ = writeln!(out, "\n3. COMPILE");
+    let _ = writeln!(out, "\n2. COMPILE");
     match report.compile.as_ref() {
         Some(compile) => match compile.compiled.as_ref() {
             Some(compiled) => {
@@ -445,7 +1400,185 @@ pub fn human_summary(report: &CaseRunReport) -> String {
         }
     }
 
-    let _ = writeln!(out, "\n4. EVALUATE");
+    let _ = writeln!(out, "\n3. EXECUTE");
+    match report.execution.as_ref() {
+        Some(execution) => {
+            for step in &execution.steps {
+                match step.state {
+                    StepExecutionState::Executed => {
+                        let _ = writeln!(
+                            out,
+                            "   [EXECUTED] {} via {} ({}, {})",
+                            step.step_id,
+                            step.capability_id,
+                            step.capability
+                                .as_ref()
+                                .map_or("?", |capability| capability.package_id.as_str()),
+                            step.capability
+                                .as_ref()
+                                .and_then(|capability| capability.actual_sha256.as_deref())
+                                .unwrap_or("?")
+                        );
+                        let verified_inputs = step
+                            .inputs
+                            .iter()
+                            .filter(|input| input.integrity == IntegrityCheckState::Verified)
+                            .count();
+                        if let Some(receipt) = &step.receipt {
+                            let _ = writeln!(
+                                out,
+                                "      {verified_inputs}/{} staged inputs verified; exit {} in {} ms; {}/{} declared outputs collected",
+                                step.inputs.len(),
+                                receipt
+                                    .exit_status
+                                    .map_or("none".to_string(), |code| code.to_string()),
+                                receipt.duration_ms,
+                                step.outputs
+                                    .iter()
+                                    .filter(|output| output.state == OutputState::Collected)
+                                    .count(),
+                                step.outputs.len()
+                            );
+                        }
+                        for output in &step.outputs {
+                            let _ = writeln!(
+                                out,
+                                "      {} {}{}",
+                                output.workspace_path,
+                                output.sha256.as_deref().unwrap_or("missing"),
+                                match output.reproduces_bound_artifact {
+                                    Some(true) => " — reproduces the bound artifact",
+                                    Some(false) => " — DIFFERS from the bound artifact",
+                                    None => "",
+                                }
+                            );
+                        }
+                        if let Some(receipt) = &step.receipt {
+                            let _ = writeln!(
+                                out,
+                                "      receipt {} {} [{}]{}",
+                                receipt.workspace_path,
+                                receipt.sha256,
+                                step.verification.as_ref().map_or("NOT VERIFIED", |check| {
+                                    match check.state {
+                                        ReceiptCheckState::Verified => "VERIFIED",
+                                        ReceiptCheckState::Failed => "FAILED",
+                                    }
+                                }),
+                                match &step.replay {
+                                    Some(replay) if replay.matches =>
+                                        "; [MATCH] committed receipt".to_string(),
+                                    Some(replay) => format!(
+                                        "; [DRIFT] committed receipt: {}",
+                                        replay.differences.join("; ")
+                                    ),
+                                    None => String::new(),
+                                }
+                            );
+                        }
+                    }
+                    StepExecutionState::NotRun => {
+                        let _ = writeln!(
+                            out,
+                            "   [NOT RUN] {} — capability `{}` not supplied; its committed claims are evaluated as recorded attestations",
+                            step.step_id, step.capability_id
+                        );
+                    }
+                    StepExecutionState::Refused => {
+                        let _ = writeln!(out, "   [REFUSED] {}", step.step_id);
+                    }
+                    StepExecutionState::Failed => {
+                        let _ = writeln!(out, "   [FAILED] {}", step.step_id);
+                    }
+                }
+                for issue in &step.issues {
+                    let _ = writeln!(out, "      issue: {issue}");
+                }
+            }
+            if !execution.not_executed.is_empty() {
+                let _ = writeln!(
+                    out,
+                    "   not executed: {}",
+                    execution
+                        .not_executed
+                        .iter()
+                        .map(|step| format!("{} ({})", step.step_id, step.reason))
+                        .collect::<Vec<_>>()
+                        .join("; ")
+                );
+            }
+            if let Some(workspace) = &execution.workspace {
+                let _ = writeln!(out, "   workspace {workspace}");
+            }
+        }
+        None => {
+            let _ = writeln!(
+                out,
+                "   [NOT RUN] {}",
+                if report
+                    .compile
+                    .as_ref()
+                    .is_some_and(|c| c.compiled.is_some())
+                {
+                    "the package declares no execution"
+                } else {
+                    "compilation did not pass its gate"
+                }
+            );
+        }
+    }
+
+    let _ = writeln!(out, "\n4. CLAIMS");
+    match (&report.claims, &report.bindings) {
+        (Some(claims), bindings) => {
+            let _ = writeln!(
+                out,
+                "   [GENERATED] {} input attestations from package identities; {} claims from executed outputs; {} recorded claims carried; {} decisions",
+                claims.input_attestations,
+                claims.executed_claims,
+                claims.recorded_claims,
+                claims.decisions
+            );
+            let _ = writeln!(
+                out,
+                "   [{}] generated claims {} committed claims.json",
+                if claims.matches_committed {
+                    "MATCH"
+                } else {
+                    "MISMATCH"
+                },
+                if claims.matches_committed {
+                    "match"
+                } else {
+                    "differ from"
+                }
+            );
+            match bindings {
+                Some(bindings) => {
+                    let _ = writeln!(
+                        out,
+                        "   [{}] {}/{} evidence identities bound; {}/{} review-policy identities",
+                        binding_label(bindings.status),
+                        bindings.bound_evidence_records,
+                        bindings.evidence_records,
+                        bindings.bound_review_policies,
+                        bindings.required_review_policies
+                    );
+                    for issue in &bindings.issues {
+                        let _ = writeln!(out, "   issue: {issue}");
+                    }
+                }
+                None => {
+                    let _ = writeln!(out, "   [NOT BOUND]");
+                }
+            }
+        }
+        (None, _) => {
+            let _ = writeln!(out, "   [NOT RUN] an earlier gate did not pass");
+        }
+    }
+
+    let _ = writeln!(out, "\n5. EVALUATE");
     match report.campaign.as_ref() {
         Some(campaign) => {
             let admitted = campaign
@@ -477,7 +1610,7 @@ pub fn human_summary(report: &CaseRunReport) -> String {
     }
 
     if let Some(replay) = &report.replay {
-        let _ = writeln!(out, "\n5. REPLAY");
+        let _ = writeln!(out, "\n6. REPLAY");
         let _ = writeln!(
             out,
             "   [{}] generated campaign report {} committed expectation",
@@ -490,9 +1623,19 @@ pub fn human_summary(report: &CaseRunReport) -> String {
         );
     }
 
+    let execution_phrase = match report.execution.as_ref().map(|execution| execution.status) {
+        Some(ExecutionStatus::Executed) => "every declared step executed with a verified receipt",
+        Some(ExecutionStatus::NotRun) => "no step was executed",
+        Some(ExecutionStatus::Partial) => {
+            "some declared steps executed and others were not supplied"
+        }
+        Some(ExecutionStatus::Refused) => "execution was refused",
+        Some(ExecutionStatus::Failed) => "execution failed",
+        None => "no execution is declared",
+    };
     let _ = writeln!(
         out,
-        "\nOutcome: {}. Byte integrity is {}; {}",
+        "\nOutcome: {}. Byte integrity is {}; {execution_phrase}; {}",
         match report.status {
             CaseRunStatus::Evaluated => "workflow evaluated",
             CaseRunStatus::Rejected => "workflow rejected",
@@ -547,7 +1690,7 @@ mod tests {
 
     #[test]
     fn case_000_runs_without_external_roots_and_names_every_gap() {
-        let report = execute_case(&case_000(), &BTreeMap::new()).unwrap();
+        let report = execute_case(&case_000(), &CaseRunOptions::default()).unwrap();
         assert_eq!(report.status, CaseRunStatus::Evaluated);
         assert_eq!(report.integrity.status, PackageIntegrityStatus::Partial);
         assert!(
@@ -564,6 +1707,11 @@ mod tests {
                 .iter()
                 .all(|check| { check.state == IntegrityCheckState::NotChecked })
         );
+        let execution = report.execution.as_ref().unwrap();
+        assert_eq!(execution.status, ExecutionStatus::NotRun);
+        assert!(execution.workspace.is_none());
+        let claims = report.claims.as_ref().unwrap();
+        assert!(claims.matches_committed);
         let bindings = report.bindings.as_ref().unwrap();
         assert_eq!(bindings.status, BindingStatus::Verified);
         assert_eq!(bindings.bound_evidence_records, 16);
@@ -573,7 +1721,53 @@ mod tests {
 
         let summary = human_summary(&report);
         assert!(summary.contains("activation [actinv.activation-inventory@1]"));
+        assert!(summary.contains("[NOT RUN] classification"));
         assert!(summary.contains("CASE-000-R1 — not_evaluated.review_pending"));
         assert!(summary.contains("source root(s) actinv-data, aftermatter"));
+    }
+
+    /// Executes CASE-000 for real when the bound Aftermatter executable and
+    /// both artifact roots are available locally. Set
+    /// `AVILA_CORE_CASE_000_AFTERMATTER` (the executable),
+    /// `AVILA_CORE_CASE_000_AFTERMATTER_ROOT` (the checkout), and
+    /// `AVILA_CORE_CASE_000_ACTINV_DATA` (the data release) to run it; it is
+    /// skipped, visibly, otherwise.
+    #[test]
+    fn case_000_executes_aftermatter_when_available() {
+        let (Ok(executable), Ok(aftermatter), Ok(actinv_data)) = (
+            std::env::var("AVILA_CORE_CASE_000_AFTERMATTER"),
+            std::env::var("AVILA_CORE_CASE_000_AFTERMATTER_ROOT"),
+            std::env::var("AVILA_CORE_CASE_000_ACTINV_DATA"),
+        ) else {
+            eprintln!("skipped: AVILA_CORE_CASE_000_* not set; CASE-000 was not executed");
+            return;
+        };
+        let workspace =
+            std::env::temp_dir().join(format!("avila-core-case-000-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&workspace);
+        let options = CaseRunOptions {
+            source_roots: BTreeMap::from([
+                ("aftermatter".to_string(), PathBuf::from(aftermatter)),
+                ("actinv-data".to_string(), PathBuf::from(actinv_data)),
+            ]),
+            capabilities: BTreeMap::from([(
+                "aftermatter-cli".to_string(),
+                PathBuf::from(executable),
+            )]),
+            workspace: Some(workspace.clone()),
+        };
+        let report = execute_case(&case_000(), &options).unwrap();
+        let summary = human_summary(&report);
+        assert_eq!(report.status, CaseRunStatus::Evaluated, "{summary}");
+        assert_eq!(report.integrity.status, PackageIntegrityStatus::Complete);
+        let execution = report.execution.as_ref().unwrap();
+        assert_eq!(execution.status, ExecutionStatus::Executed);
+        let step = &execution.steps[0];
+        assert_eq!(step.outputs[0].reproduces_bound_artifact, Some(true));
+        assert!(step.replay.as_ref().unwrap().matches);
+        assert!(report.claims.as_ref().unwrap().matches_committed);
+        assert!(report.replay.as_ref().unwrap().matches);
+        assert!(summary.contains("[EXECUTED] classification via aftermatter-cli"));
+        let _ = fs::remove_dir_all(&workspace);
     }
 }

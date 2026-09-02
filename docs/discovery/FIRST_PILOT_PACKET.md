@@ -15,12 +15,14 @@ restricted artifacts in their approved system of record as described in the
 
 ## Internal pressure-test specimen
 
-[CASE-000](../../examples/cases/case-000-actinv-aftermatter/README.md) freezes a
-synthetic ACTINV 1.0.1 → Aftermatter R0 chain and runs its recorded claims
-through the current Core compiler and campaign evaluator. It exists to expose
-the smallest real semantic and evidence gaps: artifact bytes and receipts are
-not verified, package implementations are not bound, categorical route states
-are not requirement values, and qualified review remains external.
+[CASE-000](../../examples/cases/case-000-actinv-aftermatter/README.md) binds a
+synthetic ACTINV 1.0.1 → Aftermatter R0 chain, executes the Aftermatter step
+under a verified execution receipt, and runs the generated claims through the
+current Core compiler and campaign evaluator. It exists to expose the smallest
+real semantic and evidence gaps: ACTINV is still attested rather than run,
+capability identity stops at an executable digest, receipts are unsigned,
+categorical route states are not requirement values, and qualified review
+remains external.
 
 CASE-000 is not a completed decision loop, participant observation,
 representative customer case, pilot selection, or evidence for H1–H6. It does

@@ -51,16 +51,21 @@ The current repository remains in this stage. Its draft kernel executes 90 pure
 vectors, its static compiler executes 68 fixtures through R10, and its campaign
 harness executes 12 fixtures over the first SC-10/SC-11 slice. That slice
 performs type-level claim admission and verdict derivation. It does not perform
-full package-level evidence admission: package binding, artifact-byte and
-receipt verification, signatures, qualification and eligibility-policy
-evaluation, review fulfillment, and invalidation remain absent.
+full package-level evidence admission: the evaluator reads no bytes;
+artifact-byte and receipt verification exist only in the case runner for the
+steps a case declares; package binding beyond an executable digest,
+signatures, qualification and eligibility-policy evaluation, review
+fulfillment, and invalidation remain absent.
 
 The repository also carries
-[CASE-000](../../examples/cases/case-000-actinv-aftermatter/README.md), a frozen
+[CASE-000](../../examples/cases/case-000-actinv-aftermatter/README.md), a
 synthetic ACTINV 1.0.1 → Aftermatter R0 composition. It is an internal pressure
-test of the current boundary, not Stage 1: Core admits recorded hash
-attestations but does not run the tools or verify their bytes, and both
-requirements remain `NOT_EVALUATED` because qualified review is absent.
+test of the current boundary, not Stage 1: the case runner verifies every
+declared byte, executes the Aftermatter step through a case-specific adapter
+under a verified execution receipt, and generates its claims from the fresh
+result (ADR-0007), while the ACTINV inventory remains a recorded attestation
+and both requirements remain `NOT_EVALUATED` because qualified review is
+absent.
 
 ## Stage 1 — vertical reference prototype
 

@@ -39,16 +39,22 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   the kernel derives one `PASS`, `FAIL`, `INCONCLUSIVE`, or `NOT_EVALUATED`
   verdict per requirement, with review asymmetry and a content-identified
   report;
-- the first composed internal case, `CASE-000`, which pins an existing
-  synthetic ACTINV 1.0.1 → Aftermatter R0 chain, admits 12 source attestations
-  and 4 output claims, and truthfully withholds both otherwise-within-limit
-  requirements for absent qualified review;
-- a first offline case-package workflow that re-hashes package documents,
-  re-hashes external artifact bytes only from explicitly supplied roots, binds
-  those identities to the claims and review policy, compiles and evaluates the
-  case, and replays its committed campaign report without collapsing unchecked
-  artifacts into a success state;
-- a draft portable evidence model and SHA-256 utility;
+- the first composed internal case, `CASE-000`, which binds an existing
+  synthetic ACTINV 1.0.1 → Aftermatter R0 chain, executes the Aftermatter
+  step, generates its output claims from the fresh result, admits 12 source
+  attestations and 4 output claims, and truthfully withholds both
+  otherwise-within-limit requirements for absent qualified review;
+- a case-package workflow that re-hashes package documents, re-hashes
+  external artifact bytes only from explicitly supplied roots, executes the
+  steps the package declares through a named case-specific adapter over an
+  exact executable in a fresh workspace with a cleared environment, writes an
+  execution receipt and verifies it from bytes, generates the claims document
+  from package identities and fresh outputs, binds those identities to the
+  claims and review policy, compiles and evaluates the case, and replays its
+  committed claims, receipt, and campaign report without collapsing an
+  unchecked artifact or an unsupplied executable into a success state;
+- a draft portable evidence model, case-package manifest, execution-receipt
+  record, and SHA-256 utility;
 - JSON Schemas that the compiler embeds and enforces as its source layer, and
   a deliberately non-executable specimen contract and registry snapshot;
 - a local CLI for canonicalization, compilation, campaign evaluation, and the
@@ -67,14 +73,16 @@ but package-level rule halves, other normative fixture families, full
 package-level admission, invalidation, and package semantics remain proposed
 and incomplete.
 
-It does **not** run scientific software, calculate a physical quantity, select
-or bind capability packages, verify execution receipts or signatures, evaluate
-a scientifically qualified requirement, certify a design, or produce
+It does **not** calculate a physical quantity, select or bind capability
+packages beyond an executable digest, verify signatures, evaluate a
+scientifically qualified requirement, certify a design, or produce
 decision-grade evidence. The standalone `compile` and `evaluate` commands do
-not read artifact bytes. The `run` command can independently re-hash bytes at
-explicitly resolved paths, but a matching hash establishes identity only.
-CASE-000 still evaluates recorded claims rather than invoking ACTINV or
-Aftermatter.
+not read artifact bytes. The `run` command re-hashes bytes at explicitly
+resolved roots and, where a case declares it, runs one exact executable
+through a case-specific adapter; a matching hash establishes identity only,
+and a verified receipt establishes process provenance only. In CASE-000 the
+Aftermatter step is executed and its claims are extracted from the fresh
+result, while the ACTINV inventory is still a recorded attestation.
 
 ## Core objects
 
@@ -123,7 +131,9 @@ cargo run -p avila-core-cli -- evaluate \
 
 cargo run -p avila-core-cli -- run \
   examples/cases/case-000-actinv-aftermatter \
-  --source-root aftermatter=../project-aftermatter
+  --source-root aftermatter=../project-aftermatter \
+  --source-root actinv-data=../project-aftermatter/.data/actinv/v1.0.0 \
+  --capability aftermatter-cli=../project-aftermatter/target/release/aftermatter
 
 cargo run -p avila-core-app
 ```
@@ -141,10 +151,14 @@ Pointer location, and typed repair candidates where a bounded repair exists;
 code, or the whole catalog with `--all`. The evaluate command admits a claims
 document against the compiled snapshot and prints one verdict per requirement;
 see the [campaign evaluation boundary](docs/architecture/CAMPAIGN_EVALUATION.md).
-The `run` command is the first concise end-to-end view: integrity, identity
-binding, compiled workflow, admissions, verdicts, and deterministic replay.
-Omit `--source-root` to see every external artifact reported as `not_checked`;
-add `--json` for the complete machine-readable run report.
+The `run` command is the concise end-to-end view: integrity, compiled
+workflow, execution with a verified receipt, generated claims, identity
+binding, admissions, verdicts, and replay against the committed claims,
+receipt, and campaign report. Omit `--source-root` to see every external
+artifact reported as `not_checked`; omit `--capability` to see the executed
+step reported `NOT RUN` with its committed claims evaluated as recorded
+attestations; add `--json` for the complete machine-readable run report. A
+supplied root or executable that does not match fails closed.
 
 ## Repository map
 
@@ -152,8 +166,10 @@ add `--json` for the complete machine-readable run report.
 crates/
   avila-core-kernel/      exact values, predicates, and verdict derivation
   avila-core-compiler/    draft static compiler, document types, and semantic IR
-  avila-core-evidence/    portable evidence records and hashing
-  avila-core-cli/         headless local interface
+  avila-core-evidence/    evidence records, case-package integrity, and
+                          execution receipts
+  avila-core-cli/         headless local interface and the case runner with
+                          its case-specific adapters
   avila-core-app/         thin egui client over the compiler
 docs/
   strategy/               north star, economics, and counter-positioning
@@ -176,7 +192,9 @@ Start with the [project charter](PROJECT_CHARTER.md), then read the
 is in the [Stage 0 status ledger](docs/roadmap/STAGE_0_STATUS.md), and the next
 validation work is captured in the
 [first-pilot discovery packet](docs/discovery/FIRST_PILOT_PACKET.md). The
-proposed language rules are in [ADR-0006](docs/adr/0006-semantic-core.md).
+proposed language rules are in [ADR-0006](docs/adr/0006-semantic-core.md);
+execution receipts and case-specific adapters are decided in
+[ADR-0007](docs/adr/0007-execution-receipts.md).
 
 ## Licensing and claims
 

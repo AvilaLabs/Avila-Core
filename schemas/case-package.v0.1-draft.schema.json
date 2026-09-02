@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/case-package/v0.1-draft.schema.json",
+  "title": "Avila Core Case Package v0.1 draft",
+  "description": "The manifest of a composed case: its hashed documents, the external artifacts bound to evidence records under named source roots, the exact executables it binds, and the steps the runner executes through case-specific adapters. Integrity checks byte identity; execution declarations bind what may run and what identities its outputs must carry.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "case_id", "title", "documents"],
+  "properties": {
+    "schema_version": { "const": "avila.core/case-package/v0.1-draft" },
+    "case_id": { "$ref": "#/$defs/nonemptyString" },
+    "title": { "$ref": "#/$defs/nonemptyString" },
+    "documents": {
+      "type": "array",
+      "description": "Package documents hashed by raw bytes. Exactly one each of contract, registry, and claims; at most one expected_campaign_report; execution_receipt documents name their step.",
+      "items": { "$ref": "#/$defs/document" }
+    },
+    "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
+    "capabilities": { "type": "array", "items": { "$ref": "#/$defs/capability" } },
+    "executions": { "type": "array", "items": { "$ref": "#/$defs/execution" } },
+    "limitations": { "type": "array", "items": { "$ref": "#/$defs/nonemptyString" } }
+  },
+  "$defs": {
+    "nonemptyString": { "type": "string", "minLength": 1 },
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "relativePath": { "type": "string", "pattern": "^[^/][^\\\\]*$" },
+    "rootName": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document_id", "role", "path", "sha256"],
+      "properties": {
+        "document_id": { "$ref": "#/$defs/nonemptyString" },
+        "role": { "$ref": "#/$defs/nonemptyString" },
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "step_id": { "$ref": "#/$defs/nonemptyString" }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_id", "evidence_ids", "source_root", "path", "sha256"],
+      "properties": {
+        "artifact_id": { "$ref": "#/$defs/nonemptyString" },
+        "evidence_ids": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/nonemptyString" } },
+        "source_root": { "$ref": "#/$defs/rootName" },
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "description": "An exact implementation the package binds. The executable digest is the identity; the package name and source coordinates are annotations.",
+      "additionalProperties": false,
+      "required": ["capability_id", "package_id", "executable_sha256"],
+      "properties": {
+        "capability_id": { "$ref": "#/$defs/nonemptyString" },
+        "package_id": { "$ref": "#/$defs/nonemptyString" },
+        "source_repository": { "$ref": "#/$defs/nonemptyString" },
+        "source_commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "executable_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "description": "One compiled step the runner executes with a named case-specific adapter. Every produced output claim must bind to a declared artifact identity.",
+      "additionalProperties": false,
+      "required": ["step_id", "adapter", "capability_id", "inputs", "outputs"],
+      "properties": {
+        "step_id": { "$ref": "#/$defs/nonemptyString" },
+        "adapter": { "$ref": "#/$defs/nonemptyString" },
+        "capability_id": { "$ref": "#/$defs/nonemptyString" },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["input_slot", "workspace_path"],
+            "properties": { "input_slot": { "$ref": "#/$defs/nonemptyString" }, "workspace_path": { "$ref": "#/$defs/relativePath" } }
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["output_slot", "claim_id"],
+            "properties": { "output_slot": { "$ref": "#/$defs/nonemptyString" }, "claim_id": { "$ref": "#/$defs/nonemptyString" } }
+          }
+        }
+      }
+    }
+  }
+}

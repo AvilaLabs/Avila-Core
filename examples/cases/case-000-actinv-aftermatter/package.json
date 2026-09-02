@@ -19,115 +19,148 @@
       "document_id": "case-000-claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:91b0d2173d4d561f719469c1956db810ca00bbea5b71584d64fe9f976b99601a"
+      "sha256": "sha256:0dd182084cb5585e2d7bf2d45311407e116fb0818c82119913a34a1487ca92c9"
     },
     {
       "document_id": "case-000-expected-campaign",
       "role": "expected_campaign_report",
       "path": "campaign-report.json",
-      "sha256": "sha256:5f3f7d03dcae94c37bd63ebc7cb2a2990c1944f39b96b918d7f08819061263bf"
+      "sha256": "sha256:742af1845c3dedb8ee8c0333376dadc1a18b6af9bd044b0bfc30bd95f1380536"
     },
     {
       "document_id": "case-000-provenance",
       "role": "provenance",
       "path": "provenance.json",
-      "sha256": "sha256:bfc89f3bb3c3d5c4af98a85f7e910f8d8654e42609c0ca844dee66e7278df205"
+      "sha256": "sha256:2211df8b94ec6f75f189d50a5ac8b9b60b7c2d5622ce9a7cf9025b6e56d106b3"
     },
     {
       "document_id": "case-000-reviewer-eligibility",
       "role": "review_policy",
       "path": "reviewer-eligibility-policy.md",
       "sha256": "sha256:5ce3fcac9014d4cc5f6c184eb458911469e879b7ce78f5b42fa118b28652dd16"
+    },
+    {
+      "document_id": "case-000-classification-receipt",
+      "role": "execution_receipt",
+      "path": "receipts/classification.json",
+      "sha256": "sha256:569dabb1ad3dffc394f2b48709535bd33bd3f7f69400dd1de6b73c3e02eacab4",
+      "step_id": "classification"
     }
   ],
   "artifacts": [
     {
       "artifact_id": "actinv-problem",
-      "evidence_ids": ["input:actinv-problem"],
+      "evidence_ids": [
+        "input:actinv-problem"
+      ],
       "source_root": "aftermatter",
       "path": "cases/r0/input/actinv-problem.json",
       "sha256": "sha256:010d95e23cff58144a8a977b61d980d87ef22396f5e64b0ce4272577aa1d6151"
     },
     {
       "artifact_id": "actinv-activation-library",
-      "evidence_ids": ["input:actinv-activation-library"],
+      "evidence_ids": [
+        "input:actinv-activation-library"
+      ],
       "source_root": "actinv-data",
       "path": "activation/tendl-2025-neutron-709g.npz",
       "sha256": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44"
     },
     {
       "artifact_id": "actinv-library-index",
-      "evidence_ids": ["input:actinv-library-index"],
+      "evidence_ids": [
+        "input:actinv-library-index"
+      ],
       "source_root": "actinv-data",
       "path": "activation/tendl-2025-neutron-709g_index.json",
       "sha256": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb"
     },
     {
       "artifact_id": "actinv-decay-primary",
-      "evidence_ids": ["input:actinv-decay-primary"],
+      "evidence_ids": [
+        "input:actinv-decay-primary"
+      ],
       "source_root": "actinv-data",
       "path": "decay/endf-b-viii-0_decay.dat",
       "sha256": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb"
     },
     {
       "artifact_id": "actinv-decay-fallback",
-      "evidence_ids": ["input:actinv-decay-fallback"],
+      "evidence_ids": [
+        "input:actinv-decay-fallback"
+      ],
       "source_root": "actinv-data",
       "path": "decay/jeff-3-3_decay.dat",
       "sha256": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123"
     },
     {
       "artifact_id": "actinv-data-notice",
-      "evidence_ids": ["input:actinv-data-notice"],
+      "evidence_ids": [
+        "input:actinv-data-notice"
+      ],
       "source_root": "actinv-data",
       "path": "ACTINV-DATA-NOTICE.md",
       "sha256": "sha256:191117ff8aaff8d9981a93c9bb59b418cfe54505dc7363128d2bc5e728a6a62c"
     },
     {
       "artifact_id": "aftermatter-case",
-      "evidence_ids": ["input:aftermatter-case"],
+      "evidence_ids": [
+        "input:aftermatter-case"
+      ],
       "source_root": "aftermatter",
       "path": "cases/r0/case.json",
       "sha256": "sha256:5b63361ac78e2090c556f5d67dba5033c385dbdfc606566c130cf72f553f007b"
     },
     {
       "artifact_id": "aftermatter-decay-metadata",
-      "evidence_ids": ["input:aftermatter-decay-metadata"],
+      "evidence_ids": [
+        "input:aftermatter-decay-metadata"
+      ],
       "source_root": "aftermatter",
       "path": "cases/r0/reference/decay-half-lives.json",
       "sha256": "sha256:d80f972fe26608139cb26d5a31a9a2bfc7a461be928fb8984f71830bf505535c"
     },
     {
       "artifact_id": "aftermatter-federal-rulepack",
-      "evidence_ids": ["input:aftermatter-federal-rulepack"],
+      "evidence_ids": [
+        "input:aftermatter-federal-rulepack"
+      ],
       "source_root": "aftermatter",
       "path": "rulepacks/us/10-cfr-61.55-r0.json",
       "sha256": "sha256:c9ef110349c22de71eb6677c9a85bdc39b250ba4368246c18d701b236542bd49"
     },
     {
       "artifact_id": "aftermatter-clive-rulepack",
-      "evidence_ids": ["input:aftermatter-clive-rulepack"],
+      "evidence_ids": [
+        "input:aftermatter-clive-rulepack"
+      ],
       "source_root": "aftermatter",
       "path": "rulepacks/facilities/clive-bwf-rev11-r0.json",
       "sha256": "sha256:22d6cc2b045227073faa56654bf7a70938eef04c323823b7e5771472aa5fed3c"
     },
     {
       "artifact_id": "aftermatter-wcs-rulepack",
-      "evidence_ids": ["input:aftermatter-wcs-rulepack"],
+      "evidence_ids": [
+        "input:aftermatter-wcs-rulepack"
+      ],
       "source_root": "aftermatter",
       "path": "rulepacks/facilities/wcs-cwf-rev11-r0.json",
       "sha256": "sha256:eb9142992c0963b7cf0fab47eac9cdbc79ba20f9bf0509554b200b02c902d52c"
     },
     {
       "artifact_id": "aftermatter-sources-manifest",
-      "evidence_ids": ["input:aftermatter-sources-manifest"],
+      "evidence_ids": [
+        "input:aftermatter-sources-manifest"
+      ],
       "source_root": "aftermatter",
       "path": "sources/MANIFEST.json",
       "sha256": "sha256:50faba035c762f7e47ed1624a6b78064809e43b6e8f835c083c195e4743816b1"
     },
     {
       "artifact_id": "actinv-normalized-inventory",
-      "evidence_ids": ["actinv-r0-inventory"],
+      "evidence_ids": [
+        "actinv-r0-inventory"
+      ],
       "source_root": "aftermatter",
       "path": "cases/r0/reference/actinv-result.json",
       "sha256": "sha256:3942d6f3337b786c018ac28474f4e7206d4d49301317812e7aef80058ca62bc8"
@@ -144,10 +177,70 @@
       "sha256": "sha256:3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718"
     }
   ],
+  "capabilities": [
+    {
+      "capability_id": "aftermatter-cli",
+      "package_id": "avila-labs.aftermatter/aftermatter-cli@0.1.0",
+      "source_repository": "https://github.com/AvilaLabs/Aftermatter",
+      "source_commit": "70a1c341d478bc37bf1ed0206dad4ee507cf743d",
+      "executable_sha256": "sha256:7f5067fead9fb1a25ec3937877a24a54533769515996ce0f4038bce2d8b05943"
+    }
+  ],
+  "executions": [
+    {
+      "step_id": "classification",
+      "adapter": "avila-labs.aftermatter/evaluate@1",
+      "capability_id": "aftermatter-cli",
+      "inputs": [
+        {
+          "input_slot": "inventory",
+          "workspace_path": "cases/r0/reference/actinv-result.json"
+        },
+        {
+          "input_slot": "case",
+          "workspace_path": "cases/r0/case.json"
+        },
+        {
+          "input_slot": "decay-metadata",
+          "workspace_path": "cases/r0/reference/decay-half-lives.json"
+        },
+        {
+          "input_slot": "federal-rulepack",
+          "workspace_path": "rulepacks/us/10-cfr-61.55-r0.json"
+        },
+        {
+          "input_slot": "clive-rulepack",
+          "workspace_path": "rulepacks/facilities/clive-bwf-rev11-r0.json"
+        },
+        {
+          "input_slot": "wcs-rulepack",
+          "workspace_path": "rulepacks/facilities/wcs-cwf-rev11-r0.json"
+        },
+        {
+          "input_slot": "sources-manifest",
+          "workspace_path": "sources/MANIFEST.json"
+        }
+      ],
+      "outputs": [
+        {
+          "output_slot": "table-1-class-a-fraction",
+          "claim_id": "aftermatter-r0-table-1-class-a-fraction"
+        },
+        {
+          "output_slot": "table-2-class-a-fraction",
+          "claim_id": "aftermatter-r0-table-2-class-a-fraction"
+        },
+        {
+          "output_slot": "route-result",
+          "claim_id": "aftermatter-r0-route-result"
+        }
+      ]
+    }
+  ],
   "limitations": [
     "CASE-000 is an internal synthetic integration specimen, not pilot or participant evidence.",
-    "Five ACTINV data-release artifacts are not available in the local workspace and remain not_checked unless that exact release is supplied as the actinv-data source root.",
-    "Artifact integrity establishes byte identity only; no execution receipt, signature, qualification, scientific correctness, or regulatory suitability is verified.",
-    "ACTINV and Aftermatter are not invoked by this workflow; the campaign evaluates the frozen recorded claims."
+    "The five ACTINV data-release artifacts are verified only when that exact release is supplied as the actinv-data source root; they live outside the Aftermatter checkout.",
+    "Artifact integrity establishes byte identity only; a verified execution receipt establishes that the bound Aftermatter executable ran over the bound bytes and produced the recorded bytes. Neither establishes scientific correctness, qualification, signature, or regulatory suitability.",
+    "Only the classification step is executed. The activation step's ACTINV inventory is a recorded attestation, and the review step is a pending obligation the runner never performs."
   ]
 }

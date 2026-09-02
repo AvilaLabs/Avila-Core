@@ -19,10 +19,14 @@ invalidate anything. Review decisions are recorded as unverified assertions.
 No verdict it produces is scientific truth, certification, or regulatory
 approval; every verdict names the boundary it holds under.
 
-`avila-core run` composes this evaluator with a separate case-package integrity
-layer. That layer can re-hash explicitly resolved bytes and bind their digests
-to the claims, but it does not alter the evaluator's admission semantics or
-turn an unchecked, unsigned, or unqualified assertion into evidence of truth.
+`avila-core run` composes this evaluator with a separate case-package layer.
+That layer re-hashes explicitly resolved bytes, executes the steps a case
+declares through named adapters over exact executables, verifies the
+resulting execution receipts from bytes, generates the claims document from
+package identities and fresh outputs, and binds every identity before
+evaluation (ADR-0007). It does not alter the evaluator's admission semantics
+or turn an unchecked, unsigned, or unqualified assertion into evidence of
+truth.
 
 ## Claims
 
@@ -102,16 +106,19 @@ A frozen protocol with gates and falsifiers is a contract: the gates are
 requirements, the register is the declared inputs, and the checker is a
 capability type. Executing the protocol produces the claims document; the
 checker's re-derivation is the admission step; the ledger entry is the
-campaign report; the manifest is its identity. The next steps that make this
-complete are execution receipts and package identities for A2 and A4, and
-typed invalidation so a changed input or method names exactly which
-verdicts no longer stand.
+campaign report; the manifest is its identity. Execution receipts now exist
+for the steps a case declares (ADR-0007); what remains is capability identity
+beyond an executable digest, the signed half of A2, and typed invalidation so
+a changed input or method names exactly which verdicts no longer stand.
 
 ## First composed internal case
 
 [CASE-000](../../examples/cases/case-000-actinv-aftermatter/README.md) applies
-this slice to a frozen synthetic ACTINV 1.0.1 → Aftermatter R0 chain. Twelve
-input attestations and four output claims admit under the type-level rules.
+this slice to a synthetic ACTINV 1.0.1 → Aftermatter R0 chain. Twelve
+input attestations and four output claims admit under the type-level rules;
+the three classification claims are extracted by the case runner from the
+Aftermatter result it executes, and the inventory claim is a recorded
+attestation.
 Both bounded fraction claims have upper bounds below their frozen limits, but
 the campaign returns `NOT_EVALUATED / not_evaluated.review_pending` for both
 requirements because no qualified-review decision is asserted.
@@ -121,7 +128,10 @@ all three modeled routes are unresolved, and the current numeric requirement
 language has no categorical route-state semantics. CASE-000 therefore records
 both what the executable slice can establish and the next vertical gaps
 without pretending the upstream bytes, packages, qualification, or review have
-been verified. The case runner now makes the byte boundary visible: nine
-Aftermatter-root artifacts can be re-hashed locally, while five ACTINV
-data-release artifacts remain `not_checked` until that separate root is
-available.
+been verified. The case runner makes the byte boundary visible: nine
+artifacts are re-hashed from the Aftermatter checkout and five ACTINV
+data-release artifacts from that checkout's data directory when the
+`actinv-data` root is supplied, and every root left unsupplied stays
+`not_checked`. With both roots and the bound executable supplied, the fresh
+Aftermatter result reproduces the frozen artifact byte for byte and the fresh
+receipt matches the committed one.

@@ -132,9 +132,18 @@
       "threshold": "1"
     },
     "routes": [
-      { "route_id": "clive-bwf", "state": "unresolved" },
-      { "route_id": "wcs-cwf", "state": "unresolved" },
-      { "route_id": "managed-storage", "state": "unresolved" }
+      {
+        "route_id": "clive-bwf",
+        "state": "unresolved"
+      },
+      {
+        "route_id": "wcs-cwf",
+        "state": "unresolved"
+      },
+      {
+        "route_id": "managed-storage",
+        "state": "unresolved"
+      }
     ]
   },
   "expected_core_result": {
@@ -155,10 +164,49 @@
     "reason": "No qualified independent review decision is present."
   },
   "core_boundary": [
-    "The standalone Core compiler and campaign evaluator do not read artifact bytes; the case runner re-hashes only files under explicitly supplied source roots and reports every omitted root as not_checked.",
-    "A matching artifact digest establishes byte identity only; Core does not verify execution receipts, capability package identities, signatures, qualification, professional judgment, or invalidation.",
-    "Producer and input identities in the claims document are attestations only.",
+    "The standalone Core compiler and campaign evaluator do not read artifact bytes; the case runner re-hashes files under explicitly supplied source roots and reports every omitted root as not_checked.",
+    "A matching artifact digest establishes byte identity only. A verified execution receipt establishes that the bound executable ran over the bound bytes and produced the recorded bytes; it does not verify signatures, qualification, professional judgment, or invalidation.",
+    "Producer identities in the generated claims are the executable digest the runner verified, not a signed capability package.",
     "The current requirement language does not evaluate the categorical waste-class or route-state vocabulary.",
-    "CASE-000 is not discovery evidence, participant evidence, pilot evidence, or a qualification record."
-  ]
+    "CASE-000 is not discovery evidence, participant evidence, pilot evidence, or a qualification record. Execution does not substitute for qualified review."
+  ],
+  "execution_recorded_on": "2026-09-02",
+  "execution": {
+    "milestone": "CASE-000E",
+    "runner": "avila.core/cli-rust@0.1.0",
+    "executed_steps": [
+      {
+        "step_id": "classification",
+        "adapter": "avila-labs.aftermatter/evaluate@1",
+        "capability": {
+          "capability_id": "aftermatter-cli",
+          "package_id": "avila-labs.aftermatter/aftermatter-cli@0.1.0",
+          "source_repository": "https://github.com/AvilaLabs/Aftermatter",
+          "source_commit": "70a1c341d478bc37bf1ed0206dad4ee507cf743d",
+          "executable_sha256": "7f5067fead9fb1a25ec3937877a24a54533769515996ce0f4038bce2d8b05943"
+        },
+        "receipt": "receipts/classification.json",
+        "invocation_sha256": "1c4295bb60863084660b6ce8b2d410c675ea65f889afd8326fdab27f1d10e599",
+        "fresh_output_sha256": "3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718",
+        "reproduces_frozen_artifact": true,
+        "claims_extracted": [
+          "aftermatter-r0-table-1-class-a-fraction",
+          "aftermatter-r0-table-2-class-a-fraction",
+          "aftermatter-r0-route-result"
+        ]
+      }
+    ],
+    "attested_steps": [
+      {
+        "step_id": "activation",
+        "reason": "ACTINV 1.0.1 is not executed by Core in CASE-000; the normalized inventory is carried as a recorded attestation whose bytes are verified against the Aftermatter checkout."
+      }
+    ],
+    "pending_steps": [
+      {
+        "step_id": "qualified-review",
+        "reason": "pending external review; never executed by the runner"
+      }
+    ]
+  }
 }

@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod case_run;
+mod execute;
 
 use std::error::Error;
 use std::fs;
@@ -59,13 +60,23 @@ enum Command {
         claims: PathBuf,
     },
     /// Run a composed case package through integrity checks, compilation,
-    /// evidence binding, campaign evaluation, and deterministic replay.
+    /// controlled execution with receipts, claim generation, evidence
+    /// binding, campaign evaluation, and deterministic replay.
     Run {
         /// Case directory containing package.json, or the manifest path itself.
         case: PathBuf,
         /// Resolve an external artifact root as NAME=PATH. Repeat as needed.
         #[arg(long = "source-root", value_name = "NAME=PATH")]
         source_roots: Vec<String>,
+        /// Supply the executable for a package capability as NAME=PATH. Its
+        /// bytes must hash to the identity the package binds. Repeat as needed.
+        #[arg(long = "capability", value_name = "NAME=PATH")]
+        capabilities: Vec<String>,
+        /// Fresh directory for staged inputs, outputs, logs, receipts, and the
+        /// generated documents. Defaults to workspaces/<case>/<run> under the
+        /// current directory when something is executed.
+        #[arg(long, value_name = "DIR")]
+        workspace: Option<PathBuf>,
         /// Emit the complete machine-readable run report instead of the concise view.
         #[arg(long)]
         json: bool,
@@ -131,10 +142,16 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
         Command::Run {
             case,
             source_roots,
+            capabilities,
+            workspace,
             json,
         } => {
-            let source_roots = case_run::parse_source_roots(&source_roots)?;
-            let report = case_run::execute_case(&case, &source_roots)?;
+            let options = case_run::CaseRunOptions {
+                source_roots: case_run::parse_source_roots(&source_roots)?,
+                capabilities: case_run::parse_capabilities(&capabilities)?,
+                workspace,
+            };
+            let report = case_run::execute_case(&case, &options)?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             } else {

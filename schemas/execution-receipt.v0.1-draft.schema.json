@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/execution-receipt/v0.1-draft.schema.json",
+  "title": "Avila Core Execution Receipt v0.1 draft",
+  "description": "What one controlled step execution actually did: the exact capability, the staged input bytes, the portable invocation, the process outcome, the captured logs, and the produced output bytes. Process evidence only: a zero exit status and matching digests establish that a named executable ran over named bytes and produced named bytes, not scientific correctness, qualification, review, or regulatory suitability.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "case_id", "compiled_snapshot_sha256", "step_id", "capability_type", "adapter", "capability", "inputs", "invocation", "invocation_sha256", "process", "outputs", "runner", "status", "notice"],
+  "properties": {
+    "schema_version": { "const": "avila.core/execution-receipt/v0.1-draft" },
+    "case_id": { "$ref": "#/$defs/nonemptyString" },
+    "compiled_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+    "step_id": { "$ref": "#/$defs/nonemptyString" },
+    "capability_type": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "major"],
+      "properties": { "id": { "$ref": "#/$defs/nonemptyString" }, "major": { "type": "integer", "minimum": 0 } }
+    },
+    "adapter": { "$ref": "#/$defs/nonemptyString" },
+    "capability": { "$ref": "#/$defs/capabilityIdentity" },
+    "parameters": {
+      "type": "object",
+      "description": "The compiled step parameters, in their tagged canonical form.",
+      "additionalProperties": true
+    },
+    "inputs": { "type": "array", "items": { "$ref": "#/$defs/receiptInput" } },
+    "invocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["program", "arguments", "working_directory", "timeout_ms"],
+      "properties": {
+        "program": { "$ref": "#/$defs/nonemptyString" },
+        "arguments": { "type": "array", "items": { "type": "string", "pattern": "^[^/].*|^$", "description": "Relative workspace paths and flags only; never a host path." } },
+        "working_directory": { "const": "." },
+        "environment": { "type": "object", "additionalProperties": { "type": "string" } },
+        "timeout_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "invocation_sha256": {
+      "description": "Identity of the capability, parameters, staged inputs, and invocation: what was asked of the program before it ran.",
+      "$ref": "#/$defs/sha256"
+    },
+    "process": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["started_at", "finished_at", "duration_ms", "timed_out"],
+      "properties": {
+        "started_at": { "$ref": "#/$defs/rfc3339" },
+        "finished_at": { "$ref": "#/$defs/rfc3339" },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "exit_status": { "type": "integer" },
+        "signal": { "type": "integer" },
+        "timed_out": { "type": "boolean" }
+      }
+    },
+    "logs": { "type": "array", "items": { "$ref": "#/$defs/logRecord" } },
+    "outputs": { "type": "array", "items": { "$ref": "#/$defs/receiptOutput" } },
+    "runner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runner", "os", "arch"],
+      "properties": { "runner": { "$ref": "#/$defs/nonemptyString" }, "os": { "$ref": "#/$defs/nonemptyString" }, "arch": { "$ref": "#/$defs/nonemptyString" } }
+    },
+    "status": { "enum": ["completed", "failed", "timed_out"] },
+    "limitations": { "type": "array", "items": { "$ref": "#/$defs/nonemptyString" } },
+    "notice": { "$ref": "#/$defs/nonemptyString" }
+  },
+  "$defs": {
+    "nonemptyString": { "type": "string", "minLength": 1 },
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "rfc3339": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$" },
+    "relativePath": { "type": "string", "pattern": "^[^/][^\\\\]*$" },
+    "capabilityIdentity": {
+      "type": "object",
+      "description": "The exact implementation that ran. The executable digest is the identity; the package name and source coordinates are annotations.",
+      "additionalProperties": false,
+      "required": ["capability_id", "package_id", "executable_sha256"],
+      "properties": {
+        "capability_id": { "$ref": "#/$defs/nonemptyString" },
+        "package_id": { "$ref": "#/$defs/nonemptyString" },
+        "source_repository": { "$ref": "#/$defs/nonemptyString" },
+        "source_commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "executable_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "receiptInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_slot", "evidence_id", "workspace_path", "media_type", "sha256", "bytes"],
+      "properties": {
+        "input_slot": { "$ref": "#/$defs/nonemptyString" },
+        "evidence_id": { "$ref": "#/$defs/nonemptyString" },
+        "workspace_path": { "$ref": "#/$defs/relativePath" },
+        "media_type": { "$ref": "#/$defs/nonemptyString" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "logRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stream", "workspace_path", "sha256", "bytes"],
+      "properties": {
+        "stream": { "enum": ["stdout", "stderr"] },
+        "workspace_path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "receiptOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["output_id", "workspace_path", "media_type", "state"],
+      "properties": {
+        "output_id": { "$ref": "#/$defs/nonemptyString" },
+        "workspace_path": { "$ref": "#/$defs/relativePath" },
+        "media_type": { "$ref": "#/$defs/nonemptyString" },
+        "state": { "enum": ["collected", "missing"] },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

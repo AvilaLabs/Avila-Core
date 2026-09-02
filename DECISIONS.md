@@ -23,6 +23,7 @@ decision records (ADRs). “Proposed” items are intentionally reversible.
 | S-016 | Accepted | The `v0.1` contract model, capability manifests, and planner are retired. The `v0.2-draft` contract, which carries its bounded question, and the registry snapshot compiled by `avila-core-compiler` are the only authoritative document forms; package selection returns as an SC-5 and SC-8 binding pass over compiled snapshots. |
 | S-017 | Accepted | `CASE-000` is the first composed internal integration specimen: the frozen ACTINV 1.0.1 inventory feeds Aftermatter R0, and Core admits the recorded claims while withholding `PASS` for absent qualified review. It does not select the first external vertical, close discovery, qualify either tool, or count as pilot evidence. |
 | S-018 | Accepted | The first runnable case workflow separates raw-byte integrity, identity binding, semantic compilation, campaign evaluation, and deterministic replay. Omitted artifact roots are `not_checked`; supplied roots with missing or different bytes fail closed. A matching digest proves identity only and does not alter qualification or review state. |
+| S-019 | Accepted | `CASE-000E`: Core executes Aftermatter through a named case-specific adapter over verified bytes and an exact executable, writes and verifies an execution receipt, and generates the output claims from the fresh bytes. An omitted executable leaves a step `not_run` with its committed claims as recorded attestations; a supplied executable must match its bound identity, complete, and reproduce claims that bind, or the run is rejected. No horizontal runner or adapter protocol is built. |
 
 Architecture records:
 
@@ -32,3 +33,4 @@ Architecture records:
 - [ADR-0004: Four-state verdict model](docs/adr/0004-four-state-verdict-model.md)
 - [ADR-0005: Portable evidence boundary](docs/adr/0005-portable-evidence-boundary.md)
 - [ADR-0006: Semantic core and evidence-contract language](docs/adr/0006-semantic-core.md)
+- [ADR-0007: Execution receipts and case-specific adapters](docs/adr/0007-execution-receipts.md)

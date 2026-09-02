@@ -1,8 +1,9 @@
 # Capability protocol
 
-**Status:** early design; the registry snapshot's capability types are the
-only executable part. Package manifests, selection, and invocation are not
-implemented.
+**Status:** early design; the registry snapshot's capability types are
+executable, and a case-specific invocation with execution receipts exists for
+the steps a committed case declares (ADR-0007). Package manifests, selection,
+and a generic adapter protocol are not implemented.
 
 ## Purpose
 
@@ -109,6 +110,14 @@ The runner creates a receipt covering all verified inputs, the invocation,
 capability package, environment, timestamps, resource use, process outcome,
 logs, produced artifact hashes, and validation outcome. Admissible outputs are
 then added to the evidence graph; originals remain immutable.
+
+The implemented slice of this lifecycle is deliberately narrow: a case package
+binds an exact executable by digest and declares which compiled step runs
+through which named adapter; the runner stages verified bytes at
+package-declared workspace paths, runs with a cleared environment and a
+timeout, collects only declared outputs, writes the receipt, and verifies it
+from bytes; the adapter extracts claims. Resolve, package verification beyond
+the digest, preflight, approval, and generic validators are not implemented.
 
 ## Proposed invocation document
 

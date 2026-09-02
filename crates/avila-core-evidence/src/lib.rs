@@ -8,21 +8,49 @@
 #![forbid(unsafe_code)]
 
 mod package;
+mod receipt;
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 pub use package::{
     ArtifactCheck, CASE_PACKAGE_SCHEMA_VERSION, CasePackageManifest, DocumentCheck,
-    IntegrityCheckState, PACKAGE_INTEGRITY_REPORT_SCHEMA_VERSION, PackageArtifact, PackageDocument,
-    PackageError, PackageIntegrityReport, PackageIntegrityStatus, VerifiedCasePackage,
-    verify_case_package,
+    ExecutionInputStaging, ExecutionOutputBinding, IntegrityCheckState,
+    PACKAGE_INTEGRITY_REPORT_SCHEMA_VERSION, PackageArtifact, PackageCapability, PackageDocument,
+    PackageError, PackageExecution, PackageIntegrityReport, PackageIntegrityStatus,
+    VerifiedCasePackage, verify_case_package,
+};
+pub use receipt::{
+    CapabilityIdentity, CapabilityTypeRef, EXECUTION_RECEIPT_SCHEMA_VERSION, ExecutionReceipt,
+    ExpectedInput, Invocation, LogRecord, OutputState, ProcessOutcome, RECEIPT_NOTICE,
+    ReceiptCheck, ReceiptCheckState, ReceiptError, ReceiptExpectations, ReceiptFileCheck,
+    ReceiptInput, ReceiptOutput, ReceiptStatus, RunnerIdentity, invocation_identity, parse_receipt,
+    verify_receipt,
 };
 
 pub const EVIDENCE_SCHEMA_VERSION: &str = "avila.core/evidence-bundle/v0.1";
 
 pub fn sha256_hex(bytes: impl AsRef<[u8]>) -> String {
     format!("{:x}", Sha256::digest(bytes.as_ref()))
+}
+
+/// Hash a regular file in fixed-size chunks. Returns the `sha256:`-prefixed
+/// digest and the byte length.
+pub fn sha256_file(path: &std::path::Path) -> std::io::Result<(String, u64)> {
+    use std::io::Read as _;
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0_u8; 64 * 1024];
+    let mut length = 0_u64;
+    loop {
+        let count = file.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        length += count as u64;
+        hasher.update(&buffer[..count]);
+    }
+    Ok((format!("sha256:{:x}", hasher.finalize()), length))
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

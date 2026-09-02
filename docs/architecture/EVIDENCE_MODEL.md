@@ -1,7 +1,8 @@
 # Evidence model
 
-**Status:** conceptual model plus minimal draft Rust records and an offline
-case-package integrity slice.
+**Status:** conceptual model plus minimal draft Rust records, an offline
+case-package integrity slice, and an execution-receipt record verified from
+bytes (ADR-0007).
 
 ## Principle
 
@@ -88,14 +89,20 @@ Rules must define:
 The current helper computes SHA-256 over supplied bytes only. It does not define
 canonicalization or package identity.
 
-The first `avila-core run` slice reads a draft case manifest, confines relative
+The `avila-core run` slice reads a draft case manifest, confines relative
 paths beneath explicitly selected roots, re-hashes package documents and
 available external artifacts, and reports missing roots separately from
-missing or mismatched files. It also binds those manifest digests to claim and
-review-policy identities before campaign evaluation. This is an integrity and
-replay spike, not the final portable evidence package: it has no archive
-canonicalization, signed root, receipt model, trust store, redaction semantics,
-or lineage-completeness proof.
+missing or mismatched files. For the steps a case declares it stages the
+verified bytes into a fresh workspace, runs the bound executable with a
+cleared environment, and writes an `avila.core/execution-receipt/v0.1-draft`
+record: capability identity, staged inputs, portable invocation and its
+identity, process outcome, log and output digests, runner identity, and
+limitations. The receipt is re-read and re-hashed before anything is
+promoted. The generated claims document is then bound to the manifest
+digests and review-policy identities before campaign evaluation. This is an
+integrity, execution, and replay spike, not the final portable evidence
+package: it has no archive canonicalization, signed root, trust store,
+redaction semantics, sandbox, or lineage-completeness proof.
 
 ## Requirement verdict
 

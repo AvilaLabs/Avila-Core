@@ -30,6 +30,14 @@ pub struct CasePackageManifest {
     pub documents: Vec<PackageDocument>,
     #[serde(default)]
     pub artifacts: Vec<PackageArtifact>,
+    /// Exact implementations the package binds for execution, identified by
+    /// the digest of their executable bytes.
+    #[serde(default)]
+    pub capabilities: Vec<PackageCapability>,
+    /// Steps the case runner executes rather than replays, with the staging
+    /// layout and the evidence identifiers their outputs receive.
+    #[serde(default)]
+    pub executions: Vec<PackageExecution>,
     #[serde(default)]
     pub limitations: Vec<String>,
 }
@@ -41,6 +49,9 @@ pub struct PackageDocument {
     pub role: String,
     pub path: String,
     pub sha256: String,
+    /// The executed step an `execution_receipt` document records.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub step_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -51,6 +62,48 @@ pub struct PackageArtifact {
     pub source_root: String,
     pub path: String,
     pub sha256: String,
+}
+
+/// An exact implementation the package binds. The executable digest is the
+/// identity; the package name and source coordinates are annotations that
+/// help a reader locate it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PackageCapability {
+    pub capability_id: String,
+    pub package_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_repository: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_commit: Option<String>,
+    pub executable_sha256: String,
+}
+
+/// One step the runner executes with a named case-specific adapter.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PackageExecution {
+    pub step_id: String,
+    pub adapter: String,
+    pub capability_id: String,
+    /// Where each bound input slot is staged inside the step workspace.
+    pub inputs: Vec<ExecutionInputStaging>,
+    /// The evidence identifier each produced output slot's claim receives.
+    pub outputs: Vec<ExecutionOutputBinding>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExecutionInputStaging {
+    pub input_slot: String,
+    pub workspace_path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExecutionOutputBinding {
+    pub output_slot: String,
+    pub claim_id: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -338,6 +391,117 @@ fn validate_manifest(manifest: &CasePackageManifest) -> Result<(), PackageError>
             }
         }
     }
+
+    let mut capability_ids = BTreeSet::new();
+    for capability in &manifest.capabilities {
+        require_nonempty("capability_id", &capability.capability_id)?;
+        require_nonempty("package_id", &capability.package_id)?;
+        validate_digest(&capability.executable_sha256)?;
+        if !capability_ids.insert(capability.capability_id.as_str()) {
+            return Err(PackageError::InvalidManifest(format!(
+                "duplicate capability_id `{}`",
+                capability.capability_id
+            )));
+        }
+    }
+
+    let mut execution_steps = BTreeSet::new();
+    let mut execution_claims = BTreeSet::new();
+    for execution in &manifest.executions {
+        require_nonempty("execution step_id", &execution.step_id)?;
+        require_nonempty("adapter", &execution.adapter)?;
+        if !execution_steps.insert(execution.step_id.as_str()) {
+            return Err(PackageError::InvalidManifest(format!(
+                "step `{}` is declared for execution more than once",
+                execution.step_id
+            )));
+        }
+        if !capability_ids.contains(execution.capability_id.as_str()) {
+            return Err(PackageError::InvalidManifest(format!(
+                "execution of `{}` names capability `{}`, which the package does not declare",
+                execution.step_id, execution.capability_id
+            )));
+        }
+        let mut slots = BTreeSet::new();
+        let mut staged_paths = BTreeSet::new();
+        for input in &execution.inputs {
+            require_nonempty("input_slot", &input.input_slot)?;
+            validate_relative_path(&input.workspace_path)?;
+            if !slots.insert(input.input_slot.as_str()) {
+                return Err(PackageError::InvalidManifest(format!(
+                    "execution of `{}` stages input slot `{}` twice",
+                    execution.step_id, input.input_slot
+                )));
+            }
+            if !staged_paths.insert(input.workspace_path.as_str()) {
+                return Err(PackageError::InvalidManifest(format!(
+                    "execution of `{}` stages two inputs at `{}`",
+                    execution.step_id, input.workspace_path
+                )));
+            }
+        }
+        if execution.outputs.is_empty() {
+            return Err(PackageError::InvalidManifest(format!(
+                "execution of `{}` binds no output claims",
+                execution.step_id
+            )));
+        }
+        let mut output_slots = BTreeSet::new();
+        for output in &execution.outputs {
+            require_nonempty("output_slot", &output.output_slot)?;
+            require_nonempty("claim_id", &output.claim_id)?;
+            if !output_slots.insert(output.output_slot.as_str()) {
+                return Err(PackageError::InvalidManifest(format!(
+                    "execution of `{}` binds output slot `{}` twice",
+                    execution.step_id, output.output_slot
+                )));
+            }
+            if !execution_claims.insert(output.claim_id.as_str()) {
+                return Err(PackageError::InvalidManifest(format!(
+                    "claim `{}` is produced by more than one execution output",
+                    output.claim_id
+                )));
+            }
+            if !evidence_ids.contains(output.claim_id.as_str()) {
+                return Err(PackageError::InvalidManifest(format!(
+                    "execution output claim `{}` is not bound to any package artifact; a fresh output must bind to a declared identity",
+                    output.claim_id
+                )));
+            }
+        }
+    }
+
+    let mut receipt_steps = BTreeSet::new();
+    for document in &manifest.documents {
+        match (document.role.as_str(), &document.step_id) {
+            ("execution_receipt", Some(step_id)) => {
+                if !execution_steps.contains(step_id.as_str()) {
+                    return Err(PackageError::InvalidManifest(format!(
+                        "receipt document `{}` names step `{step_id}`, which is not declared for execution",
+                        document.document_id
+                    )));
+                }
+                if !receipt_steps.insert(step_id.as_str()) {
+                    return Err(PackageError::InvalidManifest(format!(
+                        "step `{step_id}` has more than one execution_receipt document"
+                    )));
+                }
+            }
+            ("execution_receipt", None) => {
+                return Err(PackageError::InvalidManifest(format!(
+                    "receipt document `{}` must name its step_id",
+                    document.document_id
+                )));
+            }
+            (_, Some(step_id)) => {
+                return Err(PackageError::InvalidManifest(format!(
+                    "document `{}` names step `{step_id}` but is not an execution_receipt",
+                    document.document_id
+                )));
+            }
+            (_, None) => {}
+        }
+    }
     Ok(())
 }
 
@@ -461,13 +625,14 @@ fn resolve_confined(root: &Path, relative: &str) -> Result<Option<PathBuf>, Pack
     Ok(Some(canonical))
 }
 
-fn check_file(
+/// Hash a regular file confined beneath `root` in fixed-size chunks. Returns
+/// the prefixed digest and byte length, or `None` when the file is absent.
+pub(crate) fn hash_confined_file(
     root: &Path,
     relative: &str,
-    expected: &str,
-) -> Result<(Option<String>, IntegrityCheckState), PackageError> {
+) -> Result<Option<(String, u64)>, PackageError> {
     let Some(path) = resolve_confined(root, relative)? else {
-        return Ok((None, IntegrityCheckState::Missing));
+        return Ok(None);
     };
     let mut file = fs::File::open(&path).map_err(|source| PackageError::Io {
         path: path.display().to_string(),
@@ -475,6 +640,7 @@ fn check_file(
     })?;
     let mut hasher = Sha256::new();
     let mut buffer = [0_u8; 64 * 1024];
+    let mut length = 0_u64;
     loop {
         let count = file.read(&mut buffer).map_err(|source| PackageError::Io {
             path: path.display().to_string(),
@@ -483,9 +649,20 @@ fn check_file(
         if count == 0 {
             break;
         }
+        length += count as u64;
         hasher.update(&buffer[..count]);
     }
-    let actual = format!("sha256:{:x}", hasher.finalize());
+    Ok(Some((format!("sha256:{:x}", hasher.finalize()), length)))
+}
+
+fn check_file(
+    root: &Path,
+    relative: &str,
+    expected: &str,
+) -> Result<(Option<String>, IntegrityCheckState), PackageError> {
+    let Some((actual, _)) = hash_confined_file(root, relative)? else {
+        return Ok((None, IntegrityCheckState::Missing));
+    };
     let state = if actual == expected {
         IntegrityCheckState::Verified
     } else {
@@ -556,6 +733,7 @@ mod tests {
                     role: role.into(),
                     path: format!("{role}.json"),
                     sha256: digest(format!("{role}.json").as_bytes()),
+                    step_id: None,
                 })
                 .collect(),
             artifacts: vec![PackageArtifact {
@@ -565,6 +743,8 @@ mod tests {
                 path: "artifact.bin".into(),
                 sha256: digest(b"artifact"),
             }],
+            capabilities: Vec::new(),
+            executions: Vec::new(),
             limitations: vec!["fixture only".into()],
         })
         .unwrap()
@@ -596,6 +776,65 @@ mod tests {
         assert_eq!(
             failed.integrity.artifacts[0].state,
             IntegrityCheckState::Mismatch
+        );
+    }
+
+    #[test]
+    fn executions_must_name_declared_capabilities_and_bound_claims() {
+        let root = TestDir::new();
+        let mut manifest: CasePackageManifest = serde_json::from_slice(&fixture(&root.0)).unwrap();
+        manifest.executions.push(PackageExecution {
+            step_id: "step".into(),
+            adapter: "test/adapter@1".into(),
+            capability_id: "stub".into(),
+            inputs: vec![ExecutionInputStaging {
+                input_slot: "a".into(),
+                workspace_path: "inputs/a.bin".into(),
+            }],
+            outputs: vec![ExecutionOutputBinding {
+                output_slot: "result".into(),
+                claim_id: "step-result".into(),
+            }],
+        });
+        let bytes = serde_json::to_vec(&manifest).unwrap();
+        let error = verify_case_package(&bytes, &root.0, &BTreeMap::new()).unwrap_err();
+        assert!(error.to_string().contains("does not declare"), "{error}");
+
+        manifest.capabilities.push(PackageCapability {
+            capability_id: "stub".into(),
+            package_id: "test/stub@1".into(),
+            source_repository: None,
+            source_commit: None,
+            executable_sha256: digest(b"stub"),
+        });
+        let bytes = serde_json::to_vec(&manifest).unwrap();
+        let error = verify_case_package(&bytes, &root.0, &BTreeMap::new()).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("not bound to any package artifact"),
+            "{error}"
+        );
+
+        manifest.artifacts[0]
+            .evidence_ids
+            .push("step-result".into());
+        let bytes = serde_json::to_vec(&manifest).unwrap();
+        let package = verify_case_package(&bytes, &root.0, &BTreeMap::new()).unwrap();
+        assert_eq!(package.manifest.executions.len(), 1);
+
+        manifest.documents.push(PackageDocument {
+            document_id: "receipt".into(),
+            role: "execution_receipt".into(),
+            path: "receipt.json".into(),
+            sha256: digest(b"receipt"),
+            step_id: Some("other".into()),
+        });
+        let bytes = serde_json::to_vec(&manifest).unwrap();
+        let error = verify_case_package(&bytes, &root.0, &BTreeMap::new()).unwrap_err();
+        assert!(
+            error.to_string().contains("not declared for execution"),
+            "{error}"
         );
     }
 

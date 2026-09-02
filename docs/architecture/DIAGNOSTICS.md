@@ -11,6 +11,33 @@ for resolution, graph, requirement, review, and registry checks, `A` for
 admissibility, and `E` for evidence admission during campaign evaluation. Only `CORE-R3601` and `CORE-R3602` are notices; every other
 code blocks compilation.
 
+## Human rendering
+
+`avila-core compile --text` and `avila-core evaluate --text` render the same
+findings the JSON report carries in the shape a compiler user expects, and
+the case runner and the workbench show the same rendering for a rejected
+compilation:
+
+```text
+missing[CORE-S1301]: parameter `histories` remains explicitly not defined in this draft
+  --> contract:19:131  /workflow/0/parameters/histories
+   |
+19 |     { "step_id": "transport", ... "parameters": { "histories": "not_defined" }, ... },
+   |                                                                 ^^^^^^^^^^^^^
+   = owner: requester
+   = next: Supply a value of the declared family and domain. The owner is the requester.
+```
+
+The first word is the finding's class, never collapsed to `error`, because a
+missing value, an invalid one, an unsatisfiable composition, and an
+inadmissible record call for different people and actions. The location
+resolves the JSON Pointer to a line and column in the supplied document
+bytes; a pointer that does not exist yet, as for a missing member, resolves
+to its nearest existing ancestor and says so. Related locations, every
+repair alternative with its applicability, and the catalog's next action
+follow. The rendering is presentation only: consumers keep matching codes,
+classes, owners, pointers, and repair applicability.
+
 | Code | Title | Rule | Meaning | Next action |
 | --- | --- | --- | --- | --- |
 | `CORE-A4201` | Nominal basis not permitted | SC-8 and SC-10 | A requirement's basis is `nominal`, which compares a nominal value and uses no uncertainty, but the contract execution policy does not permit that weakening. Every weakening is explicit in the contract. | Set `permit_nominal_basis` to true in the execution policy, accepting that the verdict will visibly state that uncertainty was not used, or use a `bounded` or `enclosure` basis. The owner is the policy owner. |

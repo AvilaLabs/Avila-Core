@@ -173,8 +173,10 @@ The compile command prints a JSON report and exits 0 when the contract
 compiled, possibly with notices; 1 when it was rejected; and 2 when the tool
 could not run. Every finding carries a stable code, a class, an owner, a JSON
 Pointer location, and typed repair candidates where a bounded repair exists;
-`explain` prints the [catalog entry](docs/architecture/DIAGNOSTICS.md) for a
-code, or the whole catalog with `--all`. The evaluate command admits a claims
+`--text` renders the same findings with `document:line:column` locations and
+the underlined source line, and `explain` prints the
+[catalog entry](docs/architecture/DIAGNOSTICS.md) for a code, or the whole
+catalog with `--all`. The evaluate command admits a claims
 document against the compiled snapshot and prints one verdict per requirement;
 see the [campaign evaluation boundary](docs/architecture/CAMPAIGN_EVALUATION.md).
 The `run` command is the concise end-to-end view: integrity, compiled

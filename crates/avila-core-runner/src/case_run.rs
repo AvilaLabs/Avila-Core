@@ -16,6 +16,7 @@ use std::path::{Path, PathBuf};
 use avila_core_compiler::{
     AdmissionState, CampaignReport, CampaignStatus, ClaimsDocument, CompilationStatus,
     CompileReport, CompiledContract, CompiledStep, SourceRef, compile_documents, evaluate_campaign,
+    render_campaign_report, render_compile_report,
 };
 use avila_core_evidence::{
     ArtifactCheck, CapabilityIdentity, CasePackageManifest, ExecutionReceipt, ExpectedInput,
@@ -296,6 +297,10 @@ pub struct CaseRunReport {
     pub integrity: PackageIntegrityReport,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub compile: Option<CompileReport>,
+    /// Findings rendered as readable text with source locations, present
+    /// whenever compilation or evaluation reported any.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rendered_findings: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub execution: Option<ExecutionReport>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -377,6 +382,7 @@ pub fn execute_case(
         status: CaseRunStatus::Rejected,
         integrity: package.integrity.clone(),
         compile: None,
+        rendered_findings: None,
         execution: None,
         claims: None,
         bindings: None,
@@ -398,6 +404,10 @@ pub fn execute_case(
 
     let compile = compile_documents(contract, registry)?;
     if compile.status == CompilationStatus::Rejected {
+        report.rendered_findings = Some(render_compile_report(
+            &compile,
+            &[("contract", contract), ("registry", registry)],
+        ));
         report.compile = Some(compile);
         return Ok(report);
     }
@@ -473,6 +483,16 @@ pub fn execute_case(
 
     let campaign = evaluate_campaign(contract, registry, &generated.bytes)?;
     let campaign_rejected = campaign.status == CampaignStatus::Rejected;
+    if !campaign.findings.is_empty() {
+        report.rendered_findings = Some(render_campaign_report(
+            &campaign,
+            &[
+                ("contract", contract),
+                ("registry", registry),
+                ("claims", &generated.bytes),
+            ],
+        ));
+    }
     report.replay = replay_expected(&package, &campaign)?;
     let replay_failed = report.replay.as_ref().is_some_and(|replay| !replay.matches);
     if let Some(workspace) = workspace.as_deref()
@@ -1819,6 +1839,11 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                     "   [REJECTED] {} compiler finding(s)",
                     compile.findings.len()
                 );
+                if let Some(rendered) = &report.rendered_findings {
+                    for line in rendered.lines() {
+                        let _ = writeln!(out, "   {line}");
+                    }
+                }
             }
         },
         None => {

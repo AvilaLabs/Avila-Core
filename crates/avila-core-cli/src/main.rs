@@ -8,7 +8,7 @@ use std::process::ExitCode;
 
 use avila_core_compiler::{
     CampaignStatus, CompilationStatus, DIAGNOSTIC_CATALOG, compile_documents, evaluate_campaign,
-    explain,
+    explain, render_campaign_report, render_compile_report,
 };
 use avila_core_evidence::sha256_hex;
 use avila_core_kernel::{SEMANTIC_PROFILE, canonicalize_json};
@@ -41,6 +41,10 @@ enum Command {
         contract: PathBuf,
         #[arg(long)]
         registry: PathBuf,
+        /// Print findings as readable text with source locations instead of
+        /// the JSON report.
+        #[arg(long)]
+        text: bool,
     },
     /// Evaluate a campaign: admit the claims produced for a compiled contract
     /// and derive one four-state verdict per requirement.
@@ -55,6 +59,10 @@ enum Command {
         registry: PathBuf,
         #[arg(long)]
         claims: PathBuf,
+        /// Print findings and verdicts as readable text with source locations
+        /// instead of the JSON report.
+        #[arg(long)]
+        text: bool,
     },
     /// Run a composed case package through integrity checks, compilation,
     /// controlled execution with receipts, claim generation, evidence
@@ -121,11 +129,25 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             stdout.write_all(&canonical)?;
             stdout.write_all(b"\n")?;
         }
-        Command::Compile { contract, registry } => {
+        Command::Compile {
+            contract,
+            registry,
+            text,
+        } => {
             let contract = fs::read(contract)?;
             let registry = fs::read(registry)?;
             let report = compile_documents(&contract, &registry)?;
-            println!("{}", serde_json::to_string_pretty(&report)?);
+            if text {
+                print!(
+                    "{}",
+                    render_compile_report(
+                        &report,
+                        &[("contract", &contract), ("registry", &registry)]
+                    )
+                );
+            } else {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            }
             if report.status == CompilationStatus::Rejected {
                 return Ok(ExitCode::from(1));
             }
@@ -134,12 +156,27 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             contract,
             registry,
             claims,
+            text,
         } => {
             let contract = fs::read(contract)?;
             let registry = fs::read(registry)?;
             let claims = fs::read(claims)?;
             let report = evaluate_campaign(&contract, &registry, &claims)?;
-            println!("{}", serde_json::to_string_pretty(&report)?);
+            if text {
+                print!(
+                    "{}",
+                    render_campaign_report(
+                        &report,
+                        &[
+                            ("contract", &contract),
+                            ("registry", &registry),
+                            ("claims", &claims)
+                        ]
+                    )
+                );
+            } else {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            }
             if report.status == CampaignStatus::Rejected {
                 return Ok(ExitCode::from(1));
             }

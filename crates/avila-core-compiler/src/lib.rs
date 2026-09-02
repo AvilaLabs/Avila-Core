@@ -11,6 +11,7 @@ mod catalog;
 mod compile;
 mod diagnostic;
 mod document;
+mod render;
 
 pub use campaign::{
     AdmissionReason, AdmissionRecord, AdmissionState, ArtifactIdentity, Attestation,
@@ -44,4 +45,7 @@ pub use document::{
     RequirementBasis, RequirementSource, ReviewDeclaration, ReviewDisposition, ReviewIndependence,
     ReviewParty, ReviewPolicyBinding, RoleDefinition, SeparationLevel, SourceRef, TypedQuantity,
     UnitRecord, VersionedRef, WorkflowStep, current_profile_contract,
+};
+pub use render::{
+    SourceSpan, locate, render_campaign_report, render_compile_report, render_findings,
 };

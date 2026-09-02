@@ -575,12 +575,44 @@ fn show_findings(ui: &mut egui::Ui, report: &CompileReport) {
         return;
     }
     for finding in &report.findings {
-        show_finding(ui, finding);
+        show_finding(
+            ui,
+            finding,
+            &[("contract", CONTRACT_JSON), ("registry", REGISTRY_JSON)],
+        );
         ui.add_space(7.0);
     }
 }
 
-fn show_finding(ui: &mut egui::Ui, finding: &CoreDiagnostic) {
+/// The source line a finding points at, when its document's bytes are known:
+/// `document:line:column`, the pointer, and the line with the value marked.
+fn finding_location(finding: &CoreDiagnostic, sources: &[(&str, &[u8])]) -> Option<String> {
+    let (_, bytes) = sources
+        .iter()
+        .find(|(document, _)| *document == finding.primary.document)?;
+    let span = avila_core_compiler::locate(bytes, &finding.primary.pointer)?;
+    let text = std::str::from_utf8(bytes).ok()?;
+    let line_start = text[..span.start].rfind('\n').map_or(0, |index| index + 1);
+    let line_end = text[span.start..]
+        .find('\n')
+        .map_or(text.len(), |index| span.start + index);
+    let line = text[line_start..line_end].trim_end();
+    let mut rendered = format!(
+        "{}:{}:{}  {}",
+        finding.primary.document, span.line, span.column, finding.primary.pointer
+    );
+    if !span.is_exact(&finding.primary.pointer) {
+        rendered.push_str(&format!(
+            "  (not present; nearest is {})",
+            span.resolved_pointer
+        ));
+    }
+    rendered.push('\n');
+    rendered.push_str(line.trim_start());
+    Some(rendered)
+}
+
+fn show_finding(ui: &mut egui::Ui, finding: &CoreDiagnostic, sources: &[(&str, &[u8])]) {
     card(ui, |ui| {
         ui.horizontal_wrapped(|ui| {
             class_badge(ui, finding.class);
@@ -590,6 +622,11 @@ fn show_finding(ui: &mut egui::Ui, finding: &CoreDiagnostic) {
                     .color(CORE_ORANGE),
             );
             ui.colored_label(muted(ui), format!("owner: {}", finding.owner));
+            if let Some(location) = finding_location(finding, sources) {
+                ui.add(
+                    egui::Label::new(egui::RichText::new(location).monospace().size(11.0)).wrap(),
+                );
+            }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.monospace(format!(
                     "{}:{}",

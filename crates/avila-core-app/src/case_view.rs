@@ -238,6 +238,9 @@ pub struct CaseView {
     screenshot_requested: bool,
     started: Option<Instant>,
     last_duration: Option<Duration>,
+    /// The case documents as bytes, read when a report arrives, so findings
+    /// can be shown at their source lines.
+    sources: Vec<(String, Vec<u8>)>,
 }
 
 impl CaseView {
@@ -268,7 +271,24 @@ impl CaseView {
             screenshot_requested: false,
             started: None,
             last_duration: None,
+            sources: Vec::new(),
         }
+    }
+
+    fn read_sources(&mut self) {
+        let case_dir = PathBuf::from(self.setup.case_dir.trim());
+        self.sources = [
+            ("contract", "contract.json"),
+            ("registry", "registry.json"),
+            ("claims", "claims.json"),
+        ]
+        .into_iter()
+        .filter_map(|(document, file)| {
+            std::fs::read(case_dir.join(file))
+                .ok()
+                .map(|bytes| (document.to_string(), bytes))
+        })
+        .collect();
     }
 
     pub fn help_tab(&self) -> HelpTab {
@@ -373,6 +393,7 @@ impl CaseView {
             Ok(Ok(report)) => {
                 self.summary = human_summary(&report);
                 self.report = Some(report);
+                self.read_sources();
                 self.finish();
             }
             Ok(Err(error)) => {
@@ -586,7 +607,14 @@ impl CaseView {
         match self.tab {
             CaseTab::Overview => show_overview(ui, report, &self.summary, targets),
             CaseTab::Integrity => show_integrity(ui, report),
-            CaseTab::Compile => show_compile(ui, report.compile.as_ref()),
+            CaseTab::Compile => {
+                let sources: Vec<(&str, &[u8])> = self
+                    .sources
+                    .iter()
+                    .map(|(document, bytes)| (document.as_str(), bytes.as_slice()))
+                    .collect();
+                show_compile(ui, report.compile.as_ref(), &sources);
+            }
             CaseTab::Execute => show_execute(ui, report),
             CaseTab::Claims => show_claims(ui, report),
             CaseTab::Verdicts => show_verdicts(ui, report),
@@ -921,7 +949,7 @@ fn show_integrity(ui: &mut egui::Ui, report: &CaseRunReport) {
     }
 }
 
-fn show_compile(ui: &mut egui::Ui, compile: Option<&CompileReport>) {
+fn show_compile(ui: &mut egui::Ui, compile: Option<&CompileReport>, sources: &[(&str, &[u8])]) {
     section_heading(
         ui,
         "Compilation",
@@ -977,7 +1005,7 @@ fn show_compile(ui: &mut egui::Ui, compile: Option<&CompileReport>) {
         }
     }
     for finding in &compile.findings {
-        show_finding(ui, finding);
+        show_finding(ui, finding, sources);
     }
 }
 

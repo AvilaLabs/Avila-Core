@@ -43,6 +43,11 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   synthetic ACTINV 1.0.1 → Aftermatter R0 chain, admits 12 source attestations
   and 4 output claims, and truthfully withholds both otherwise-within-limit
   requirements for absent qualified review;
+- a first offline case-package workflow that re-hashes package documents,
+  re-hashes external artifact bytes only from explicitly supplied roots, binds
+  those identities to the claims and review policy, compiles and evaluates the
+  case, and replays its committed campaign report without collapsing unchecked
+  artifacts into a success state;
 - a draft portable evidence model and SHA-256 utility;
 - JSON Schemas that the compiler embeds and enforces as its source layer, and
   a deliberately non-executable specimen contract and registry snapshot;
@@ -63,11 +68,13 @@ package-level admission, invalidation, and package semantics remain proposed
 and incomplete.
 
 It does **not** run scientific software, calculate a physical quantity, select
-or bind capability packages, read artifact bytes, verify receipts or
-signatures, evaluate a scientifically qualified requirement, certify a
-design, or produce decision-grade evidence. The specimen contract is an
-incomplete draft on purpose. CASE-000 evaluates recorded claims rather than
-invoking ACTINV or Aftermatter and does not change this boundary.
+or bind capability packages, verify execution receipts or signatures, evaluate
+a scientifically qualified requirement, certify a design, or produce
+decision-grade evidence. The standalone `compile` and `evaluate` commands do
+not read artifact bytes. The `run` command can independently re-hash bytes at
+explicitly resolved paths, but a matching hash establishes identity only.
+CASE-000 still evaluates recorded claims rather than invoking ACTINV or
+Aftermatter.
 
 ## Core objects
 
@@ -114,6 +121,10 @@ cargo run -p avila-core-cli -- evaluate \
   --registry examples/cases/case-000-actinv-aftermatter/registry.json \
   --claims examples/cases/case-000-actinv-aftermatter/claims.json
 
+cargo run -p avila-core-cli -- run \
+  examples/cases/case-000-actinv-aftermatter \
+  --source-root aftermatter=../project-aftermatter
+
 cargo run -p avila-core-app
 ```
 
@@ -130,6 +141,10 @@ Pointer location, and typed repair candidates where a bounded repair exists;
 code, or the whole catalog with `--all`. The evaluate command admits a claims
 document against the compiled snapshot and prints one verdict per requirement;
 see the [campaign evaluation boundary](docs/architecture/CAMPAIGN_EVALUATION.md).
+The `run` command is the first concise end-to-end view: integrity, identity
+binding, compiled workflow, admissions, verdicts, and deterministic replay.
+Omit `--source-root` to see every external artifact reported as `not_checked`;
+add `--json` for the complete machine-readable run report.
 
 ## Repository map
 

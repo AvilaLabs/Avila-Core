@@ -155,8 +155,8 @@
     "reason": "No qualified independent review decision is present."
   },
   "core_boundary": [
-    "Core v0.2-draft does not read or re-hash the external artifact bytes.",
-    "Core does not verify execution receipts, package identities, signatures, qualification, policy snapshots, or invalidation.",
+    "The standalone Core compiler and campaign evaluator do not read artifact bytes; the case runner re-hashes only files under explicitly supplied source roots and reports every omitted root as not_checked.",
+    "A matching artifact digest establishes byte identity only; Core does not verify execution receipts, capability package identities, signatures, qualification, professional judgment, or invalidation.",
     "Producer and input identities in the claims document are attestations only.",
     "The current requirement language does not evaluate the categorical waste-class or route-state vocabulary.",
     "CASE-000 is not discovery evidence, participant evidence, pilot evidence, or a qualification record."

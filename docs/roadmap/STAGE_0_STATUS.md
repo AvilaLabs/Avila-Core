@@ -13,6 +13,9 @@ Passing a fixture proves only the behavior named by that fixture.
 
 - `cargo run -p avila-core-cli -- semantic-profile` reports executable fixture
   sets, counts, and content identities.
+- `cargo run -p avila-core-cli -- run examples/cases/case-000-actinv-aftermatter`
+  reports the first package-integrity, compilation, evaluation, and replay
+  workflow; omitted external roots remain visible as `not_checked`.
 - [ADR-0006](../adr/0006-semantic-core.md) defines the proposed rules and its
   acceptance conditions.
 - [Campaign evaluation](../architecture/CAMPAIGN_EVALUATION.md) defines the
@@ -32,9 +35,9 @@ professional gate.
 | Canonical semantic kernel | Partial | 90 pure vectors: canonical values, exact unit scaling, three-valued predicates, and four-state verdict calculus | Total archive/package canonicalization, remaining predicate and aggregation boundaries, and independent implementation |
 | Static contract compiler | Partial | 68 fixtures across R1–R10, deterministic source diagnostics, exact lowering, and content-identified compiled snapshots | Package binding halves, qualification, organization policy, selection, lifecycle, and accepted profile |
 | Diagnostic contract | Implemented for current compiler slice | 35 catalogued finding codes, anchored JSON Pointers, typed RFC 6902 repairs, and mutation tests | Real-contract defect corpus, fixture coverage checker, and measured false-block/clarification outcomes |
-| Campaign evaluation | Partial | 12 fixtures for snapshot binding, type-level admission, quarantine propagation, exact verdicts, and review asymmetry; CASE-000 adds one pinned ACTINV → Aftermatter composition | Artifact bytes, receipts, package identities, A2/A4/A7/A8/A10, signed review fulfillment, qualification, policy, and invalidation |
-| Internal composed case | Implemented as an unqualified specimen | CASE-000 pins 12 source attestations and 4 output claims; every record admits and both requirements stop at `NOT_EVALUATED / review_pending` | Tool invocation, package binding, external-byte verification, categorical route verdicts, qualified review, and any participant-backed applicability decision |
-| Evidence records | Concept only | Minimal record types and SHA-256 helper | Canonical package format, writer, lineage validation, signatures, redaction, package root, and offline verifier |
+| Campaign evaluation | Partial | 12 fixtures for snapshot binding, type-level admission, quarantine propagation, exact verdicts, and review asymmetry; CASE-000 adds one pinned ACTINV → Aftermatter composition | The standalone evaluator still does not read bytes; receipts, capability package identities, A2/A4/A7/A8/A10, signed review fulfillment, qualification, policy evaluation, and invalidation remain open |
+| Internal composed case | Implemented as an unqualified specimen | CASE-000 pins 12 source attestations and 4 output claims; the runner binds all 16 records, re-hashes 9 of 14 distinct artifacts from the available Aftermatter root, compiles the three-step graph, and reproduces both `NOT_EVALUATED / review_pending` verdicts | Five ACTINV data-release files, tool invocation, receipts, capability packages, categorical route verdicts, qualified review, and any participant-backed applicability decision |
+| Evidence records | Partial spike | Minimal record types, SHA-256 helper, confined-path draft case manifest, explicit `not_checked` states, claim/policy binding, and deterministic replay | Canonical archive/package identity, writer, full lineage validation, receipts, signatures, trust roots, redaction, invalidation, and an independently implemented verifier |
 | Planning and selection | Planned | Static type satisfiability only | Bound plans, package discovery, admissibility before ranking, deterministic selection, estimates, and approvals |
 | Execution | Planned | None | Controlled workspace, adapter lifecycle, artifact store, receipts, isolation, cancellation, and recovery |
 | Application | Partial | Thin egui report shell over the authoritative compiler | Question-first editor, campaign state, evidence view, and usability evidence |
@@ -49,7 +52,7 @@ professional gate.
 | Question-first workbench | Partial | Usable authoring and preflight flow tested with pilot participants |
 | Deterministic planning and blocked states | Open | Bound-plan and state fixtures for the selected vertical |
 | Capability threat model and conformance design | Partial | Adversarial review tied to the actual adapter and execution boundary |
-| Evidence-package spike | Open | Offline package round trip for a non-qualified specimen |
+| Evidence-package spike | Partial | CASE-000 performs an offline manifest/integrity/binding/compile/evaluate/replay round trip; close only after every declared source byte or explicit redaction/retention rule, plus receipt and package-root semantics, is exercised |
 | Interview materials | Ready | The discovery packet is present; completed interviews are counted separately below |
 | Concrete first-contract workflow map | Open | One participant-validated current-state map with authoritative artifacts and owners |
 

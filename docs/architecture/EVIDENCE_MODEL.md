@@ -1,6 +1,7 @@
 # Evidence model
 
-**Status:** conceptual model plus a minimal draft Rust type.
+**Status:** conceptual model plus minimal draft Rust records and an offline
+case-package integrity slice.
 
 ## Principle
 
@@ -86,6 +87,15 @@ Rules must define:
 
 The current helper computes SHA-256 over supplied bytes only. It does not define
 canonicalization or package identity.
+
+The first `avila-core run` slice reads a draft case manifest, confines relative
+paths beneath explicitly selected roots, re-hashes package documents and
+available external artifacts, and reports missing roots separately from
+missing or mismatched files. It also binds those manifest digests to claim and
+review-policy identities before campaign evaluation. This is an integrity and
+replay spike, not the final portable evidence package: it has no archive
+canonicalization, signed root, receipt model, trust store, redaction semantics,
+or lineage-completeness proof.
 
 ## Requirement verdict
 

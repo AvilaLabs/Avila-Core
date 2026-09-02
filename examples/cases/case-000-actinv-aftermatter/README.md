@@ -60,6 +60,8 @@ campaign evaluator withholds `PASS`.
   case.
 - `claims.json` — hash attestations and the two bounded numeric claims.
 - `campaign-report.json` — the deterministic expected Core evaluation.
+- `package.json` — raw-byte identities for the case documents plus bindings
+  from all 16 evidence records to 14 distinct externally resolvable artifacts.
 - `provenance.json` — upstream repositories, commits/releases, artifact
   hashes, observed source result, and explicit boundary.
 - `reviewer-eligibility-policy.md` — the hash-bound but currently unfulfilled
@@ -68,14 +70,21 @@ campaign evaluator withholds `PASS`.
 The external source artifacts are not vendored here. Their recorded identities
 come from Aftermatter commit
 `70a1c341d478bc37bf1ed0206dad4ee507cf743d`, whose R0 inventory records
-ACTINV 1.0.1 and its data/result identities. Core v0.2-draft does not yet read
-or independently re-hash those bytes; this limitation is material.
+ACTINV 1.0.1 and its data/result identities. The case runner can independently
+re-hash nine artifacts present in the Aftermatter checkout, covering 11 of the
+16 evidence records. Five ACTINV data-release artifacts are not present on this
+machine and remain explicitly `not_checked` unless an `actinv-data` source root
+is supplied. This limitation is material.
 
 ## Reproduce the Core layer
 
 From the repository root:
 
 ```bash
+cargo run -p avila-core-cli -- run \
+  examples/cases/case-000-actinv-aftermatter \
+  --source-root aftermatter=../project-aftermatter
+
 cargo run -p avila-core-cli -- compile \
   --contract examples/cases/case-000-actinv-aftermatter/contract.json \
   --registry examples/cases/case-000-actinv-aftermatter/registry.json
@@ -87,6 +96,15 @@ cargo run -p avila-core-cli -- evaluate \
 
 cargo test -p avila-core-compiler --test case_000
 ```
+
+The first command is the human-scale workflow: it reports document and artifact
+integrity separately, proves that all claim and policy digests are bound into
+the package, renders the compiled ACTINV → Aftermatter → review graph, admits
+the campaign records, prints both four-state verdicts, and checks the result
+against `campaign-report.json`. It exits successfully with integrity `PARTIAL`
+when a source root is intentionally omitted, but fails closed for a missing or
+different file under a root that was supplied. Pass `--json` for its complete
+machine-readable report.
 
 The integration test requires semantic equality with the committed campaign
 report and separately asserts that every evidence record is admitted while

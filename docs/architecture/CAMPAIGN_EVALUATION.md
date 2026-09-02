@@ -19,6 +19,11 @@ invalidate anything. Review decisions are recorded as unverified assertions.
 No verdict it produces is scientific truth, certification, or regulatory
 approval; every verdict names the boundary it holds under.
 
+`avila-core run` composes this evaluator with a separate case-package integrity
+layer. That layer can re-hash explicitly resolved bytes and bind their digests
+to the claims, but it does not alter the evaluator's admission semantics or
+turn an unchecked, unsigned, or unqualified assertion into evidence of truth.
+
 ## Claims
 
 A claims document carries:
@@ -116,4 +121,7 @@ all three modeled routes are unresolved, and the current numeric requirement
 language has no categorical route-state semantics. CASE-000 therefore records
 both what the executable slice can establish and the next vertical gaps
 without pretending the upstream bytes, packages, qualification, or review have
-been verified.
+been verified. The case runner now makes the byte boundary visible: nine
+Aftermatter-root artifacts can be re-hashed locally, while five ACTINV
+data-release artifacts remain `not_checked` until that separate root is
+available.

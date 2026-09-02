@@ -22,6 +22,7 @@ decision records (ADRs). “Proposed” items are intentionally reversible.
 | S-015 | Accepted | A Core verdict is a conditional derivation from admitted records under named rules and authorities. It is not, by itself, scientific truth, certification, or regulatory approval. |
 | S-016 | Accepted | The `v0.1` contract model, capability manifests, and planner are retired. The `v0.2-draft` contract, which carries its bounded question, and the registry snapshot compiled by `avila-core-compiler` are the only authoritative document forms; package selection returns as an SC-5 and SC-8 binding pass over compiled snapshots. |
 | S-017 | Accepted | `CASE-000` is the first composed internal integration specimen: the frozen ACTINV 1.0.1 inventory feeds Aftermatter R0, and Core admits the recorded claims while withholding `PASS` for absent qualified review. It does not select the first external vertical, close discovery, qualify either tool, or count as pilot evidence. |
+| S-018 | Accepted | The first runnable case workflow separates raw-byte integrity, identity binding, semantic compilation, campaign evaluation, and deterministic replay. Omitted artifact roots are `not_checked`; supplied roots with missing or different bytes fail closed. A matching digest proves identity only and does not alter qualification or review state. |
 
 Architecture records:
 

@@ -7,8 +7,17 @@
 
 #![forbid(unsafe_code)]
 
+mod package;
+
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+
+pub use package::{
+    ArtifactCheck, CASE_PACKAGE_SCHEMA_VERSION, CasePackageManifest, DocumentCheck,
+    IntegrityCheckState, PACKAGE_INTEGRITY_REPORT_SCHEMA_VERSION, PackageArtifact, PackageDocument,
+    PackageError, PackageIntegrityReport, PackageIntegrityStatus, VerifiedCasePackage,
+    verify_case_package,
+};
 
 pub const EVIDENCE_SCHEMA_VERSION: &str = "avila.core/evidence-bundle/v0.1";
 

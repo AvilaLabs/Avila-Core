@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+mod case_run;
+
 use std::error::Error;
 use std::fs;
 use std::io::{self, Write};
@@ -56,6 +58,18 @@ enum Command {
         #[arg(long)]
         claims: PathBuf,
     },
+    /// Run a composed case package through integrity checks, compilation,
+    /// evidence binding, campaign evaluation, and deterministic replay.
+    Run {
+        /// Case directory containing package.json, or the manifest path itself.
+        case: PathBuf,
+        /// Resolve an external artifact root as NAME=PATH. Repeat as needed.
+        #[arg(long = "source-root", value_name = "NAME=PATH")]
+        source_roots: Vec<String>,
+        /// Emit the complete machine-readable run report instead of the concise view.
+        #[arg(long)]
+        json: bool,
+    },
     /// Explain a stable finding code from the diagnostic catalog.
     Explain {
         /// A code such as `CORE-R3102`. Omit it and pass `--all` for the whole catalog.
@@ -111,6 +125,22 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             let report = evaluate_campaign(&contract, &registry, &claims)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
             if report.status == CampaignStatus::Rejected {
+                return Ok(ExitCode::from(1));
+            }
+        }
+        Command::Run {
+            case,
+            source_roots,
+            json,
+        } => {
+            let source_roots = case_run::parse_source_roots(&source_roots)?;
+            let report = case_run::execute_case(&case, &source_roots)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                print!("{}", case_run::human_summary(&report));
+            }
+            if !report.succeeded() {
                 return Ok(ExitCode::from(1));
             }
         }

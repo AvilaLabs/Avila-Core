@@ -3,6 +3,7 @@ members = [
   "crates/avila-core-kernel",
   "crates/avila-core-compiler",
   "crates/avila-core-evidence",
+  "crates/avila-core-runner",
   "crates/avila-core-cli",
   "crates/avila-core-app",
 ]
@@ -19,6 +20,7 @@ publish = false
 avila-core-evidence = { path = "crates/avila-core-evidence" }
 avila-core-compiler = { path = "crates/avila-core-compiler" }
 avila-core-kernel = { path = "crates/avila-core-kernel" }
+avila-core-runner = { path = "crates/avila-core-runner" }
 clap = { version = "4", features = ["derive"] }
 eframe = "0.36.1"
 image = { version = "0.25", default-features = false, features = ["png"] }

@@ -1,8 +1,5 @@
 #![forbid(unsafe_code)]
 
-mod case_run;
-mod execute;
-
 use std::error::Error;
 use std::fs;
 use std::io::{self, Write};
@@ -156,18 +153,18 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             plan,
             json,
         } => {
-            let options = case_run::CaseRunOptions {
-                source_roots: case_run::parse_source_roots(&source_roots)?,
-                capabilities: case_run::parse_capabilities(&capabilities)?,
+            let options = avila_core_runner::CaseRunOptions {
+                source_roots: avila_core_runner::parse_source_roots(&source_roots)?,
+                capabilities: avila_core_runner::parse_capabilities(&capabilities)?,
                 workspace,
                 reuse: !no_reuse,
                 plan_only: plan,
             };
-            let report = case_run::execute_case(&case, &options)?;
+            let report = avila_core_runner::execute_case(&case, &options)?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             } else {
-                print!("{}", case_run::human_summary(&report));
+                print!("{}", avila_core_runner::human_summary(&report));
             }
             if !report.succeeded() {
                 return Ok(ExitCode::from(1));

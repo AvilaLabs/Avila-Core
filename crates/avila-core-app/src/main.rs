@@ -1,12 +1,14 @@
 #![forbid(unsafe_code)]
 
-//! Thin egui client over the semantic compiler.
+//! Thin egui client over the semantic compiler and the case runner.
 //!
-//! The application compiles the embedded specimen through the same compiler
-//! the CLI uses and renders the report: the question, the contract, every
-//! finding with its owner, pointer, and repair candidates, and the compiled
-//! snapshot when one exists. It performs no calculation and holds no
-//! scientific state of its own.
+//! The case workbench runs a composed case through the same runner the CLI
+//! uses and renders its report stage by stage; the specimen view compiles the
+//! embedded specimen through the same compiler and renders its findings. The
+//! application performs no calculation and holds no scientific state of its
+//! own.
+
+mod case_view;
 
 use avila_core_compiler::{
     CompilationStatus, CompileReport, ContractSource, CoreDiagnostic, FindingClass,
@@ -24,6 +26,16 @@ const REGISTRY_JSON: &[u8] =
     include_bytes!("../../../examples/registry/shutdown-dose-specimen.registry.json");
 
 fn main() -> eframe::Result {
+    let arguments: Vec<String> = std::env::args().skip(1).collect();
+    let setup = match case_view::CaseSetup::from_arguments(&arguments) {
+        Ok(setup) => setup,
+        Err(error) => {
+            eprintln!(
+                "error: {error}\nusage: avila-core-app [--case DIR] [--source-root NAME=PATH]... [--capability NAME=PATH]... [--workspace DIR] [--no-reuse] [--auto-run | --auto-plan] [--screenshot PNG] [--tab NAME]"
+            );
+            std::process::exit(2);
+        }
+    };
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1_260.0, 800.0])
@@ -35,7 +47,7 @@ fn main() -> eframe::Result {
         options,
         Box::new(|creation_context| {
             configure_style(&creation_context.egui_ctx);
-            Ok(Box::new(CoreApp::new(&creation_context.egui_ctx)))
+            Ok(Box::new(CoreApp::new(&creation_context.egui_ctx, setup)))
         }),
     )
 }
@@ -78,18 +90,29 @@ struct Specimen {
     report: CompileReport,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+enum Mode {
+    #[default]
+    Case,
+    Specimen,
+}
+
 struct CoreApp {
+    mode: Mode,
     workspace: Workspace,
     logo: Option<egui::TextureHandle>,
     specimen: Result<Specimen, String>,
+    case: case_view::CaseView,
 }
 
 impl CoreApp {
-    fn new(context: &egui::Context) -> Self {
+    fn new(context: &egui::Context, setup: case_view::CaseSetup) -> Self {
         Self {
+            mode: Mode::Case,
             workspace: Workspace::Overview,
             logo: load_logo_texture(context).ok(),
             specimen: load_specimen(),
+            case: case_view::CaseView::new(setup),
         }
     }
 }
@@ -98,6 +121,21 @@ impl eframe::App for CoreApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         show_header(ui, self.logo.as_ref());
         ui.add_space(8.0);
+        ui.horizontal(|ui| {
+            for (mode, label) in [
+                (Mode::Case, "Case workbench"),
+                (Mode::Specimen, "Specimen compiler"),
+            ] {
+                if ui.selectable_label(self.mode == mode, label).clicked() {
+                    self.mode = mode;
+                }
+            }
+        });
+        ui.separator();
+        if self.mode == Mode::Case {
+            self.case.ui(ui);
+            return;
+        }
         show_scaffold_notice(ui);
         ui.add_space(8.0);
 
@@ -195,7 +233,7 @@ fn show_header(ui: &mut egui::Ui, logo: Option<&egui::TextureHandle>) {
                 }
                 ui.vertical(|ui| {
                     ui.label(
-                        egui::RichText::new("SEMANTIC COMPILER")
+                        egui::RichText::new("SEMANTIC COMPILER AND CASE RUNNER")
                             .size(10.0)
                             .strong()
                             .color(TEXT_MUTED),

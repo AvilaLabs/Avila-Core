@@ -61,10 +61,12 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   record, and SHA-256 utility;
 - JSON Schemas that the compiler embeds and enforces as its source layer, and
   a deliberately non-executable specimen contract and registry snapshot;
-- a local CLI for canonicalization, compilation, campaign evaluation, and the
-  diagnostic catalog; and
-- an egui shell that compiles the embedded specimen through the same compiler
-  and renders its findings, owners, and repairs.
+- a local CLI for canonicalization, compilation, campaign evaluation, the
+  diagnostic catalog, and the case workflow; and
+- an egui workbench that runs a composed case through the same runner and
+  renders its six-stage report (integrity, compile, execute with reuse and
+  change classes, claims, verdicts with their boundaries, replay), plus the
+  original specimen compiler view. It computes nothing itself.
 
 The repository also contains proposed `v0.2` semantic rules and an initial
 conformance-vector corpus. The Rust kernel executes all 90 current pure vectors:
@@ -141,8 +143,19 @@ cargo run -p avila-core-cli -- run \
   --capability python3=/usr/bin/python3 \
   --capability aftermatter-cli=../project-aftermatter/target/release/aftermatter
 
-cargo run -p avila-core-app
+cargo run -p avila-core-app -- \
+  --case examples/cases/case-000-actinv-aftermatter \
+  --source-root aftermatter=../project-aftermatter \
+  --source-root actinv-data=../project-aftermatter/.data/actinv/v1.0.0 \
+  --source-root actinv-release=../../actinv/target/release
 ```
+
+The workbench opens on the case: roots and capabilities the package requests
+are listed for you to point at local paths, `Plan` reports what would be
+reused or rerun and why, and `Run` performs the workflow and renders every
+stage. `--auto-run` or `--auto-plan` starts immediately and `--screenshot
+PNG` saves the rendered window and closes, which is how the view is reviewed
+without a hand.
 
 Compiling the specimen returns `"status": "rejected"` with only `missing`
 findings, one for each value the draft declares `not_defined`. That is the
@@ -176,9 +189,11 @@ crates/
   avila-core-compiler/    draft static compiler, document types, and semantic IR
   avila-core-evidence/    evidence records, case-package integrity, and
                           execution receipts
-  avila-core-cli/         headless local interface and the case runner with
-                          its case-specific adapters
-  avila-core-app/         thin egui client over the compiler
+  avila-core-runner/      the case workflow: staging, execution, receipts,
+                          reuse, claim generation, and the case-specific
+                          adapters
+  avila-core-cli/         headless local interface
+  avila-core-app/         thin egui workbench over the runner and compiler
 docs/
   strategy/               north star, economics, and counter-positioning
   product/                product definition, evidence contracts, and UX

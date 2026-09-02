@@ -472,7 +472,9 @@ name = "avila-core-app"
 version = "0.1.0"
 dependencies = [
  "avila-core-compiler",
+ "avila-core-evidence",
  "avila-core-kernel",
+ "avila-core-runner",
  "eframe",
  "image",
  "serde_json",
@@ -485,10 +487,10 @@ dependencies = [
  "avila-core-compiler",
  "avila-core-evidence",
  "avila-core-kernel",
+ "avila-core-runner",
  "clap",
  "serde",
  "serde_json",
- "sha2",
 ]
 
 [[package]]
@@ -522,6 +524,18 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.20",
+]
+
+[[package]]
+name = "avila-core-runner"
+version = "0.1.0"
+dependencies = [
+ "avila-core-compiler",
+ "avila-core-evidence",
+ "avila-core-kernel",
+ "serde",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]

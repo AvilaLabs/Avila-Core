@@ -41,7 +41,7 @@ professional gate.
 | Evidence records | Partial spike | Minimal record types, SHA-256 helpers, confined-path case manifest with bound capabilities and executions, explicit `not_checked` states, execution receipts verified from bytes, claim/policy binding, and deterministic replay of claims, receipt, and campaign report | Canonical archive/package identity, writer, full lineage validation, signatures, trust roots, redaction, invalidation, and an independently implemented verifier |
 | Planning and selection | Planned | Static type satisfiability only | Bound plans, package discovery, admissibility before ranking, deterministic selection, estimates, and approvals |
 | Execution | Partial, case-specific | Fresh workspace, staged verified bytes, cleared environment, timeout, declared-output collection, execution receipts, claim extraction, receipt-based reuse with typed SC-12 change classes and `--plan`, and adversarial tests for modified inputs, unchecked bytes, wrong or missing executables, failing runs, drifting outputs, missing or edited receipts, wrong step types, reuse, requirement-only change, and selective rerun across the two-step chain | Sandboxing, resource accounting, artifact store, generic adapter lifecycle, cancellation, recovery, signatures, and change classes a receipt cannot see (policy, qualification, review, advisory) |
-| Application | Partial | Thin egui report shell over the authoritative compiler | Question-first editor, campaign state, evidence view, and usability evidence |
+| Application | Partial | Thin egui workbench over the runner and compiler: case setup from the package's requested roots and executables, background Plan/Run, and a six-stage evidence view with reuse, change classes, receipts, claims, verdicts, and boundaries; a specimen compiler view | Question-first editor, contract authoring, campaign state beyond one run, and usability evidence with proxy users |
 
 ## Stage 0 build gates
 
@@ -50,7 +50,7 @@ professional gate.
 | Authoritative contract and verdict foundation | Partial | Current compiler and campaign slice plus package/bound-plan model driven by the selected pilot |
 | Proposed semantic profile and adversarial fixtures | Partial | All ADR-0006 acceptance conditions; draft status remains visible |
 | IP and prior-art review before public enabling disclosure | Open | Recorded counsel/strategy decision covering compiler, admission, signed reuse, and selective recomputation |
-| Question-first workbench | Partial | Usable authoring and preflight flow tested with pilot participants |
+| Question-first workbench | Partial | The case workbench renders every stage of a run; authoring and preflight flows, and testing with pilot participants, remain |
 | Deterministic planning and blocked states | Open | Bound-plan and state fixtures for the selected vertical |
 | Capability threat model and conformance design | Partial | Adversarial review tied to the actual adapter and execution boundary |
 | Evidence-package spike | Partial | CASE-000 performs an integrity/compile/execute/generate/bind/evaluate/replay round trip with every declared source byte verified and one execution receipt; close only after redaction/retention rules, package-root semantics, and an independently implemented verifier are exercised |

@@ -12,7 +12,9 @@ path = "src/main.rs"
 
 [dependencies]
 avila-core-compiler.workspace = true
+avila-core-evidence.workspace = true
 avila-core-kernel.workspace = true
+avila-core-runner.workspace = true
 eframe.workspace = true
 image.workspace = true
 serde_json.workspace = true

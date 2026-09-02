@@ -1,5 +1,17 @@
 # User experience
 
+## Implemented slice
+
+The egui workbench today covers the run-and-understand half of the journey
+below for a composed case: it lists the roots and executables the case
+package requests, plans or runs the workflow through the same runner the CLI
+uses, and renders integrity, compilation, execution (reused, executed,
+planned, not run, refused, failed, with every change named by class),
+generated claims, requirement verdicts with their complete boundaries, and
+replay. Contract authoring, preflight editing, plan approval, and campaign
+supervision beyond one run are not implemented; nothing in the interface has
+semantics the runner and kernel do not.
+
 ## Design premise
 
 Core should feel like a disciplined technical workbench, not a solver storefront

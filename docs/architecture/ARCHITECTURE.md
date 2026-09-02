@@ -73,13 +73,14 @@ The scaffold deliberately implements only the shaded foundation implied below:
 ```text
 avila-core-kernel            (first canonical-value semantic slice)
     ├── avila-core-compiler  (v0.2-draft document types, static compilation,
-    │   │                     semantic IR, campaign evaluation, and the
-    │   │                     diagnostic catalog)
-    │   ├── avila-core-cli   (canonicalize, compile, evaluate, explain, and
-    │   │                     the case runner with case-specific adapters)
-    │   └── avila-core-app   (thin client rendering compile reports)
-    └── avila-core-evidence  (record model, hashing, case-package integrity,
-                              and execution receipts)
+    │                         semantic IR, campaign evaluation, and the
+    │                         diagnostic catalog)
+    ├── avila-core-evidence  (record model, hashing, case-package integrity,
+    │                         and execution receipts)
+    └── avila-core-runner    (the case workflow: staging, execution, receipts,
+        │                     reuse, claim generation, case-specific adapters)
+        ├── avila-core-cli   (canonicalize, compile, evaluate, explain, run)
+        └── avila-core-app   (thin egui workbench over the runner and compiler)
 ```
 
 The `v0.1` contract model and planner were retired once the compiler's
@@ -134,24 +135,37 @@ manifest with its bound capabilities and executions, and the execution
 receipt record with its byte-level verification (ADR-0007). It has no package
 writer, signature system, lineage validator, or independent verifier yet.
 
+### `avila-core-runner`
+
+The only crate that performs I/O beyond reading documents: it re-hashes bytes
+at explicitly supplied roots, stages verified inputs into a fresh workspace,
+runs exact executables through named case-specific adapters, writes and
+verifies execution receipts, reuses steps whose committed receipts still
+describe the planned invocation and names every change by class, generates
+the claims document, and hands evaluation to the compiler and kernel. Its
+report is the single source every front end renders (ADR-0007).
+
 ### `avila-core-cli`
 
 Provides authoritative JSON canonicalization, embedded semantic-profile and
 vector-set identities, `v0.2-draft` compilation with a nonzero exit status for
 a rejected contract, campaign evaluation over a claims document, the
 diagnostic catalog through `explain`, and the composed case workflow through
-`run`: integrity, compilation, execution of declared steps through named
-case-specific adapters over exact executables, receipt verification, claim
-generation, binding, evaluation, and replay. All output explicitly
-distinguishes software conformance, structural validity, and process
-provenance from scientific validity.
+`run`, printed as a concise six-stage view or as the complete JSON report. All
+output explicitly distinguishes software conformance, structural validity,
+and process provenance from scientific validity.
 
 ### `avila-core-app`
 
-An egui client that compiles the embedded specimen through the same compiler
-and renders the report: question, contract, findings with owners and repairs,
-and the compiled snapshot when one exists. It does not perform calculations
-and must never grow a separate scientific state model.
+An egui workbench with two modes. The case workbench opens a composed case,
+lists the roots and executables its package requests, runs the workflow on a
+background thread through the runner crate, and renders the report stage by
+stage: integrity, compilation, execution with reuse and change classes,
+generated claims and binding, verdicts with their complete boundaries, and
+replay. The specimen view compiles the embedded specimen and renders its
+findings with owners and repairs. Every badge and number is read from a
+report; the client performs no calculation and must never grow a separate
+scientific state model.
 
 ## Target components
 

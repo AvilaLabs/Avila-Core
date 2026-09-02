@@ -36,7 +36,8 @@ verdict. It is the point where errors move to compile time.
 re-hashes bytes at supplied roots, stages verified inputs into a fresh
 workspace, runs exact executables through adapters, writes and verifies
 receipts, reuses steps whose receipts still hold, and generates the claims
-document before handing evaluation to the compiler and kernel.
+document before handing evaluation to the compiler and kernel, then
+materializes exact content-identified requests for compiled review stages.
 
 **Workbench.** The desktop application. It renders the runner's report and
 the compiler's findings, requests plans and runs, and holds no semantics of
@@ -134,14 +135,25 @@ A nominal basis needs explicit policy permission.
 nondeterministic roles are permitted and whether a nominal basis is allowed.
 Every weakening is visible in the affected verdicts.
 
-**Review obligation.** A compiled, pending obligation that a named external
-eligibility policy, a presented dossier, governance-only dispositions, and
-independence constraints must be satisfied by a review record before `PASS`
-can be established (SC-6 R9). Compilation never fulfills a review.
+**Review obligation.** A compiled, pending request binding a reviewer role, a
+named external eligibility policy, an exact presented dossier,
+governance-only dispositions, independence constraints, and any instructions
+(SC-6 R9). An `accountable_person` obligation must be fulfilled before `PASS`
+can be established. An `agent` obligation is a routing stage and never gates
+or constructs a technical verdict. Compilation never fulfills either kind.
 
 **Eligibility policy.** The external, organization-owned rule for who may
-review, pinned by identity and digest. Core stores and binds it; it does not
-decide that a person is qualified.
+review, pinned by identity and digest. For an agent stage it binds the
+permitted software identity and practical instructions; that does not turn
+software into an eligible person. Core stores and binds the policy; it does
+not decide that a person is qualified or that an agent's advice is correct.
+
+**Staged agent review.** A compiled review stage before accountable human
+review in which identified software receives an exact, content-identified
+dossier and explicit practical instructions. It may recommend accountable
+review, request changes, or abstain. It can never approve or reject a result
+for use, fulfill an accountable-person obligation, or change a technical
+verdict. Its current record is unsigned and unverified.
 
 **Finding.** One compiler or admission result: a stable code, a class, an
 owner, a JSON Pointer location, related locations, typed repair candidates,
@@ -422,12 +434,6 @@ candidates and running each as a campaign. Cheap screening methods may guide
 the search; a requirement is `PASS` only when a qualified method establishes
 it inside its validation envelope, with receipts. Admissibility precedes
 optimization (SC-8): a good score never rescues an inadmissible candidate.
-
-**Staged review.** Reviews placed before the accountable human review, such
-as an agent instructed to critique practicality, whose disposition can send a
-candidate back. Each stage is a review capability with a recorded identity
-and a governance-only disposition. A staged review reduces what reaches a
-person; it never replaces the accountable review.
 
 **Physical evidence.** A measurement, test, or inspection treated as a
 capability whose receipt is the measurement record. This is how the loop

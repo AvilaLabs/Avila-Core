@@ -15,3 +15,5 @@ An `inconclusive` verdict means the statistical interval straddles the limit; mo
 Values are shown to four significant digits; the campaign log keeps every exact value and identity.
 
 The screen's PASS is nominal and establishes nothing; only the transport verdict is bounded, and its interval is statistical only. Nothing here is qualified for any decision.
+
+This frozen search predates the staged-agent-review slice, so its historical log contains no review records. Under the now-bound instruction to request changes unless every Core requirement is `PASS`, all three finalists would be returned (two are `INCONCLUSIVE`, one is `FAIL`) and none would enter the accountable-person queue. Current runs of `shield_search.py` record that routing step explicitly; an agent recommendation still is not approval.

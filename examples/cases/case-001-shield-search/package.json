@@ -7,19 +7,19 @@
       "document_id": "case-001-contract",
       "role": "contract",
       "path": "contract.json",
-      "sha256": "sha256:dcafd28d782e0a89dc62900bc4ffe4c7067f437e08257007f234191a9b1fc032"
+      "sha256": "sha256:f3dd4e6e1d2035ba0824ea5aad6fe2435d57e1332eff9a8eba121381169a3f2b"
     },
     {
       "document_id": "case-001-registry",
       "role": "registry",
       "path": "registry.json",
-      "sha256": "sha256:e7efe17de3e4ac520999b23ac21e31cf4dda3e985b803562174d48a7d58b79e1"
+      "sha256": "sha256:e8d757235d265cc023dac8397f8b3696f9b2f1a30ab2474be905ae06e461b8cf"
     },
     {
       "document_id": "case-001-claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:159e2ec1e3351732de7c3a9c3b8be686df0bb5fcbe0b158e71c577322aa97199"
+      "sha256": "sha256:2b79b344fd91a9edd0c340d6f620f5b5e463ce0962dc3b24eeb4b20542cf62e4"
     },
     {
       "document_id": "case-001-requirement-set",
@@ -34,23 +34,35 @@
       "sha256": "sha256:f81ad3813faa0d1908be3309305bad195d5a973f3fcc279efed465dcf6673912"
     },
     {
+      "document_id": "case-001-agent-review-policy",
+      "role": "review_policy",
+      "path": "agent-review-policy.json",
+      "sha256": "sha256:3ea229c01bed007dcdb6a47211f12b672e170af7873614b61e59e0461f1d4278"
+    },
+    {
+      "document_id": "case-001-reference-staged-review",
+      "role": "staged_review_record",
+      "path": "reviews/reference.json",
+      "sha256": "sha256:1ab5753fca911bab34e05655f8738a994516d4cebdbaa858a03d9b847078836b"
+    },
+    {
       "role": "expected_campaign_report",
       "document_id": "case-001-expected-campaign",
       "path": "campaign-report.json",
-      "sha256": "sha256:845842813d2e667305ec7f8b4c42cf45df75122a2da9ad6c52a13fd2f659001e"
+      "sha256": "sha256:db61ce030155d0b12539ec3341db6f25139e8071f69c1a19905769cbe061f128"
     },
     {
       "role": "execution_receipt",
       "document_id": "case-001-screen-receipt",
       "path": "receipts/screen.json",
-      "sha256": "sha256:3f3e25b911e4b6c15376b0277df83ae137acf1291bf6a978800580e065093b3e",
+      "sha256": "sha256:f8af5f1870323e724a35ac9f9f05df4ca30289f6f78632bf176a2e5060e4e9cc",
       "step_id": "screen"
     },
     {
       "role": "execution_receipt",
       "document_id": "case-001-transport-receipt",
       "path": "receipts/transport.json",
-      "sha256": "sha256:7d69bf4ca597eadfe806ed0c63358b1a53ea28cf937a79d6355d60748a0712d2",
+      "sha256": "sha256:464774fa8e0a2aae42d62abc6777ca98dd38740c2942a8d531c5cc75cae05a4a",
       "step_id": "transport"
     }
   ],
@@ -99,6 +111,15 @@
       "source_root": "shielding",
       "path": "transport.py",
       "sha256": "sha256:acb2c376462ec9a00bf9472e8ff0b9f9b5b1a500cffcaf4034f7fc5141a14039"
+    },
+    {
+      "artifact_id": "practical-reviewer-script",
+      "evidence_ids": [
+        "input:reviewer-script"
+      ],
+      "source_root": "agents",
+      "path": "shield_review.py",
+      "sha256": "sha256:8bb09398fb77a1f2417a38523bd3035a6dcfa7ac6d8e8cfed75387e90eb3cf68"
     },
     {
       "artifact_id": "cross-section-index",
@@ -267,6 +288,6 @@
     "The screening capability is unqualified and evaluated on a nominal basis; only the transport capability produces a bounded claim, and its interval covers statistical error only.",
     "Executables are bound by digest: a system Python interpreter for the screen and the OpenMC environment's interpreter for transport; neither is a qualified package.",
     "The nuclear data library is identified by the digest of its index; the nuclide files it names are not re-hashed by this case.",
-    "No review obligation is compiled: technical verdicts here guide a search and authorize nothing."
+    "A non-accountable agent review is compiled with exact practical instructions and a hash-bound implementation. Its recommendation only routes a finalist to a person and can never approve or reject it for use; no accountable review obligation is present."
   ]
 }

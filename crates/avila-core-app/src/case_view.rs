@@ -8,12 +8,12 @@ use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
 
-use avila_core_compiler::CompileReport;
+use avila_core_compiler::{CompileReport, ReviewerRole};
 use avila_core_evidence::{CasePackageManifest, IntegrityCheckState, PackageIntegrityStatus};
 use avila_core_kernel::VerdictStatus;
 use avila_core_runner::{
     BindingStatus, CapabilityCheckState, CaseRunOptions, CaseRunReport, CaseRunStatus,
-    ExecutionStatus, StepExecutionState, execute_case, human_summary,
+    ExecutionStatus, ReviewStageState, StepExecutionState, execute_case, human_summary,
 };
 use eframe::egui;
 
@@ -1101,8 +1101,15 @@ fn show_compile(ui: &mut egui::Ui, compile: Option<&CompileReport>, sources: &[(
                             ))
                             .color(muted(ui)),
                         );
-                        if step.review_obligation.is_some() {
-                            badge(ui, "PENDING REVIEW", CORE_ORANGE);
+                        if let Some(review) = &step.review_obligation {
+                            badge(
+                                ui,
+                                match review.reviewer_role {
+                                    ReviewerRole::AccountablePerson => "PENDING PERSON REVIEW",
+                                    ReviewerRole::Agent => "PENDING AGENT REVIEW",
+                                },
+                                CORE_ORANGE,
+                            );
                         }
                     });
                 }
@@ -1471,6 +1478,44 @@ fn show_claims(ui: &mut egui::Ui, report: &CaseRunReport) {
             });
             for issue in &bindings.issues {
                 ui.colored_label(RED, issue);
+            }
+        });
+    }
+    for review in &report.review_stages {
+        ui.add_space(8.0);
+        card(ui, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.label(egui::RichText::new(&review.step_id).strong());
+                badge(
+                    ui,
+                    match review.state {
+                        ReviewStageState::ReadyForReview => "READY FOR REVIEW",
+                        ReviewStageState::AwaitingEvidence => "AWAITING EVIDENCE",
+                    },
+                    match review.state {
+                        ReviewStageState::ReadyForReview => BLUE,
+                        ReviewStageState::AwaitingEvidence => AMBER,
+                    },
+                );
+                ui.label(match review.reviewer_role {
+                    ReviewerRole::AccountablePerson => "accountable person",
+                    ReviewerRole::Agent => "non-accountable agent",
+                });
+            });
+            key_value(ui, "Review request", &review.request_sha256);
+            key_value(
+                ui,
+                "Dossier",
+                &format!(
+                    "{}/{} exact artifacts present",
+                    review.presented_evidence.len(),
+                    review.presented_evidence.len() + review.missing_evidence.len()
+                ),
+            );
+            for instruction in &review.instructions {
+                ui.label(
+                    egui::RichText::new(format!("Instruction: {instruction}")).color(muted(ui)),
+                );
             }
         });
     }

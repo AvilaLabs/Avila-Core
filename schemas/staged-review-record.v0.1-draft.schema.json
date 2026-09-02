@@ -1,0 +1,333 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/staged-review-record/v0.1-draft.schema.json",
+  "title": "Avila Core Staged Review Record v0.1 draft",
+  "description": "An unsigned routing record from a non-accountable agent over one content-identified Core review request. It can recommend accountable review, request changes, or abstain; it can never approve or reject a result for use.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "review_request",
+    "reviewer",
+    "candidate_id",
+    "disposition",
+    "rationale",
+    "actions",
+    "attestation",
+    "limitations",
+    "record_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/staged-review-record/v0.1-draft"
+    },
+    "review_request": {
+      "$ref": "#/$defs/reviewRequest"
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "identity"
+      ],
+      "properties": {
+        "role": {
+          "const": "agent"
+        },
+        "identity": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "candidate_id": {
+      "$ref": "#/$defs/nonemptyString"
+    },
+    "disposition": {
+      "enum": [
+        "recommend_for_accountable_review",
+        "request_changes",
+        "abstain"
+      ]
+    },
+    "rationale": {
+      "$ref": "#/$defs/nonemptyString"
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonemptyString"
+      }
+    },
+    "attestation": {
+      "const": "unverified"
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonemptyString"
+      }
+    },
+    "record_sha256": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "$defs": {
+    "nonemptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "versionedRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "major"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "major": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "sourceRef": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "input_id"
+          ],
+          "properties": {
+            "source": {
+              "const": "contract_input"
+            },
+            "input_id": {
+              "$ref": "#/$defs/nonemptyString"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "step_id",
+            "output_slot"
+          ],
+          "properties": {
+            "source": {
+              "const": "step_output"
+            },
+            "step_id": {
+              "$ref": "#/$defs/nonemptyString"
+            },
+            "output_slot": {
+              "$ref": "#/$defs/nonemptyString"
+            }
+          }
+        }
+      ]
+    },
+    "presentedEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_slot",
+        "source",
+        "evidence_id",
+        "sha256",
+        "media_type"
+      ],
+      "properties": {
+        "input_slot": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "source": {
+          "$ref": "#/$defs/sourceRef"
+        },
+        "evidence_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "media_type": {
+          "$ref": "#/$defs/nonemptyString"
+        }
+      }
+    },
+    "immutablePolicyRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "revision",
+        "sha256"
+      ],
+      "properties": {
+        "policy_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "independenceRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "separated_from",
+        "minimum_separation"
+      ],
+      "properties": {
+        "separated_from": {
+          "enum": [
+            "requester",
+            "method_owner",
+            "capability_provider",
+            "executor"
+          ]
+        },
+        "minimum_separation": {
+          "enum": [
+            "different_person",
+            "different_organization"
+          ]
+        }
+      }
+    },
+    "reviewIndependence": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "const": "none"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "requirements"
+          ],
+          "properties": {
+            "mode": {
+              "const": "constraints"
+            },
+            "requirements": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/independenceRequirement"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "reviewRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request_sha256",
+        "compiled_snapshot_sha256",
+        "campaign_sha256",
+        "step_id",
+        "fulfillment",
+        "reviewer_role",
+        "state",
+        "presented_evidence",
+        "decision_role",
+        "decision_media_type",
+        "allowed_dispositions",
+        "reviewer_eligibility_policy",
+        "independence",
+        "instructions"
+      ],
+      "properties": {
+        "request_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "compiled_snapshot_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "campaign_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "step_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "fulfillment": {
+          "const": "pending_agent_review"
+        },
+        "reviewer_role": {
+          "const": "agent"
+        },
+        "state": {
+          "const": "ready_for_review"
+        },
+        "presented_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/presentedEvidence"
+          }
+        },
+        "decision_role": {
+          "$ref": "#/$defs/versionedRef"
+        },
+        "decision_media_type": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "allowed_dispositions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "recommend_for_accountable_review",
+              "request_changes",
+              "abstain"
+            ]
+          }
+        },
+        "reviewer_eligibility_policy": {
+          "$ref": "#/$defs/immutablePolicyRef"
+        },
+        "independence": {
+          "$ref": "#/$defs/reviewIndependence"
+        },
+        "instructions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonemptyString"
+          }
+        }
+      }
+    }
+  }
+}

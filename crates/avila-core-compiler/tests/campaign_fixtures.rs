@@ -5,7 +5,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use avila_core_compiler::evaluate_campaign;
+use avila_core_compiler::{compile_documents, evaluate_campaign};
 use avila_core_kernel::SEMANTIC_PROFILE;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -150,4 +150,48 @@ fn campaign_fixtures_are_executable() {
             ),
         }
     }
+}
+
+#[test]
+fn pending_agent_review_routes_work_but_does_not_withhold_a_technical_pass() {
+    let root = fixture_root();
+    let mut contract: Value = serde_json::from_slice(
+        &fs::read(root.join("../types/types.R9.review-bound.pass.contract.json")).unwrap(),
+    )
+    .unwrap();
+    contract["workflow"][1]["review"]["instructions"] = json!([
+        "Read the recorded verdict and practical evidence; never construct or override a verdict.",
+        "Recommend only for accountable review, request changes, or abstain."
+    ]);
+    let mut registry: Value = serde_json::from_slice(
+        &fs::read(root.join("../types/compiler.review.registry.v1.json")).unwrap(),
+    )
+    .unwrap();
+    registry["capability_types"][1]["reproducibility"]["determinism"] = json!("deterministic");
+    registry["capability_types"][1]["review"]["reviewer_role"] = json!("agent");
+    registry["capability_types"][1]["review"]["allowed_dispositions"] = json!([
+        "recommend_for_accountable_review",
+        "request_changes",
+        "abstain"
+    ]);
+
+    let contract = serde_json::to_vec(&contract).unwrap();
+    let registry = serde_json::to_vec(&registry).unwrap();
+    let compile = compile_documents(&contract, &registry).unwrap();
+    let snapshot = compile.compiled.unwrap().snapshot_sha256;
+    let mut claims: Value = serde_json::from_slice(
+        &fs::read(root.join("campaign.review-pending.not_evaluated.claims.json")).unwrap(),
+    )
+    .unwrap();
+    claims["compiled_snapshot_sha256"] = json!(snapshot);
+    let report =
+        evaluate_campaign(&contract, &registry, &serde_json::to_vec(&claims).unwrap()).unwrap();
+
+    assert!(report.findings.is_empty());
+    assert_eq!(report.verdicts.len(), 1);
+    assert_eq!(
+        report.verdicts[0].verdict.status,
+        avila_core_kernel::VerdictStatus::Pass
+    );
+    assert!(report.verdicts[0].verdict.reviews_outstanding.is_empty());
 }

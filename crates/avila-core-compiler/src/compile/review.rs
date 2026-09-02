@@ -1,10 +1,10 @@
-//! Accountable-review obligations.
+//! Role-separated accountable-person and agent review obligations.
 
 use super::findings::{contract_location, review_incomplete};
 use super::ir::{CompiledReviewObligation, ResolvedBinding, ReviewFulfillment};
 use super::registry::RegistryIndex;
 use crate::diagnostic::{CORE_R3401, CoreDiagnostic, FindingClass};
-use crate::document::{ContractSource, ReviewIndependence, ReviewParty};
+use crate::document::{ContractSource, ReviewIndependence, ReviewParty, ReviewerRole};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub(super) fn compile_review_obligations(
@@ -23,7 +23,7 @@ pub(super) fn compile_review_obligations(
                 review_incomplete(
                     contract_location(format!("/workflow/{step_index}/review")),
                     format!(
-                        "capability type `{}@{}` does not declare accountable review semantics",
+                        "capability type `{}@{}` does not declare review semantics",
                         step.capability_type.id, step.capability_type.major
                     ),
                     "policy_owner",
@@ -104,6 +104,29 @@ pub(super) fn compile_review_obligations(
             }
         }
 
+        for (index, instruction) in binding.instructions.iter().enumerate() {
+            if instruction.trim().is_empty() {
+                review_incomplete(
+                    contract_location(format!(
+                        "/workflow/{step_index}/review/instructions/{index}"
+                    )),
+                    "review instructions must not contain an empty item",
+                    "policy_owner",
+                    findings,
+                );
+                valid = false;
+            }
+        }
+        if declaration.reviewer_role == ReviewerRole::Agent && binding.instructions.is_empty() {
+            review_incomplete(
+                contract_location(format!("/workflow/{step_index}/review/instructions")),
+                "an agent review requires explicit practical instructions",
+                "policy_owner",
+                findings,
+            );
+            valid = false;
+        }
+
         let Some(output) = capability
             .outputs
             .iter()
@@ -132,7 +155,11 @@ pub(super) fn compile_review_obligations(
         compiled.insert(
             step.step_id.clone(),
             CompiledReviewObligation {
-                fulfillment: ReviewFulfillment::PendingExternalReview,
+                fulfillment: match declaration.reviewer_role {
+                    ReviewerRole::AccountablePerson => ReviewFulfillment::PendingExternalReview,
+                    ReviewerRole::Agent => ReviewFulfillment::PendingAgentReview,
+                },
+                reviewer_role: declaration.reviewer_role,
                 presented_evidence,
                 decision_output_slot: output.slot_id.clone(),
                 decision_role: output.role.clone(),
@@ -140,6 +167,7 @@ pub(super) fn compile_review_obligations(
                 allowed_dispositions: declaration.allowed_dispositions.clone(),
                 reviewer_eligibility_policy: binding.reviewer_eligibility_policy.clone(),
                 independence: binding.independence.clone(),
+                instructions: binding.instructions.clone(),
             },
         );
     }

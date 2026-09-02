@@ -3,7 +3,7 @@
 use crate::diagnostic::CoreDiagnostic;
 use crate::document::{
     Comparison, ContractInput, DeterminismClass, ExecutionPolicy, ImmutablePolicyRef,
-    RequirementBasis, ReviewDisposition, ReviewIndependence, SourceRef, VersionedRef,
+    RequirementBasis, ReviewDisposition, ReviewIndependence, ReviewerRole, SourceRef, VersionedRef,
 };
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -77,6 +77,7 @@ pub struct CompiledStep {
 #[serde(deny_unknown_fields)]
 pub struct CompiledReviewObligation {
     pub fulfillment: ReviewFulfillment,
+    pub reviewer_role: ReviewerRole,
     pub presented_evidence: Vec<ResolvedBinding>,
     pub decision_output_slot: String,
     pub decision_role: VersionedRef,
@@ -84,12 +85,14 @@ pub struct CompiledReviewObligation {
     pub allowed_dispositions: Vec<ReviewDisposition>,
     pub reviewer_eligibility_policy: ImmutablePolicyRef,
     pub independence: ReviewIndependence,
+    pub instructions: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ReviewFulfillment {
     PendingExternalReview,
+    PendingAgentReview,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

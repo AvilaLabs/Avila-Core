@@ -8,8 +8,8 @@ use crate::diagnostic::{
 };
 use crate::document::{
     AuthoredBinding, BasisKind, BoundSide, ClaimModelDeclaration, Comparison, ContractSource,
-    ContractStatus, DeterminismClass, ParameterType, RegistrySnapshot, RequirementBasis, SourceRef,
-    TypedQuantity, VersionedRef,
+    ContractStatus, DeterminismClass, ParameterType, RegistrySnapshot, RequirementBasis,
+    ReviewDisposition, ReviewerRole, SourceRef, TypedQuantity, VersionedRef,
 };
 use avila_core_kernel::ExactNumber;
 use std::collections::BTreeSet;
@@ -333,6 +333,7 @@ fn review_obligation_never_becomes_a_technical_verdict() {
         .and_then(|step| step.review_obligation.as_ref())
         .unwrap();
     assert_eq!(review.fulfillment, ReviewFulfillment::PendingExternalReview);
+    assert_eq!(review.reviewer_role, ReviewerRole::AccountablePerson);
     assert_eq!(review.presented_evidence[0].input_slot, "trace");
     assert_eq!(review.presented_evidence[1].input_slot, "result");
     assert!(compiled.requirements.iter().all(|requirement| {
@@ -341,6 +342,71 @@ fn review_obligation_never_becomes_a_technical_verdict() {
             SourceRef::StepOutput { step_id, .. } if step_id == "review"
         )
     }));
+}
+
+#[test]
+fn agent_review_is_instructed_and_can_never_govern_use() {
+    let mut source = review_contract();
+    let mut registry = review_registry();
+    registry.capability_types[1].reproducibility.determinism = DeterminismClass::Deterministic;
+    registry.capability_types[1]
+        .review
+        .as_mut()
+        .unwrap()
+        .reviewer_role = ReviewerRole::Agent;
+
+    let missing_instructions = compile_with_registry(&source, &registry);
+    assert!(codes(&missing_instructions).contains(CORE_R3401));
+    assert!(
+        missing_instructions
+            .findings
+            .iter()
+            .any(|finding| { finding.primary.pointer == "/workflow/1/review/instructions" })
+    );
+
+    source.workflow[1].review.as_mut().unwrap().instructions =
+        vec!["Critique practical implementation and never construct a technical verdict.".into()];
+    let forbidden_authority = compile_with_registry(&source, &registry);
+    assert!(codes(&forbidden_authority).contains(CORE_R3401));
+    assert!(forbidden_authority.findings.iter().any(|finding| {
+        finding.primary.pointer == "/capability_types/1/review/allowed_dispositions"
+    }));
+
+    registry.capability_types[1]
+        .review
+        .as_mut()
+        .unwrap()
+        .allowed_dispositions = vec![
+        ReviewDisposition::RecommendForAccountableReview,
+        ReviewDisposition::RequestChanges,
+        ReviewDisposition::Abstain,
+    ];
+    let report = compile_with_registry(&source, &registry);
+    assert_eq!(report.status, CompilationStatus::Compiled);
+    let review = report
+        .compiled
+        .unwrap()
+        .workflow
+        .into_iter()
+        .find(|step| step.step_id == "review")
+        .and_then(|step| step.review_obligation)
+        .unwrap();
+    assert_eq!(review.fulfillment, ReviewFulfillment::PendingAgentReview);
+    assert_eq!(review.reviewer_role, ReviewerRole::Agent);
+    assert_eq!(
+        review.instructions,
+        source.workflow[1].review.as_ref().unwrap().instructions
+    );
+    assert!(
+        !review
+            .allowed_dispositions
+            .contains(&ReviewDisposition::ApproveForUse)
+    );
+    assert!(
+        !review
+            .allowed_dispositions
+            .contains(&ReviewDisposition::RejectForUse)
+    );
 }
 
 #[test]

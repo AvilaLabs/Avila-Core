@@ -202,7 +202,7 @@
       "step_id": "transport"
     }
   ],
-  "compiled_snapshot_sha256": "sha256:199c4c6bb0c5f11b37b828aadeea3da45e9c70dd998ec8b4b20eb19018da4f07",
+  "compiled_snapshot_sha256": "sha256:9817e10fc8abc0aab1cd21888b75735a3a5ceec87084b4e84b98fd633c529a7d",
   "decisions": [],
   "inputs": [
     {
@@ -225,6 +225,13 @@
         "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb"
       },
       "input_id": "materials"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:8bb09398fb77a1f2417a38523bd3035a6dcfa7ac6d8e8cfed75387e90eb3cf68"
+      },
+      "input_id": "reviewer-script"
     },
     {
       "artifact": {

@@ -2,7 +2,8 @@
 
 **Status:** conceptual model plus minimal draft Rust records, an offline
 case-package integrity slice, and an execution-receipt record verified from
-bytes (ADR-0007).
+bytes (ADR-0007), plus an unsigned staged-agent-review routing record
+(ADR-0009).
 
 ## Principle
 
@@ -108,6 +109,15 @@ a locator names is bound as a staged input. A package may declare free
 inputs; a supplied one is hashed and attested, the steps it reaches have
 their committed claims withheld and bind fresh outputs by receipt, and
 replay is reported not applicable.
+
+After campaign evaluation the runner also realizes every compiled review
+dossier from those exact claims. It content-identifies a request containing
+the compiled snapshot and campaign, evidence sources and artifact digests,
+reviewer role, policy, dispositions, independence, and instructions, and says
+whether the dossier is complete. CASE-001's external agent writes an unsigned
+staged-review record over that request. The record is routing history, not a
+review admission or a signed accountable decision, and it cannot alter a
+technical verdict.
 
 ## Requirement verdict
 

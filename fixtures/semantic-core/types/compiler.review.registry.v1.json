@@ -164,6 +164,7 @@
         }
       ],
       "review": {
+        "reviewer_role": "accountable_person",
         "presented_input_slots": [
           "trace",
           "result"

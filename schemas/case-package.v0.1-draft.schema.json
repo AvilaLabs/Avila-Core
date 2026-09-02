@@ -117,6 +117,13 @@
             "required": ["output_slot", "claim_id"],
             "properties": { "output_slot": { "$ref": "#/$defs/nonemptyString" }, "claim_id": { "$ref": "#/$defs/nonemptyString" } }
           }
+        },
+        "environment": {
+          "description": "Environment keys the adapter requires the operator to value when this step runs.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonemptyString" },
+          "default": []
         }
       }
     }

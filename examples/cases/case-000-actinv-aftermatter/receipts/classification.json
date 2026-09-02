@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/execution-receipt/v0.1-draft",
   "case_id": "CASE-000",
-  "compiled_snapshot_sha256": "sha256:09f116476fce3645728925f0c396bc968a5767f9b6875c8c4ce9809e9d888a74",
+  "compiled_snapshot_sha256": "sha256:fb62afe280e9356730f5624f50f35245d3ed66fc8a2b4fb026dc301e03a1f209",
   "step_id": "classification",
   "capability_type": {
     "id": "aftermatter.activated-metal-disposition",

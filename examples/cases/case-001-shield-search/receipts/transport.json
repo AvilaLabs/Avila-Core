@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/execution-receipt/v0.1-draft",
   "case_id": "CASE-001",
-  "compiled_snapshot_sha256": "sha256:199c4c6bb0c5f11b37b828aadeea3da45e9c70dd998ec8b4b20eb19018da4f07",
+  "compiled_snapshot_sha256": "sha256:9817e10fc8abc0aab1cd21888b75735a3a5ceec87084b4e84b98fd633c529a7d",
   "step_id": "transport",
   "capability_type": {
     "id": "shielding.slab-transport",

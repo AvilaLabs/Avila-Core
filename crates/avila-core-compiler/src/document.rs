@@ -249,9 +249,19 @@ pub struct CapabilityTypeDefinition {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ReviewDeclaration {
+    pub reviewer_role: ReviewerRole,
     pub presented_input_slots: Vec<String>,
     pub decision_output_slot: String,
     pub allowed_dispositions: Vec<ReviewDisposition>,
+}
+
+/// Who may fulfill a review capability. An agent may make a routing
+/// recommendation, but it is never the accountable reviewer for use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReviewerRole {
+    AccountablePerson,
+    Agent,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -259,6 +269,7 @@ pub struct ReviewDeclaration {
 pub enum ReviewDisposition {
     ApproveForUse,
     RejectForUse,
+    RecommendForAccountableReview,
     RequestChanges,
     Abstain,
 }
@@ -268,6 +279,10 @@ pub enum ReviewDisposition {
 pub struct ReviewPolicyBinding {
     pub reviewer_eligibility_policy: ImmutablePolicyRef,
     pub independence: ReviewIndependence,
+    /// Practical instructions shown to this reviewer. The compiler binds the
+    /// exact text but does not interpret whether the reviewer followed it.
+    #[serde(default)]
+    pub instructions: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -195,7 +195,7 @@
     },
     "reviewPolicyBinding": {
       "type": "object",
-      "description": "Contract binding for a pending accountable-review obligation. The compiler preserves the external policy identity and independence requirements but does not evaluate either.",
+      "description": "Contract binding for a pending person or agent review obligation. The compiler preserves the external policy identity, independence requirements, and instructions but does not evaluate them.",
       "additionalProperties": false,
       "required": [
         "reviewer_eligibility_policy",
@@ -207,6 +207,14 @@
         },
         "independence": {
           "$ref": "#/$defs/reviewIndependence"
+        },
+        "instructions": {
+          "description": "Exact practical instructions bound into the compiled review obligation. Agent reviews require at least one; the compiler does not interpret whether they were followed.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonemptyString"
+          },
+          "default": []
         }
       }
     },

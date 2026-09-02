@@ -18,9 +18,10 @@ use avila_core_compiler::{
     AdmissionState, BasisKind, CampaignReport, CampaignStatus, ClaimQualification, ClaimsDocument,
     CompilationStatus, CompileReport, CompiledContract, CompiledStep, CoverageDeclaration,
     CoverageReport, CoverageState, CoverageStatus, DeclaredOmission, EnvelopeAssessment,
-    EnvelopeState, QualificationRecord, SourceRef, assess_coverage, compile_documents,
-    evaluate_campaign, evaluate_envelope, parse_qualification, parse_requirement_set,
-    registry_kinds, render_campaign_report, render_compile_report,
+    EnvelopeState, ImmutablePolicyRef, QualificationRecord, ResolvedBinding, ReviewDisposition,
+    ReviewFulfillment, ReviewIndependence, ReviewerRole, SourceRef, assess_coverage,
+    compile_documents, evaluate_campaign, evaluate_envelope, parse_qualification,
+    parse_requirement_set, registry_kinds, render_campaign_report, render_compile_report,
 };
 use avila_core_evidence::PackageArtifact;
 use avila_core_evidence::{
@@ -33,6 +34,7 @@ use avila_core_evidence::{
 use avila_core_kernel::{ExactNumber, KindRegistry, TruthValue, VerdictStatus};
 use serde::Serialize;
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 
 use crate::execute::claims::{
     GeneratedClaim, canonical_decimal, canonical_identity, generate_claims,
@@ -360,6 +362,50 @@ pub struct ClaimsReport {
     pub decisions: usize,
 }
 
+/// Whether the exact evidence dossier for a compiled review stage is present.
+/// Readiness is not fulfillment: no disposition has been recorded here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReviewStageState {
+    ReadyForReview,
+    AwaitingEvidence,
+}
+
+/// One realized artifact in the exact dossier compiled for a review stage.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct PresentedReviewEvidence {
+    pub input_slot: String,
+    pub source: SourceRef,
+    pub evidence_id: String,
+    pub sha256: String,
+    pub media_type: String,
+}
+
+/// A content-identified request for either an accountable person or a
+/// non-accountable agent to review the exact realized dossier. The request is
+/// routing material, not a decision and not an attestation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReviewStageReport {
+    pub request_sha256: String,
+    pub compiled_snapshot_sha256: String,
+    pub campaign_sha256: String,
+    pub step_id: String,
+    pub fulfillment: ReviewFulfillment,
+    pub reviewer_role: ReviewerRole,
+    pub state: ReviewStageState,
+    pub presented_evidence: Vec<PresentedReviewEvidence>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub missing_evidence: Vec<SourceRef>,
+    pub decision_role: avila_core_compiler::VersionedRef,
+    pub decision_media_type: String,
+    pub allowed_dispositions: Vec<ReviewDisposition>,
+    pub reviewer_eligibility_policy: ImmutablePolicyRef,
+    pub independence: ReviewIndependence,
+    pub instructions: Vec<String>,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct CaseRunReport {
@@ -389,6 +435,10 @@ pub struct CaseRunReport {
     /// One entry per requirement verdict with its numbers and margin.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub margins: Vec<VerdictMargin>,
+    /// Realized, content-identified dossiers for compiled review stages.
+    /// These are requests only; an agent recommendation cannot approve use.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub review_stages: Vec<ReviewStageReport>,
     /// Free inputs supplied for this run.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub supplied_inputs: Vec<SuppliedInput>,
@@ -504,6 +554,7 @@ pub fn execute_case(
         bindings: None,
         campaign: None,
         margins: Vec::new(),
+        review_stages: Vec::new(),
         supplied_inputs: supplied_inputs.clone(),
         invalidated_steps: Vec::new(),
         replay_applicable,
@@ -655,6 +706,7 @@ pub fn execute_case(
     let campaign = evaluate_campaign(contract, registry, &generated.bytes)?;
     let campaign_rejected = campaign.status == CampaignStatus::Rejected;
     report.margins = margins(compiled, &campaign);
+    report.review_stages = build_review_stages(compiled, &claims, &campaign)?;
     if !campaign.findings.is_empty() {
         report.rendered_findings = Some(render_campaign_report(
             &campaign,
@@ -692,6 +744,111 @@ pub fn execute_case(
     write_run_report(workspace.as_deref(), &report);
     append_log(options, &report);
     Ok(report)
+}
+
+fn build_review_stages(
+    compiled: &CompiledContract,
+    claims: &ClaimsDocument,
+    campaign: &CampaignReport,
+) -> Result<Vec<ReviewStageReport>, Box<dyn Error>> {
+    let Some(campaign_sha256) = campaign.campaign_sha256.as_ref() else {
+        return Ok(Vec::new());
+    };
+    let mut stages = Vec::new();
+    for step in &compiled.workflow {
+        let Some(obligation) = &step.review_obligation else {
+            continue;
+        };
+        let mut presented_evidence = Vec::new();
+        let mut missing_evidence = Vec::new();
+        for binding in &obligation.presented_evidence {
+            match realize_review_evidence(binding, claims) {
+                Some(evidence) => presented_evidence.push(evidence),
+                None => missing_evidence.push(binding.source.clone()),
+            }
+        }
+        let state = if missing_evidence.is_empty() {
+            ReviewStageState::ReadyForReview
+        } else {
+            ReviewStageState::AwaitingEvidence
+        };
+        let mut stage = ReviewStageReport {
+            request_sha256: String::new(),
+            compiled_snapshot_sha256: compiled.snapshot_sha256.clone(),
+            campaign_sha256: campaign_sha256.clone(),
+            step_id: step.step_id.clone(),
+            fulfillment: obligation.fulfillment,
+            reviewer_role: obligation.reviewer_role,
+            state,
+            presented_evidence,
+            missing_evidence,
+            decision_role: obligation.decision_role.clone(),
+            decision_media_type: obligation.decision_media_type.clone(),
+            allowed_dispositions: obligation.allowed_dispositions.clone(),
+            reviewer_eligibility_policy: obligation.reviewer_eligibility_policy.clone(),
+            independence: obligation.independence.clone(),
+            instructions: obligation.instructions.clone(),
+        };
+        stage.request_sha256 = review_request_identity(&stage)?;
+        stages.push(stage);
+    }
+    Ok(stages)
+}
+
+fn realize_review_evidence(
+    binding: &ResolvedBinding,
+    claims: &ClaimsDocument,
+) -> Option<PresentedReviewEvidence> {
+    match &binding.source {
+        SourceRef::ContractInput { input_id } => {
+            let mut matches = claims
+                .inputs
+                .iter()
+                .filter(|input| input.input_id == *input_id);
+            let input = matches.next()?;
+            if matches.next().is_some() {
+                return None;
+            }
+            Some(PresentedReviewEvidence {
+                input_slot: binding.input_slot.clone(),
+                source: binding.source.clone(),
+                evidence_id: format!("input:{input_id}"),
+                sha256: input.artifact.sha256.clone(),
+                media_type: input.artifact.media_type.clone(),
+            })
+        }
+        SourceRef::StepOutput {
+            step_id,
+            output_slot,
+        } => {
+            let mut matches = claims
+                .claims
+                .iter()
+                .filter(|claim| claim.step_id == *step_id && claim.output_slot == *output_slot);
+            let output = matches.next()?;
+            if matches.next().is_some() {
+                return None;
+            }
+            Some(PresentedReviewEvidence {
+                input_slot: binding.input_slot.clone(),
+                source: binding.source.clone(),
+                evidence_id: output.claim_id.clone(),
+                sha256: output.artifact.sha256.clone(),
+                media_type: output.artifact.media_type.clone(),
+            })
+        }
+    }
+}
+
+fn review_request_identity(stage: &ReviewStageReport) -> Result<String, Box<dyn Error>> {
+    let mut value = serde_json::to_value(stage)?;
+    value
+        .as_object_mut()
+        .expect("a review stage serializes as an object")
+        .remove("request_sha256");
+    let bytes = serde_json::to_vec(&value)?;
+    let canonical = avila_core_kernel::canonicalize_json(&bytes)?;
+    Ok(format!("sha256:{:x}", Sha256::digest(&canonical)))
 }
 
 /// Hash each supplied free input and let it stand for its contract input in
@@ -974,6 +1131,7 @@ fn append_log(options: &CaseRunOptions, report: &CaseRunReport) {
         supplied_inputs: &'a [SuppliedInput],
         steps: Vec<(String, StepExecutionState)>,
         verdicts: &'a [VerdictMargin],
+        reviews: Vec<ReviewLog<'a>>,
         #[serde(skip_serializing_if = "Option::is_none")]
         coverage: Option<CoverageLog<'a>>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -986,6 +1144,13 @@ fn append_log(options: &CaseRunOptions, report: &CaseRunReport) {
         status: CoverageStatus,
         set_id: &'a str,
         set_sha256: &'a str,
+    }
+    #[derive(Serialize)]
+    struct ReviewLog<'a> {
+        step_id: &'a str,
+        reviewer_role: ReviewerRole,
+        state: ReviewStageState,
+        request_sha256: &'a str,
     }
     let entry = LogEntry {
         recorded_at: rfc3339_now(),
@@ -1004,6 +1169,16 @@ fn append_log(options: &CaseRunOptions, report: &CaseRunReport) {
             })
             .unwrap_or_default(),
         verdicts: &report.margins,
+        reviews: report
+            .review_stages
+            .iter()
+            .map(|review| ReviewLog {
+                step_id: &review.step_id,
+                reviewer_role: review.reviewer_role,
+                state: review.state,
+                request_sha256: &review.request_sha256,
+            })
+            .collect(),
         coverage: report.coverage.as_ref().map(|coverage| CoverageLog {
             status: coverage.status,
             set_id: &coverage.set_id,
@@ -1227,10 +1402,18 @@ impl<'a> Runner<'a> {
                 Some(execution) => steps.push(self.run_step(step, execution)?),
                 None => not_executed.push(NotExecutedStep {
                     step_id: step.step_id.clone(),
-                    reason: if step.review_obligation.is_some() {
-                        "pending external review; never executed by the runner".into()
-                    } else {
-                        "no execution declared; the committed claim is evaluated as a recorded attestation".into()
+                    reason: match step
+                        .review_obligation
+                        .as_ref()
+                        .map(|review| review.reviewer_role)
+                    {
+                        Some(ReviewerRole::AccountablePerson) => {
+                            "pending accountable review; never executed by the runner".into()
+                        }
+                        Some(ReviewerRole::Agent) => {
+                            "pending agent review; the runner materializes its exact dossier for an external agent".into()
+                        }
+                        None => "no execution declared; the committed claim is evaluated as a recorded attestation".into(),
                     },
                 }),
             }
@@ -1374,10 +1557,15 @@ impl<'a> Runner<'a> {
                 step.capability_type.major
             ));
         }
-        if step.review_obligation.is_some() {
-            report
-                .issues
-                .push("a review obligation is never executed by the runner".into());
+        if let Some(review) = &step.review_obligation {
+            report.issues.push(match review.reviewer_role {
+                ReviewerRole::AccountablePerson => {
+                    "an accountable review obligation is never executed by the runner".into()
+                }
+                ReviewerRole::Agent => {
+                    "an agent review consumes the runner's materialized review request, not a package execution declaration".into()
+                }
+            });
         }
 
         // Every bound input slot must be staged from verified bytes.
@@ -2983,15 +3171,48 @@ pub fn human_summary(report: &CaseRunReport) -> String {
         }
     }
 
+    if !report.review_stages.is_empty() {
+        let _ = writeln!(out, "\n6. REVIEW");
+        for review in &report.review_stages {
+            let state = match review.state {
+                ReviewStageState::ReadyForReview => "READY",
+                ReviewStageState::AwaitingEvidence => "AWAITING EVIDENCE",
+            };
+            let role = match review.reviewer_role {
+                ReviewerRole::AccountablePerson => "accountable person",
+                ReviewerRole::Agent => "non-accountable agent",
+            };
+            let _ = writeln!(
+                out,
+                "   [{state}] {} — {role}; {}/{} dossier artifacts present; request {}",
+                review.step_id,
+                review.presented_evidence.len(),
+                review.presented_evidence.len() + review.missing_evidence.len(),
+                review.request_sha256,
+            );
+            for instruction in &review.instructions {
+                let _ = writeln!(out, "      instruction: {instruction}");
+            }
+            for source in &review.missing_evidence {
+                let _ = writeln!(out, "      missing: {}", source.label());
+            }
+        }
+    }
+
+    let replay_section = if report.review_stages.is_empty() {
+        6
+    } else {
+        7
+    };
     if !report.replay_applicable && report.campaign.is_some() {
-        let _ = writeln!(out, "\n6. REPLAY");
+        let _ = writeln!(out, "\n{replay_section}. REPLAY");
         let _ = writeln!(
             out,
             "   [NOT APPLICABLE] free input(s) supplied; committed expectations describe the reference candidate"
         );
     }
     if let Some(replay) = &report.replay {
-        let _ = writeln!(out, "\n6. REPLAY");
+        let _ = writeln!(out, "\n{replay_section}. REPLAY");
         let _ = writeln!(
             out,
             "   [{}] generated campaign report {} committed expectation",
@@ -3081,6 +3302,93 @@ mod tests {
     fn case_000() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../examples/cases/case-000-actinv-aftermatter")
+    }
+
+    fn case_001() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/cases/case-001-shield-search")
+    }
+
+    #[test]
+    fn case_001_materializes_an_exact_non_accountable_review_request() {
+        let report = execute_case(&case_001(), &CaseRunOptions::default()).unwrap();
+        assert_eq!(report.status, CaseRunStatus::Evaluated);
+        assert!(report.replay.as_ref().unwrap().matches);
+
+        let [stage] = report.review_stages.as_slice() else {
+            panic!("CASE-001 must materialize exactly one staged review request");
+        };
+        assert_eq!(stage.step_id, "practical-review");
+        assert_eq!(stage.reviewer_role, ReviewerRole::Agent);
+        assert_eq!(stage.fulfillment, ReviewFulfillment::PendingAgentReview);
+        assert_eq!(stage.state, ReviewStageState::ReadyForReview);
+        assert_eq!(
+            stage.request_sha256,
+            "sha256:f3a95612d7a64187217698f67a0c003f4667a1d1eb55d2a9879d60514dcfb321"
+        );
+        assert_eq!(
+            stage
+                .presented_evidence
+                .iter()
+                .map(|evidence| evidence.evidence_id.as_str())
+                .collect::<Vec<_>>(),
+            vec![
+                "input:reviewer-script",
+                "input:candidate",
+                "screen-result",
+                "transport-result",
+            ]
+        );
+        assert!(stage.missing_evidence.is_empty());
+        assert_eq!(stage.instructions.len(), 4);
+        assert_eq!(
+            stage.allowed_dispositions,
+            vec![
+                ReviewDisposition::RecommendForAccountableReview,
+                ReviewDisposition::RequestChanges,
+                ReviewDisposition::Abstain,
+            ]
+        );
+        assert!(
+            !stage
+                .allowed_dispositions
+                .contains(&ReviewDisposition::ApproveForUse)
+        );
+        assert!(
+            !stage
+                .allowed_dispositions
+                .contains(&ReviewDisposition::RejectForUse)
+        );
+
+        let transport = report
+            .campaign
+            .as_ref()
+            .unwrap()
+            .verdicts
+            .iter()
+            .find(|verdict| verdict.requirement_id == "SHIELD-R2-transport")
+            .unwrap();
+        assert_eq!(transport.verdict.status, VerdictStatus::Fail);
+
+        let contract = fs::read(case_001().join("contract.json")).unwrap();
+        let registry = fs::read(case_001().join("registry.json")).unwrap();
+        let compile = compile_documents(&contract, &registry).unwrap();
+        let compiled = compile.compiled.as_ref().unwrap();
+        let mut claims: ClaimsDocument =
+            serde_json::from_slice(&fs::read(case_001().join("claims.json")).unwrap()).unwrap();
+        claims
+            .claims
+            .retain(|claim| claim.claim_id != "transport-result");
+        let claims_bytes = serde_json::to_vec(&claims).unwrap();
+        let campaign = evaluate_campaign(&contract, &registry, &claims_bytes).unwrap();
+        let stages = build_review_stages(compiled, &claims, &campaign).unwrap();
+        assert_eq!(stages[0].state, ReviewStageState::AwaitingEvidence);
+        assert_eq!(
+            stages[0].missing_evidence,
+            vec![SourceRef::StepOutput {
+                step_id: "transport".into(),
+                output_slot: "transport-result".into(),
+            }]
+        );
     }
 
     #[test]

@@ -17,9 +17,10 @@ mod execute;
 pub use case_run::{
     BindingReport, BindingStatus, CapabilityCheck, CapabilityCheckState, CaseRunOptions,
     CaseRunReport, CaseRunStatus, ChangeClass, ChangeRecord, ClaimsReport, ExecutionReport,
-    ExecutionStatus, NotExecutedStep, OutputReport, ReceiptReplayReport, ReceiptSummary,
-    ReplayReport, StagedInputReport, StepExecutionReport, StepExecutionState, SuppliedInput,
-    VerdictMargin, display_number, execute_case, human_summary, parse_capabilities,
-    parse_environment, parse_inputs, parse_named_paths, parse_source_roots,
+    ExecutionStatus, NotExecutedStep, OutputReport, PresentedReviewEvidence, ReceiptReplayReport,
+    ReceiptSummary, ReplayReport, ReviewStageReport, ReviewStageState, StagedInputReport,
+    StepExecutionReport, StepExecutionState, SuppliedInput, VerdictMargin, display_number,
+    execute_case, human_summary, parse_capabilities, parse_environment, parse_inputs,
+    parse_named_paths, parse_source_roots,
 };
 pub use execute::{Adapter, AdapterOutput, ExtractedClaim, RUNNER_ID, StepContext};

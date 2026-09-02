@@ -11,7 +11,9 @@ command line without re-freezing the package.
 candidate (free input) ─┬─► screen: removal-cross-section attenuation (python3, unqualified, nominal basis)
                         └─► transport: OpenMC slab model (openmc-python, seeded_stochastic, bounded basis)
                                     ↓
-             Avila Core: four requirement verdicts with margins, campaign-log line
+             Avila Core: four requirement verdicts + exact review request
+                                    ↓
+          practical-review agent: request changes or recommend a person's review
 ```
 
 This is a research specimen over a synthetic plane source. No facility,
@@ -57,6 +59,7 @@ needed (about 20 ms):
 cargo run -p avila-core-cli -- run examples/cases/case-001-shield-search \
   --source-root case=examples/cases/case-001-shield-search \
   --source-root shielding=examples/capabilities/shielding \
+  --source-root agents=examples/agents \
   --source-root nuclear-data=/path/to/endfb-vii.1-hdf5
 ```
 
@@ -67,6 +70,7 @@ input, so its committed claims are withheld and R2 is `NOT_EVALUATED`):
 cargo run -p avila-core-cli -- run examples/cases/case-001-shield-search \
   --source-root case=examples/cases/case-001-shield-search \
   --source-root shielding=examples/capabilities/shielding \
+  --source-root agents=examples/agents \
   --source-root nuclear-data=/path/to/endfb-vii.1-hdf5 \
   --capability python3=/usr/bin/python3 \
   --input candidate=my-candidate.json --log campaign-log.jsonl
@@ -82,7 +86,10 @@ Run transport on it as well (about a minute at 1e6 particles on 8 threads):
 The scripted designer in `examples/agents/shield_search.py` drives the whole
 loop: it proposes candidates, screens each, keeps the ones the screen and the
 exact requirements accept, and sends the ones with the most screen margin to
-transport. It reads reports and never constructs a verdict.
+transport. After each finalist it gives the exact ready dossier to
+`shield_review.py`, writes a staged-review record, returns candidates that need
+changes, and queues only recommendations for a later accountable person. It
+reads reports and never constructs a verdict or approval.
 
 ## Coverage of the library requirement set
 
@@ -133,15 +140,47 @@ interval that Core refuses to let establish the bounded requirement:
 [FAIL] SHIELD-R4-thickness — bounded.le.exceeds ([150, 150] cm; limit 100 cm; margin -50 cm)
 ```
 
+## Staged agent review
+
+The final `practical-review` step is a review capability, but its declared
+reviewer role is `agent`, not `accountable_person`. Its exact dossier is the
+hash-bound reviewer script, candidate, screen result, and transport result.
+The contract and `agent-review-policy.json` bind four practical instructions,
+including the rule that every technical requirement must already be `PASS`.
+Core emits the realized request only after campaign evaluation and identifies
+it canonically:
+
+```text
+[READY] practical-review — agent; dossier 4 artifact(s); request sha256:f3a95612…
+  instruction: Use Core's recorded requirement statuses and rules; never derive, edit, or override a technical verdict.
+  instruction: Request changes unless every compiled requirement is PASS.
+```
+
+The compiler permits this role only
+`recommend_for_accountable_review`, `request_changes`, or `abstain`. It
+refuses `approve_for_use` and `reject_for_use`, and campaign evaluation does
+not let an agent stage gate or create a technical verdict. The committed
+[`reviews/reference.json`](reviews/reference.json) embeds that exact request
+and records the expected negative route for the reference candidate:
+`request_changes`, because Core reports R2 as `FAIL`. The record is unsigned,
+`unverified`, and explicitly not an approval. CASE-001 has no accountable
+review obligation or decision.
+
 ## What the package binds
 
 - **Capabilities:** `python3` (the system interpreter, by digest) for the
   screen; `openmc-python` (the OpenMC virtual environment's interpreter, by
-  digest) for transport. Neither is a qualified package.
+  digest) for transport. Neither is a qualified package. The staged reviewer
+  is an input artifact identified by its own digest, not an executable granted
+  runner authority.
 - **Artifacts:** the reference candidate, the material table, the source
-  definition, both scripts, the nuclear-data index (identity of the index
+  definition, both computational scripts, the reviewer script, the
+  nuclear-data index (identity of the index
   only; the nuclide files it names are not re-hashed), and the reference
   candidate's expected outputs under `expected/`.
+- **Review:** the agent policy and reference routing record as package
+  documents; `practical-review` has no package execution because the runner
+  materializes the request and external software consumes it.
 - **Executions:** `screen` through `avila-labs.shielding/screen@1`;
   `transport` through `avila-labs.shielding/slab-transport@1`, which requires
   the operator to value `OPENMC_CROSS_SECTIONS`. The key name is invocation
@@ -203,3 +242,10 @@ not met by anything the designer tried; the next moves belong to the designer
 (more particles on the borated candidate, a less optimistic screen, materials
 from the table it never combined into a feasible candidate) and to the
 requirement owner, not to Core.
+
+That frozen search predates the staged-review slice, so its historical log is
+not retrofitted with review records. Running the current designer writes a
+record for every transported finalist and reports separately how many were
+returned and how many were merely recommended into the accountable-person
+queue. Since all three historical finalists were `FAIL` or `INCONCLUSIVE`, the
+bound instructions would return all three rather than place any in that queue.

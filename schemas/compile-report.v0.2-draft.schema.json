@@ -330,21 +330,32 @@
     },
     "compiledReviewObligation": {
       "type": "object",
-      "description": "A structurally complete but unfulfilled review obligation. Reviewer eligibility, signatures, independence, and admission remain external future checks.",
+      "description": "A structurally complete but unfulfilled person or agent review obligation. Reviewer eligibility, signatures, independence, and admission remain external checks.",
       "additionalProperties": false,
       "required": [
         "fulfillment",
+        "reviewer_role",
         "presented_evidence",
         "decision_output_slot",
         "decision_role",
         "decision_media_type",
         "allowed_dispositions",
         "reviewer_eligibility_policy",
-        "independence"
+        "independence",
+        "instructions"
       ],
       "properties": {
         "fulfillment": {
-          "const": "pending_external_review"
+          "enum": [
+            "pending_external_review",
+            "pending_agent_review"
+          ]
+        },
+        "reviewer_role": {
+          "enum": [
+            "accountable_person",
+            "agent"
+          ]
         },
         "presented_evidence": {
           "type": "array",
@@ -370,6 +381,7 @@
             "enum": [
               "approve_for_use",
               "reject_for_use",
+              "recommend_for_accountable_review",
               "request_changes",
               "abstain"
             ]
@@ -380,6 +392,12 @@
         },
         "independence": {
           "$ref": "#/$defs/reviewIndependence"
+        },
+        "instructions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonemptyString"
+          }
         }
       }
     },

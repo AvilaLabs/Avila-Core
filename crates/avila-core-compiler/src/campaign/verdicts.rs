@@ -14,7 +14,9 @@ use super::{AdmissionRecord, AdmissionState, VerdictBoundary, VerdictRecord};
 use crate::compile::registry::RegistryIndex;
 use crate::compile::{CanonicalTypedQuantity, CompiledContract};
 use crate::diagnostic::CORE_A4401;
-use crate::document::{BasisKind, Comparison, QuantityValue, ReviewDisposition, SourceRef};
+use crate::document::{
+    BasisKind, Comparison, QuantityValue, ReviewDisposition, ReviewerRole, SourceRef,
+};
 use crate::qualification::{ClaimQualification, EnvelopeState};
 
 pub(super) fn evaluate(
@@ -29,7 +31,11 @@ pub(super) fn evaluate(
     let required_reviews: Vec<String> = compiled
         .workflow
         .iter()
-        .filter(|step| step.review_obligation.is_some())
+        .filter(|step| {
+            step.review_obligation
+                .as_ref()
+                .is_some_and(|review| review.reviewer_role == ReviewerRole::AccountablePerson)
+        })
         .map(|step| step.step_id.clone())
         .collect();
     let present_reviews: Vec<String> = required_reviews

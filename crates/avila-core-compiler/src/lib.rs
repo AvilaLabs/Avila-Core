@@ -51,8 +51,8 @@ pub use document::{
     ParameterDefinition, ParameterType, PurposeDefinition, QuantityBound, QuantityValue,
     REGISTRY_SCHEMA_VERSION, RegistrySnapshot, ReproducibilityBinding, ReproducibilityDeclaration,
     RequirementBasis, RequirementSource, ReviewDeclaration, ReviewDisposition, ReviewIndependence,
-    ReviewParty, ReviewPolicyBinding, RoleDefinition, SeparationLevel, SourceRef, TypedQuantity,
-    UnitRecord, VersionedRef, WorkflowStep, current_profile_contract,
+    ReviewParty, ReviewPolicyBinding, ReviewerRole, RoleDefinition, SeparationLevel, SourceRef,
+    TypedQuantity, UnitRecord, VersionedRef, WorkflowStep, current_profile_contract,
 };
 pub use qualification::{
     ClaimQualification, EnvelopeAssessment, EnvelopeState, EnvelopeTerm,

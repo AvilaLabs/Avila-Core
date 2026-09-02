@@ -2,8 +2,8 @@
   "schema_version": "avila.core/campaign-report/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "status": "evaluated",
-  "compiled_snapshot_sha256": "sha256:09f116476fce3645728925f0c396bc968a5767f9b6875c8c4ce9809e9d888a74",
-  "claims_sha256": "sha256:591d005b195bc7f531e3eb469c170efded8acf37d1b21e3f97af486fde876c94",
+  "compiled_snapshot_sha256": "sha256:fb62afe280e9356730f5624f50f35245d3ed66fc8a2b4fb026dc301e03a1f209",
+  "claims_sha256": "sha256:eed75d5a4551e42f193eeedc17ca307cdaee70906b953b5b045fd406cbcec795",
   "admissions": [
     {
       "evidence_id": "input:actinv-activation-library",
@@ -199,8 +199,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:09f116476fce3645728925f0c396bc968a5767f9b6875c8c4ce9809e9d888a74",
-        "claims_sha256": "sha256:591d005b195bc7f531e3eb469c170efded8acf37d1b21e3f97af486fde876c94",
+        "compiled_snapshot_sha256": "sha256:fb62afe280e9356730f5624f50f35245d3ed66fc8a2b4fb026dc301e03a1f209",
+        "claims_sha256": "sha256:eed75d5a4551e42f193eeedc17ca307cdaee70906b953b5b045fd406cbcec795",
         "review_attestation": "unverified"
       }
     },
@@ -230,12 +230,12 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:09f116476fce3645728925f0c396bc968a5767f9b6875c8c4ce9809e9d888a74",
-        "claims_sha256": "sha256:591d005b195bc7f531e3eb469c170efded8acf37d1b21e3f97af486fde876c94",
+        "compiled_snapshot_sha256": "sha256:fb62afe280e9356730f5624f50f35245d3ed66fc8a2b4fb026dc301e03a1f209",
+        "claims_sha256": "sha256:eed75d5a4551e42f193eeedc17ca307cdaee70906b953b5b045fd406cbcec795",
         "review_attestation": "unverified"
       }
     }
   ],
-  "campaign_sha256": "sha256:564d7626e0970267eb79c810db7eea00a64a04202e454a2d1c2c102587a54a67",
+  "campaign_sha256": "sha256:8221beb0d0f3cbb3f103da8e82d8219df19ba04720446f36c2b4e53161714a10",
   "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked, and review decisions are unverified assertions. No verdict here is scientific truth, certification, or regulatory approval."
 }

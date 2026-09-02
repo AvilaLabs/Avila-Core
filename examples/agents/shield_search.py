@@ -17,12 +17,15 @@ import sys
 from fractions import Fraction
 from pathlib import Path
 
+import shield_review
+
 
 def run_core(core, case, candidate, args, transport, log):
     command = [
         core, "run", str(case), "--json", "--input", f"candidate={candidate}",
         "--source-root", f"case={args.case}",
         "--source-root", f"shielding={args.shielding}",
+        "--source-root", f"agents={args.agents}",
         "--source-root", f"nuclear-data={args.nuclear_data}",
         "--capability", f"python3={args.python3}",
         "--log", str(log),
@@ -57,6 +60,7 @@ def main():
     parser.add_argument("--core", default="target/debug/avila-core")
     parser.add_argument("--case", default="examples/cases/case-001-shield-search")
     parser.add_argument("--shielding", default="examples/capabilities/shielding")
+    parser.add_argument("--agents", default="examples/agents")
     parser.add_argument("--nuclear-data", required=True)
     parser.add_argument("--cross-sections", required=True, help="value for OPENMC_CROSS_SECTIONS")
     parser.add_argument("--python3", default="/usr/bin/python3")
@@ -69,7 +73,12 @@ def main():
 
     out = Path(args.out)
     (out / "candidates").mkdir(parents=True, exist_ok=True)
+    (out / "reviews").mkdir(parents=True, exist_ok=True)
     log = out / "campaign-log.jsonl"
+    review_log = out / "review-log.jsonl"
+    policy_path = Path(args.case, "agent-review-policy.json")
+    review_policy, review_policy_sha256 = shield_review.load_policy(policy_path)
+    reviewer_sha256 = shield_review.file_identity(shield_review.__file__)
     materials = json.loads(Path(args.shielding, "materials.json").read_text())["materials"]
     names = sorted(materials)
     rng = random.Random(args.seed)
@@ -120,25 +129,62 @@ def main():
     for entry in finalists:
         report = run_core(args.core, args.case, entry["path"], args, transport=True, log=log)
         r2 = margin(report, "SHIELD-R2-transport")
-        results.append({**entry, "transport": r2, "workspace": report.get("execution", {}).get("workspace")})
-        print(f"{entry['id']}: transport {r2 and r2['status']} [{show(r2 and r2.get('lower'))}, {show(r2 and r2.get('upper'))}] uSv/h", file=sys.stderr)
+        candidate = json.loads(Path(entry["path"]).read_text())
+        review = shield_review.review_candidate(
+            report,
+            candidate,
+            shield_review.file_identity(entry["path"]),
+            review_policy,
+            review_policy_sha256,
+            reviewer_sha256,
+        )
+        review_path = out / "reviews" / f"{entry['id']}.json"
+        review_path.write_text(json.dumps(review, indent=2) + "\n")
+        with review_log.open("a") as file:
+            file.write(json.dumps({
+                "candidate_id": entry["id"],
+                "disposition": review["disposition"],
+                "actions": review["actions"],
+                "review_request_sha256": review["review_request"]["request_sha256"],
+                "record_sha256": review["record_sha256"],
+                "record": str(review_path),
+            }, separators=(",", ":")) + "\n")
+        results.append({
+            **entry,
+            "transport": r2,
+            "workspace": report.get("execution", {}).get("workspace"),
+            "review": review,
+            "review_path": str(review_path),
+        })
+        print(
+            f"{entry['id']}: agent {review['disposition']} after transport "
+            f"{r2 and r2['status']} [{show(r2 and r2.get('lower'))}, "
+            f"{show(r2 and r2.get('upper'))}] uSv/h",
+            file=sys.stderr,
+        )
 
     lines = ["# Shielding configuration search", "", f"{len(screened)} candidates screened; {len(feasible)} passed the screen, mass, and thickness requirements; {len(finalists)} finalists ran transport.", "",
-             "| candidate | layers | screen uSv/h | mass kg | transport uSv/h | transport verdict |", "| --- | --- | ---: | ---: | ---: | --- |"]
+             "| candidate | layers | screen uSv/h | mass kg | transport uSv/h | transport verdict | agent routing |", "| --- | --- | ---: | ---: | ---: | --- | --- |"]
     for entry in results:
         r2 = entry["transport"] or {}
         layers = " + ".join(f"{layer['thickness_cm']} cm {layer['material']}" for layer in entry["layers"])
-        lines.append(f"| {entry['id']} | {layers} | {show(entry['screen_dose'])} | {show(entry['mass_kg'])} | [{show(r2.get('lower'))}, {show(r2.get('upper'))}] | {r2.get('status')} ({r2.get('rule')}) |")
+        review = entry["review"]
+        lines.append(f"| {entry['id']} | {layers} | {show(entry['screen_dose'])} | {show(entry['mass_kg'])} | [{show(r2.get('lower'))}, {show(r2.get('upper'))}] | {r2.get('status')} ({r2.get('rule')}) | {review['disposition']} ({len(review['actions'])} actions) |")
     counts = {}
     for entry in results:
         status = (entry["transport"] or {}).get("status") or "not evaluated"
         counts[status] = counts.get(status, 0) + 1
     tally = ", ".join(f"{count} {status}" for status, count in sorted(counts.items()))
+    recommended = [
+        entry for entry in results
+        if entry["review"]["disposition"] == "recommend_for_accountable_review"
+    ]
     lines += ["", f"Transport verdicts for the {len(results)} finalists: {tally}." if results else "",
+              f"Accountable-review queue: {len(recommended)} candidate(s). The agent returned {len(results) - len(recommended)} to the designer; it approved none.",
               f"{duplicates} feasible candidate(s) skipped as duplicates of a design already sent to transport." if duplicates else "",
               "An `inconclusive` verdict means the statistical interval straddles the limit; more particles narrow it, and a candidate whose nominal sits above the limit is unlikely to pass.", "",
-              "Values are shown to four significant digits; the campaign log keeps every exact value and identity.", "",
-              "The screen's PASS is nominal and establishes nothing; only the transport verdict is bounded, and its interval is statistical only. Nothing here is qualified for any decision."]
+              "Values are shown to four significant digits; the campaign log keeps every exact value and identity. Each staged-review record binds Core's exact review request, dossier identities, policy, instructions, agent implementation, disposition, and actions.", "",
+              "The screen's PASS is nominal and establishes nothing; only the transport verdict is bounded, and its interval is statistical only. Agent routing is not accountable review and never approves a candidate for use."]
     (out / "summary.md").write_text("\n".join(lines) + "\n")
     print((out / "summary.md").read_text())
     return 0

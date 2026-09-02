@@ -41,7 +41,7 @@ parameter and reproducibility declaration checks
 slot resolution + role/media checks
               │
               ▼
-accountable-review obligation checks
+role-separated review obligation checks
               │
               ▼
 derived dependency graph + cycle check
@@ -156,50 +156,58 @@ material environment, hardware, ABI, validator, and implementation factors.
 Those factors cannot be checked until package binding exists, so successful
 static compilation is not a package-level reproducibility judgment.
 
-## Accountable review obligations
+## Review obligations
 
-R9 represents review as a capability type, but gives it no privileged power over
-technical claims. A review type must be nondeterministic, name every required
-input in the exact dossier presented to the reviewer, emit only one nominal
-decision record with the `unquantified` claim model, and declare a closed set of
-governance dispositions: `approve_for_use`, `reject_for_use`,
-`request_changes`, or `abstain`. None is a technical `PASS` or `FAIL`.
+R9 represents review as a capability type, but gives it no privileged power
+over technical claims. Every review type names each required input in the
+exact dossier, emits only one nominal decision record with the `unquantified`
+claim model, declares a closed set of governance dispositions, and says
+whether its reviewer is an `accountable_person` or an `agent`. None of those
+dispositions is a technical `PASS` or `FAIL`.
+
+The role closes the authority surface. An accountable-person capability must
+remain nondeterministic and may allow `approve_for_use`, `reject_for_use`,
+`request_changes`, or `abstain`; it may not merely recommend another review.
+An agent capability may allow only `recommend_for_accountable_review`,
+`request_changes`, or `abstain`. Offering an agent approval or rejection
+authority is a compile-time refusal. Every agent use must also bind at least
+one nonempty practical instruction.
 
 Each workflow use binds a reviewer-eligibility policy by id, revision, and
-lowercase SHA-256 identity. The policy bytes, identities, credentials, and trust
-roots are deliberately not compiler inputs. Independence is nevertheless
-explicit in the contract: either `none`, preserving the visible weakening, or a
-nonempty set of minimum person/organization separations from named campaign
-parties.
+lowercase SHA-256 identity. The policy bytes, identities, credentials, and
+trust roots are deliberately not compiler inputs. Independence is nevertheless
+explicit in the contract: either `none`, preserving the visible weakening, or
+a nonempty set of minimum person/organization separations from named campaign
+parties. The same binding slot is used for an agent policy, where it pins the
+permitted implementation and instructions rather than professional authority.
 
-Successful compilation records `pending_external_review`, the exact resolved
-evidence sources, decision role and media type, permitted dispositions, policy
-identity, and independence constraints. This is an obligation for later
-execution and admission. It is not evidence that a review occurred or that any
-reviewer was legitimate. A later signed decision must bind the compiled plan and
-the exact dossier; an organization-scoped admission policy must independently
-evaluate eligibility and separation.
+Successful compilation records `pending_external_review` for a person or
+`pending_agent_review` for software, along with the exact resolved evidence
+sources, decision role and media type, permitted dispositions, policy identity,
+independence constraints, and instructions. These are obligations for later
+routing or admission. They are not evidence that a review occurred or that any
+reviewer was legitimate. Only the accountable-person obligation participates
+in campaign `PASS` gating; an agent stage can send work back but cannot fulfill
+that obligation or alter a verdict.
 
-Technical result, review disposition, and admission state remain separate. A
-review may govern whether an organization uses a result, but cannot silently
-turn a violated or inconclusive technical requirement into a satisfied one.
-
-The later fulfillment record is intentionally not implemented or assigned an
-authoritative schema yet. Its interface must eventually bind at least the
-compiled snapshot and review-step identity, the exact realized dossier artifact
-identities, one allowed disposition and rationale, the eligibility-policy
-identity, signer key and organization-scoped eligibility assertions,
-independence-evaluation inputs and result, canonical payload identity,
-signature, and supersession or revocation state. It must contain no field that
-overrides a technical requirement verdict.
+The runner now materializes a content-identified request from each obligation
+and the evidence actually present. Draft schema
+`avila.core/staged-review-record/v0.1-draft` records an unsigned agent routing
+result over that request. The authoritative, signed accountable fulfillment
+record remains intentionally unimplemented. It must eventually bind at least
+the compiled snapshot and review-step identity, exact realized dossier
+identities, one allowed disposition and rationale, eligibility-policy identity,
+signer and organization-scoped eligibility assertions, independence inputs and
+result, canonical payload identity, signature, and supersession or revocation
+state. Neither record may contain a field that overrides a technical verdict.
 
 `CORE-R3401` is reserved for an authored review obligation that is structurally
-incomplete or contradictory. Once a valid obligation has compiled, absence of a
-real decision is a future `awaiting_review` campaign state, not a compiler
-error. A bad signature, failed eligibility check, or failed independence check
-is a future admission refusal. Keeping those outcomes distinct prevents static
-composition, human action, and organizational trust from collapsing into one
-misleading status.
+incomplete or contradictory. Once a valid obligation has compiled, an absent
+accountable decision withholds `PASS` at campaign evaluation; an absent agent
+record changes no technical verdict. A bad signature, failed eligibility check,
+or failed independence check remains a future admission refusal. Keeping those
+outcomes distinct prevents static composition, software routing, human action,
+and organizational trust from collapsing into one misleading status.
 
 ## Governed purposes and typed exclusions
 
@@ -327,8 +335,9 @@ Successful output is `avila.core/compiled-contract/v0.2-draft`. It contains:
 - typed parameter values lowered to canonical exact representations;
 - type-level determinism, seeds, material execution factors, and the effective
   contract nondeterminism policy;
-- pending accountable-review obligations, exact presented evidence, external
-  eligibility-policy identities, and explicit independence constraints;
+- role-separated pending review obligations, exact presented evidence,
+  external eligibility-policy identities, explicit independence constraints,
+  and agent instructions;
 - governed requirement-purpose identities and output-level explicit
   purpose exclusions;
 - exact requirement limits, and equality tolerances, lowered to canonical
@@ -350,7 +359,8 @@ identity, exact within-kind unit scaling, unique slot resolution, nominal
 role-major compatibility, type-level claim-model/basis satisfiability, media
 compatibility, graph shape, metric binding, limit kind/unit compatibility,
 typed parameter/domain enforcement, type-level reproducibility bindings, the
-structural half of accountable review, and nominal purpose-exclusion checking.
+structural review roles and authority limits, and nominal purpose-exclusion
+checking.
 
 It does not yet represent or decide:
 

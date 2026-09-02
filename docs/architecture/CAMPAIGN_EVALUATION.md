@@ -78,15 +78,39 @@ reduced under SC-3, scaled exactly, and compared under the SC-10 tables:
 `bounded.le.within`, `bounded.le.crossing`, `bounded.le.exceeds`, and the
 rest.
 
-Review is asymmetric, as SC-10 requires. Every compiled review obligation is
-a required review; `PASS` is withheld as `not_evaluated.review_pending` until
-an `approve_for_use` decision is present, while `FAIL` is emitted from
-contradicting evidence with the review still outstanding and listed. A
-decision is an unverified assertion here; eligibility, signatures, and
-independence are later admission checks.
+Accountable review is asymmetric, as SC-10 requires. Every compiled
+`accountable_person` obligation is a required review; `PASS` is withheld as
+`not_evaluated.review_pending` until an `approve_for_use` decision is present,
+while `FAIL` is emitted from contradicting evidence with the review still
+outstanding and listed. A decision is an unverified assertion here;
+eligibility, signatures, and independence are later admission checks.
+
+An `agent` obligation is not a required review for verdict purposes. It may
+route a candidate back or recommend that an accountable person review it, but
+pending or completed agent work neither withholds nor creates a technical
+verdict. The compiler forbids agent `approve_for_use` and `reject_for_use`
+dispositions, and campaign evaluation filters by reviewer role rather than by
+step naming convention.
 
 A `nominal` basis is evaluated only when the contract's execution policy
 permits it; the compiler refuses the contract otherwise with `CORE-A4201`.
+
+## Realized review requests
+
+`avila-core run` resolves each compiled review dossier against the claims it
+generated and emits a `review_stages` entry after campaign evaluation. The
+entry binds the compiled snapshot and campaign identities; each presented
+artifact's source, evidence id, digest, and media type; the policy,
+dispositions, independence declaration, and instructions; and a canonical
+`request_sha256`. Its state is `ready_for_review` only when every compiled
+source is present, otherwise `awaiting_evidence` with the missing sources
+listed. Readiness is not fulfillment.
+
+The runner does not execute a reviewer or ingest the resulting agent record.
+CASE-001's external scripted designer passes the exact ready request to its
+hash-bound reviewer and records an unsigned
+`avila.core/staged-review-record/v0.1-draft` beside the campaign. That record
+is routing history, not an admitted decision and not accountable approval.
 
 ## Identity
 

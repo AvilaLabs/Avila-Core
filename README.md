@@ -63,7 +63,9 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   satisfies only the nominal-basis requirement while OpenMC transport
   satisfies the bounded one, every verdict carries its exact margin, and
   `--log` appends one line per run to a campaign log that a scripted
-  designer in `examples/agents/` drives through the two-fidelity loop;
+  designer in `examples/agents/` drives through the two-fidelity loop; its
+  hash-bound staged reviewer receives Core's exact dossier and can only
+  return work or recommend accountable review, never approve it;
 - qualification envelopes: a method owner's record binds an exact executable
   and adapter to a kernel applicability predicate over facts the adapter
   reads from verified inputs; the runner evaluates it before a step runs and
@@ -76,15 +78,16 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   refuses to execute over an unstated omission or a weaker-than-required
   basis, so a search cannot optimize an incomplete question;
 - a draft portable evidence model, case-package manifest, execution-receipt
-  record, and SHA-256 utility;
+  and non-accountable staged-review records, and SHA-256 utility;
 - JSON Schemas that the compiler embeds and enforces as its source layer, and
   a deliberately non-executable specimen contract and registry snapshot;
 - a local CLI for canonicalization, compilation, campaign evaluation, the
   diagnostic catalog, and the case workflow; and
 - an egui workbench that runs a composed case through the same runner and
-  renders its six-stage report (integrity, compile, execute with reuse and
-  change classes, claims, verdicts with their boundaries, replay), plus the
-  original specimen compiler view. It computes nothing itself.
+  renders integrity, compilation, execution with reuse and change classes,
+  claims, verdicts with their boundaries, staged-review readiness and
+  instructions, and replay, plus the original specimen compiler view. It
+  computes nothing itself.
 
 The repository also contains proposed `v0.2` semantic rules and an initial
 conformance-vector corpus. The Rust kernel executes all 91 current pure vectors:
@@ -165,6 +168,7 @@ cargo run -p avila-core-cli -- run \
   examples/cases/case-001-shield-search \
   --source-root case=examples/cases/case-001-shield-search \
   --source-root shielding=examples/capabilities/shielding \
+  --source-root agents=examples/agents \
   --source-root nuclear-data=/path/to/endfb-vii.1-hdf5 \
   --capability python3=/usr/bin/python3 \
   --input candidate=my-candidate.json --log campaign-log.jsonl
@@ -207,8 +211,9 @@ document against the compiled snapshot and prints one verdict per requirement;
 see the [campaign evaluation boundary](docs/architecture/CAMPAIGN_EVALUATION.md).
 The `run` command is the concise end-to-end view: integrity, compiled
 workflow, execution with a verified receipt, generated claims, identity
-binding, admissions, verdicts, and replay against the committed claims,
-receipt, and campaign report. Omit `--source-root` to see every external
+binding, admissions, verdicts, exact staged-review requests, and replay
+against the committed claims, receipt, and campaign report. Omit
+`--source-root` to see every external
 artifact reported as `not_checked`. With the roots supplied and nothing
 changed since the committed receipts, both steps are `REUSED` and nothing
 runs, executables or not; add `--no-reuse` to execute afresh, `--plan` to see

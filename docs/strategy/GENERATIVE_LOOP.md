@@ -80,12 +80,12 @@ screen as the unqualified capability and Monte Carlo transport as the
 bounded one. The executable slices, in order: free inputs so a candidate can
 vary without re-freezing the package; margins and machine-readable reasons
 on every verdict; a campaign log per candidate; a scripted agent that drives
-the two-fidelity loop; coverage against a library requirement set; then
-qualification envelopes, physical evidence, and staged agent review.
+the two-fidelity loop; coverage against a library requirement set;
+qualification envelopes; staged agent review; then physical evidence.
 
 ## What has landed (2026-09-02)
 
-The first four slices exist as [CASE-001](../../examples/cases/case-001-shield-search/README.md):
+These slices exist as [CASE-001](../../examples/cases/case-001-shield-search/README.md):
 
 - **Free inputs.** A package may declare inputs free; `run --input NAME=PATH`
   supplies one, hashes it, and attests it in the claims. Every step the
@@ -135,8 +135,20 @@ exactly what fell short and by how much, and the log holds every candidate.
   "beyond a validation envelope, Core says so" rule, minus the validation
   evidence itself, which the first record honestly does not bind.
 
+- **Staged agent review.** The contract ends with a non-accountable review
+  capability over the exact reviewer implementation, candidate, screen
+  result, and transport result. The compiler requires explicit practical
+  instructions and refuses approval or rejection authority for the agent.
+  After evaluation the runner content-identifies the realized dossier; the
+  scripted designer records either `request_changes` or
+  `recommend_for_accountable_review`. Agent review never changes a Core
+  verdict, and a recommendation is only entry to a future person's queue.
+  The committed reference record demonstrates the negative route: R2 is
+  `FAIL`, so the candidate is returned with that recorded action.
+
 Not yet: validation evidence behind an envelope, enforcement of
 qualification for every bounded verdict, physical evidence as a capability,
-staged agent review, and any optimizer or constellation view over the log. The
-workbench exposes free inputs, environment values, margins, and coverage,
-but cannot yet drive a search itself.
+an accountable review fulfillment for CASE-001, and any optimizer or
+constellation view over the log. The workbench exposes free inputs,
+environment values, margins, coverage, and staged-review requests, but cannot
+yet drive a search itself.

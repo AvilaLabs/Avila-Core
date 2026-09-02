@@ -1,0 +1,97 @@
+{
+  "schema_version": "avila.core/staged-review-record/v0.1-draft",
+  "review_request": {
+    "request_sha256": "sha256:f3a95612d7a64187217698f67a0c003f4667a1d1eb55d2a9879d60514dcfb321",
+    "compiled_snapshot_sha256": "sha256:9817e10fc8abc0aab1cd21888b75735a3a5ceec87084b4e84b98fd633c529a7d",
+    "campaign_sha256": "sha256:f5f3860addc4eb48e05887e8c89304e8cde98b18bc001407a0a224d343cfaf19",
+    "step_id": "practical-review",
+    "fulfillment": "pending_agent_review",
+    "reviewer_role": "agent",
+    "state": "ready_for_review",
+    "presented_evidence": [
+      {
+        "input_slot": "reviewer",
+        "source": {
+          "source": "contract_input",
+          "input_id": "reviewer-script"
+        },
+        "evidence_id": "input:reviewer-script",
+        "sha256": "sha256:8bb09398fb77a1f2417a38523bd3035a6dcfa7ac6d8e8cfed75387e90eb3cf68",
+        "media_type": "text/x-python"
+      },
+      {
+        "input_slot": "candidate",
+        "source": {
+          "source": "contract_input",
+          "input_id": "candidate"
+        },
+        "evidence_id": "input:candidate",
+        "sha256": "sha256:0e3a08d60c664683d8c40421e9f5aa6754c2288409dbfe0a47b22347a6236eb1",
+        "media_type": "application/vnd.avila.shield-candidate+json"
+      },
+      {
+        "input_slot": "screen-result",
+        "source": {
+          "source": "step_output",
+          "step_id": "screen",
+          "output_slot": "screen-result"
+        },
+        "evidence_id": "screen-result",
+        "sha256": "sha256:5daaf5e27e369ec9bc14f7d0b8ed23739dc08bfce746adae72a9e77c1432f201",
+        "media_type": "application/vnd.avila.shield-screen+json"
+      },
+      {
+        "input_slot": "transport-result",
+        "source": {
+          "source": "step_output",
+          "step_id": "transport",
+          "output_slot": "transport-result"
+        },
+        "evidence_id": "transport-result",
+        "sha256": "sha256:f0dd8060405a58bb4ce2f9526eba460286beccde644fc058b4abe6ec742dfab1",
+        "media_type": "application/vnd.avila.shield-transport+json"
+      }
+    ],
+    "decision_role": {
+      "id": "core.review.routing-decision",
+      "major": 1
+    },
+    "decision_media_type": "application/vnd.avila-core.staged-review+json",
+    "allowed_dispositions": [
+      "recommend_for_accountable_review",
+      "request_changes",
+      "abstain"
+    ],
+    "reviewer_eligibility_policy": {
+      "policy_id": "avila-labs.shielding/practical-agent-review",
+      "revision": 1,
+      "sha256": "sha256:3ea229c01bed007dcdb6a47211f12b672e170af7873614b61e59e0461f1d4278"
+    },
+    "independence": {
+      "mode": "none"
+    },
+    "instructions": [
+      "Use Core's recorded requirement statuses and rules; never derive, edit, or override a technical verdict.",
+      "Request changes unless every compiled requirement is PASS.",
+      "After technical PASS, request changes for adjacent identical layers, a layer thinner than 10 cm, or liquid water without explicit containment evidence.",
+      "A positive result may only recommend the candidate for accountable human review; never approve or reject it for use."
+    ]
+  },
+  "reviewer": {
+    "role": "agent",
+    "identity": "sha256:8bb09398fb77a1f2417a38523bd3035a6dcfa7ac6d8e8cfed75387e90eb3cf68"
+  },
+  "candidate_id": "reference-poly-90",
+  "disposition": "request_changes",
+  "rationale": "Return reference-poly-90 to the designer with 1 recorded action(s).",
+  "actions": [
+    "Revise SHIELD-R2-transport: Core reports FAIL under bounded.le.exceeds."
+  ],
+  "attestation": "unverified",
+  "limitations": [
+    "This is an unsigned, non-accountable agent routing record; it is not an approval for use.",
+    "The reviewer reads Core's verdicts and applies the bound practical instructions; it does not construct, alter, or validate a technical verdict.",
+    "A recommendation only places a candidate before an eligible accountable person under a separate review obligation."
+  ],
+  "record_sha256": "sha256:9dbfb39940ce847302fd88ba3a2f0d90db5825dd10e10da151235bdefbb9c9f4"
+}

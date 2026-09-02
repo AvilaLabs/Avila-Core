@@ -13,19 +13,19 @@
       "document_id": "case-000-registry",
       "role": "registry",
       "path": "registry.json",
-      "sha256": "sha256:fe12b0a4c3cffa103fc5b555964d1079ec950cff7f6eef9a31390ac8f7416e60"
+      "sha256": "sha256:be754a32c53d86aed6e894e585bde375c4e7d9904187bf3be20dbce693542bc8"
     },
     {
       "document_id": "case-000-claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:54ae8d15f0b60395d8449a10477c37f9c4ff2998a7ddaa297efc572807a35e39"
+      "sha256": "sha256:cc984c1b10a6d1ae6fa9970c4e576a2ab9d67daa97c2152b7ac6885909df8216"
     },
     {
       "document_id": "case-000-expected-campaign",
       "role": "expected_campaign_report",
       "path": "campaign-report.json",
-      "sha256": "sha256:a34cd6454b6a47babb608ca71ce4849ff5217e7de0d31b6f0ce7ab637f001e7e"
+      "sha256": "sha256:cc63b3bbdcd0be1739ea49bb7b50817c8322dd457075b2572a7fc672b3af99a5"
     },
     {
       "document_id": "case-000-provenance",
@@ -43,14 +43,14 @@
       "document_id": "case-000-activation-receipt",
       "role": "execution_receipt",
       "path": "receipts/activation.json",
-      "sha256": "sha256:7eed646fef2eb42e353af9f61eb0967a5faacf526a18801578a96ea403a88fa2",
+      "sha256": "sha256:fb187dc3c477370cf51fab5518f54514dc0b6b2bd4d638b2b588f08db4426e26",
       "step_id": "activation"
     },
     {
       "document_id": "case-000-classification-receipt",
       "role": "execution_receipt",
       "path": "receipts/classification.json",
-      "sha256": "sha256:1a076303558f29436dd02417294b761750c745cbf957b39df37dd77fe2e43bd9",
+      "sha256": "sha256:f329bef9612803fd2b958dbbda7cc3d58e7854c19706181f933d39bd5fc0956f",
       "step_id": "classification"
     }
   ],

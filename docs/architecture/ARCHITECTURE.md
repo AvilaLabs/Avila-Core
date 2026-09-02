@@ -115,11 +115,12 @@ dependency graph, validates nominal roles, claim-model sufficiency, and media,
 enforces declared parameter types and domains, and lowers parameters and
 requirement limits through exact kind/unit rules. It also binds each capability
 type's determinism class, seed, and declared material execution factors while
-leaving package-level reproducibility to future package binding. Accountable
-review types lower to pending obligations containing the exact dossier,
-governance dispositions, digest-pinned external eligibility policy, and
-explicit independence constraints. The compiler neither evaluates that policy
-nor fulfills the review. Governed nominal requirement purposes are checked
+leaving package-level reproducibility to future package binding. Review types
+lower to role-separated pending obligations containing the exact dossier,
+governance dispositions, digest-pinned external eligibility policy,
+independence constraints, and agent instructions. Accountable people may
+govern use; agents may only route work. The compiler neither evaluates that
+policy nor fulfills the review. Governed nominal requirement purposes are checked
 against output-level explicit exclusions without interpreting prose or inferring
 purpose hierarchies. It performs no package selection, execution, qualification decision, or
 verdict during compilation. A separate campaign entry point admits an
@@ -131,9 +132,10 @@ admission conditions and derives verdicts with the kernel; see the
 ### `avila-core-evidence`
 
 Defines draft evidence records, SHA-256 content identities, the case-package
-manifest with its bound capabilities and executions, and the execution
-receipt record with its byte-level verification (ADR-0007). It has no package
-writer, signature system, lineage validator, or independent verifier yet.
+manifest with its bound capabilities and executions, the execution receipt
+record with its byte-level verification (ADR-0007), and the unsigned staged
+agent routing record (ADR-0009). It has no package writer, signature system,
+lineage validator, or independent verifier yet.
 
 ### `avila-core-runner`
 
@@ -142,8 +144,9 @@ at explicitly supplied roots, stages verified inputs into a fresh workspace,
 runs exact executables through named case-specific adapters, writes and
 verifies execution receipts, reuses steps whose committed receipts still
 describe the planned invocation and names every change by class, generates
-the claims document, and hands evaluation to the compiler and kernel. Its
-report is the single source every front end renders (ADR-0007).
+the claims document, hands evaluation to the compiler and kernel, and
+materializes exact content-identified requests for compiled review stages. Its
+report is the single source every front end renders (ADR-0007, ADR-0009).
 
 ### `avila-core-cli`
 
@@ -151,7 +154,7 @@ Provides authoritative JSON canonicalization, embedded semantic-profile and
 vector-set identities, `v0.2-draft` compilation with a nonzero exit status for
 a rejected contract, campaign evaluation over a claims document, the
 diagnostic catalog through `explain`, and the composed case workflow through
-`run`, printed as a concise six-stage view or as the complete JSON report. All
+`run`, printed as a concise staged view or as the complete JSON report. All
 output explicitly distinguishes software conformance, structural validity,
 and process provenance from scientific validity.
 
@@ -161,8 +164,8 @@ An egui workbench with two modes. The case workbench opens a composed case,
 lists the roots and executables its package requests, runs the workflow on a
 background thread through the runner crate, and renders the report stage by
 stage: integrity, compilation, execution with reuse and change classes,
-generated claims and binding, verdicts with their complete boundaries, and
-replay. The specimen view compiles the embedded specimen and renders its
+generated claims and binding, verdicts with their complete boundaries,
+staged-review readiness and instructions, and replay. The specimen view compiles the embedded specimen and renders its
 findings with owners and repairs. Every badge and number is read from a
 report; the client performs no calculation and must never grow a separate
 scientific state model.

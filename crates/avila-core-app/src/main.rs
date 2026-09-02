@@ -13,7 +13,7 @@ mod help;
 
 use avila_core_compiler::{
     CompilationStatus, CompileReport, ContractSource, CoreDiagnostic, FindingClass,
-    RepairApplicability, compile_documents, explain,
+    RepairApplicability, ReviewerRole, compile_documents, explain,
 };
 use avila_core_kernel::VerdictStatus;
 use eframe::egui;
@@ -721,10 +721,13 @@ fn show_compiled(ui: &mut egui::Ui, report: &CompileReport) {
                     format!("{} ← {}", binding.input_slot, binding.source.label()),
                 );
             }
-            if step.review_obligation.is_some() {
+            if let Some(review) = &step.review_obligation {
                 badge(
                     ui,
-                    "PENDING EXTERNAL REVIEW",
+                    match review.reviewer_role {
+                        ReviewerRole::AccountablePerson => "PENDING ACCOUNTABLE REVIEW",
+                        ReviewerRole::Agent => "PENDING AGENT REVIEW",
+                    },
                     egui::Color32::from_rgb(120, 164, 210),
                 );
             }

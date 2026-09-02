@@ -21,6 +21,7 @@
     { "input_id": "source", "role": { "id": "shielding.source-spec", "major": 1 }, "media_type": "application/vnd.avila.shield-source+json", "claim_model": { "model": "unquantified" } },
     { "input_id": "screen-script", "role": { "id": "shielding.screen-script", "major": 1 }, "media_type": "text/x-python", "claim_model": { "model": "unquantified" } },
     { "input_id": "transport-script", "role": { "id": "shielding.transport-script", "major": 1 }, "media_type": "text/x-python", "claim_model": { "model": "unquantified" } },
+    { "input_id": "reviewer-script", "role": { "id": "core.review.agent-implementation", "major": 1 }, "media_type": "text/x-python", "claim_model": { "model": "unquantified" } },
     { "input_id": "cross-section-index", "role": { "id": "nuclear.cross-section-index", "major": 1 }, "media_type": "application/xml", "claim_model": { "model": "unquantified" } }
   ],
   "workflow": [
@@ -46,6 +47,30 @@
       ],
       "parameters": { "particles": 1000000, "batches": 10 },
       "reproducibility": { "seed": "1" }
+    },
+    {
+      "step_id": "practical-review",
+      "capability_type": { "id": "shielding.practical-agent-review", "major": 1 },
+      "bindings": [
+        { "input_slot": "reviewer", "source": { "source": "contract_input", "input_id": "reviewer-script" } },
+        { "input_slot": "candidate", "source": { "source": "contract_input", "input_id": "candidate" } },
+        { "input_slot": "screen-result", "source": { "source": "step_output", "step_id": "screen", "output_slot": "screen-result" } },
+        { "input_slot": "transport-result", "source": { "source": "step_output", "step_id": "transport", "output_slot": "transport-result" } }
+      ],
+      "review": {
+        "reviewer_eligibility_policy": {
+          "policy_id": "avila-labs.shielding/practical-agent-review",
+          "revision": 1,
+          "sha256": "sha256:3ea229c01bed007dcdb6a47211f12b672e170af7873614b61e59e0461f1d4278"
+        },
+        "independence": { "mode": "none" },
+        "instructions": [
+          "Use Core's recorded requirement statuses and rules; never derive, edit, or override a technical verdict.",
+          "Request changes unless every compiled requirement is PASS.",
+          "After technical PASS, request changes for adjacent identical layers, a layer thinner than 10 cm, or liquid water without explicit containment evidence.",
+          "A positive result may only recommend the candidate for accountable human review; never approve or reject it for use."
+        ]
+      }
     }
   ],
   "requirements": [

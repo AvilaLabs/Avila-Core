@@ -315,6 +315,44 @@
           "model": "unquantified"
         }
       ]
+    },
+    {
+      "role": {
+        "id": "core.review.agent-implementation",
+        "major": 1
+      },
+      "owner": "avila-labs.core",
+      "validator": "core.validate.agent-implementation@1",
+      "accepted_media_types": [
+        "text/x-python"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ],
+      "non_claims": [
+        "An implementation digest identifies the reviewing software; it grants no professional authority."
+      ]
+    },
+    {
+      "role": {
+        "id": "core.review.routing-decision",
+        "major": 1
+      },
+      "owner": "avila-labs.core",
+      "validator": "core.validate.staged-review@1",
+      "accepted_media_types": [
+        "application/vnd.avila-core.staged-review+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ],
+      "non_claims": [
+        "An agent routing decision can return work or recommend accountable review; it never approves or rejects a result for use."
+      ]
     }
   ],
   "capability_types": [
@@ -578,6 +616,91 @@
       ],
       "non_claims": [
         "Monte Carlo transport of a laterally infinite slab; the coverage interval is statistical only. Not qualified for any decision."
+      ]
+    },
+    {
+      "capability_type": {
+        "id": "shielding.practical-agent-review",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "reproducibility": {
+        "determinism": "deterministic"
+      },
+      "inputs": [
+        {
+          "slot_id": "reviewer",
+          "role": {
+            "id": "core.review.agent-implementation",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "text/x-python"
+          ]
+        },
+        {
+          "slot_id": "candidate",
+          "role": {
+            "id": "shielding.candidate",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-candidate+json"
+          ]
+        },
+        {
+          "slot_id": "screen-result",
+          "role": {
+            "id": "shielding.screen-result",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-screen+json"
+          ]
+        },
+        {
+          "slot_id": "transport-result",
+          "role": {
+            "id": "shielding.transport-result",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-transport+json"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "slot_id": "decision",
+          "role": {
+            "id": "core.review.routing-decision",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila-core.staged-review+json",
+          "permitted_claim_models": [
+            {
+              "model": "unquantified"
+            }
+          ]
+        }
+      ],
+      "review": {
+        "reviewer_role": "agent",
+        "presented_input_slots": [
+          "reviewer",
+          "candidate",
+          "screen-result",
+          "transport-result"
+        ],
+        "decision_output_slot": "decision",
+        "allowed_dispositions": [
+          "recommend_for_accountable_review",
+          "request_changes",
+          "abstain"
+        ]
+      },
+      "non_claims": [
+        "This stage applies CASE-001's practical routing instructions. It reads Core's verdicts, can return a candidate, and can only recommend a separate accountable review."
       ]
     }
   ]

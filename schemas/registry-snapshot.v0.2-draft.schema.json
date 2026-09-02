@@ -252,14 +252,22 @@
     },
     "reviewDeclaration": {
       "type": "object",
-      "description": "Type-level accountable-review signature. Dispositions govern use and never constitute a technical requirement verdict.",
+      "description": "Type-level review signature. The reviewer role bounds its dispositions; no disposition constitutes a technical requirement verdict.",
       "additionalProperties": false,
       "required": [
+        "reviewer_role",
         "presented_input_slots",
         "decision_output_slot",
         "allowed_dispositions"
       ],
       "properties": {
+        "reviewer_role": {
+          "description": "Accountable people may govern use; agents may only route work toward or back from accountable review.",
+          "enum": [
+            "accountable_person",
+            "agent"
+          ]
+        },
         "presented_input_slots": {
           "type": "array",
           "minItems": 1,
@@ -279,6 +287,7 @@
             "enum": [
               "approve_for_use",
               "reject_for_use",
+              "recommend_for_accountable_review",
               "request_changes",
               "abstain"
             ]

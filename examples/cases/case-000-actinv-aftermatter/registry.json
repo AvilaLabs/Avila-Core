@@ -375,6 +375,7 @@
         }
       ],
       "review": {
+        "reviewer_role": "accountable_person",
         "presented_input_slots": [
           "table-1-fraction",
           "table-2-fraction",

@@ -97,7 +97,7 @@
       "required": ["step_id", "disposition", "rationale", "reviewer", "attestation"],
       "properties": {
         "step_id": { "$ref": "#/$defs/nonemptyString" },
-        "disposition": { "enum": ["approve_for_use", "reject_for_use", "request_changes", "abstain"] },
+        "disposition": { "enum": ["approve_for_use", "reject_for_use", "recommend_for_accountable_review", "request_changes", "abstain"] },
         "rationale": { "$ref": "#/$defs/nonemptyString" },
         "reviewer": { "type": "object", "additionalProperties": false, "required": ["identity"], "properties": { "identity": { "$ref": "#/$defs/nonemptyString" } } },
         "attestation": { "const": "unverified" }

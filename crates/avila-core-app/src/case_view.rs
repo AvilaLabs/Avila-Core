@@ -893,7 +893,26 @@ fn show_overview(
                 if replay.matches { GREEN } else { RED },
                 "generated campaign report against the committed expectation",
             ),
+            None if !report.replay_applicable => stage_row(
+                ui,
+                "6. Replay",
+                "NOT APPLICABLE",
+                muted(ui),
+                "free input(s) supplied; the committed expectations describe the reference input",
+            ),
             None => stage_row(ui, "6. Replay", "NOT RUN", muted(ui), ""),
+        }
+        for input in &report.supplied_inputs {
+            ui.horizontal_wrapped(|ui| {
+                ui.label(egui::RichText::new("Supplied input").strong());
+                ui.label(
+                    egui::RichText::new(format!(
+                        "`{}` = {} ({})",
+                        input.input_id, input.path, input.sha256
+                    ))
+                    .color(muted(ui)),
+                );
+            });
         }
     });
     ui.add_space(8.0);
@@ -1258,8 +1277,30 @@ fn show_verdicts(ui: &mut egui::Ui, report: &CaseRunReport) {
                 "numbers_present",
             ] {
                 if let Some(value) = output.get(field).filter(|value| !value.is_null()) {
-                    key_value(ui, field, &compact(value));
+                    let text = compact(value);
+                    let shown = value
+                        .as_str()
+                        .map(avila_core_runner::display_number)
+                        .filter(|shown| shown != &text)
+                        .map_or(text.clone(), |shown| format!("{shown} (exact {text})"));
+                    key_value(ui, field, &shown);
                 }
+            }
+            if let Some(margin) = report
+                .margins
+                .iter()
+                .find(|margin| margin.requirement_id == verdict.requirement_id)
+                && let Some(value) = &margin.margin
+            {
+                let unit = margin.unit.as_deref().unwrap_or("");
+                key_value(
+                    ui,
+                    "margin",
+                    &format!(
+                        "{} {unit} (exact {value}; positive when satisfied, on the decisive bound)",
+                        avila_core_runner::display_number(value)
+                    ),
+                );
             }
             if let Some(reasons) = output.get("reasons").and_then(|value| value.as_array())
                 && !reasons.is_empty()

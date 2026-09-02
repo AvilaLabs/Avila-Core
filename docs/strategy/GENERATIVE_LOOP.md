@@ -110,6 +110,12 @@ The first four slices exist as [CASE-001](../../examples/cases/case-001-shield-s
   bounded one. The reference candidate passes the first and fails the
   second, which is the loop's point.
 
+The first search (200 candidates, 3 distinct finalists) found nothing that
+passes the bounded requirement: two `INCONCLUSIVE` intervals crossing the
+limit and one `FAIL`, with the screen about three times optimistic. That is
+a result, recorded in the case, not a failure of the loop: the oracle said
+exactly what fell short and by how much, and the log holds every candidate.
+
 Not yet: coverage against a library requirement set, qualification
 envelopes, physical evidence as a capability, staged agent review, and any
 optimizer or constellation view over the log. The workbench does not yet

@@ -19,7 +19,7 @@ pub use case_run::{
     CaseRunReport, CaseRunStatus, ChangeClass, ChangeRecord, ClaimsReport, ExecutionReport,
     ExecutionStatus, NotExecutedStep, OutputReport, ReceiptReplayReport, ReceiptSummary,
     ReplayReport, StagedInputReport, StepExecutionReport, StepExecutionState, SuppliedInput,
-    VerdictMargin, execute_case, human_summary, parse_capabilities, parse_environment,
-    parse_inputs, parse_named_paths, parse_source_roots,
+    VerdictMargin, display_number, execute_case, human_summary, parse_capabilities,
+    parse_environment, parse_inputs, parse_named_paths, parse_source_roots,
 };
 pub use execute::{Adapter, AdapterOutput, ExtractedClaim, RUNNER_ID, StepContext};

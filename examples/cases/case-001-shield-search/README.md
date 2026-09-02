@@ -131,4 +131,26 @@ interval `lo = hi = nominal`; R3 and R4 exposed it, and vector
 
 ## First search
 
-See [`search/summary.md`](search/summary.md) and the campaign log beside it.
+[`search/summary.md`](search/summary.md) and
+[`search/campaign-log.jsonl`](search/campaign-log.jsonl) record the first run
+of the scripted designer (seed 1), with the three finalist candidates under
+`search/finalists/`:
+
+| Stage | Count |
+| --- | ---: |
+| candidates screened (about 0.1 s each) | 200 |
+| accepted by screen, mass, and thickness | 17 |
+| distinct designs sent to transport (duplicates skipped) | 3 (2) |
+| transport verdicts | 2 INCONCLUSIVE, 1 FAIL, 0 PASS |
+
+No candidate passes the bounded requirement. 100 cm of polyethylene is
+`INCONCLUSIVE` at [~9.4, ~12.0] uSv/h; replacing part of it with borated
+polyethylene lowers the interval to [~9.0, ~11.2], still crossing the limit; a
+polyethylene-and-water layering fails at [~14.1, ~17.3]. The screen rated all
+three between 3.1 and 3.7 uSv/h, about three times too optimistic, and could
+not tell borated from plain polyethylene at all. Read as the loop intends:
+within this material table, 100 cm, and 1500 kg, the stated requirement was
+not met by anything the designer tried; the next moves belong to the designer
+(more particles on the borated candidate, a less optimistic screen, materials
+from the table it never combined into a feasible candidate) and to the
+requirement owner, not to Core.

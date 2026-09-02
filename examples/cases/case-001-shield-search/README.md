@@ -84,6 +84,26 @@ loop: it proposes candidates, screens each, keeps the ones the screen and the
 exact requirements accept, and sends the ones with the most screen margin to
 transport. It reads reports and never constructs a verdict.
 
+## Coverage of the library requirement set
+
+`requirement-set.json` is a byte-identical copy of the shielding library's
+[requirement set](../../libraries/shielding/requirement-set.json): seven
+things any slab-shield search must address. The package declares that the
+neutron dose-rate entry is covered by R2 (bounded) with R1 as a guide below
+the set's minimum basis, mass by R3, thickness by R4, and that photon dose,
+shield activation, and streaming paths are omitted, each with a reason and
+the case author as accepting owner; skyshine the set lets pass silently. Core
+reports this after compiling and before executing anything:
+
+```text
+coverage of requirement set avila-labs.shielding/slab-shield revision 1: [COMPLETE] 3 covered, 3 omitted with a stated reason, 1 omissible, 0 unstated
+```
+
+Remove one omission from `package.json` and the run stops there with
+`[UNSTATED]` on that entry. That is the point: the search above found the
+best neutron shield it could inside a question that, by its own declaration,
+does not ask about capture photons.
+
 ## What the package binds
 
 - **Capabilities:** `python3` (the system interpreter, by digest) for the

@@ -16,9 +16,9 @@ use sha2::{Digest, Sha256};
 pub use package::{
     ArtifactCheck, CASE_PACKAGE_SCHEMA_VERSION, CasePackageManifest, DocumentCheck,
     ExecutionInputStaging, ExecutionOutputBinding, IntegrityCheckState,
-    PACKAGE_INTEGRITY_REPORT_SCHEMA_VERSION, PackageArtifact, PackageCapability, PackageDocument,
-    PackageError, PackageExecution, PackageIntegrityReport, PackageIntegrityStatus,
-    VerifiedCasePackage, verify_case_package,
+    PACKAGE_INTEGRITY_REPORT_SCHEMA_VERSION, PackageArtifact, PackageCapability, PackageCoverage,
+    PackageDocument, PackageError, PackageExecution, PackageIntegrityReport,
+    PackageIntegrityStatus, PackageOmission, VerifiedCasePackage, verify_case_package,
 };
 pub use receipt::{
     CapabilityIdentity, CapabilityTypeRef, EXECUTION_RECEIPT_SCHEMA_VERSION, ExecutionReceipt,

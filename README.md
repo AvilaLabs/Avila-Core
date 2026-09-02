@@ -64,6 +64,11 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   satisfies the bounded one, every verdict carries its exact margin, and
   `--log` appends one line per run to a campaign log that a scripted
   designer in `examples/agents/` drives through the two-fidelity loop;
+- requirement-set coverage: a library states what any contract in its domain
+  must address (`examples/libraries/`), the case declares what covers each
+  entry and why the rest are omitted with an accepting owner, and `run`
+  refuses to execute over an unstated omission or a weaker-than-required
+  basis, so a search cannot optimize an incomplete question;
 - a draft portable evidence model, case-package manifest, execution-receipt
   record, and SHA-256 utility;
 - JSON Schemas that the compiler embeds and enforces as its source layer, and
@@ -232,8 +237,9 @@ docs/
   adr/                    durable architectural decisions
 schemas/                  machine-readable interchange drafts
 examples/                 unqualified documents: composed CASE-000 and CASE-001,
-                          the shielding capability scripts, and the scripted
-                          designer that drives the search
+                          the shielding capability scripts, the first library
+                          requirement set, and the scripted designer that
+                          drives the search
 assets/branding/          provisional Avila Core mark
 fixtures/semantic-core/   proposed semantic-profile coverage, vectors, and campaigns
 ```

@@ -195,6 +195,19 @@ an owner and every claim in it carries its qualification state. A library is
 not a pile of documents mined from the internet; it is curated content with
 accountable owners.
 
+**Requirement set.** A library's owned, versioned list of what any contract
+in its domain must address: for each entry, the quantity kind, comparison,
+weakest acceptable basis, and whether omitting it requires a stated reason.
+Schema `avila.core/requirement-set/v0.1-draft`.
+
+**Coverage.** The runner's assessment of a compiled contract against a
+requirement set under the case's declaration: which contract requirements
+cover each entry (and on what basis), which entries are omitted with a reason
+and an accepting owner, which the set lets pass silently, and which are
+unstated. An unstated omission, or coverage only on a basis weaker than the
+set's minimum, makes coverage incomplete and stops the run before execution.
+Coverage is a report about the contract, never a verdict about a design.
+
 **Template.** A contract with typed parameters and domains, workflow,
 requirements, policy floor, eligibility rules, validation cases, owner, and
 version (SC-9). An instance pins the template digest and its parameters and

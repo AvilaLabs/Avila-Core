@@ -43,8 +43,32 @@ pub struct CasePackageManifest {
     /// then describe a different candidate and are not replayed.
     #[serde(default)]
     pub free_inputs: Vec<String>,
+    /// Coverage of the contract against a library requirement set held as a
+    /// `requirement_set` document, with the case's mapping and omissions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coverage: Option<PackageCoverage>,
     #[serde(default)]
     pub limitations: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PackageCoverage {
+    /// The `document_id` of the package's `requirement_set` document.
+    pub requirement_set: String,
+    /// Set requirement id to the contract requirement ids that cover it.
+    #[serde(default)]
+    pub mapping: BTreeMap<String, Vec<String>>,
+    #[serde(default)]
+    pub omissions: Vec<PackageOmission>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PackageOmission {
+    pub set_requirement_id: String,
+    pub reason: String,
+    pub accepted_by: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -382,6 +406,34 @@ fn validate_manifest(manifest: &CasePackageManifest) -> Result<(), PackageError>
     {
         return Err(PackageError::InvalidManifest(
             "manifest may contain at most one `expected_campaign_report` document".into(),
+        ));
+    }
+    if let Some(coverage) = &manifest.coverage {
+        require_nonempty("coverage.requirement_set", &coverage.requirement_set)?;
+        let names_set_document = manifest.documents.iter().any(|document| {
+            document.document_id == coverage.requirement_set && document.role == "requirement_set"
+        });
+        if !names_set_document {
+            return Err(PackageError::InvalidManifest(format!(
+                "coverage names document `{}`, which is not a `requirement_set` document of this package",
+                coverage.requirement_set
+            )));
+        }
+        for (set_requirement_id, requirement_ids) in &coverage.mapping {
+            require_nonempty("coverage mapping key", set_requirement_id)?;
+            for requirement_id in requirement_ids {
+                require_nonempty("coverage mapping requirement_id", requirement_id)?;
+            }
+        }
+        for omission in &coverage.omissions {
+            require_nonempty("omission set_requirement_id", &omission.set_requirement_id)?;
+            require_nonempty("omission reason", &omission.reason)?;
+            require_nonempty("omission accepted_by", &omission.accepted_by)?;
+        }
+    } else if role_counts.contains_key("requirement_set") {
+        return Err(PackageError::InvalidManifest(
+            "a `requirement_set` document is present but the manifest declares no `coverage`"
+                .into(),
         ));
     }
 
@@ -768,6 +820,7 @@ mod tests {
             capabilities: Vec::new(),
             executions: Vec::new(),
             free_inputs: Vec::new(),
+            coverage: None,
             limitations: vec!["fixture only".into()],
         })
         .unwrap()

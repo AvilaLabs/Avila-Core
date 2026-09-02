@@ -22,6 +22,12 @@
       "sha256": "sha256:d5ef4255b18d948d1e0c115c893d50730af95e08e37ab1845b80e5f2c31da09d"
     },
     {
+      "document_id": "case-001-requirement-set",
+      "role": "requirement_set",
+      "path": "requirement-set.json",
+      "sha256": "sha256:5f5eaa10d3867ddb5905dfc578103403966291da5eab6a854e5b1f354f5b63f4"
+    },
+    {
       "role": "expected_campaign_report",
       "document_id": "case-001-expected-campaign",
       "path": "campaign-report.json",
@@ -215,6 +221,38 @@
       ]
     }
   ],
+  "coverage": {
+    "requirement_set": "case-001-requirement-set",
+    "mapping": {
+      "neutron-dose-rate": [
+        "SHIELD-R1-screen",
+        "SHIELD-R2-transport"
+      ],
+      "areal-mass": [
+        "SHIELD-R3-mass"
+      ],
+      "total-thickness": [
+        "SHIELD-R4-thickness"
+      ]
+    },
+    "omissions": [
+      {
+        "set_requirement_id": "secondary-photon-dose-rate",
+        "reason": "The transport capability tallies neutron dose only; photon production and transport are not modeled in this specimen, so the neutron optimum is not a shield design.",
+        "accepted_by": "Connor Avila, case author (research specimen; no design use)"
+      },
+      {
+        "set_requirement_id": "shield-material-activation",
+        "reason": "No activation capability is bound in this case. ACTINV is executed in CASE-000 and could be composed here later.",
+        "accepted_by": "Connor Avila, case author (research specimen; no design use)"
+      },
+      {
+        "set_requirement_id": "streaming-paths",
+        "reason": "The model is a one-dimensional slab with reflective lateral boundaries; no penetrations, gaps, or edges exist in it.",
+        "accepted_by": "Connor Avila, case author (research specimen; no design use)"
+      }
+    ]
+  },
   "free_inputs": [
     "candidate"
   ],

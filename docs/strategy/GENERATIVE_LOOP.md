@@ -116,7 +116,16 @@ limit and one `FAIL`, with the screen about three times optimistic. That is
 a result, recorded in the case, not a failure of the loop: the oracle said
 exactly what fell short and by how much, and the log holds every candidate.
 
-Not yet: coverage against a library requirement set, qualification
-envelopes, physical evidence as a capability, staged agent review, and any
-optimizer or constellation view over the log. The workbench does not yet
-expose free inputs or margins.
+- **Coverage against a library requirement set.** The shielding library's
+  first requirement set names seven things any slab-shield search must
+  address. CASE-001 covers three, omits three with a stated reason and an
+  accepting owner (photon dose, activation, streaming paths), and one is
+  omissible. The runner assesses this after compiling and before executing;
+  an unstated omission stops the run, and coverage on a weaker basis than
+  the set's minimum (the screen's nominal basis, for example) does not count.
+  The search's optimum is now qualified by what it did not ask.
+
+Not yet: qualification envelopes, physical evidence as a capability, staged
+agent review, and any optimizer or constellation view over the log. The
+workbench exposes free inputs, environment values, margins, and coverage,
+but cannot yet drive a search itself.

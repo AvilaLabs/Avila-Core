@@ -9,6 +9,7 @@
 mod campaign;
 mod catalog;
 mod compile;
+mod coverage;
 mod diagnostic;
 mod document;
 mod render;
@@ -25,6 +26,12 @@ pub use compile::{
     CompiledParameterValue, CompiledReproducibility, CompiledRequirement, CompiledReviewObligation,
     CompiledStep, CompilerError, DocumentIdentity, ResolvedBinding, ReviewFulfillment,
     compile_documents,
+};
+pub use coverage::{
+    COVERAGE_REPORT_SCHEMA_VERSION, CoverageDeclaration, CoverageEntry, CoverageReport,
+    CoverageState, CoverageStatus, CoveringRequirement, DeclaredOmission, OmissionPolicy,
+    REQUIREMENT_SET_SCHEMA_VERSION, RequirementSet, SetRequirement, assess_coverage,
+    parse_requirement_set,
 };
 pub use diagnostic::{
     COMPILER_FINDING_CODES, CORE_A4201, CORE_A4301, CORE_E7001, CORE_E7002, CORE_E7101, CORE_E7103,

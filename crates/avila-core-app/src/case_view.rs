@@ -22,6 +22,7 @@ use crate::{CORE_ORANGE, badge, card, key_value, muted, section_heading, show_fi
 
 const GREEN: egui::Color32 = egui::Color32::from_rgb(95, 197, 128);
 const RED: egui::Color32 = egui::Color32::from_rgb(232, 102, 102);
+const AMBER: egui::Color32 = egui::Color32::from_rgb(230, 170, 70);
 const BLUE: egui::Color32 = egui::Color32::from_rgb(120, 164, 210);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -105,6 +106,10 @@ pub struct CaseSetup {
     pub case_dir: String,
     pub source_roots: Vec<NamedPath>,
     pub capabilities: Vec<NamedPath>,
+    /// Free inputs of the case: input id and the file supplied for it.
+    pub free_inputs: Vec<NamedPath>,
+    /// Environment keys an execution requires and the values supplied.
+    pub environment: Vec<NamedPath>,
     pub workspace: String,
     pub reuse: bool,
     /// Start a run (or a plan) as soon as the window opens.
@@ -143,6 +148,8 @@ impl CaseSetup {
                 "--workspace" => setup.workspace = value()?,
                 "--source-root" => setup.source_roots.push(named_path(&value()?)?),
                 "--capability" => setup.capabilities.push(named_path(&value()?)?),
+                "--input" => setup.free_inputs.push(named_path(&value()?)?),
+                "--env" => setup.environment.push(named_path(&value()?)?),
                 "--no-reuse" => setup.reuse = false,
                 "--auto-run" => setup.auto_run = Some(false),
                 "--auto-plan" => setup.auto_run = Some(true),
@@ -184,6 +191,26 @@ impl CaseSetup {
                 });
             }
         }
+        for input_id in &manifest.free_inputs {
+            if !self.free_inputs.iter().any(|entry| &entry.name == input_id) {
+                self.free_inputs.push(NamedPath {
+                    name: input_id.clone(),
+                    path: String::new(),
+                });
+            }
+        }
+        for key in manifest
+            .executions
+            .iter()
+            .flat_map(|execution| execution.environment.iter())
+        {
+            if !self.environment.iter().any(|entry| &entry.name == key) {
+                self.environment.push(NamedPath {
+                    name: key.clone(),
+                    path: String::new(),
+                });
+            }
+        }
     }
 
     fn options(&self, plan_only: bool) -> CaseRunOptions {
@@ -196,6 +223,13 @@ impl CaseSetup {
         CaseRunOptions {
             source_roots: paths(&self.source_roots),
             capabilities: paths(&self.capabilities),
+            inputs: paths(&self.free_inputs),
+            environment: self
+                .environment
+                .iter()
+                .filter(|row| !row.name.trim().is_empty() && !row.path.trim().is_empty())
+                .map(|row| (row.name.trim().to_string(), row.path.trim().to_string()))
+                .collect(),
             workspace: (!self.workspace.trim().is_empty())
                 .then(|| PathBuf::from(self.workspace.trim())),
             reuse: self.reuse,
@@ -503,6 +537,30 @@ impl CaseView {
             );
         });
         targets.set(TourTarget::Capabilities, capabilities.response.rect);
+        if !self.setup.free_inputs.is_empty() {
+            ui.add_space(8.0);
+            named_values(
+                ui,
+                "FREE INPUTS",
+                "free-inputs",
+                &mut self.setup.free_inputs,
+                "input id",
+                "file to supply for this run (leave empty to use the reference)",
+                "REFERENCE",
+            );
+        }
+        if !self.setup.environment.is_empty() {
+            ui.add_space(8.0);
+            named_values(
+                ui,
+                "ENVIRONMENT",
+                "environment",
+                &mut self.setup.environment,
+                "key",
+                "value (needed only when that step runs)",
+                "NOT SUPPLIED",
+            );
+        }
 
         ui.add_space(8.0);
         let options = ui.scope(|ui| {
@@ -615,6 +673,7 @@ impl CaseView {
                     .map(|(document, bytes)| (document.as_str(), bytes.as_slice()))
                     .collect();
                 show_compile(ui, report.compile.as_ref(), &sources);
+                show_coverage(ui, report);
             }
             CaseTab::Execute => show_execute(ui, report),
             CaseTab::Claims => show_claims(ui, report),
@@ -624,6 +683,26 @@ impl CaseView {
 }
 
 fn named_paths(ui: &mut egui::Ui, title: &str, id: &str, rows: &mut Vec<NamedPath>) {
+    named_values(
+        ui,
+        title,
+        id,
+        rows,
+        "name",
+        "path on this machine",
+        "NOT SUPPLIED",
+    );
+}
+
+fn named_values(
+    ui: &mut egui::Ui,
+    title: &str,
+    id: &str,
+    rows: &mut Vec<NamedPath>,
+    name_hint: &str,
+    value_hint: &str,
+    empty_badge: &str,
+) {
     ui.label(
         egui::RichText::new(title)
             .size(10.0)
@@ -636,19 +715,19 @@ fn named_paths(ui: &mut egui::Ui, title: &str, id: &str, rows: &mut Vec<NamedPat
             ui.horizontal(|ui| {
                 ui.add(
                     egui::TextEdit::singleline(&mut row.name)
-                        .hint_text("name")
+                        .hint_text(name_hint)
                         .desired_width(170.0),
                 );
                 if ui.small_button("×").on_hover_text("remove").clicked() {
                     remove = Some(index);
                 }
                 if row.path.trim().is_empty() {
-                    badge(ui, "NOT SUPPLIED", muted(ui));
+                    badge(ui, empty_badge, muted(ui));
                 }
             });
             ui.add(
                 egui::TextEdit::singleline(&mut row.path)
-                    .hint_text("path on this machine")
+                    .hint_text(value_hint)
                     .desired_width(f32::INFINITY),
             );
             ui.add_space(4.0);
@@ -825,6 +904,25 @@ fn show_overview(
                 ),
             ),
             None => stage_row(ui, "2. Compile", "NOT RUN", muted(ui), ""),
+        }
+        if let Some(coverage) = &report.coverage {
+            let complete = coverage.status == avila_core_compiler::CoverageStatus::Complete;
+            stage_row(
+                ui,
+                "2b. Coverage",
+                if complete { "COMPLETE" } else { "INCOMPLETE" },
+                if complete { GREEN } else { RED },
+                &format!(
+                    "{} covered, {} omitted with a stated reason, {} omissible, {} unstated, {} under basis; set {} rev {}",
+                    coverage.count(avila_core_compiler::CoverageState::Covered),
+                    coverage.count(avila_core_compiler::CoverageState::OmittedStated),
+                    coverage.count(avila_core_compiler::CoverageState::Omissible),
+                    coverage.count(avila_core_compiler::CoverageState::OmittedUnstated),
+                    coverage.count(avila_core_compiler::CoverageState::CoveredUnderBasis),
+                    coverage.set_id,
+                    coverage.set_revision
+                ),
+            );
         }
         match &report.execution {
             Some(execution) => {
@@ -1029,6 +1127,94 @@ fn show_compile(ui: &mut egui::Ui, compile: Option<&CompileReport>, sources: &[(
     }
 }
 
+fn show_coverage(ui: &mut egui::Ui, report: &CaseRunReport) {
+    use avila_core_compiler::{CoverageState, CoverageStatus};
+    let Some(coverage) = &report.coverage else {
+        return;
+    };
+    ui.add_space(12.0);
+    section_heading(
+        ui,
+        "Coverage of the library requirement set",
+        "A search optimizes exactly what the contract states. The set is what the library says any contract in its domain must address; each entry is covered by named contract requirements or omitted with a reason and an accepting owner.",
+    );
+    card(ui, |ui| {
+        ui.horizontal_wrapped(|ui| {
+            ui.label(egui::RichText::new(&coverage.set_id).size(17.0).strong());
+            ui.label(
+                egui::RichText::new(format!("revision {}", coverage.set_revision)).color(muted(ui)),
+            );
+            match coverage.status {
+                CoverageStatus::Complete => badge(ui, "COMPLETE", GREEN),
+                CoverageStatus::Incomplete => badge(ui, "INCOMPLETE", RED),
+            }
+        });
+        key_value(ui, "Owner", &coverage.set_owner);
+        key_value(ui, "Set identity", &coverage.set_sha256);
+        for issue in &coverage.issues {
+            ui.colored_label(RED, issue);
+        }
+    });
+    for entry in &coverage.entries {
+        card(ui, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.label(
+                    egui::RichText::new(&entry.set_requirement_id)
+                        .size(15.0)
+                        .strong(),
+                );
+                match entry.state {
+                    CoverageState::Covered => badge(ui, "COVERED", GREEN),
+                    CoverageState::CoveredUnderBasis => badge(ui, "UNDER BASIS", RED),
+                    CoverageState::OmittedStated => badge(ui, "OMITTED", AMBER),
+                    CoverageState::Omissible => badge(ui, "OMISSIBLE", muted(ui)),
+                    CoverageState::OmittedUnstated => badge(ui, "UNSTATED", RED),
+                }
+            });
+            ui.label(&entry.statement);
+            if !entry.covered_by.is_empty() {
+                key_value(
+                    ui,
+                    "Covered by",
+                    &entry
+                        .covered_by
+                        .iter()
+                        .map(|cover| {
+                            format!(
+                                "{} ({:?}{})",
+                                cover.requirement_id,
+                                cover.basis,
+                                if cover.adequate {
+                                    ""
+                                } else {
+                                    ", below the set's minimum basis"
+                                }
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join("; "),
+                );
+            }
+            if let Some(reason) = &entry.reason {
+                key_value(ui, "Omitted because", reason);
+            }
+            if let Some(accepted_by) = &entry.accepted_by {
+                key_value(ui, "Accepted by", accepted_by);
+            }
+            for issue in &entry.issues {
+                ui.colored_label(RED, issue);
+            }
+        });
+    }
+    if !coverage.additional_requirements.is_empty() {
+        key_value(
+            ui,
+            "Beyond the set",
+            &coverage.additional_requirements.join(", "),
+        );
+    }
+}
+
 fn show_execute(ui: &mut egui::Ui, report: &CaseRunReport) {
     section_heading(
         ui,
@@ -1227,6 +1413,24 @@ fn show_claims(ui: &mut egui::Ui, report: &CaseRunReport) {
                     bindings.bound_review_policies,
                     bindings.required_review_policies
                 ));
+                if bindings.receipted_evidence_records > 0 {
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{} carried by receipt for steps a supplied input reaches",
+                            bindings.receipted_evidence_records
+                        ))
+                        .color(muted(ui)),
+                    );
+                }
+                if bindings.withheld_evidence_records > 0 {
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{} withheld: reached by a supplied input and not run",
+                            bindings.withheld_evidence_records
+                        ))
+                        .color(muted(ui)),
+                    );
+                }
             });
             for issue in &bindings.issues {
                 ui.colored_label(RED, issue);

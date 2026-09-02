@@ -15,9 +15,10 @@ use std::path::{Path, PathBuf};
 
 use avila_core_compiler::Comparison;
 use avila_core_compiler::{
-    AdmissionState, CampaignReport, CampaignStatus, ClaimsDocument, CompilationStatus,
-    CompileReport, CompiledContract, CompiledStep, SourceRef, compile_documents, evaluate_campaign,
-    render_campaign_report, render_compile_report,
+    AdmissionState, BasisKind, CampaignReport, CampaignStatus, ClaimsDocument, CompilationStatus,
+    CompileReport, CompiledContract, CompiledStep, CoverageDeclaration, CoverageReport,
+    CoverageState, CoverageStatus, DeclaredOmission, SourceRef, assess_coverage, compile_documents,
+    evaluate_campaign, parse_requirement_set, render_campaign_report, render_compile_report,
 };
 use avila_core_evidence::PackageArtifact;
 use avila_core_evidence::{
@@ -363,6 +364,10 @@ pub struct CaseRunReport {
     pub integrity: PackageIntegrityReport,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub compile: Option<CompileReport>,
+    /// Coverage of the contract against the package's requirement set, when
+    /// the package declares one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub coverage: Option<CoverageReport>,
     /// Findings rendered as readable text with source locations, present
     /// whenever compilation or evaluation reported any.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -486,6 +491,7 @@ pub fn execute_case(
         status: CaseRunStatus::Rejected,
         integrity: package.integrity.clone(),
         compile: None,
+        coverage: None,
         rendered_findings: None,
         execution: None,
         claims: None,
@@ -525,6 +531,41 @@ pub fn execute_case(
         .ok_or("compiler reported `compiled` without a compiled snapshot")?;
     let invalidated_steps = steps_reached_by_inputs(compiled, &supplied_inputs);
     report.invalidated_steps = invalidated_steps.iter().cloned().collect();
+
+    // Coverage against the library requirement set, when declared. A search
+    // optimizes exactly what is written; an unstated omission is refused
+    // before any evaluation is spent on it.
+    if let Some(declared) = &package.manifest.coverage {
+        let set_document = package
+            .manifest
+            .documents
+            .iter()
+            .find(|document| document.document_id == declared.requirement_set)
+            .ok_or("coverage names a document the manifest validation should have refused")?;
+        let bytes = package
+            .document_by_id(&declared.requirement_set)
+            .ok_or("requirement set document bytes are missing")?;
+        let set = parse_requirement_set(bytes)?;
+        let declaration = CoverageDeclaration {
+            mapping: declared.mapping.clone(),
+            omissions: declared
+                .omissions
+                .iter()
+                .map(|omission| DeclaredOmission {
+                    set_requirement_id: omission.set_requirement_id.clone(),
+                    reason: omission.reason.clone(),
+                    accepted_by: omission.accepted_by.clone(),
+                })
+                .collect(),
+        };
+        let coverage = assess_coverage(compiled, &set, &set_document.sha256, &declaration);
+        let incomplete = coverage.status == CoverageStatus::Incomplete;
+        report.coverage = Some(coverage);
+        if incomplete {
+            report.compile = Some(compile.clone());
+            return Ok(report);
+        }
+    }
 
     // Execute the steps the package declares. A refused or failed execution
     // stops the workflow: no claim is generated over an unverified run.
@@ -830,6 +871,86 @@ fn exact_difference(left: &str, right: &str) -> Option<String> {
 }
 
 /// Append one line describing this run to the campaign log.
+fn write_coverage_summary(out: &mut String, coverage: &CoverageReport) {
+    let label = match coverage.status {
+        CoverageStatus::Complete => "COMPLETE",
+        CoverageStatus::Incomplete => "INCOMPLETE",
+    };
+    let _ = writeln!(
+        out,
+        "   coverage of requirement set {} revision {} ({}): [{label}] {} covered, {} omitted with a stated reason, {} omissible, {} unstated, {} covered only on a weaker basis",
+        coverage.set_id,
+        coverage.set_revision,
+        coverage.set_sha256,
+        coverage.count(CoverageState::Covered),
+        coverage.count(CoverageState::OmittedStated),
+        coverage.count(CoverageState::Omissible),
+        coverage.count(CoverageState::OmittedUnstated),
+        coverage.count(CoverageState::CoveredUnderBasis),
+    );
+    for issue in &coverage.issues {
+        let _ = writeln!(out, "      issue: {issue}");
+    }
+    for entry in &coverage.entries {
+        let state = match entry.state {
+            CoverageState::Covered => "COVERED",
+            CoverageState::CoveredUnderBasis => "UNDER BASIS",
+            CoverageState::OmittedStated => "OMITTED",
+            CoverageState::Omissible => "OMISSIBLE",
+            CoverageState::OmittedUnstated => "UNSTATED",
+        };
+        let detail = match entry.state {
+            CoverageState::Covered | CoverageState::CoveredUnderBasis => entry
+                .covered_by
+                .iter()
+                .map(|cover| {
+                    format!(
+                        "{} ({}{})",
+                        cover.requirement_id,
+                        basis_word(cover.basis),
+                        if cover.adequate {
+                            ""
+                        } else {
+                            ", below the set's minimum basis"
+                        }
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("; "),
+            CoverageState::OmittedStated => format!(
+                "{} (accepted by {})",
+                entry.reason.as_deref().unwrap_or(""),
+                entry.accepted_by.as_deref().unwrap_or("")
+            ),
+            CoverageState::Omissible => "the set permits silent omission".into(),
+            CoverageState::OmittedUnstated => "no reason stated".into(),
+        };
+        let _ = writeln!(
+            out,
+            "      [{state}] {} — {detail}",
+            entry.set_requirement_id
+        );
+        for issue in &entry.issues {
+            let _ = writeln!(out, "         issue: {issue}");
+        }
+    }
+    if !coverage.additional_requirements.is_empty() {
+        let _ = writeln!(
+            out,
+            "      beyond the set: {}",
+            coverage.additional_requirements.join(", ")
+        );
+    }
+}
+
+fn basis_word(basis: BasisKind) -> &'static str {
+    match basis {
+        BasisKind::Nominal => "nominal",
+        BasisKind::Bounded => "bounded",
+        BasisKind::Enclosure => "enclosure",
+    }
+}
+
 fn append_log(options: &CaseRunOptions, report: &CaseRunReport) {
     let Some(path) = &options.log else {
         return;
@@ -843,9 +964,17 @@ fn append_log(options: &CaseRunOptions, report: &CaseRunReport) {
         steps: Vec<(String, StepExecutionState)>,
         verdicts: &'a [VerdictMargin],
         #[serde(skip_serializing_if = "Option::is_none")]
+        coverage: Option<CoverageLog<'a>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         campaign_sha256: Option<&'a str>,
         #[serde(skip_serializing_if = "Option::is_none")]
         workspace: Option<&'a str>,
+    }
+    #[derive(Serialize)]
+    struct CoverageLog<'a> {
+        status: CoverageStatus,
+        set_id: &'a str,
+        set_sha256: &'a str,
     }
     let entry = LogEntry {
         recorded_at: rfc3339_now(),
@@ -864,6 +993,11 @@ fn append_log(options: &CaseRunOptions, report: &CaseRunReport) {
             })
             .unwrap_or_default(),
         verdicts: &report.margins,
+        coverage: report.coverage.as_ref().map(|coverage| CoverageLog {
+            status: coverage.status,
+            set_id: &coverage.set_id,
+            set_sha256: &coverage.set_sha256,
+        }),
         campaign_sha256: report
             .campaign
             .as_ref()
@@ -2318,6 +2452,9 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                     compiled.requirements.len(),
                     compiled.snapshot_sha256
                 );
+                if let Some(coverage) = &report.coverage {
+                    write_coverage_summary(&mut out, coverage);
+                }
             }
             None => {
                 let _ = writeln!(

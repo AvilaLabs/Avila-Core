@@ -1218,3 +1218,155 @@ fn an_input_the_package_does_not_declare_free_cannot_be_supplied() {
         .to_string();
     assert!(error.contains("not a free input"), "{error}");
 }
+
+/// Give the synthetic package a two-entry requirement set: one entry the
+/// contract covers, one it does not.
+fn declare_requirement_set(synthetic: &Synthetic, omission: Option<(&str, &str)>) {
+    let set = json!({
+        "schema_version": "avila.core/requirement-set/v0.1-draft",
+        "set_id": "test/activated-metal", "revision": 1, "owner": "test", "title": "Test set",
+        "requirements": [
+            { "set_requirement_id": "class-a-fraction", "statement": "fraction below one", "kind": "core.dimensionless-ratio",
+              "comparison": "less_than", "minimum_basis": "bounded", "omission": "must_state" },
+            { "set_requirement_id": "surface-dose-rate", "statement": "contact dose rate", "kind": "nuclear.ambient-dose-equivalent-rate",
+              "comparison": "less_than_or_equal", "minimum_basis": "bounded", "omission": "must_state" }
+        ]
+    });
+    fs::write(
+        synthetic.case_dir.join("requirement-set.json"),
+        serde_json::to_vec_pretty(&set).unwrap(),
+    )
+    .unwrap();
+    let mut package: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    package["documents"].as_array_mut().unwrap().push(json!({
+        "document_id": "requirement-set", "role": "requirement_set", "path": "requirement-set.json",
+        "sha256": digest(&synthetic.case_dir.join("requirement-set.json"))
+    }));
+    let mut coverage = json!({
+        "requirement_set": "requirement-set",
+        "mapping": { "class-a-fraction": ["CASE-000-R1", "CASE-000-R2"] }
+    });
+    if let Some((reason, accepted_by)) = omission {
+        coverage["omissions"] = json!([
+            { "set_requirement_id": "surface-dose-rate", "reason": reason, "accepted_by": accepted_by }
+        ]);
+    }
+    package["coverage"] = coverage;
+    fs::write(
+        synthetic.case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+}
+
+#[test]
+fn a_stated_omission_keeps_coverage_complete_and_the_run_evaluates() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    declare_requirement_set(
+        &synthetic,
+        Some(("no dose capability is bound", "the requirement owner")),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let coverage = report.coverage.as_ref().expect("coverage assessed");
+    assert_eq!(
+        coverage.status,
+        avila_core_compiler::CoverageStatus::Complete,
+        "{summary}"
+    );
+    assert_eq!(
+        coverage.count(avila_core_compiler::CoverageState::Covered),
+        1
+    );
+    assert_eq!(
+        coverage.count(avila_core_compiler::CoverageState::OmittedStated),
+        1
+    );
+    assert_eq!(report.status, CaseRunStatus::Evaluated, "{summary}");
+    assert!(summary.contains("[COMPLETE] 1 covered, 1 omitted with a stated reason"));
+    assert!(summary.contains("accepted by the requirement owner"));
+}
+
+#[test]
+fn an_unstated_omission_stops_the_run_before_anything_executes() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    declare_requirement_set(&synthetic, None);
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let coverage = report.coverage.as_ref().expect("coverage assessed");
+    assert_eq!(
+        coverage.status,
+        avila_core_compiler::CoverageStatus::Incomplete,
+        "{summary}"
+    );
+    assert_eq!(
+        coverage.count(avila_core_compiler::CoverageState::OmittedUnstated),
+        1
+    );
+    assert_eq!(report.status, CaseRunStatus::Rejected, "{summary}");
+    assert!(report.execution.is_none(), "{summary}");
+    assert!(report.campaign.is_none());
+    assert!(
+        summary.contains("[UNSTATED] surface-dose-rate"),
+        "{summary}"
+    );
+}
+
+#[test]
+fn a_requirement_set_document_without_a_coverage_declaration_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    declare_requirement_set(&synthetic, None);
+    let mut package: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    package.as_object_mut().unwrap().remove("coverage");
+    fs::write(
+        synthetic.case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+    let error = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(error.contains("declares no `coverage`"), "{error}");
+}
+
+#[test]
+fn case_001_carries_the_library_requirement_set_byte_for_byte() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples");
+    let library = fs::read(root.join("libraries/shielding/requirement-set.json")).unwrap();
+    let case = fs::read(root.join("cases/case-001-shield-search/requirement-set.json")).unwrap();
+    assert_eq!(library, case, "the case's copy must be the library's bytes");
+    let manifest: Value = serde_json::from_slice(
+        &fs::read(root.join("cases/case-001-shield-search/package.json")).unwrap(),
+    )
+    .unwrap();
+    let document = manifest["documents"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|document| document["role"] == "requirement_set")
+        .expect("requirement_set document");
+    assert_eq!(
+        document["sha256"],
+        json!(digest(
+            &root.join("cases/case-001-shield-search/requirement-set.json")
+        ))
+    );
+}

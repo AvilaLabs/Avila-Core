@@ -18,6 +18,34 @@
     "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
     "capabilities": { "type": "array", "items": { "$ref": "#/$defs/capability" } },
     "executions": { "type": "array", "items": { "$ref": "#/$defs/execution" } },
+    "free_inputs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonemptyString" },
+      "description": "Contract input ids that may be supplied at run time (run --input NAME=PATH). A supplied input is hashed and attested; every step it reaches is invalidated: committed claims are withheld, fresh outputs bind by receipt, and replay is not applicable."
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirement_set"],
+      "description": "Coverage of the contract against a library requirement set held as a requirement_set document. mapping: set requirement id to the contract requirement ids that cover it. omissions: set requirements left uncovered, each with a reason and the owner who accepted it.",
+      "properties": {
+        "requirement_set": { "$ref": "#/$defs/nonemptyString" },
+        "mapping": { "type": "object", "additionalProperties": { "type": "array", "items": { "$ref": "#/$defs/nonemptyString" } } },
+        "omissions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["set_requirement_id", "reason", "accepted_by"],
+            "properties": {
+              "set_requirement_id": { "$ref": "#/$defs/nonemptyString" },
+              "reason": { "$ref": "#/$defs/nonemptyString" },
+              "accepted_by": { "$ref": "#/$defs/nonemptyString" }
+            }
+          }
+        }
+      }
+    },
     "limitations": { "type": "array", "items": { "$ref": "#/$defs/nonemptyString" } }
   },
   "$defs": {

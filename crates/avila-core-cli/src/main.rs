@@ -12,6 +12,7 @@ use avila_core_compiler::{
 };
 use avila_core_evidence::sha256_hex;
 use avila_core_kernel::{SEMANTIC_PROFILE, canonicalize_json};
+use avila_core_runner::{RUNTIME_DIAGNOSTIC_CATALOG, explain_runtime};
 use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser)]
@@ -230,12 +231,19 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             }
         }
         Command::Explain { code, all } => match (code, all) {
-            (None, true) => println!("{}", serde_json::to_string_pretty(DIAGNOSTIC_CATALOG)?),
-            (Some(code), false) => match explain(&code) {
+            (None, true) => {
+                let mut entries: Vec<_> = DIAGNOSTIC_CATALOG
+                    .iter()
+                    .chain(RUNTIME_DIAGNOSTIC_CATALOG)
+                    .collect();
+                entries.sort_by_key(|entry| entry.code);
+                println!("{}", serde_json::to_string_pretty(&entries)?);
+            }
+            (Some(code), false) => match explain(&code).or_else(|| explain_runtime(&code)) {
                 Some(entry) => println!("{}", serde_json::to_string_pretty(entry)?),
                 None => {
                     return Err(format!(
-                        "`{code}` is not a finding code this compiler emits; run `avila-core explain --all` for the catalog"
+                        "`{code}` is not a finding code Core emits; run `avila-core explain --all` for the catalog"
                     )
                     .into());
                 }
@@ -433,8 +441,10 @@ mod tests {
     #[test]
     fn explain_serves_the_embedded_catalog() {
         assert_eq!(explain("CORE-R3102").unwrap().code, "CORE-R3102");
+        assert_eq!(explain_runtime("CORE-X2601").unwrap().code, "CORE-X2601");
         assert!(explain("CORE-X9999").is_none());
         assert!(!DIAGNOSTIC_CATALOG.is_empty());
+        assert!(!RUNTIME_DIAGNOSTIC_CATALOG.is_empty());
     }
 
     #[test]

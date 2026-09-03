@@ -18,10 +18,11 @@ use avila_core_compiler::{
     AdmissionState, BasisKind, CampaignReport, CampaignStatus, ClaimQualification, ClaimsDocument,
     CompilationStatus, CompileReport, CompiledContract, CompiledStep, CoverageDeclaration,
     CoverageReport, CoverageState, CoverageStatus, DeclaredOmission, EnvelopeAssessment,
-    EnvelopeState, ImmutablePolicyRef, PresentationGateState, QualificationRecord, ResolvedBinding,
-    ReviewDisposition, ReviewIndependence, ReviewerRole, SourceRef, assess_coverage,
-    compile_documents, evaluate_campaign, evaluate_envelope, parse_qualification,
-    parse_requirement_set, registry_kinds, render_campaign_report, render_compile_report,
+    EnvelopeState, FindingClass, ImmutablePolicyRef, PresentationGateState, QualificationRecord,
+    ResolvedBinding, ReviewDisposition, ReviewIndependence, ReviewerRole, SourceLocation,
+    SourceRef, assess_coverage, compile_documents, evaluate_campaign, evaluate_envelope,
+    parse_qualification, parse_requirement_set, registry_kinds, render_campaign_report,
+    render_compile_report,
 };
 use avila_core_evidence::PackageArtifact;
 use avila_core_evidence::{
@@ -36,6 +37,11 @@ use serde::Serialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
+use crate::diagnostic::{
+    CORE_X1001, CORE_X1002, CORE_X1101, CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301, CORE_X2401,
+    CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101, CORE_X3201,
+    CORE_X3301, CORE_X9001, RunFinding, RunStage,
+};
 use crate::execute::claims::{
     GeneratedClaim, canonical_decimal, canonical_identity, generate_claims,
 };
@@ -44,7 +50,8 @@ use crate::execute::{
     execute_step, plan_invocation, rfc3339_now,
 };
 
-const CASE_RUN_REPORT_SCHEMA_VERSION: &str = "avila.core/case-run-report/v0.2-draft";
+const CASE_RUN_REPORT_SCHEMA_VERSION: &str = "avila.core/case-run-report/v0.3-draft";
+const RUN_ATTEMPT_LOG_SCHEMA_VERSION: &str = "avila.core/run-attempt/v0.1-draft";
 const CASE_RUN_NOTICE: &str = "This workflow separates byte-integrity checks, semantic compilation, controlled execution with receipts, claim generation, identity binding, campaign evaluation, and replay. Re-hashing bytes proves identity only; a verified receipt proves that a named executable ran over named bytes and produced named bytes; structural admission and a Core verdict do not establish scientific correctness, qualification, certification, or regulatory approval.";
 
 /// How the runner is pointed at the outside world: named artifact roots,
@@ -331,7 +338,24 @@ pub struct StepExecutionReport {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub replay: Option<ReceiptReplayReport>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub issues: Vec<String>,
+    pub findings: Vec<RunFinding>,
+}
+
+impl StepExecutionReport {
+    fn add_finding(
+        &mut self,
+        code: &'static str,
+        class: FindingClass,
+        stage: RunStage,
+        owner: &'static str,
+        primary: SourceLocation,
+        message: impl Into<String>,
+    ) {
+        self.findings.push(
+            RunFinding::runtime(code, class, stage, owner, primary, message)
+                .for_step(&self.step_id),
+        );
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -417,6 +441,11 @@ pub struct CaseRunReport {
     pub case_id: String,
     pub title: String,
     pub status: CaseRunStatus,
+    /// A stage-ordered, actionable view of every finding that prevented or
+    /// qualified progress. Nested reports remain available as the detailed
+    /// evidence; agents need only this collection to drive the next attempt.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub findings: Vec<RunFinding>,
     pub integrity: PackageIntegrityReport,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub compile: Option<CompileReport>,
@@ -530,6 +559,42 @@ pub fn execute_case(
     case_or_manifest: &Path,
     options: &CaseRunOptions,
 ) -> Result<CaseRunReport, Box<dyn Error>> {
+    match execute_case_inner(case_or_manifest, options) {
+        Ok(mut report) => {
+            collect_run_findings(&mut report);
+            let workspace = report
+                .execution
+                .as_ref()
+                .and_then(|execution| execution.workspace.as_deref())
+                .map(Path::new);
+            write_run_report(workspace, &report)?;
+            append_log(options, case_or_manifest, &report)?;
+            Ok(report)
+        }
+        Err(error) => {
+            let finding = RunFinding::runtime(
+                CORE_X9001,
+                FindingClass::Invalid,
+                RunStage::Infrastructure,
+                "operator_or_runner",
+                SourceLocation::new("case-run", ""),
+                error.to_string(),
+            );
+            if let Err(log_error) = append_error_log(options, case_or_manifest, &finding) {
+                return Err(format!(
+                    "{error}; additionally, the run attempt could not be logged: {log_error}"
+                )
+                .into());
+            }
+            Err(error)
+        }
+    }
+}
+
+fn execute_case_inner(
+    case_or_manifest: &Path,
+    options: &CaseRunOptions,
+) -> Result<CaseRunReport, Box<dyn Error>> {
     let manifest_path = if case_or_manifest.is_dir() {
         case_or_manifest.join("package.json")
     } else {
@@ -549,6 +614,7 @@ pub fn execute_case(
         case_id: package.manifest.case_id.clone(),
         title: package.manifest.title.clone(),
         status: CaseRunStatus::Rejected,
+        findings: Vec::new(),
         integrity: package.integrity.clone(),
         compile: None,
         coverage: None,
@@ -572,7 +638,14 @@ pub fn execute_case(
             "package manifest sha256 {} differs from the pinned {}; the run is refused before anything is compiled or executed",
             report.integrity.manifest_sha256, expected
         );
-        append_log(options, &report);
+        report.findings.push(RunFinding::runtime(
+            CORE_X1002,
+            FindingClass::Inadmissible,
+            RunStage::PackageIntegrity,
+            "requester",
+            SourceLocation::new("case-package", ""),
+            report.notice.clone(),
+        ));
         return Ok(report);
     }
 
@@ -675,7 +748,6 @@ pub fn execute_case(
         report.execution = Some(execution);
         report.compile = Some(compile.clone());
         if stop {
-            write_run_report(workspace.as_deref(), &report);
             return Ok(report);
         }
     } else {
@@ -712,7 +784,6 @@ pub fn execute_case(
     let bindings_failed = bindings.status == BindingStatus::Failed;
     report.bindings = Some(bindings);
     if bindings_failed {
-        write_run_report(workspace.as_deref(), &report);
         return Ok(report);
     }
 
@@ -754,8 +825,6 @@ pub fn execute_case(
     if !campaign_rejected && expectations_hold {
         report.status = CaseRunStatus::Evaluated;
     }
-    write_run_report(workspace.as_deref(), &report);
-    append_log(options, &report);
     Ok(report)
 }
 
@@ -1132,17 +1201,219 @@ fn basis_word(basis: BasisKind) -> &'static str {
     }
 }
 
-fn append_log(options: &CaseRunOptions, report: &CaseRunReport) {
+/// Build the single feedback stream consumed by people and iterating agents.
+/// Detailed stage reports remain authoritative; this is a lossless-enough,
+/// actionable index over the blockers and drift they contain.
+fn collect_run_findings(report: &mut CaseRunReport) {
+    for document in &report.integrity.documents {
+        let (class, state) = match document.state {
+            IntegrityCheckState::Missing => (FindingClass::Missing, "missing"),
+            IntegrityCheckState::Mismatch => (FindingClass::Inadmissible, "does not match"),
+            IntegrityCheckState::Verified | IntegrityCheckState::NotChecked => continue,
+        };
+        report.findings.push(RunFinding::runtime(
+            CORE_X1001,
+            class,
+            RunStage::PackageIntegrity,
+            "case_author",
+            SourceLocation::new(
+                "case-package",
+                format!("/documents/{}", json_pointer_segment(&document.document_id)),
+            ),
+            format!(
+                "package document `{}` at `{}` is {state}; expected {}, observed {}",
+                document.document_id,
+                document.path,
+                document.expected_sha256,
+                document.actual_sha256.as_deref().unwrap_or("no bytes")
+            ),
+        ));
+    }
+    for artifact in &report.integrity.artifacts {
+        let (class, state) = match artifact.state {
+            IntegrityCheckState::Missing => (FindingClass::Missing, "missing"),
+            IntegrityCheckState::Mismatch => (FindingClass::Inadmissible, "does not match"),
+            IntegrityCheckState::Verified | IntegrityCheckState::NotChecked => continue,
+        };
+        report.findings.push(RunFinding::runtime(
+            CORE_X1001,
+            class,
+            RunStage::PackageIntegrity,
+            "operator_or_case_author",
+            SourceLocation::new(
+                "case-package",
+                format!("/artifacts/{}", json_pointer_segment(&artifact.artifact_id)),
+            ),
+            format!(
+                "artifact `{}` at root `{}` path `{}` is {state}; expected {}, observed {}",
+                artifact.artifact_id,
+                artifact.source_root,
+                artifact.path,
+                artifact.expected_sha256,
+                artifact.actual_sha256.as_deref().unwrap_or("no bytes")
+            ),
+        ));
+    }
+
+    if let Some(compile) = &report.compile {
+        report.findings.extend(
+            compile
+                .findings
+                .iter()
+                .map(|finding| RunFinding::from_core(RunStage::Compilation, finding)),
+        );
+    }
+
+    if let Some(coverage) = &report.coverage
+        && coverage.status == CoverageStatus::Incomplete
+    {
+        let messages = coverage
+            .issues
+            .iter()
+            .cloned()
+            .chain(coverage.entries.iter().flat_map(|entry| {
+                entry
+                    .issues
+                    .iter()
+                    .map(|issue| format!("{}: {issue}", entry.set_requirement_id))
+            }));
+        for message in messages {
+            report.findings.push(RunFinding::runtime(
+                CORE_X1101,
+                FindingClass::Inadmissible,
+                RunStage::Coverage,
+                "requester",
+                SourceLocation::new("case-package", "/coverage"),
+                message,
+            ));
+        }
+    }
+
+    if let Some(execution) = &report.execution {
+        for step in &execution.steps {
+            report.findings.extend(step.findings.iter().cloned());
+            if let Some(replay) = &step.replay
+                && !replay.matches
+            {
+                report.findings.push(
+                    RunFinding::runtime(
+                        CORE_X3201,
+                        FindingClass::Inadmissible,
+                        RunStage::Replay,
+                        "capability_provider_or_case_author",
+                        SourceLocation::new("execution-receipt", ""),
+                        format!(
+                            "step `{}` differs from committed receipt `{}`: {}",
+                            step.step_id,
+                            replay.document_id,
+                            replay.differences.join("; ")
+                        ),
+                    )
+                    .for_step(&step.step_id),
+                );
+            }
+        }
+    }
+
+    if report.replay_applicable
+        && let Some(claims) = &report.claims
+        && !claims.matches_committed
+    {
+        report.findings.push(RunFinding::runtime(
+            CORE_X3101,
+            FindingClass::Inadmissible,
+            RunStage::Replay,
+            "capability_provider_or_case_author",
+            SourceLocation::new("claims", ""),
+            format!(
+                "generated claims {} differ from committed claims {}",
+                claims.generated_sha256, claims.committed_sha256
+            ),
+        ));
+    }
+
+    if let Some(bindings) = &report.bindings
+        && bindings.status == BindingStatus::Failed
+    {
+        for issue in &bindings.issues {
+            report.findings.push(RunFinding::runtime(
+                CORE_X3001,
+                FindingClass::Inadmissible,
+                RunStage::EvidenceBinding,
+                "case_author_or_capability_provider",
+                SourceLocation::new("claims", ""),
+                issue,
+            ));
+        }
+    }
+
+    if let Some(campaign) = &report.campaign {
+        report.findings.extend(
+            campaign
+                .findings
+                .iter()
+                .map(|finding| RunFinding::from_core(RunStage::CampaignEvaluation, finding)),
+        );
+    }
+
+    if let Some(replay) = &report.replay
+        && !replay.matches
+    {
+        report.findings.push(RunFinding::runtime(
+            CORE_X3301,
+            FindingClass::Inadmissible,
+            RunStage::Replay,
+            "case_author",
+            SourceLocation::new("campaign-report", ""),
+            format!(
+                "fresh campaign result differs from committed document `{}`",
+                replay.document_id
+            ),
+        ));
+    }
+
+    report.findings.sort_by(|left, right| {
+        left.stage
+            .cmp(&right.stage)
+            .then_with(|| left.step_id.cmp(&right.step_id))
+            .then_with(|| left.code.cmp(&right.code))
+            .then_with(|| left.primary.cmp(&right.primary))
+            .then_with(|| left.message.cmp(&right.message))
+    });
+    report.findings.dedup();
+}
+
+fn json_pointer_segment(value: &str) -> String {
+    value.replace('~', "~0").replace('/', "~1")
+}
+
+fn append_log(
+    options: &CaseRunOptions,
+    case_or_manifest: &Path,
+    report: &CaseRunReport,
+) -> Result<(), Box<dyn Error>> {
     let Some(path) = &options.log else {
-        return;
+        return Ok(());
     };
     #[derive(Serialize)]
     struct LogEntry<'a> {
+        schema_version: &'static str,
         recorded_at: String,
+        case_path: String,
         case_id: &'a str,
         status: CaseRunStatus,
+        integrity_status: PackageIntegrityStatus,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        compilation_status: Option<CompilationStatus>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        execution_status: Option<ExecutionStatus>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        binding_status: Option<BindingStatus>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        campaign_status: Option<CampaignStatus>,
         supplied_inputs: &'a [SuppliedInput],
-        steps: Vec<(String, StepExecutionState)>,
+        steps: Vec<StepLog<'a>>,
+        findings: &'a [RunFinding],
         verdicts: &'a [VerdictMargin],
         presentation_gates: Vec<PresentationGateLog<'a>>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -1159,6 +1430,19 @@ fn append_log(options: &CaseRunOptions, report: &CaseRunReport) {
         documents: Vec<DocumentLog<'a>>,
         #[serde(skip_serializing_if = "Vec::is_empty")]
         reused_from: Vec<(&'a str, &'a str)>,
+    }
+    #[derive(Serialize)]
+    struct StepLog<'a> {
+        step_id: &'a str,
+        adapter: &'a str,
+        capability_id: &'a str,
+        state: StepExecutionState,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        planned_invocation_sha256: Option<&'a str>,
+        changes: &'a [ChangeRecord],
+        #[serde(skip_serializing_if = "Option::is_none")]
+        receipt: Option<&'a ReceiptSummary>,
+        outputs: &'a [OutputReport],
     }
     #[derive(Serialize)]
     struct DocumentLog<'a> {
@@ -1180,9 +1464,16 @@ fn append_log(options: &CaseRunOptions, report: &CaseRunReport) {
         request_sha256: &'a str,
     }
     let entry = LogEntry {
+        schema_version: RUN_ATTEMPT_LOG_SCHEMA_VERSION,
         recorded_at: rfc3339_now(),
+        case_path: case_or_manifest.display().to_string(),
         case_id: &report.case_id,
         status: report.status,
+        integrity_status: report.integrity.status,
+        compilation_status: report.compile.as_ref().map(|compile| compile.status),
+        execution_status: report.execution.as_ref().map(|execution| execution.status),
+        binding_status: report.bindings.as_ref().map(|bindings| bindings.status),
+        campaign_status: report.campaign.as_ref().map(|campaign| campaign.status),
         supplied_inputs: &report.supplied_inputs,
         steps: report
             .execution
@@ -1191,10 +1482,20 @@ fn append_log(options: &CaseRunOptions, report: &CaseRunReport) {
                 execution
                     .steps
                     .iter()
-                    .map(|step| (step.step_id.clone(), step.state))
+                    .map(|step| StepLog {
+                        step_id: &step.step_id,
+                        adapter: &step.adapter,
+                        capability_id: &step.capability_id,
+                        state: step.state,
+                        planned_invocation_sha256: step.planned_invocation_sha256.as_deref(),
+                        changes: &step.changes,
+                        receipt: step.receipt.as_ref(),
+                        outputs: &step.outputs,
+                    })
                     .collect()
             })
             .unwrap_or_default(),
+        findings: &report.findings,
         verdicts: &report.margins,
         presentation_gates: report
             .presentation_gates
@@ -1254,21 +1555,62 @@ fn append_log(options: &CaseRunOptions, report: &CaseRunReport) {
             })
             .unwrap_or_default(),
     };
-    if let Ok(mut line) = serde_json::to_string(&entry)
-        && let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path)
-    {
-        line.push('\n');
-        let _ = std::io::Write::write_all(&mut file, line.as_bytes());
-    }
+    append_log_line(path, &serde_json::to_string(&entry)?)
 }
 
-fn write_run_report(workspace: Option<&Path>, report: &CaseRunReport) {
-    if let Some(workspace) = workspace
-        && let Ok(mut bytes) = serde_json::to_vec_pretty(report)
-    {
-        bytes.push(b'\n');
-        let _ = fs::write(workspace.join("run-report.json"), bytes);
+fn append_error_log(
+    options: &CaseRunOptions,
+    case_or_manifest: &Path,
+    finding: &RunFinding,
+) -> Result<(), Box<dyn Error>> {
+    let Some(path) = &options.log else {
+        return Ok(());
+    };
+    #[derive(Serialize)]
+    struct ErrorLogEntry<'a> {
+        schema_version: &'static str,
+        recorded_at: String,
+        case_path: String,
+        status: &'static str,
+        findings: [&'a RunFinding; 1],
     }
+    let entry = ErrorLogEntry {
+        schema_version: RUN_ATTEMPT_LOG_SCHEMA_VERSION,
+        recorded_at: rfc3339_now(),
+        case_path: case_or_manifest.display().to_string(),
+        status: "error",
+        findings: [finding],
+    };
+    append_log_line(path, &serde_json::to_string(&entry)?)
+}
+
+fn append_log_line(path: &Path, line: &str) -> Result<(), Box<dyn Error>> {
+    if let Some(parent) = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+    {
+        fs::create_dir_all(parent)?;
+    }
+    let mut file = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?;
+    std::io::Write::write_all(&mut file, line.as_bytes())?;
+    std::io::Write::write_all(&mut file, b"\n")?;
+    Ok(())
+}
+
+fn write_run_report(
+    workspace: Option<&Path>,
+    report: &CaseRunReport,
+) -> Result<(), Box<dyn Error>> {
+    let Some(workspace) = workspace else {
+        return Ok(());
+    };
+    let mut bytes = serde_json::to_vec_pretty(report)?;
+    bytes.push(b'\n');
+    fs::write(workspace.join("run-report.json"), bytes)?;
+    Ok(())
 }
 
 fn required_document<'a>(
@@ -1488,15 +1830,23 @@ impl<'a> Runner<'a> {
                     planned_invocation_sha256: None,
                     changes: Vec::new(),
                     reused_receipt: None,
-            qualification: None,
+                    qualification: None,
                     receipt: None,
                     outputs: Vec::new(),
                     verification: None,
                     replay: None,
-                    issues: vec![format!(
-                        "step `{}` is declared for execution but the compiled workflow has no such step",
-                        execution.step_id
-                    )],
+                    findings: vec![RunFinding::runtime(
+                        CORE_X2001,
+                        FindingClass::Invalid,
+                        RunStage::ExecutionPlanning,
+                        "case_author",
+                        SourceLocation::new("case-package", "/executions"),
+                        format!(
+                            "step `{}` is declared for execution but the compiled workflow has no such step",
+                            execution.step_id
+                        ),
+                    )
+                    .for_step(&execution.step_id)],
                 });
             }
         }
@@ -1559,7 +1909,7 @@ impl<'a> Runner<'a> {
             outputs: Vec::new(),
             verification: None,
             replay: None,
-            issues: Vec::new(),
+            findings: Vec::new(),
         };
 
         let Some(declared) = self
@@ -1569,10 +1919,14 @@ impl<'a> Runner<'a> {
             .iter()
             .find(|capability| capability.capability_id == execution.capability_id)
         else {
-            report.issues.push(format!(
-                "capability `{}` is not declared",
-                execution.capability_id
-            ));
+            report.add_finding(
+                CORE_X2001,
+                FindingClass::Invalid,
+                RunStage::ExecutionPlanning,
+                "case_author",
+                SourceLocation::new("case-package", "/capabilities"),
+                format!("capability `{}` is not declared", execution.capability_id),
+            );
             return Ok(report);
         };
         let identity = CapabilityIdentity {
@@ -1590,29 +1944,48 @@ impl<'a> Runner<'a> {
             state: CapabilityCheckState::NotSupplied,
         };
         let Some(adapter) = Adapter::by_id(&execution.adapter) else {
-            report.issues.push(format!(
-                "adapter `{}` is not known to this runner",
-                execution.adapter
-            ));
+            report.add_finding(
+                CORE_X2001,
+                FindingClass::Invalid,
+                RunStage::ExecutionPlanning,
+                "case_author",
+                SourceLocation::new("case-package", "/executions"),
+                format!(
+                    "adapter `{}` is not known to this runner",
+                    execution.adapter
+                ),
+            );
             return Ok(report);
         };
         let expected_type = adapter.capability_type();
         if step.capability_type.id != expected_type.id
             || step.capability_type.major != expected_type.major
         {
-            report.issues.push(format!(
-                "adapter `{}` implements `{}@{}`, but step `{}` compiles to `{}@{}`",
-                execution.adapter,
-                expected_type.id,
-                expected_type.major,
-                step.step_id,
-                step.capability_type.id,
-                step.capability_type.major
-            ));
+            report.add_finding(
+                CORE_X2001,
+                FindingClass::Invalid,
+                RunStage::ExecutionPlanning,
+                "case_author",
+                SourceLocation::new("case-package", "/executions"),
+                format!(
+                    "adapter `{}` implements `{}@{}`, but step `{}` compiles to `{}@{}`",
+                    execution.adapter,
+                    expected_type.id,
+                    expected_type.major,
+                    step.step_id,
+                    step.capability_type.id,
+                    step.capability_type.major
+                ),
+            );
         }
         if step.presentation_gate.is_some() {
-            report.issues.push(
-                "an optional agent practicality gate consumes the runner's materialized review request, not a package execution declaration".into(),
+            report.add_finding(
+                CORE_X2001,
+                FindingClass::Invalid,
+                RunStage::ExecutionPlanning,
+                "case_author",
+                SourceLocation::new("case-package", "/executions"),
+                "an optional agent practicality gate consumes the runner's materialized review request, not a package execution declaration",
             );
         }
 
@@ -1629,26 +2002,47 @@ impl<'a> Runner<'a> {
             .collect();
         for slot in staging.keys() {
             if !bound_slots.contains(slot) {
-                report.issues.push(format!(
-                    "package stages input slot `{slot}`, which the compiled step does not bind"
-                ));
+                report.add_finding(
+                    CORE_X2001,
+                    FindingClass::Invalid,
+                    RunStage::ExecutionPlanning,
+                    "case_author",
+                    SourceLocation::new("case-package", "/executions"),
+                    format!(
+                        "package stages input slot `{slot}`, which the compiled step does not bind"
+                    ),
+                );
             }
         }
         let mut staged = Vec::new();
         let mut unverified = Vec::new();
         for binding in &step.bindings {
             let Some(workspace_path) = staging.get(binding.input_slot.as_str()) else {
-                report.issues.push(format!(
-                    "bound input slot `{}` has no staging path in the package",
-                    binding.input_slot
-                ));
+                report.add_finding(
+                    CORE_X2001,
+                    FindingClass::Missing,
+                    RunStage::ExecutionPlanning,
+                    "case_author",
+                    SourceLocation::new("case-package", "/executions"),
+                    format!(
+                        "bound input slot `{}` has no staging path in the package",
+                        binding.input_slot
+                    ),
+                );
                 continue;
             };
             if !adapter.input_slots().contains(&binding.input_slot.as_str()) {
-                report.issues.push(format!(
-                    "adapter `{}` does not accept input slot `{}`",
-                    execution.adapter, binding.input_slot
-                ));
+                report.add_finding(
+                    CORE_X2001,
+                    FindingClass::Invalid,
+                    RunStage::ExecutionPlanning,
+                    "case_author",
+                    SourceLocation::new("case-package", "/executions"),
+                    format!(
+                        "adapter `{}` does not accept input slot `{}`",
+                        execution.adapter, binding.input_slot
+                    ),
+                );
                 continue;
             }
             match self.resolve_source(&binding.source) {
@@ -1675,9 +2069,14 @@ impl<'a> Runner<'a> {
                         expected_sha256: artifact.sha256,
                     });
                 }
-                Err(issue) => report
-                    .issues
-                    .push(format!("input slot `{}`: {issue}", binding.input_slot)),
+                Err(issue) => report.add_finding(
+                    CORE_X2101,
+                    FindingClass::Missing,
+                    RunStage::ExecutionPlanning,
+                    "operator",
+                    SourceLocation::new("case-run", "/execution"),
+                    format!("input slot `{}`: {issue}", binding.input_slot),
+                ),
             }
         }
         let declared_slots: BTreeSet<&str> = execution
@@ -1687,12 +2086,19 @@ impl<'a> Runner<'a> {
             .collect();
         let adapter_slots: BTreeSet<&str> = adapter.output_slots().iter().copied().collect();
         if declared_slots != adapter_slots {
-            report.issues.push(format!(
-                "package binds output slots {:?}, but adapter `{}` produces {:?}",
-                declared_slots, execution.adapter, adapter_slots
-            ));
+            report.add_finding(
+                CORE_X2801,
+                FindingClass::Invalid,
+                RunStage::ExecutionPlanning,
+                "case_author",
+                SourceLocation::new("case-package", "/executions"),
+                format!(
+                    "package binds output slots {:?}, but adapter `{}` produces {:?}",
+                    declared_slots, execution.adapter, adapter_slots
+                ),
+            );
         }
-        if !report.issues.is_empty() {
+        if !report.findings.is_empty() {
             return Ok(report);
         }
         let claim_ids_by_slot: BTreeMap<&str, &str> = execution
@@ -1715,7 +2121,18 @@ impl<'a> Runner<'a> {
                     report.capability = Some(not_supplied);
                     report.state = StepExecutionState::NotRun;
                 }
-                Some(_) => report.issues = unverified,
+                Some(_) => {
+                    for issue in unverified {
+                        report.add_finding(
+                            CORE_X2101,
+                            FindingClass::Inadmissible,
+                            RunStage::ExecutionPlanning,
+                            "operator",
+                            SourceLocation::new("case-run", "/execution"),
+                            issue,
+                        );
+                    }
+                }
             }
             return Ok(report);
         }
@@ -1770,9 +2187,14 @@ impl<'a> Runner<'a> {
         ) {
             Ok(plan) => plan,
             Err(error) => {
-                report
-                    .issues
-                    .push(format!("the invocation could not be planned: {error}"));
+                report.add_finding(
+                    CORE_X2201,
+                    FindingClass::Invalid,
+                    RunStage::ExecutionPlanning,
+                    "adapter_owner",
+                    SourceLocation::new("case-run", "/execution"),
+                    format!("the invocation could not be planned: {error}"),
+                );
                 return Ok(report);
             }
         };
@@ -1804,9 +2226,14 @@ impl<'a> Runner<'a> {
                     ));
                 }
                 Err(error) => {
-                    report
-                        .issues
-                        .push(format!("facts for the qualification envelope: {error}"));
+                    report.add_finding(
+                        CORE_X2301,
+                        FindingClass::Inadmissible,
+                        RunStage::ExecutionPlanning,
+                        "method_owner",
+                        SourceLocation::new("case-run", "/execution"),
+                        format!("facts for the qualification envelope: {error}"),
+                    );
                     return Ok(report);
                 }
             }
@@ -1840,9 +2267,14 @@ impl<'a> Runner<'a> {
                     let extracted = match adapter.extract_claims(&output_bytes, &context) {
                         Ok(extracted) => extracted,
                         Err(issue) => {
-                            report
-                                .issues
-                                .push(format!("claim extraction over reused outputs: {issue}"));
+                            report.add_finding(
+                                CORE_X2701,
+                                FindingClass::Invalid,
+                                RunStage::ClaimGeneration,
+                                "adapter_owner",
+                                SourceLocation::new("case-run", "/execution"),
+                                format!("claim extraction over reused outputs: {issue}"),
+                            );
                             report.state = StepExecutionState::Failed;
                             return Ok(report);
                         }
@@ -1852,10 +2284,17 @@ impl<'a> Runner<'a> {
                         .map(|claim| claim.output_slot.as_str())
                         .collect();
                     if extracted_slots != adapter_slots {
-                        report.issues.push(format!(
-                            "adapter extracted claims for {:?}, but declares {:?}",
-                            extracted_slots, adapter_slots
-                        ));
+                        report.add_finding(
+                            CORE_X2801,
+                            FindingClass::Invalid,
+                            RunStage::ClaimGeneration,
+                            "adapter_owner",
+                            SourceLocation::new("case-run", "/execution"),
+                            format!(
+                                "adapter extracted claims for {:?}, but declares {:?}",
+                                extracted_slots, adapter_slots
+                            ),
+                        );
                         report.state = StepExecutionState::Failed;
                         return Ok(report);
                     }
@@ -1912,9 +2351,16 @@ impl<'a> Runner<'a> {
         // Running needs a value for every required key.
         if !missing_environment.is_empty() {
             for key in &missing_environment {
-                report.issues.push(format!(
-                    "environment `{key}` is required to execute this step and was not supplied; pass --env {key}=VALUE"
-                ));
+                report.add_finding(
+                    CORE_X2402,
+                    FindingClass::Missing,
+                    RunStage::ExecutionPlanning,
+                    "operator",
+                    SourceLocation::new("case-run", "/execution"),
+                    format!(
+                        "environment `{key}` is required to execute this step and was not supplied; pass --env {key}=VALUE"
+                    ),
+                );
             }
             return Ok(report);
         }
@@ -1945,19 +2391,30 @@ impl<'a> Runner<'a> {
         };
         match capability_check.state {
             CapabilityCheckState::Verified => {}
-            CapabilityCheckState::Mismatch => report.issues.push(format!(
-                "executable `{}` hashes to {}, but the package binds {}",
-                executable.display(),
-                capability_check.actual_sha256.as_deref().unwrap_or("?"),
-                declared.executable_sha256
-            )),
-            _ => report.issues.push(format!(
-                "executable `{}` cannot be read",
-                executable.display()
-            )),
+            CapabilityCheckState::Mismatch => report.add_finding(
+                CORE_X2401,
+                FindingClass::Inadmissible,
+                RunStage::ExecutionPlanning,
+                "operator",
+                SourceLocation::new("case-run", "/execution"),
+                format!(
+                    "executable `{}` hashes to {}, but the package binds {}",
+                    executable.display(),
+                    capability_check.actual_sha256.as_deref().unwrap_or("?"),
+                    declared.executable_sha256
+                ),
+            ),
+            _ => report.add_finding(
+                CORE_X2401,
+                FindingClass::Missing,
+                RunStage::ExecutionPlanning,
+                "operator",
+                SourceLocation::new("case-run", "/execution"),
+                format!("executable `{}` cannot be read", executable.display()),
+            ),
         }
         report.capability = Some(capability_check);
-        if !report.issues.is_empty() {
+        if !report.findings.is_empty() {
             return Ok(report);
         }
 
@@ -1979,9 +2436,14 @@ impl<'a> Runner<'a> {
         let outcome = match execute_step(&step_dir, &request) {
             Ok(outcome) => outcome,
             Err(error) => {
-                report
-                    .issues
-                    .push(format!("execution could not be completed: {error}"));
+                report.add_finding(
+                    CORE_X2501,
+                    FindingClass::Unsatisfied,
+                    RunStage::Execution,
+                    "capability_provider",
+                    SourceLocation::new("case-run", "/execution"),
+                    format!("execution could not be completed: {error}"),
+                );
                 report.state = StepExecutionState::Failed;
                 return Ok(report);
             }
@@ -2001,10 +2463,17 @@ impl<'a> Runner<'a> {
             duration_ms: receipt.process.duration_ms,
         });
         if receipt.invocation_sha256 != plan.invocation_sha256 {
-            report.issues.push(format!(
-                "the receipt records invocation {} but the runner planned {}",
-                receipt.invocation_sha256, plan.invocation_sha256
-            ));
+            report.add_finding(
+                CORE_X2601,
+                FindingClass::Inadmissible,
+                RunStage::ReceiptVerification,
+                "runner",
+                SourceLocation::new("execution-receipt", "/invocation_sha256"),
+                format!(
+                    "the receipt records invocation {} but the runner planned {}",
+                    receipt.invocation_sha256, plan.invocation_sha256
+                ),
+            );
         }
         let expectations = ReceiptExpectations {
             case_id: self.package.manifest.case_id.clone(),
@@ -2034,7 +2503,16 @@ impl<'a> Runner<'a> {
         };
         let verification = verify_receipt(&receipt, &outcome.step_dir, &expectations)?;
         let verified = verification.state == ReceiptCheckState::Verified;
-        report.issues.extend(verification.issues.iter().cloned());
+        for issue in &verification.issues {
+            report.add_finding(
+                CORE_X2601,
+                FindingClass::Inadmissible,
+                RunStage::ReceiptVerification,
+                "capability_provider",
+                SourceLocation::new("execution-receipt", ""),
+                issue,
+            );
+        }
         report.verification = Some(verification);
 
         let mut extracted = Vec::new();
@@ -2050,17 +2528,31 @@ impl<'a> Runner<'a> {
             }
             match adapter.extract_claims(&output_bytes, &context) {
                 Ok(claims) => extracted = claims,
-                Err(issue) => report.issues.push(format!("claim extraction: {issue}")),
+                Err(issue) => report.add_finding(
+                    CORE_X2701,
+                    FindingClass::Invalid,
+                    RunStage::ClaimGeneration,
+                    "adapter_owner",
+                    SourceLocation::new("case-run", "/execution"),
+                    format!("claim extraction: {issue}"),
+                ),
             }
             let extracted_slots: BTreeSet<&str> = extracted
                 .iter()
                 .map(|claim| claim.output_slot.as_str())
                 .collect();
             if !extracted.is_empty() && extracted_slots != adapter_slots {
-                report.issues.push(format!(
-                    "adapter extracted claims for {:?}, but declares {:?}",
-                    extracted_slots, adapter_slots
-                ));
+                report.add_finding(
+                    CORE_X2801,
+                    FindingClass::Invalid,
+                    RunStage::ClaimGeneration,
+                    "adapter_owner",
+                    SourceLocation::new("case-run", "/execution"),
+                    format!(
+                        "adapter extracted claims for {:?}, but declares {:?}",
+                        extracted_slots, adapter_slots
+                    ),
+                );
             }
         }
 
@@ -2093,7 +2585,7 @@ impl<'a> Runner<'a> {
 
         report.replay = self.replay_receipt(&step.step_id, &receipt)?;
 
-        if !verified || !report.issues.is_empty() {
+        if !verified || !report.findings.is_empty() {
             report.state = StepExecutionState::Failed;
             return Ok(report);
         }
@@ -3015,8 +3507,12 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                         let _ = writeln!(out, "         issue: {issue}");
                     }
                 }
-                for issue in &step.issues {
-                    let _ = writeln!(out, "      issue: {issue}");
+                for finding in &step.findings {
+                    let _ = writeln!(
+                        out,
+                        "      [{}] {}\n         next: {}",
+                        finding.code, finding.message, finding.next_action
+                    );
                 }
             }
             if !execution.not_executed.is_empty() {
@@ -3268,6 +3764,30 @@ pub fn human_summary(report: &CaseRunReport) -> String {
         );
     }
 
+    if !report.findings.is_empty() {
+        let _ = writeln!(
+            out,
+            "\nACTIONABLE FEEDBACK ({} finding(s))",
+            report.findings.len()
+        );
+        for finding in &report.findings {
+            let step = finding
+                .step_id
+                .as_deref()
+                .map(|step_id| format!(" step {step_id}"))
+                .unwrap_or_default();
+            let _ = writeln!(
+                out,
+                "   [{} · {}{step} · owner {}] {}",
+                finding.code,
+                run_stage_label(finding.stage),
+                finding.owner,
+                finding.message
+            );
+            let _ = writeln!(out, "      next: {}", finding.next_action);
+        }
+    }
+
     let execution_phrase = match report.execution.as_ref().map(|execution| execution.status) {
         Some(ExecutionStatus::Executed) => {
             "every declared step executed or was reused under a verified receipt"
@@ -3335,6 +3855,22 @@ fn verdict_label(status: VerdictStatus) -> &'static str {
         VerdictStatus::Fail => "FAIL",
         VerdictStatus::Inconclusive => "INCONCLUSIVE",
         VerdictStatus::NotEvaluated => "NOT_EVALUATED",
+    }
+}
+
+fn run_stage_label(stage: RunStage) -> &'static str {
+    match stage {
+        RunStage::PackageIntegrity => "package_integrity",
+        RunStage::Compilation => "compilation",
+        RunStage::Coverage => "coverage",
+        RunStage::ExecutionPlanning => "execution_planning",
+        RunStage::Execution => "execution",
+        RunStage::ReceiptVerification => "receipt_verification",
+        RunStage::ClaimGeneration => "claim_generation",
+        RunStage::EvidenceBinding => "evidence_binding",
+        RunStage::CampaignEvaluation => "campaign_evaluation",
+        RunStage::Replay => "replay",
+        RunStage::Infrastructure => "infrastructure",
     }
 }
 

@@ -1014,6 +1014,33 @@ fn show_overview(
         }
     });
     ui.add_space(8.0);
+    if !report.findings.is_empty() {
+        card(ui, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.heading("Actionable feedback");
+                badge(ui, &format!("{} FINDING(S)", report.findings.len()), RED);
+            });
+            for finding in &report.findings {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(egui::RichText::new(&finding.code).strong().color(RED));
+                    ui.label(
+                        egui::RichText::new(format!("{:?}", finding.stage).to_lowercase())
+                            .color(muted(ui)),
+                    );
+                    if let Some(step_id) = &finding.step_id {
+                        ui.label(egui::RichText::new(step_id).color(muted(ui)));
+                    }
+                    ui.label(&finding.message);
+                });
+                ui.label(
+                    egui::RichText::new(format!("Next: {}", finding.next_action))
+                        .color(muted(ui))
+                        .size(11.0),
+                );
+            }
+        });
+        ui.add_space(8.0);
+    }
     let notice = ui.label(
         egui::RichText::new(&report.notice)
             .color(muted(ui))
@@ -1376,8 +1403,13 @@ fn show_execute(ui: &mut egui::Ui, report: &CaseRunReport) {
                     }
                 });
             }
-            for issue in &step.issues {
-                ui.colored_label(RED, issue);
+            for finding in &step.findings {
+                ui.colored_label(RED, format!("[{}] {}", finding.code, finding.message));
+                ui.label(
+                    egui::RichText::new(format!("Next: {}", finding.next_action))
+                        .color(muted(ui))
+                        .size(11.0),
+                );
             }
         });
         ui.add_space(6.0);

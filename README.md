@@ -51,7 +51,8 @@ regulatory review. It makes their boundaries explicit and inspectable.
 - A versioned evidence-contract and registry model.
 - Deterministic JSON, exact quantities and unit scaling, applicability
   predicates, and four-state requirement verdicts.
-- Stable compiler diagnostics with source locations and bounded repair hints.
+- Stable compiler and runtime diagnostics with source locations, owners, and
+  bounded next actions.
 - Controlled local execution over staged inputs with cleared environments,
   content hashes, receipts, replay checks, and selective reuse.
 - End-to-end case reports for integrity, compilation, execution, evidence

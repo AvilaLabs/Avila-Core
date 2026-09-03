@@ -1,15 +1,17 @@
 # Diagnostic catalog
 
-Every finding the semantic compiler can emit carries one of the stable codes
-below. Consumers match the code, class, owner, location, and repair
-applicability, never the wording. The same catalog is embedded in the
-compiler and served by `avila-core explain <CODE>`; a test keeps this page,
-the catalog, and the codes the compiler source references in agreement.
+Every finding Core can emit carries a stable code. Consumers match the code,
+class, owner, location, and repair applicability, never the wording. The
+catalog is embedded in Core and served by `avila-core explain <CODE>`;
+`avila-core explain --all` returns both compiler and composed-runner entries.
+A test keeps this page, the compiler catalog, and the codes the compiler source
+references in agreement.
 
 Codes are grouped by family: `S` for source and schema, `T` for typing, `R`
 for resolution, graph, requirement, review, and registry checks, `A` for
-admissibility, and `E` for evidence admission during campaign evaluation. Only `CORE-R3601` and `CORE-R3602` are notices; every other
-code blocks compilation.
+admissibility, `E` for evidence admission during campaign evaluation, and `X`
+for composed-runner stages. Only `CORE-R3601` and `CORE-R3602` are compiler
+notices; every other compiler code blocks compilation.
 
 ## Human rendering
 
@@ -37,6 +39,47 @@ to its nearest existing ancestor and says so. Related locations, every
 repair alternative with its applicability, and the catalog's next action
 follow. The rendering is presentation only: consumers keep matching codes,
 classes, owners, pointers, and repair applicability.
+
+## Composed-runner findings
+
+`avila-core run` adds a top-level `findings` array to its JSON report. It
+normalizes compiler and campaign diagnostics with runtime failures so an
+iterating person or agent has one stage-ordered queue of actionable feedback.
+Each entry carries `code`, `class`, `stage`, `owner`, an optional `step_id`, a
+primary source location, related locations, bounded repairs, `message`, and
+`next_action`. The detailed integrity, coverage, execution, receipt, binding,
+and campaign reports remain the evidence behind that index.
+
+When `--log PATH` is supplied, every returned report is appended to PATH as an
+`avila.core/run-attempt/v0.1-draft` JSON line. Failures that occur before a case
+report can be constructed are also appended with status `error` and
+`CORE-X9001`. A log-write failure is returned to the caller; Core does not
+silently claim an attempt was recorded.
+
+| Code | Title | Stage |
+| --- | --- | --- |
+| `CORE-X1001` | Package byte identity failed | package integrity |
+| `CORE-X1002` | Package manifest pin differs | package integrity |
+| `CORE-X1101` | Requirement-set coverage incomplete | coverage |
+| `CORE-X2001` | Execution declaration invalid | execution planning |
+| `CORE-X2101` | Execution input unavailable or unchecked | execution planning |
+| `CORE-X2201` | Invocation could not be planned | execution planning |
+| `CORE-X2301` | Qualification facts could not be derived | execution planning |
+| `CORE-X2401` | Capability identity unavailable | execution planning |
+| `CORE-X2402` | Required execution environment missing | execution planning |
+| `CORE-X2501` | Capability execution failed | execution |
+| `CORE-X2601` | Execution receipt failed verification | receipt verification |
+| `CORE-X2701` | Claims could not be extracted | claim generation |
+| `CORE-X2801` | Adapter output contract differs | claim generation |
+| `CORE-X3001` | Evidence identity binding failed | evidence binding |
+| `CORE-X3101` | Committed claims drifted | replay |
+| `CORE-X3201` | Committed receipt drifted | replay |
+| `CORE-X3301` | Committed campaign result drifted | replay |
+| `CORE-X9001` | Runner could not produce a case report | infrastructure |
+
+The full meaning and next action for each runtime code live in the embedded
+catalog and are available through `avila-core explain`, just like compiler
+codes.
 
 | Code | Title | Rule | Meaning | Next action |
 | --- | --- | --- | --- | --- |

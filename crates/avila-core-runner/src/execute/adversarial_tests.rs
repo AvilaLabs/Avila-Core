@@ -21,6 +21,7 @@ use crate::case_run::{
     BindingStatus, CapabilityCheckState, CaseRunOptions, CaseRunReport, CaseRunStatus, ChangeClass,
     ExecutionStatus, StepExecutionState, execute_case, human_summary,
 };
+use crate::diagnostic::{CORE_X1001, CORE_X2601, CORE_X9001};
 
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
 
@@ -544,6 +545,59 @@ fn modified_input_bytes_stop_before_execution() {
     assert!(report.execution.is_none());
     assert!(report.campaign.is_none());
     assert!(human_summary(&report).contains("Mismatch: stub:inputs/aftermatter-case"));
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_X1001)
+    );
+}
+
+#[test]
+fn early_rejections_and_infrastructure_errors_are_both_logged() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    fs::write(
+        synthetic.root.join("inputs/aftermatter-case"),
+        b"tampered\n",
+    )
+    .unwrap();
+    let log = dir.0.join("attempts/campaign-log.jsonl");
+    let mut options = run_options(&synthetic, dir.workspace());
+    options.log = Some(log.clone());
+
+    let rejected = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(rejected.status, CaseRunStatus::Rejected);
+    assert!(
+        rejected
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_X1001)
+    );
+
+    let error = execute_case(&dir.0.join("missing-case"), &options).unwrap_err();
+    assert!(error.to_string().contains("No such file"));
+
+    let lines: Vec<Value> = fs::read_to_string(log)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(lines.len(), 2);
+    assert_eq!(
+        lines[0]["schema_version"],
+        "avila.core/run-attempt/v0.1-draft"
+    );
+    assert_eq!(lines[0]["status"], "rejected");
+    assert!(
+        lines[0]["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|finding| finding["code"] == CORE_X1001)
+    );
+    assert_eq!(lines[1]["status"], "error");
+    assert_eq!(lines[1]["findings"][0]["code"], CORE_X9001);
 }
 
 #[test]
@@ -560,9 +614,9 @@ fn unchecked_input_bytes_refuse_execution() {
     );
     assert!(
         step(&report)
-            .issues
+            .findings
             .iter()
-            .any(|issue| issue.contains("were not verified"))
+            .any(|finding| finding.message.contains("were not verified"))
     );
     assert!(report.claims.is_none());
     assert!(report.campaign.is_none());
@@ -621,7 +675,10 @@ fn a_failing_execution_produces_a_failed_receipt_and_no_verdict() {
     write_failing_stub(&stub);
     let synthetic = build_package(&dir.0, &stub);
     let workspace = dir.workspace();
-    let report = run(&synthetic, workspace.clone());
+    let log = dir.0.join("campaign-log.jsonl");
+    let mut options = run_options(&synthetic, workspace.clone());
+    options.log = Some(log.clone());
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
     assert_eq!(report.status, CaseRunStatus::Rejected);
     assert_eq!(
         report.execution.as_ref().unwrap().status,
@@ -633,19 +690,34 @@ fn a_failing_execution_produces_a_failed_receipt_and_no_verdict() {
     assert_eq!(receipt.exit_status, Some(3));
     assert!(
         executed
-            .issues
+            .findings
             .iter()
-            .any(|issue| issue.contains("exited with status 3"))
+            .any(|finding| finding.message.contains("exited with status 3"))
     );
     assert!(
         executed
-            .issues
+            .findings
             .iter()
-            .any(|issue| issue.contains("was not produced"))
+            .any(|finding| finding.message.contains("was not produced"))
     );
     assert!(report.claims.is_none());
     assert!(report.campaign.is_none());
     assert!(workspace.join("classification/receipt.json").is_file());
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_X2601)
+    );
+    let logged: Value = serde_json::from_str(fs::read_to_string(log).unwrap().trim()).unwrap();
+    assert_eq!(logged["steps"][0]["receipt"]["exit_status"], 3);
+    assert!(
+        logged["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|finding| finding["code"] == CORE_X2601)
+    );
 }
 
 #[test]
@@ -741,12 +813,11 @@ fn an_adapter_bound_to_the_wrong_step_type_is_refused() {
         report.execution.as_ref().unwrap().status,
         ExecutionStatus::Refused
     );
-    assert!(
-        step(&report)
-            .issues
-            .iter()
-            .any(|issue| issue.contains("compiles to `aftermatter.r0-inventory-build@1`"))
-    );
+    assert!(step(&report).findings.iter().any(|finding| {
+        finding
+            .message
+            .contains("compiles to `aftermatter.r0-inventory-build@1`")
+    }));
     assert!(report.campaign.is_none());
 }
 

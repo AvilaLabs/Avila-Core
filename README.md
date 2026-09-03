@@ -68,6 +68,12 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   optional hash-bound practicality agent receives Core's exact post-campaign
   dossier and can only return work, present it to the user, or abstain; it
   never changes the technical verdict;
+- the first coupled case, `CASE-002`, which adds coupled neutron-photon
+  transport with per-layer spectra and ACTINV activation per layer to the
+  search, evaluates six requirements with exact margins, and carries a
+  pre-registered experimental protocol; its activation guide is a stated
+  coverage omission at the library's required basis because Core refused the
+  contract that counted it as coverage;
 - qualification envelopes: a method owner's record binds an exact executable
   and adapter to a kernel applicability predicate over facts the adapter
   reads from verified inputs; the runner evaluates it before a step runs and
@@ -250,7 +256,7 @@ docs/
   roadmap/                staged validation and 1.0 planning hypotheses
   adr/                    durable architectural decisions
 schemas/                  machine-readable interchange drafts
-examples/                 unqualified documents: composed CASE-000 and CASE-001,
+examples/                 unqualified documents: composed CASE-000, CASE-001, and CASE-002,
                           the shielding capability scripts, the first library
                           requirement set, and the scripted designer that
                           drives the search

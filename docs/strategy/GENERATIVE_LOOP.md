@@ -164,3 +164,18 @@ qualification for every bounded verdict, physical evidence as a capability,
 and any optimizer or constellation view over the log. The workbench exposes free inputs,
 environment values, margins, coverage, and presentation requests, but cannot
 yet drive a search itself.
+
+## What has landed since (2026-09-02, later the same day)
+
+[CASE-002](../../examples/cases/case-002-coupled-shield/README.md) closes two
+of CASE-001's stated omissions: transport is now coupled neutron-photon and
+reports both dose rates, and each layer's tallied spectrum feeds ACTINV so
+shield activation is evaluated. The case is the first pre-registered
+experiment: its `PROTOCOL.md` fixes four arms (practice baselines, random
+search, a learning designer, a control sweep), the measurements, and the
+supported and falsifying outcomes before any campaign runs. Composing it
+produced four refusals from Core, recorded in the case README; the first was
+aimed at the case author, who had mapped a nominal activation guide as
+coverage of a library entry that requires a bounded basis. A surrogate-assisted
+designer (`examples/agents/shield_search2.py`), three textbook practice
+baselines, and a control sweep exist as scripts. The campaign has not run.

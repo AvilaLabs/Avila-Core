@@ -29,6 +29,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import shield_common as core  # noqa: E402
 
 HEAVY_DENSITY = Decimal("2.0")
+THICKNESS_KEY = "thickness_cm"
+
+
+def use_config(config):
+    """Adopt the arm's thickness field name so every helper reads and writes the right key."""
+    global THICKNESS_KEY
+    THICKNESS_KEY = config.get("thickness_key") or "thickness_cm"
 
 
 def load_config(out):
@@ -50,27 +57,28 @@ def fmt(value, digits=3):
 
 
 def layers_text(layers):
-    return " + ".join(f"{l['thickness_cm']} cm {l['material']}" for l in layers)
+    unit = THICKNESS_KEY.split("_")[-1]
+    return " + ".join(f"{l[THICKNESS_KEY]} {unit} {l['material']}" for l in layers)
 
 
 def canonical_layers(layers):
     merged = []
     for layer in layers:
-        thickness = Decimal(str(layer["thickness_cm"]))
+        thickness = Decimal(str(layer.get(THICKNESS_KEY, layer.get("thickness_cm", layer.get("thickness_mm", "0")))))
         if thickness <= 0:
             continue
         if merged and merged[-1]["material"] == layer["material"]:
-            merged[-1]["thickness_cm"] = str(Decimal(merged[-1]["thickness_cm"]) + thickness)
+            merged[-1][THICKNESS_KEY] = str(Decimal(merged[-1][THICKNESS_KEY]) + thickness)
         else:
-            merged.append({"material": layer["material"], "thickness_cm": str(thickness)})
+            merged.append({"material": layer["material"], THICKNESS_KEY: str(thickness)})
     for layer in merged:
-        text = format(Decimal(layer["thickness_cm"]), "f")
-        layer["thickness_cm"] = text.rstrip("0").rstrip(".") if "." in text else text
+        text = format(Decimal(layer[THICKNESS_KEY]), "f")
+        layer[THICKNESS_KEY] = text.rstrip("0").rstrip(".") if "." in text else text
     return merged
 
 
 def signature(layers):
-    return tuple((l["material"], l["thickness_cm"]) for l in layers)
+    return tuple((l["material"], l[THICKNESS_KEY]) for l in layers)
 
 
 def read_log(path):
@@ -201,6 +209,7 @@ def cmd_init(args):
 def cmd_brief(args):
     out = args.out
     config = load_config(out)
+    use_config(config)
     state = load_state(out)
     materials = core.load_materials(Path(config["materials"]) / "materials.json")
     # A bootstrap screen run exposes the compiled requirements.
@@ -233,7 +242,8 @@ def cmd_brief(args):
     print(f"# Budget: {state['transports']}/{config['transport_budget']} transports used, {state['screens']}/{config['screen_budget']} screens used")
     print()
     print("# Rules")
-    print("- Propose candidates as a JSON list of {\"layers\": [{\"material\": ..., \"thickness_cm\": ...}, ...], \"rationale\": ...}; thicknesses in whole centimetres, layers listed from the source outward.")
+    unit = THICKNESS_KEY.split("_")[-1]
+    print(f"- Propose candidates as a JSON list of {{\"layers\": [{{\"material\": ..., \"{THICKNESS_KEY}\": ...}}, ...], \"rationale\": ...}}; thicknesses in whole {unit}, layers listed from the source outward.")
     print("- The screen establishes nothing; only transport decides the bounded requirements. Choose which screened candidates to transport yourself.")
     print("- Core's verdicts are final. You may not edit the contract, the package, or any file; you may only propose and choose.")
     print("- Every proposal's rationale is recorded. Say what evidence in the constellation it rests on.")
@@ -242,6 +252,7 @@ def cmd_brief(args):
 def cmd_propose(args):
     out = args.out
     config = load_config(out)
+    use_config(config)
     state = load_state(out)
     proposals = json.loads(Path(args.proposals).read_text())
     materials = core.load_materials(Path(config["materials"]) / "materials.json")
@@ -264,7 +275,7 @@ def cmd_propose(args):
         candidate_id = f"l-{state['next_index']:04d}"
         state["next_index"] += 1
         path = Path(out) / "candidates" / f"{candidate_id}.json"
-        core.write_candidate(path, candidate_id, [(l["material"], l["thickness_cm"]) for l in layers],
+        core.write_candidate(path, candidate_id, [(l["material"], l[THICKNESS_KEY]) for l in layers],
                              schema=config.get("candidate_schema"), thickness_key=config.get("thickness_key"))
         report = run(config, path, False, out)
         state["screens"] += 1
@@ -289,6 +300,7 @@ def cmd_propose(args):
 def cmd_transport(args):
     out = args.out
     config = load_config(out)
+    use_config(config)
     state = load_state(out)
     notes = Path(out) / "designer-notes.jsonl"
     for candidate_id in args.ids:
@@ -319,6 +331,7 @@ def cmd_transport(args):
 def cmd_status(args):
     out = args.out
     config = load_config(out)
+    use_config(config)
     state = load_state(out)
     rows = [r for r in constellation_rows(config, out) if r["origin"] == "this arm"]
     passing = sorted((mass_of(r["verdicts"]), layers_text(r["layers"])) for r in rows if r["all_pass"] and mass_of(r["verdicts"]) is not None)
@@ -333,6 +346,7 @@ def cmd_status(args):
 def cmd_finish(args):
     out = args.out
     config = load_config(out)
+    use_config(config)
     state = load_state(out)
     rows = [r for r in constellation_rows(config, out) if r["origin"] == "this arm"]
     passing = sorted((mass_of(r["verdicts"]), layers_text(r["layers"])) for r in rows if r["all_pass"] and mass_of(r["verdicts"]) is not None)

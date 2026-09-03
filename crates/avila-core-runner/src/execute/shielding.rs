@@ -311,10 +311,29 @@ pub fn transport_facts(
     facts: &mut serde_json::Map<String, Value>,
     inputs: &mut serde_json::Map<String, Value>,
 ) -> Result<(), String> {
+    transport_facts_for(
+        staged,
+        invocation_sha256,
+        facts,
+        inputs,
+        TRANSPORT_ADAPTER_ID,
+    )
+}
+
+/// The same extraction attributed to another adapter id, so an adapter that
+/// reuses this slab model (the coupled transport) reports facts a
+/// qualification record over its own id can consume.
+pub fn transport_facts_for(
+    staged: &[(String, String, String, Vec<u8>)],
+    invocation_sha256: &str,
+    facts: &mut serde_json::Map<String, Value>,
+    inputs: &mut serde_json::Map<String, Value>,
+    validator: &str,
+) -> Result<(), String> {
     let receipt = format!("plan:{invocation_sha256}");
     let source_of = |identity: &str| {
         json!({ "class": "validated_input", "identity": identity,
-                "validator": TRANSPORT_ADAPTER_ID, "receipt": receipt })
+                "validator": validator, "receipt": receipt })
     };
     for (slot, _, sha256, bytes) in staged {
         match slot.as_str() {

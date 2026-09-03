@@ -13,7 +13,7 @@ use std::time::Duration;
 use avila_core_kernel::{lower_authored_decimal, read_authoritative_decimal};
 use serde_json::{Value, json};
 
-use super::shielding::transport_facts;
+use super::shielding::transport_facts_for;
 use super::{AdapterOutput, ExtractedClaim, StepContext};
 
 pub const TRANSPORT_ADAPTER_ID: &str = "avila-labs.shielding/slab-transport@2";
@@ -232,7 +232,13 @@ pub fn transport_facts_coupled(
     facts: &mut serde_json::Map<String, Value>,
     inputs: &mut serde_json::Map<String, Value>,
 ) -> Result<(), String> {
-    transport_facts(staged, invocation_sha256, facts, inputs)
+    transport_facts_for(
+        staged,
+        invocation_sha256,
+        facts,
+        inputs,
+        TRANSPORT_ADAPTER_ID,
+    )
 }
 
 #[cfg(test)]

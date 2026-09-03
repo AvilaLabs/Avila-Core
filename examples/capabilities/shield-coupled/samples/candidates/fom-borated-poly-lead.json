@@ -1,0 +1,10 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "fom-borated-poly-lead",
+  "description": "Figure-of-merit comparison candidate for the slice-A variance-reduction study: 20 cm borated polyethylene, 60 cm polyethylene, 5 cm lead (85 cm total, front to back). Not part of any case; used only to measure analog vs survival-biasing vs survival-biasing-plus-weight-windows performance across a multi-material slab.",
+  "layers": [
+    { "material": "borated_polyethylene", "thickness_cm": "20" },
+    { "material": "polyethylene", "thickness_cm": "60" },
+    { "material": "lead", "thickness_cm": "5" }
+  ]
+}

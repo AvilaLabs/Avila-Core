@@ -10,6 +10,7 @@ mod adversarial_tests;
 pub mod aftermatter;
 pub mod claims;
 pub mod shielding;
+pub mod shielding_coupled;
 
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -60,6 +61,7 @@ pub enum Adapter {
     ActinvBuild,
     ShieldingScreen,
     ShieldingTransport,
+    ShieldingTransportCoupled,
 }
 
 impl Adapter {
@@ -69,6 +71,7 @@ impl Adapter {
             actinv_build::ADAPTER_ID => Some(Self::ActinvBuild),
             shielding::SCREEN_ADAPTER_ID => Some(Self::ShieldingScreen),
             shielding::TRANSPORT_ADAPTER_ID => Some(Self::ShieldingTransport),
+            shielding_coupled::TRANSPORT_ADAPTER_ID => Some(Self::ShieldingTransportCoupled),
             _ => None,
         }
     }
@@ -79,6 +82,7 @@ impl Adapter {
             Self::ActinvBuild => actinv_build::ADAPTER_ID,
             Self::ShieldingScreen => shielding::SCREEN_ADAPTER_ID,
             Self::ShieldingTransport => shielding::TRANSPORT_ADAPTER_ID,
+            Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_ADAPTER_ID,
         }
     }
 
@@ -100,6 +104,10 @@ impl Adapter {
                 id: shielding::TRANSPORT_TYPE_ID.into(),
                 major: 1,
             },
+            Self::ShieldingTransportCoupled => CapabilityTypeRef {
+                id: shielding_coupled::TRANSPORT_TYPE_ID.into(),
+                major: 1,
+            },
         }
     }
 
@@ -109,6 +117,7 @@ impl Adapter {
             Self::ActinvBuild => actinv_build::INPUT_SLOTS,
             Self::ShieldingScreen => shielding::SCREEN_INPUT_SLOTS,
             Self::ShieldingTransport => shielding::TRANSPORT_INPUT_SLOTS,
+            Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_INPUT_SLOTS,
         }
     }
 
@@ -118,6 +127,7 @@ impl Adapter {
             Self::ActinvBuild => actinv_build::OUTPUTS,
             Self::ShieldingScreen => shielding::SCREEN_OUTPUTS,
             Self::ShieldingTransport => shielding::TRANSPORT_OUTPUTS,
+            Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_OUTPUTS,
         }
     }
 
@@ -127,6 +137,7 @@ impl Adapter {
             Self::ActinvBuild => actinv_build::OUTPUT_SLOTS,
             Self::ShieldingScreen => shielding::SCREEN_OUTPUT_SLOTS,
             Self::ShieldingTransport => shielding::TRANSPORT_OUTPUT_SLOTS,
+            Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_OUTPUT_SLOTS,
         }
     }
 
@@ -136,6 +147,7 @@ impl Adapter {
             Self::ActinvBuild => actinv_build::TIMEOUT,
             Self::ShieldingScreen => shielding::SCREEN_TIMEOUT,
             Self::ShieldingTransport => shielding::TRANSPORT_TIMEOUT,
+            Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_TIMEOUT,
         }
     }
 
@@ -145,6 +157,7 @@ impl Adapter {
         match self {
             Self::AftermatterEvaluate | Self::ActinvBuild | Self::ShieldingScreen => &[],
             Self::ShieldingTransport => shielding::TRANSPORT_ENVIRONMENT_KEYS,
+            Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_ENVIRONMENT_KEYS,
         }
     }
 
@@ -155,6 +168,7 @@ impl Adapter {
             Self::AftermatterEvaluate | Self::ShieldingScreen => BTreeMap::new(),
             Self::ActinvBuild => actinv_build::environment(),
             Self::ShieldingTransport => shielding::transport_environment(),
+            Self::ShieldingTransportCoupled => shielding_coupled::transport_environment(),
         }
     }
 
@@ -187,6 +201,14 @@ impl Adapter {
         if self == Self::ShieldingTransport {
             shielding::transport_facts(staged, invocation_sha256, &mut facts, &mut inputs)?;
         }
+        if self == Self::ShieldingTransportCoupled {
+            shielding_coupled::transport_facts_coupled(
+                staged,
+                invocation_sha256,
+                &mut facts,
+                &mut inputs,
+            )?;
+        }
         Ok(serde_json::json!({ "facts": facts, "inputs": inputs }))
     }
 
@@ -201,6 +223,9 @@ impl Adapter {
             Self::ActinvBuild => actinv_build::arguments(staged),
             Self::ShieldingScreen => shielding::screen_arguments(staged, context),
             Self::ShieldingTransport => shielding::transport_arguments(staged, context),
+            Self::ShieldingTransportCoupled => {
+                shielding_coupled::transport_arguments(staged, context)
+            }
         }
     }
 
@@ -214,6 +239,9 @@ impl Adapter {
             Self::ActinvBuild => actinv_build::extract_claims(outputs, &context.parameters),
             Self::ShieldingScreen => shielding::screen_claims(outputs, context),
             Self::ShieldingTransport => shielding::transport_claims(outputs, context),
+            Self::ShieldingTransportCoupled => {
+                shielding_coupled::transport_claims(outputs, context)
+            }
         }
     }
 }

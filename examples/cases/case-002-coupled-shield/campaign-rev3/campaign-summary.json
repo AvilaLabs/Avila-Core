@@ -1,0 +1,179 @@
+{
+  "baselines": [],
+  "arms": {
+    "llm": {
+      "arm": "llm",
+      "log_lines": 29,
+      "screened_only": 19,
+      "transported": 10,
+      "verdict_histogram_transported": {
+        "SHIELD-R1-screen": {
+          "pass": 10
+        },
+        "SHIELD-R2-neutron": {
+          "pass": 9,
+          "inconclusive": 1
+        },
+        "SHIELD-R3-photon": {
+          "pass": 6,
+          "fail": 3,
+          "inconclusive": 1
+        },
+        "SHIELD-R4-mass": {
+          "pass": 10
+        },
+        "SHIELD-R5-thickness": {
+          "pass": 10
+        },
+        "SHIELD-R6-activation": {
+          "pass": 10
+        }
+      },
+      "first_all_pass_transport_index": 1,
+      "all_pass_count": 6,
+      "best_all_pass": {
+        "candidate": {
+          "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-rev3/llm/candidates/l-0004.json",
+          "sha256": "sha256:c15a68290137438eabf035349e99a81cd9be9068cb5831c23b45b479057b4d6b",
+          "layers": [
+            [
+              "borated_polyethylene",
+              "105"
+            ],
+            [
+              "lead",
+              "2"
+            ]
+          ]
+        },
+        "mass_kg": "1277",
+        "campaign_sha256": "sha256:6404332286d9a480f384872b4e35047c206124e56fdd0934c7123474a097c268"
+      },
+      "refused_runs": 0,
+      "inconclusive_verdicts": 2,
+      "not_evaluated": []
+    },
+    "recovery": {
+      "arm": "recovery",
+      "log_lines": 40,
+      "screened_only": 31,
+      "transported": 9,
+      "verdict_histogram_transported": {
+        "SHIELD-R1-screen": {
+          "pass": 3,
+          "fail": 6
+        },
+        "SHIELD-R2-neutron": {
+          "pass": 1,
+          "fail": 8
+        },
+        "SHIELD-R3-photon": {
+          "fail": 8,
+          "pass": 1
+        },
+        "SHIELD-R4-mass": {
+          "pass": 9
+        },
+        "SHIELD-R5-thickness": {
+          "pass": 9
+        },
+        "SHIELD-R6-activation": {
+          "pass": 9
+        }
+      },
+      "first_all_pass_transport_index": null,
+      "all_pass_count": 0,
+      "best_all_pass": null,
+      "refused_runs": 0,
+      "inconclusive_verdicts": 0,
+      "not_evaluated": []
+    },
+    "surrogate": {
+      "arm": "surrogate",
+      "log_lines": 185,
+      "screened_only": 161,
+      "transported": 24,
+      "verdict_histogram_transported": {
+        "SHIELD-R1-screen": {
+          "fail": 8,
+          "pass": 16
+        },
+        "SHIELD-R2-neutron": {
+          "fail": 10,
+          "pass": 12,
+          "inconclusive": 2
+        },
+        "SHIELD-R3-photon": {
+          "fail": 17,
+          "pass": 6,
+          "inconclusive": 1
+        },
+        "SHIELD-R4-mass": {
+          "pass": 24
+        },
+        "SHIELD-R5-thickness": {
+          "pass": 24
+        },
+        "SHIELD-R6-activation": {
+          "fail": 10,
+          "pass": 14
+        }
+      },
+      "first_all_pass_transport_index": 11,
+      "all_pass_count": 4,
+      "best_all_pass": {
+        "candidate": {
+          "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-rev3/surrogate/candidates/c-0081.json",
+          "sha256": "sha256:039432d3be3582b1e4d853491ea862e1832dfed352e8a879c1ac4b0870da97be",
+          "layers": [
+            [
+              "borated_polyethylene",
+              "80"
+            ],
+            [
+              "polyethylene",
+              "25"
+            ],
+            [
+              "iron",
+              "5"
+            ]
+          ]
+        },
+        "mass_kg": "2857/2",
+        "campaign_sha256": "sha256:af05e2ca73d1b88d574c86ab76f513d438b9e12fa8d8a7d7f14ac91d5a8f9abf"
+      },
+      "refused_runs": 0,
+      "inconclusive_verdicts": 3,
+      "not_evaluated": []
+    }
+  },
+  "sweep": {
+    "points": 11,
+    "all_pass_points": 3,
+    "optimum": {
+      "candidate": {
+        "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-rev3/sweep/candidates/grid-2L-polyethylene105-lead5.json",
+        "sha256": "sha256:5fb8e5f35f5f6f0e2f767533e90e719e1d970de6bb3d5eefb03290105ff74a04",
+        "layers": [
+          [
+            "polyethylene",
+            "105"
+          ],
+          [
+            "lead",
+            "5"
+          ]
+        ]
+      },
+      "mass_kg": "3109/2"
+    }
+  },
+  "recovery_check": {
+    "applicable": true,
+    "reached": false,
+    "sweep_points": 11,
+    "designer_best_mass_kg": null,
+    "sweep_optimum_mass_kg": "3109/2"
+  }
+}

@@ -1,0 +1,156 @@
+{
+  "schema": "avila.shielding/constellation/v1",
+  "notice": "The surrogate only proposes candidates and predicts their margins; it never constructs, edits, or substitutes for a Core verdict. Every status, rule, limit, and margin in this file is copied from Avila Core's own --json report or --log campaign log.",
+  "requirements": {
+    "SHIELD-R1-screen": {
+      "pass": 129,
+      "fail": 56,
+      "inconclusive": 0,
+      "not_evaluated": 0,
+      "binding": 120,
+      "unit": "uSv/h"
+    },
+    "SHIELD-R2-neutron": {
+      "pass": 12,
+      "fail": 10,
+      "inconclusive": 2,
+      "not_evaluated": 161,
+      "binding": 8,
+      "unit": "uSv/h"
+    },
+    "SHIELD-R3-photon": {
+      "pass": 6,
+      "fail": 17,
+      "inconclusive": 1,
+      "not_evaluated": 161,
+      "binding": 12,
+      "unit": "uSv/h"
+    },
+    "SHIELD-R4-mass": {
+      "pass": 185,
+      "fail": 0,
+      "inconclusive": 0,
+      "not_evaluated": 0,
+      "binding": 0,
+      "unit": "kg"
+    },
+    "SHIELD-R5-thickness": {
+      "pass": 185,
+      "fail": 0,
+      "inconclusive": 0,
+      "not_evaluated": 0,
+      "binding": 43,
+      "unit": "cm"
+    },
+    "SHIELD-R6-activation": {
+      "pass": 14,
+      "fail": 10,
+      "inconclusive": 0,
+      "not_evaluated": 161,
+      "binding": 2,
+      "unit": "Bq/g"
+    }
+  },
+  "dose_requirement_ids": [
+    "SHIELD-R2-neutron",
+    "SHIELD-R3-photon"
+  ],
+  "mass_requirement_ids": [
+    "SHIELD-R4-mass"
+  ],
+  "sensitivity_d_log_nominal_d_thickness_cm": {
+    "SHIELD-R1-screen": {
+      "borated_polyethylene": -0.0363132833355138,
+      "concrete": -0.03946474543882976,
+      "iron": -0.11727275650446739,
+      "lead": -0.06758195492230365,
+      "polyethylene": -0.03639312058667404,
+      "water": -0.029361882358599833
+    },
+    "SHIELD-R2-neutron": {
+      "borated_polyethylene": -0.025336906279633264,
+      "concrete": -0.03645168931993142,
+      "iron": -0.07934843236207316,
+      "lead": -0.02887327662528579,
+      "polyethylene": -0.024939201973896877,
+      "water": -0.012657177720109549
+    },
+    "SHIELD-R3-photon": {
+      "borated_polyethylene": -0.01334688070843135,
+      "concrete": -0.01830775464435175,
+      "iron": -0.09550479370715247,
+      "lead": -0.1660207341146651,
+      "polyethylene": -0.00904416849775768,
+      "water": -0.005390866015509332
+    },
+    "SHIELD-R4-mass": {
+      "borated_polyethylene": 0.0045488112924945865,
+      "concrete": 0.010642721495067835,
+      "iron": 0.07034971810150772,
+      "lead": 0.11726411182741768,
+      "polyethylene": 0.0035719584297559544,
+      "water": 0.0033057584992948292
+    },
+    "SHIELD-R5-thickness": {
+      "borated_polyethylene": 0.006318145884026506,
+      "concrete": 0.009732128286821263,
+      "iron": 0.025123902908323368,
+      "lead": 0.02231710497784075,
+      "polyethylene": 0.006316158583518727,
+      "water": 0.006377004538510652
+    },
+    "SHIELD-R6-activation": {
+      "borated_polyethylene": 0.014415613952868216,
+      "concrete": 0.05555860632174558,
+      "iron": 0.15298326277891308,
+      "lead": 0.3776974552881925,
+      "polyethylene": 0.012937901637783286,
+      "water": 0.020309290287745793
+    }
+  },
+  "pareto_mass_vs_primary_dose": [
+    {
+      "candidate_sha256": "sha256:039432d3be3582b1e4d853491ea862e1832dfed352e8a879c1ac4b0870da97be",
+      "primary_dose": 4.02496776,
+      "mass": 1428.5
+    },
+    {
+      "candidate_sha256": "sha256:a2aefec71c9695f892d513d52e6738f0d8178ca4521c0fe5750210152d727caf",
+      "primary_dose": 2.255202972,
+      "mass": 1460.0
+    },
+    {
+      "candidate_sha256": "sha256:f8e8fe8cca5009be25b80a0d99d25d71dcb2ba072ec19579781fd8d5f958fe7b",
+      "primary_dose": 2.039717772,
+      "mass": 1478.5
+    },
+    {
+      "candidate_sha256": "sha256:8e0e51f8e431ffd8c81bd346ce4487ac136a8d2fc93f4186e6d2e27428ee2a35",
+      "primary_dose": 1.965918276,
+      "mass": 1616.5
+    }
+  ],
+  "best_feasible_candidates": [
+    {
+      "candidate_sha256": "sha256:8e0e51f8e431ffd8c81bd346ce4487ac136a8d2fc93f4186e6d2e27428ee2a35",
+      "primary_dose": 1.965918276,
+      "mass": 1616.5
+    },
+    {
+      "candidate_sha256": "sha256:f8e8fe8cca5009be25b80a0d99d25d71dcb2ba072ec19579781fd8d5f958fe7b",
+      "primary_dose": 2.039717772,
+      "mass": 1478.5
+    },
+    {
+      "candidate_sha256": "sha256:a2aefec71c9695f892d513d52e6738f0d8178ca4521c0fe5750210152d727caf",
+      "primary_dose": 2.255202972,
+      "mass": 1460.0
+    },
+    {
+      "candidate_sha256": "sha256:039432d3be3582b1e4d853491ea862e1832dfed352e8a879c1ac4b0870da97be",
+      "primary_dose": 4.02496776,
+      "mass": 1428.5
+    }
+  ],
+  "rows_considered": 185
+}

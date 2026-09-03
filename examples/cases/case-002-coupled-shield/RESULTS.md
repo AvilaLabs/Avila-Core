@@ -215,3 +215,94 @@ Driver status lines: `2026-09-03T02:23:31Z` start, `2026-09-03T11:48:01Z` end, a
 | `campaign-rev2/campaign-summary.json` | `ab60b5636b9bc0369195d3cb78ae92ac4dd7fc5399717db9d5e0195e581b0b1a` | 253 |
 | `campaign-rev2/STATUS` | `93eb29ecad9f9b407a11a127e5ca6416748ef068fffa8f778d83548ec45c363a` | 12 |
 | `campaign-rev2/posthoc/campaign-log.jsonl` | `d73960baca2c6951aabbc197dcb48ea6b626477476ea8c20ad39ebfb7dca1561` | 3 |
+
+---
+
+# CASE-002 results, contract revision 2, campaign 3 (amendment A5)
+
+**Campaign:** 2026-09-03, contract revision 2 unchanged, seed 1, at most 40
+transports per search arm. Arms per amendment A5: control sweep on a 5 cm
+polyethylene-lead grid, recovery run, surrogate designer seeded with both
+prior campaigns, language-model designer, and revision 2's random arm reused.
+**Summary tables:** `campaign-rev3/campaign-summary.md`; logs, candidates, arm
+summaries, the language-model designer's proposals and rationales
+(`campaign-rev3/llm/designer-notes.jsonl`, `proposals/`), and its prompt
+(`llm-designer-prompt.md`) are under `campaign-rev3/` with the digests listed
+at the end. The scripted arms ran concurrently with the language-model arm on
+the same machine, so wall-clock costs in this campaign are not comparable
+with revision 2's.
+
+## Outcome: supported on the creation criteria; the refusal criterion was not exercised
+
+The bar on record is the control sweep's lightest all-`PASS` point, 105 cm
+polyethylene followed by 5 cm lead at 1554.5 kg, found in 11 transports.
+
+- **Language-model designer.** 17 screens, 10 transports, 6 all-`PASS`
+  designs. Its second transport, 105 cm borated polyethylene followed by 2 cm
+  lead, passes every requirement at 1277.0 kg: 277 kg lighter than the bar,
+  reached in 2 transports against the sweep's 11, in a family no arm or
+  person had evaluated. It then bracketed the boundary (104 cm inconclusive on
+  photon, hybrids with thin borated backing layers fail, lead below 2 cm
+  needs more than 120 cm), transported near neighbours at 106 to 110 cm, and
+  stopped by its own judgment with 30 transports unspent, giving its
+  reasons. Its rationale for the winning bet is on file: bare borated
+  polyethylene shows about half the photon dose of plain polyethylene at
+  equal thickness in the prior record, so a thinner lead cap should suffice.
+- **Surrogate designer, seeded.** 161 screened, 24 transported, 4 all-`PASS`; lightest all-`PASS` 80 cm borated_polyethylene + 25 cm polyethylene + 5 cm iron at 1428.5 kg; first all-`PASS` at transport 11; 3 `INCONCLUSIVE` verdicts.
+- **Recovery run.** 31 screened, 9 transported, 0 all-`PASS`; lightest all-`PASS` none; first all-`PASS` at transport none; 0 `INCONCLUSIVE` verdicts.
+- **Random search** (revision 2's arm, reused): 12 transports, none passes.
+- **Control sweep.** 11 points; 3 all-`PASS`, all polyethylene with 5 cm lead
+  at 105 cm or more; the results reproduce revision 2's post-campaign runs
+  byte for byte under the same seed.
+
+Two of the three conditions of the pre-declared "supported" outcome hold: an
+all-`PASS` design lighter than every all-`PASS` baseline and sweep point, and
+the sub-grid optimum reached in fewer evaluations than the sweep. The third,
+that Core refused at least one candidate on record, was not exercised: no
+arm proposed a candidate outside the envelopes or the coverage, so Core had
+nothing to refuse. The four refusals on record all happened while the case
+was composed. An adversarial arm that tries shortcuts is the next test, and
+it is a separate one.
+
+## What the campaign established
+
+- **A reasoning designer read the constellation and created.** Given the same
+  contract, the same evaluator, and the same 105 transported designs on
+  record, it extracted the ordering and material relationships and turned
+  them into a lighter design in one round. The scripted arms of the previous
+  campaign, and the seeded surrogate of this one found its first all-`PASS` at transport 11 and its lightest at 1428.5 kg.
+- **Core held the boundary.** Near the mass optimum the photon interval
+  straddles its allocation and Core returned `INCONCLUSIVE` rather than a
+  verdict; the designer reported the noise and recommended the more robust
+  107 to 110 cm variants for a build rather than the lightest point. That is
+  the division of labour the loop is meant to have.
+- **Reproducibility.** Designs evaluated in different campaigns under the
+  same seed returned identical intervals to the last digit.
+
+## Limits of the claim
+
+Every `PASS` is a pass under an unvalidated model with statistical error
+only; the design is a design inside the model. The language-model designer
+was given the constellation in a form built for it, and its prompt is on
+record; a different prompt is a different arm. The scripted and
+language-model arms shared the machine, so the cost comparison is deferred.
+
+## Amendments
+
+- **A6, 2026-09-03, after campaign 3.** The next campaign adds an adversarial
+  designer arm instructed to reach `PASS` by any means, so that the refusal
+  criterion is exercised rather than assumed. No other change.
+
+## Record
+
+| file | sha256 | lines |
+| --- | --- | ---: |
+| `campaign-rev3/llm/campaign-log.jsonl` | `c6936ca2feccb9a9e5bddbe0f1847ef0218ad40247785a310a112c4c526247cb` | 29 |
+| `campaign-rev3/recovery/campaign-log.jsonl` | `9a0e5d8bb4c8e3aac483b779f9deeb1ce8d1a87953f60ecf3afe00a42557551e` | 40 |
+| `campaign-rev3/surrogate/campaign-log.jsonl` | `1ffdadc9af419e39dab43df5ac6a2cc8ccfc89fbf88d7a19c489f87d078be4cc` | 185 |
+| `campaign-rev3/sweep/campaign-log.jsonl` | `d04b62f7d444a127a2f5fb7fa6617ac2dd863e13cad252d03491d5a9194c9dfe` | 12 |
+| `campaign-rev3/llm/designer-notes.jsonl` | `f6953a1974953748e3a4b6e14ee8e99baafee652edc39a146ddef09ec6e1a530` | 27 |
+| `campaign-rev3/campaign-summary.md` | `c75864abb6f517a010a0fc3a3ab6d581d6ff1bb8143a0d78f6d72bdf6107b56c` | 33 |
+| `campaign-rev3/campaign-summary.json` | `f4277a05efb05d8927f1d59552419370400cf29c5281669b94c39b451413f974` | 179 |
+| `campaign-rev3/STATUS` | `d305beb19cf51d67c21d96327eb87f9f987275c5943ae5ec82d53015225b4896` | 9 |
+| `llm-designer-prompt.md` | `3bec72b3c4bde1df43e7098cdaa10acde3f0f8febab84d93ce30b3bfd6af4ec8` | 60 |

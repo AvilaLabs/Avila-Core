@@ -40,7 +40,7 @@ def candidate_of(row, arm_dir):
                     file = Path(arm_dir) / "candidates" / file.name
                 if file.is_file():
                     try:
-                        layers = [(l["material"], l["thickness_cm"]) for l in json.loads(file.read_text())["layers"]]
+                        layers = [(l["material"], l.get("thickness_cm", l.get("thickness_mm"))) for l in json.loads(file.read_text())["layers"]]
                     except (KeyError, ValueError):
                         layers = None
             return {"path": path, "sha256": sha, "layers": layers}
@@ -85,7 +85,7 @@ def mass_of(row):
 def layers_text(layers):
     if not layers:
         return "?"
-    return " + ".join(f"{t} cm {m}" for m, t in layers)
+    return " + ".join(f"{t} {m}" for m, t in layers)
 
 
 def summarize_arm(arm, arm_dir):

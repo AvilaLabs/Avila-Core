@@ -11,7 +11,7 @@ Every number below is read from a Core campaign log; the summarizer constructs n
 
 | arm | screened only | transported | all-PASS | first all-PASS at transport # | best all-PASS (mass) | refused runs | INCONCLUSIVE verdicts |
 | --- | ---: | ---: | ---: | ---: | --- | ---: | ---: |
-| llm | 15 | 8 | 5 | 2 | ? (3.6 kg) | 0 | 0 |
+| llm | 15 | 8 | 5 | 2 | 2 graphite (3.6 kg) | 0 | 0 |
 
 ## Verdict histograms over transported candidates
 
@@ -20,7 +20,7 @@ Every number below is read from a Core campaign log; the summarizer constructs n
 ## Control sweep
 
 12 grid points transported; 10 all-PASS.
-Optimum by mass: ? at 18 kg.
+Optimum by mass: 10 graphite at 18 kg.
 
 ## Recovery check
 

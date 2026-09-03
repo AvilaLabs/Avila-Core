@@ -80,5 +80,5 @@ the strip source or the materials.
 | `campaign-1/llm/campaign-log.jsonl` | `dc7fb562f76577b748a5ea7837d134a114a0bbc787795fb5e6d0a5e1d1737afb` | 23 |
 | `campaign-1/llm/designer-notes.jsonl` | `37e3d27fcb21482bd4cba212d51c699ccce3e5b318e4bce36edbcdcbab4d84f8` | 21 |
 | `campaign-1/archive/sweep-rev1/campaign-log.jsonl` | `afcc2fa65f8db0af5efe8b00e606cd8e4a76bd4033235129e123e14e3c9ceb8b` | 20 |
-| `campaign-1/campaign-summary.md` | `3533070f4e1afd5281c7ed8edbb299586517629da4b8c495228d5caab2c6e5b7` | 27 |
-| `campaign-1/campaign-summary.json` | `918e9f65dcc3b88210bbf8e0fdb90fdaf611fc3d851b3907665886875581e282` | 56 |
+| `campaign-1/campaign-summary.md` | `4ca38eb7987d3ad4626f80172cd3f14161880819b52c75a6c00720c098f2493f` | 27 |
+| `campaign-1/campaign-summary.json` | `547ec6ce52858cb98c1c45ac58451f80bb1ff347076e2654ef18d26083e70b1f` | 66 |

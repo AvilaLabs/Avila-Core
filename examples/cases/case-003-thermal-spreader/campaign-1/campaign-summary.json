@@ -27,7 +27,12 @@
         "candidate": {
           "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-c3/llm/candidates/l-0001.json",
           "sha256": "sha256:c5381d36b52d9e225b43bc9739ca1599729d9f772602f139ce53b3081fbc81d2",
-          "layers": null
+          "layers": [
+            [
+              "graphite",
+              "2"
+            ]
+          ]
         },
         "mass_kg": "18/5",
         "campaign_sha256": "sha256:d795b292e951962623c839b495f0e1e018b84d626bc3014dd837ad74bea08a63"
@@ -44,7 +49,12 @@
       "candidate": {
         "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-c3/sweep/candidates/l-0006.json",
         "sha256": "sha256:bb582f5e26cab19168987f2af4e2a38b990d3b41c811ef75ba7fa474c4dd7f27",
-        "layers": null
+        "layers": [
+          [
+            "graphite",
+            "10"
+          ]
+        ]
       },
       "mass_kg": "18"
     }

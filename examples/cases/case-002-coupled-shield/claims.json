@@ -79,22 +79,22 @@
     {
       "artifact": {
         "media_type": "application/vnd.avila.shield-transport+json",
-        "sha256": "sha256:fa49fd20d946009eaf4aeee4d63c58dc1bd26f95aa5b8b72fdef834e77b88885"
+        "sha256": "sha256:6f0f9c7f509f8e0af250aaa02e6152d2816b79b8eb4de7819dda2854cc43a927"
       },
       "claim": {
         "coverage": "0.95",
         "lower": {
           "unit": "uSv/h",
-          "value": "61.85125977644736"
+          "value": "57.184128885570768"
         },
         "model": "coverage_interval",
         "nominal": {
           "unit": "uSv/h",
-          "value": "70.20648"
+          "value": "63.395802"
         },
         "upper": {
           "unit": "uSv/h",
-          "value": "78.56170022355264"
+          "value": "69.607475114429232"
         }
       },
       "claim_id": "transport-neutron-dose-rate",
@@ -148,22 +148,22 @@
     {
       "artifact": {
         "media_type": "application/vnd.avila.shield-transport+json",
-        "sha256": "sha256:fa49fd20d946009eaf4aeee4d63c58dc1bd26f95aa5b8b72fdef834e77b88885"
+        "sha256": "sha256:6f0f9c7f509f8e0af250aaa02e6152d2816b79b8eb4de7819dda2854cc43a927"
       },
       "claim": {
         "coverage": "0.95",
         "lower": {
           "unit": "uSv/h",
-          "value": "3.204420106955616"
+          "value": "3.149149015734984"
         },
         "model": "coverage_interval",
         "nominal": {
           "unit": "uSv/h",
-          "value": "3.339261036"
+          "value": "3.252807972"
         },
         "upper": {
           "unit": "uSv/h",
-          "value": "3.474101965044384"
+          "value": "3.356466928265016"
         }
       },
       "claim_id": "transport-photon-dose-rate",
@@ -217,7 +217,7 @@
     {
       "artifact": {
         "media_type": "application/vnd.avila.shield-transport+json",
-        "sha256": "sha256:fa49fd20d946009eaf4aeee4d63c58dc1bd26f95aa5b8b72fdef834e77b88885"
+        "sha256": "sha256:6f0f9c7f509f8e0af250aaa02e6152d2816b79b8eb4de7819dda2854cc43a927"
       },
       "claim": {
         "model": "unquantified"
@@ -273,7 +273,7 @@
     {
       "artifact": {
         "media_type": "application/vnd.avila.shield-layer-spectra+json",
-        "sha256": "sha256:3f7418f1ac1f80ad50863705a05fca73bc417ec803e3fdc3d25000b1c4cc2501"
+        "sha256": "sha256:567999c7d7c6bc4b02aa310603078314125e20cfa9c14eb5a3c08646dfbf66d6"
       },
       "claim": {
         "model": "unquantified"
@@ -329,13 +329,13 @@
     {
       "artifact": {
         "media_type": "application/vnd.avila.shield-activation+json",
-        "sha256": "sha256:c33f9051693b78a82129e26a02ac3590da3e133b2089045bb89c55941ede319f"
+        "sha256": "sha256:b7f95e8f42e240f74a833a2398c4efd3c3167cf963f4953f4dee64314e4a18bc"
       },
       "claim": {
         "model": "unquantified",
         "nominal": {
           "unit": "Bq/g",
-          "value": "0.00062549704"
+          "value": "0.00063100376"
         }
       },
       "claim_id": "activation-specific-activity",
@@ -381,13 +381,13 @@
     {
       "artifact": {
         "media_type": "application/vnd.avila.shield-activation+json",
-        "sha256": "sha256:c33f9051693b78a82129e26a02ac3590da3e133b2089045bb89c55941ede319f"
+        "sha256": "sha256:b7f95e8f42e240f74a833a2398c4efd3c3167cf963f4953f4dee64314e4a18bc"
       },
       "claim": {
         "model": "unquantified",
         "nominal": {
           "unit": "W",
-          "value": "0.000000000022387981"
+          "value": "0.000000000022580048"
         }
       },
       "claim_id": "activation-decay-heat",
@@ -433,7 +433,7 @@
     {
       "artifact": {
         "media_type": "application/vnd.avila.shield-activation+json",
-        "sha256": "sha256:c33f9051693b78a82129e26a02ac3590da3e133b2089045bb89c55941ede319f"
+        "sha256": "sha256:b7f95e8f42e240f74a833a2398c4efd3c3167cf963f4953f4dee64314e4a18bc"
       },
       "claim": {
         "model": "unquantified"
@@ -479,7 +479,7 @@
       "step_id": "activation"
     }
   ],
-  "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
+  "compiled_snapshot_sha256": "sha256:2f76e8428d5ce664bae8d9dbfc77728064f2b214d1fa8c33e30886d30284d780",
   "inputs": [
     {
       "artifact": {

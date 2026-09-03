@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/execution-receipt/v0.1-draft",
   "case_id": "CASE-002",
-  "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
+  "compiled_snapshot_sha256": "sha256:2f76e8428d5ce664bae8d9dbfc77728064f2b214d1fa8c33e30886d30284d780",
   "step_id": "activation",
   "capability_type": {
     "id": "shielding.slab-activation",
@@ -84,8 +84,8 @@
       "evidence_id": "transport-layer-spectra",
       "workspace_path": "inputs/layer-spectra.json",
       "media_type": "application/vnd.avila.shield-layer-spectra+json",
-      "sha256": "sha256:3f7418f1ac1f80ad50863705a05fca73bc417ec803e3fdc3d25000b1c4cc2501",
-      "bytes": 37367
+      "sha256": "sha256:567999c7d7c6bc4b02aa310603078314125e20cfa9c14eb5a3c08646dfbf66d6",
+      "bytes": 37784
     }
   ],
   "invocation": {
@@ -117,11 +117,11 @@
     },
     "timeout_ms": 900000
   },
-  "invocation_sha256": "sha256:2535b64b6a5817e3eb03bd59de3c9938945eabf09239c29cb3f472237e6b0af0",
+  "invocation_sha256": "sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
   "process": {
-    "started_at": "2026-09-03T00:43:51.505Z",
-    "finished_at": "2026-09-03T00:44:03.867Z",
-    "duration_ms": 12361,
+    "started_at": "2026-09-03T02:22:39.881Z",
+    "finished_at": "2026-09-03T02:22:52.317Z",
+    "duration_ms": 12435,
     "exit_status": 0,
     "timed_out": false
   },
@@ -135,7 +135,7 @@
     {
       "stream": "stderr",
       "workspace_path": "logs/stderr.log",
-      "sha256": "sha256:21ed4e6c6c8f4303e26435a24f83ed271f7f5a26ad121e11cf0dbf12c895e2ae",
+      "sha256": "sha256:4d7d0d11dfcacbe902c150964425f16e743ff6c884d663c197dda926f1efea43",
       "bytes": 90
     }
   ],
@@ -145,8 +145,8 @@
       "workspace_path": "outputs/activation-result.json",
       "media_type": "application/vnd.avila.shield-activation+json",
       "state": "collected",
-      "sha256": "sha256:c33f9051693b78a82129e26a02ac3590da3e133b2089045bb89c55941ede319f",
-      "bytes": 5124
+      "sha256": "sha256:b7f95e8f42e240f74a833a2398c4efd3c3167cf963f4953f4dee64314e4a18bc",
+      "bytes": 5127
     }
   ],
   "runner": {

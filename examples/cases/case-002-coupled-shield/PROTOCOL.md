@@ -121,3 +121,14 @@ outcome occurred and cites the log lines that establish it.
 - **A2, 2026-09-02, before the campaign.** The whole campaign is run by
   `run_campaign.sh`, in the order baselines, sweep, recovery, learning,
   random, with the seed fixed at 1 for every arm.
+- **A3, 2026-09-03, after the revision 1 campaign (outcome F1, see
+  `RESULTS.md`).** Contract revision 2 widens the box to 2000 kg and 120 cm,
+  raises the transport particle budget from 200 000 to 500 000 so that
+  candidates within about twenty percent of an allocation are decided rather
+  than left `INCONCLUSIVE`, and caps the transport budget at 40 per search
+  arm because each transport now costs about four minutes. The learning
+  designer is fixed in two ways the campaign exposed: adjacent identical
+  layers are merged before a candidate is proposed, and the stopping rule
+  follows transported margins once any transport has run. Allocations, the
+  activation guide, the arms, the measurements, and the pre-declared
+  outcomes are unchanged. Revision 1's results stay on record.

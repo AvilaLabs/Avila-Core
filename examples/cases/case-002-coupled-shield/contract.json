@@ -2,9 +2,9 @@
   "schema_version": "avila.core/evidence-contract/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "contract_id": "case-002.coupled-shield-search",
-  "revision": 1,
+  "revision": 2,
   "status": "draft",
-  "question": "Does a candidate layered slab keep both the neutron and the shield-produced photon ambient dose-equivalent rates behind it within their allocations (7 and 3 uSv/h of a 10 uSv/h design point) for the synthetic 14.1 MeV plane source, and stay within 1500 kg per square metre and 100 cm, as established by coupled Monte Carlo transport rather than by the screening estimate, while an ACTINV inventory keeps the shield's specific activity after 30 days of irradiation and 1 day of cooling at or below 1 Bq/g as a nominal guide?",
+  "question": "Does a candidate layered slab keep both the neutron and the shield-produced photon ambient dose-equivalent rates behind it within their allocations (7 and 3 uSv/h of a 10 uSv/h design point) for the synthetic 14.1 MeV plane source, and stay within 2000 kg per square metre and 120 cm, as established by coupled Monte Carlo transport rather than by the screening estimate, while an ACTINV inventory keeps the shield's specific activity after 30 days of irradiation and 1 day of cooling at or below 1 Bq/g as a nominal guide?",
   "assumptions": [
     "The source is a synthetic isotropic plane source of 14.1 MeV neutrons at 1e9 neutrons per second over one square metre; no real generator, facility, or occupancy is represented.",
     "The slab is laterally infinite by reflection; edge leakage and streaming paths are not evaluated.",
@@ -12,7 +12,8 @@
     "The screening estimate uses approximate removal cross sections without buildup and is evaluated on a nominal basis only; the transport intervals bound statistical error only.",
     "Activation is evaluated by ACTINV on each layer's Monte Carlo group flux for 30 days of continuous irradiation at the source strength followed by 1 day of cooling. The result is nominal with no bound, so it is a search guide only: the shielding library requires activation on a bounded basis and this case declares that entry omitted at the required basis. The 1 Bq/g limit is the case author's allocation, not a regulatory level.",
     "Material compositions and densities are nominal literature values; no material, executable, or data library is qualified.",
-    "This contract is a research-only design-search specimen and excludes every regulatory, safety, or operational purpose."
+    "This contract is a research-only design-search specimen and excludes every regulatory, safety, or operational purpose.",
+    "Revision 2 widens the box from 1500 kg and 100 cm to 2000 kg and 120 cm after revision 1's campaign found no feasible design within the original limits, and raises the transport particle budget from 200000 to 500000 so that a candidate within about twenty percent of a dose allocation can be decided rather than left INCONCLUSIVE; the transport envelope's 120 cm bound is unchanged, so the box now reaches it."
   ],
   "execution_policy": {
     "permit_nominal_basis": true
@@ -273,7 +274,7 @@
         }
       ],
       "parameters": {
-        "particles": 200000,
+        "particles": 500000,
         "batches": 10
       },
       "reproducibility": {
@@ -478,7 +479,7 @@
     },
     {
       "requirement_id": "SHIELD-R4-mass",
-      "statement": "Areal mass of the slab is at or below 1500 kg per square metre.",
+      "statement": "Areal mass of the slab is at or below 2000 kg per square metre.",
       "purpose": {
         "id": "avila-labs.shielding.design-search",
         "major": 1
@@ -491,7 +492,7 @@
       "comparison": "less_than_or_equal",
       "limit": {
         "kind": "core.mass",
-        "value": "1500",
+        "value": "2000",
         "unit": "kg"
       },
       "basis": {
@@ -500,7 +501,7 @@
     },
     {
       "requirement_id": "SHIELD-R5-thickness",
-      "statement": "Total slab thickness is at or below 100 cm.",
+      "statement": "Total slab thickness is at or below 120 cm.",
       "purpose": {
         "id": "avila-labs.shielding.design-search",
         "major": 1
@@ -513,7 +514,7 @@
       "comparison": "less_than_or_equal",
       "limit": {
         "kind": "core.length",
-        "value": "100",
+        "value": "120",
         "unit": "cm"
       },
       "basis": {

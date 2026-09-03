@@ -727,6 +727,24 @@ def mutate_layers(rng, layers, material_names, grid_cm, max_layers, max_total_cm
     return layers
 
 
+def canonical_layers(layers):
+    """Merge adjacent layers of the same material and drop zero-thickness
+    layers, so that "20 cm polyethylene + 70 cm polyethylene" and "90 cm
+    polyethylene" are one design. Transport, activation, mass, and thickness
+    cannot tell them apart, and the recovery campaign spent five of eight
+    transports learning that the hard way."""
+    merged = []
+    for layer in layers:
+        thickness = Decimal(str(layer["thickness_cm"]))
+        if thickness <= 0:
+            continue
+        if merged and merged[-1]["material"] == layer["material"]:
+            merged[-1]["thickness_cm"] = format_thickness(Decimal(merged[-1]["thickness_cm"]) + thickness)
+        else:
+            merged.append({"material": layer["material"], "thickness_cm": format_thickness(thickness)})
+    return merged
+
+
 def estimated_mass_kg(layers, materials_table, area_cm2):
     total_g = Decimal(0)
     for layer in layers:
@@ -748,6 +766,9 @@ def propose_pool(rng, size, material_names, grid_cm, max_layers, max_total_cm,
             layers = mutate_layers(rng, base, material_names, grid_cm, max_layers, max_total_cm)
         else:
             layers = random_layers(rng, material_names, grid_cm, max_layers, max_total_cm)
+        layers = canonical_layers(layers)
+        if not layers:
+            continue
         if mass_limit_kg is not None and area_cm2 is not None:
             if estimated_mass_kg(layers, materials_table, area_cm2) > mass_limit_kg:
                 continue
@@ -1138,8 +1159,14 @@ def main():
                 )
             bank.refit()
 
+        # Once transport has run, the stopping rule follows the transported
+        # candidates' real margins: the screen's margin saturates long before
+        # the bounded requirements do, and stopping on it left budget unspent.
+        stop_population = (
+            [s for s in screened if s["id"] in transported_ids] if transported_ids else screened
+        )
         current_best = max(
-            (s["worst_real_margin"] for s in screened if s["worst_real_margin"] is not None),
+            (s["worst_real_margin"] for s in stop_population if s["worst_real_margin"] is not None),
             default=None,
         )
         best_worst_margin, rounds_since_improvement, _improved = stopping_decision(

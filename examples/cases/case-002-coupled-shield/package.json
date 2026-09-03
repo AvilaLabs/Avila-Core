@@ -7,7 +7,7 @@
       "document_id": "case-002-contract",
       "role": "contract",
       "path": "contract.json",
-      "sha256": "sha256:3a8618133d6834ef565b95122c5b891e2f75d4286be203f225a0c80077e220ad"
+      "sha256": "sha256:06901653f896bd87735dad774056f87ea55708b7cda491e59249da38b4673d8c"
     },
     {
       "document_id": "case-002-registry",
@@ -19,7 +19,7 @@
       "document_id": "case-002-claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:bb9e32e7cb68b4bdf1994b0d18047a3f2ca0c15c319a74dad5386797f1811a70"
+      "sha256": "sha256:cdc24a3138c5bc6df59667ec7f79bcc188073a545809fea44c428ec996172410"
     },
     {
       "document_id": "case-002-requirement-set",
@@ -49,27 +49,27 @@
       "role": "expected_campaign_report",
       "document_id": "case-002-expected-campaign",
       "path": "campaign-report.json",
-      "sha256": "sha256:1c8e97c7637382dda8a5387b6ca0a570b1932ee66a4b2ac128aacce5cc9eadc2"
+      "sha256": "sha256:3dcf6daa8334d24b9339b644a1cb8ed59f05b450da5e7a275535fa8cf7f70549"
     },
     {
       "role": "execution_receipt",
       "document_id": "case-002-screen-receipt",
       "path": "receipts/screen.json",
-      "sha256": "sha256:f02231fe34dd4f9517337b28f61f33343fd3a6a497dfc382e4f098eb3253321f",
+      "sha256": "sha256:cd84eb80b15f625d184cc49a1128590c224ef12ae045e686bb9969b79602af68",
       "step_id": "screen"
     },
     {
       "role": "execution_receipt",
       "document_id": "case-002-transport-receipt",
       "path": "receipts/transport.json",
-      "sha256": "sha256:870cd4f6769c89143c278af5b6941d97db9471a8a4a3833113063942b93c0e92",
+      "sha256": "sha256:7f317ed46c4c5047e72a1edfa41536c48a0b2ac8897d41fdac297f363b4b3a81",
       "step_id": "transport"
     },
     {
       "role": "execution_receipt",
       "document_id": "case-002-activation-receipt",
       "path": "receipts/activation.json",
-      "sha256": "sha256:23f2f8c4b20b69adf02d7d94a0c09fc6156dca276a0b401a1ba9718f14254132",
+      "sha256": "sha256:d6862a5cb03d6dd253ee0296d28995ebda6a2aaa66405529862782997288fcec",
       "step_id": "activation"
     }
   ],
@@ -230,7 +230,7 @@
       ],
       "source_root": "case",
       "path": "expected/transport-result.json",
-      "sha256": "sha256:fa49fd20d946009eaf4aeee4d63c58dc1bd26f95aa5b8b72fdef834e77b88885"
+      "sha256": "sha256:6f0f9c7f509f8e0af250aaa02e6152d2816b79b8eb4de7819dda2854cc43a927"
     },
     {
       "artifact_id": "reference-layer-spectra",
@@ -239,7 +239,7 @@
       ],
       "source_root": "case",
       "path": "expected/layer-spectra.json",
-      "sha256": "sha256:3f7418f1ac1f80ad50863705a05fca73bc417ec803e3fdc3d25000b1c4cc2501"
+      "sha256": "sha256:567999c7d7c6bc4b02aa310603078314125e20cfa9c14eb5a3c08646dfbf66d6"
     },
     {
       "artifact_id": "reference-activation-result",
@@ -250,7 +250,7 @@
       ],
       "source_root": "case",
       "path": "expected/activation-result.json",
-      "sha256": "sha256:c33f9051693b78a82129e26a02ac3590da3e133b2089045bb89c55941ede319f"
+      "sha256": "sha256:b7f95e8f42e240f74a833a2398c4efd3c3167cf963f4953f4dee64314e4a18bc"
     }
   ],
   "capabilities": [

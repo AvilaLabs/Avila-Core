@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/execution-receipt/v0.1-draft",
   "case_id": "CASE-002",
-  "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
+  "compiled_snapshot_sha256": "sha256:2f76e8428d5ce664bae8d9dbfc77728064f2b214d1fa8c33e30886d30284d780",
   "step_id": "screen",
   "capability_type": {
     "id": "shielding.attenuation-screen",
@@ -67,9 +67,9 @@
   },
   "invocation_sha256": "sha256:d96dc148ebb760da4c90ff10bfe11143ea86909d6a57be3741df8985907bd50a",
   "process": {
-    "started_at": "2026-09-03T00:41:43.627Z",
-    "finished_at": "2026-09-03T00:41:43.728Z",
-    "duration_ms": 101,
+    "started_at": "2026-09-03T02:17:52.706Z",
+    "finished_at": "2026-09-03T02:17:52.848Z",
+    "duration_ms": 141,
     "exit_status": 0,
     "timed_out": false
   },

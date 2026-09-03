@@ -2,8 +2,8 @@
   "schema_version": "avila.core/campaign-report/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "status": "evaluated",
-  "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
-  "claims_sha256": "sha256:68e9c1e5035e64c98db63bc53f430a4455b368c8baafce2bc61d0f315abe45ae",
+  "compiled_snapshot_sha256": "sha256:2f76e8428d5ce664bae8d9dbfc77728064f2b214d1fa8c33e30886d30284d780",
+  "claims_sha256": "sha256:3cb3d0c098161888760fa6e47795076bafcccc6aa4cc8815838447102f3be871",
   "admissions": [
     {
       "evidence_id": "input:actinv-activation-library",
@@ -249,8 +249,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
-        "claims_sha256": "sha256:68e9c1e5035e64c98db63bc53f430a4455b368c8baafce2bc61d0f315abe45ae"
+        "compiled_snapshot_sha256": "sha256:2f76e8428d5ce664bae8d9dbfc77728064f2b214d1fa8c33e30886d30284d780",
+        "claims_sha256": "sha256:3cb3d0c098161888760fa6e47795076bafcccc6aa4cc8815838447102f3be871"
       }
     },
     {
@@ -269,16 +269,16 @@
         "rule": "bounded.le.exceeds",
         "canonical_unit": "uSv/h",
         "limit_canonical": "7",
-        "lower_canonical": "96642593400699/1562500000000",
-        "upper_canonical": "122752656599301/1562500000000",
-        "nominal_canonical": "877581/12500"
+        "lower_canonical": "3574008055348173/62500000000000",
+        "upper_canonical": "4350467194651827/62500000000000",
+        "nominal_canonical": "31697901/500000"
       },
       "boundary": {
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
-        "claims_sha256": "sha256:68e9c1e5035e64c98db63bc53f430a4455b368c8baafce2bc61d0f315abe45ae"
+        "compiled_snapshot_sha256": "sha256:2f76e8428d5ce664bae8d9dbfc77728064f2b214d1fa8c33e30886d30284d780",
+        "claims_sha256": "sha256:3cb3d0c098161888760fa6e47795076bafcccc6aa4cc8815838447102f3be871"
       }
     },
     {
@@ -297,21 +297,21 @@
         "rule": "bounded.le.exceeds",
         "canonical_unit": "uSv/h",
         "limit_canonical": "3",
-        "lower_canonical": "100138128342363/31250000000000",
-        "upper_canonical": "108565686407637/31250000000000",
-        "nominal_canonical": "834815259/250000000"
+        "lower_canonical": "393643626966873/125000000000000",
+        "upper_canonical": "419558366033127/125000000000000",
+        "nominal_canonical": "813201993/250000000"
       },
       "boundary": {
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
-        "claims_sha256": "sha256:68e9c1e5035e64c98db63bc53f430a4455b368c8baafce2bc61d0f315abe45ae"
+        "compiled_snapshot_sha256": "sha256:2f76e8428d5ce664bae8d9dbfc77728064f2b214d1fa8c33e30886d30284d780",
+        "claims_sha256": "sha256:3cb3d0c098161888760fa6e47795076bafcccc6aa4cc8815838447102f3be871"
       }
     },
     {
       "requirement_id": "SHIELD-R4-mass",
-      "statement": "Areal mass of the slab is at or below 1500 kg per square metre.",
+      "statement": "Areal mass of the slab is at or below 2000 kg per square metre.",
       "metric": {
         "source": "step_output",
         "step_id": "screen",
@@ -324,7 +324,7 @@
         "status": "pass",
         "rule": "bounded.le.within",
         "canonical_unit": "kg",
-        "limit_canonical": "1500",
+        "limit_canonical": "2000",
         "lower_canonical": "2639/2",
         "upper_canonical": "2639/2",
         "nominal_canonical": "2639/2"
@@ -333,13 +333,13 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
-        "claims_sha256": "sha256:68e9c1e5035e64c98db63bc53f430a4455b368c8baafce2bc61d0f315abe45ae"
+        "compiled_snapshot_sha256": "sha256:2f76e8428d5ce664bae8d9dbfc77728064f2b214d1fa8c33e30886d30284d780",
+        "claims_sha256": "sha256:3cb3d0c098161888760fa6e47795076bafcccc6aa4cc8815838447102f3be871"
       }
     },
     {
       "requirement_id": "SHIELD-R5-thickness",
-      "statement": "Total slab thickness is at or below 100 cm.",
+      "statement": "Total slab thickness is at or below 120 cm.",
       "metric": {
         "source": "step_output",
         "step_id": "screen",
@@ -352,7 +352,7 @@
         "status": "pass",
         "rule": "bounded.le.within",
         "canonical_unit": "cm",
-        "limit_canonical": "100",
+        "limit_canonical": "120",
         "lower_canonical": "85",
         "upper_canonical": "85",
         "nominal_canonical": "85"
@@ -361,8 +361,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
-        "claims_sha256": "sha256:68e9c1e5035e64c98db63bc53f430a4455b368c8baafce2bc61d0f315abe45ae"
+        "compiled_snapshot_sha256": "sha256:2f76e8428d5ce664bae8d9dbfc77728064f2b214d1fa8c33e30886d30284d780",
+        "claims_sha256": "sha256:3cb3d0c098161888760fa6e47795076bafcccc6aa4cc8815838447102f3be871"
       }
     },
     {
@@ -381,18 +381,18 @@
         "rule": "nominal.le.within",
         "canonical_unit": "Bq/g",
         "limit_canonical": "1",
-        "nominal_canonical": "7818713/12500000000",
+        "nominal_canonical": "7887547/12500000000",
         "basis_visible": "nominal"
       },
       "boundary": {
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
-        "claims_sha256": "sha256:68e9c1e5035e64c98db63bc53f430a4455b368c8baafce2bc61d0f315abe45ae"
+        "compiled_snapshot_sha256": "sha256:2f76e8428d5ce664bae8d9dbfc77728064f2b214d1fa8c33e30886d30284d780",
+        "claims_sha256": "sha256:3cb3d0c098161888760fa6e47795076bafcccc6aa4cc8815838447102f3be871"
       }
     }
   ],
-  "campaign_sha256": "sha256:b23ad222900ca62e6c91dee928fc765e81b622b2373f8af0684125d33d533fd5",
+  "campaign_sha256": "sha256:9938ae951777386bc66c8954064dd0b1c1b0830641c6be812209812b8658a068",
   "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
 }

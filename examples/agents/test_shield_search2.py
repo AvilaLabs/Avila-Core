@@ -606,3 +606,44 @@ class NoInventedVerdictTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CanonicalLayersTest(unittest.TestCase):
+    """Adjacent identical materials are one layer; zero-thickness layers vanish."""
+
+    def test_adjacent_identical_layers_merge(self):
+        layers = [
+            {"material": "polyethylene", "thickness_cm": "20"},
+            {"material": "polyethylene", "thickness_cm": "70"},
+            {"material": "lead", "thickness_cm": "5"},
+        ]
+        self.assertEqual(
+            ss.canonical_layers(layers),
+            [{"material": "polyethylene", "thickness_cm": "90"}, {"material": "lead", "thickness_cm": "5"}],
+        )
+
+    def test_zero_thickness_layers_are_dropped_and_neighbours_merge_across_them(self):
+        layers = [
+            {"material": "iron", "thickness_cm": "10"},
+            {"material": "lead", "thickness_cm": "0"},
+            {"material": "iron", "thickness_cm": "5"},
+        ]
+        self.assertEqual(
+            ss.canonical_layers(layers),
+            [{"material": "iron", "thickness_cm": "15"}],
+        )
+
+    def test_distinct_neighbours_are_untouched(self):
+        layers = [
+            {"material": "iron", "thickness_cm": "10"},
+            {"material": "polyethylene", "thickness_cm": "70"},
+        ]
+        self.assertEqual(ss.canonical_layers(layers), layers)
+
+    def test_proposals_never_contain_adjacent_identical_layers(self):
+        rng = np.random.default_rng(3)
+        table = {"polyethylene": {"density_g_cm3": "0.94"}, "lead": {"density_g_cm3": "11.35"}}
+        pool = ss.propose_pool(rng, 200, ["polyethylene", "lead"], 10, 3, 100, table, 10000, 1500, [])
+        for layers in pool:
+            for a, b in zip(layers, layers[1:]):
+                self.assertNotEqual(a["material"], b["material"], layers)

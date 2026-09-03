@@ -21,7 +21,10 @@ This is a research specimen over a synthetic plane source. No facility,
 generator, occupancy, or regulatory limit is represented, the removal cross
 sections are approximate, and nothing here is qualified for any decision.
 The experiment this case exists for is pre-registered in
-[PROTOCOL.md](PROTOCOL.md).
+[PROTOCOL.md](PROTOCOL.md). The contract is at revision 2: revision 1's
+campaign found no feasible design within 1500 kg and 100 cm (outcome F1 in
+[RESULTS.md](RESULTS.md)), so the box was widened to 2000 kg and 120 cm and
+the particle budget raised, as amendment A3 records.
 
 ## Requirements
 
@@ -30,8 +33,8 @@ The experiment this case exists for is pre-registered in
 | SHIELD-R1-screen | screen dose rate ≤ 10 uSv/h | nominal | the screen's `unquantified` claim; guides the search |
 | SHIELD-R2-neutron | neutron dose rate ≤ 7 uSv/h | bounded | transport `coverage_interval` (0.95, statistical only) |
 | SHIELD-R3-photon | shield-produced photon dose rate ≤ 3 uSv/h | bounded | transport `coverage_interval` (0.95, statistical only) |
-| SHIELD-R4-mass | areal mass ≤ 1500 kg | bounded | the screen's `exact` mass |
-| SHIELD-R5-thickness | total thickness ≤ 100 cm | bounded | the screen's `exact` thickness |
+| SHIELD-R4-mass | areal mass ≤ 2000 kg | bounded | the screen's `exact` mass |
+| SHIELD-R5-thickness | total thickness ≤ 120 cm | bounded | the screen's `exact` thickness |
 | SHIELD-R6-activation | highest layer specific activity ≤ 1 Bq/g after 30 d irradiation and 1 d cooling | nominal | ACTINV's `unquantified` total; guides the search |
 
 The 10 uSv/h design point is allocated 7 uSv/h to neutrons and 3 uSv/h to
@@ -48,10 +51,10 @@ lead. Committed results:
 | Requirement | Verdict | Value |
 | --- | --- | --- |
 | R1 screen | FAIL (nominal) | ~15.6 uSv/h, margin ~−5.6 |
-| R2 neutron | FAIL (bounded) | [~61.9, ~78.6] uSv/h, margin ~−71.6 |
-| R3 photon | FAIL (bounded) | [~3.20, ~3.47] uSv/h, margin ~−0.47 |
-| R4 mass | PASS | 1319.5 kg, margin 180.5 |
-| R5 thickness | PASS | 85 cm, margin 15 |
+| R2 neutron | FAIL (bounded) | [~57.2, ~69.6] uSv/h, margin ~−62.6 |
+| R3 photon | FAIL (bounded) | [~3.15, ~3.36] uSv/h, margin ~−0.36 |
+| R4 mass | PASS | 1319.5 kg, margin 680.5 |
+| R5 thickness | PASS | 85 cm, margin 35 |
 | R6 activation | PASS (nominal) | ~0.0006 Bq/g in the lead, margin ~0.9994 |
 
 `candidates/iron-first.json` (10 cm iron in front of 70 cm polyethylene) is
@@ -104,8 +107,8 @@ cargo run -p avila-core-cli -- run examples/cases/case-002-coupled-shield \
   --source-root actinv-data=/path/to/actinv-data/v1.0.0
 ```
 
-Run a candidate of your own through every step (about two and a half
-minutes on eight threads at 200 000 particles):
+Run a candidate of your own through every step (about four minutes on
+eight threads at 500 000 particles):
 
 ```bash
   … --capability python3=/usr/bin/python3 \

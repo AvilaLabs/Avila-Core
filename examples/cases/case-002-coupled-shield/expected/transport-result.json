@@ -12,7 +12,7 @@
     "note": "identity of the index only; the nuclide files it names are not re-hashed"
   },
   "run": {
-    "particles": 200000,
+    "particles": 500000,
     "batches": 10,
     "seed": 1,
     "threads": 8,
@@ -96,27 +96,27 @@
   },
   "tally": {
     "neutron": {
-      "mean_pSv_cm_per_particle": "0.195018",
-      "std_dev": "0.011841516"
+      "mean_pSv_cm_per_particle": "0.17609945",
+      "std_dev": "0.0088035533"
     },
     "photon": {
-      "mean_pSv_cm_per_particle": "0.0092757251",
-      "std_dev": "0.0001911046"
+      "mean_pSv_cm_per_particle": "0.0090355777",
+      "std_dev": "0.00014691165"
     },
     "significant_digits": 8,
     "detector_volume_cm3": "10000.0"
   },
   "neutron_dose_rate": {
     "nominal": {
-      "value": "70.20648",
+      "value": "63.395802",
       "unit": "uSv/h"
     },
     "lower": {
-      "value": "61.85125977644736",
+      "value": "57.184128885570768",
       "unit": "uSv/h"
     },
     "upper": {
-      "value": "78.56170022355264",
+      "value": "69.607475114429232",
       "unit": "uSv/h"
     },
     "coverage": "0.95",
@@ -124,15 +124,15 @@
   },
   "photon_dose_rate": {
     "nominal": {
-      "value": "3.339261036",
+      "value": "3.252807972",
       "unit": "uSv/h"
     },
     "lower": {
-      "value": "3.204420106955616",
+      "value": "3.149149015734984",
       "unit": "uSv/h"
     },
     "upper": {
-      "value": "3.474101965044384",
+      "value": "3.356466928265016",
       "unit": "uSv/h"
     },
     "coverage": "0.95",

@@ -58,12 +58,12 @@ run_stage recovery $PY examples/agents/shield_search2.py "${COMMON[@]}" \
 
 # Arm 3: the learning designer over the full space.
 run_stage learning $PY examples/agents/shield_search2.py "${COMMON[@]}" \
-  --grid-cm 5 --max-layers 3 --screen-budget 2000 --transport-budget 60 \
+  --grid-cm 5 --max-layers 3 --screen-budget 2000 --transport-budget 40 \
   --batch-size 20 --patience 5 --seed 1 --out "$OUT/learning"
 
 # Arm 2: random search over the same space with the same budgets.
 run_stage random $PY examples/agents/shield_search2.py "${COMMON[@]}" --random \
-  --grid-cm 5 --max-layers 3 --screen-budget 2000 --transport-budget 60 \
+  --grid-cm 5 --max-layers 3 --screen-budget 2000 --transport-budget 40 \
   --batch-size 20 --patience 5 --seed 1 --out "$OUT/random"
 
 say "CAMPAIGN END"

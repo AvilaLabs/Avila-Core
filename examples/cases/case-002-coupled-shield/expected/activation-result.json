@@ -14,27 +14,27 @@
     {
       "decay_heat": {
         "unit": "W/kg",
-        "value": "0.0000000000000000015973142"
+        "value": "0.0000000000000000015894317"
       },
       "dominant_nuclides": [
         {
-          "activity_Bq_per_g": "0.00000010582031",
+          "activity_Bq_per_g": "0.00000010491937",
           "nuclide": "C14"
         },
         {
-          "activity_Bq_per_g": "0.0000000233744",
+          "activity_Bq_per_g": "0.000000023351546",
           "nuclide": "Be10"
         },
         {
-          "activity_Bq_per_g": "0.00000000000001635276",
+          "activity_Bq_per_g": "0.000000000000016337173",
           "nuclide": "Be8"
         },
         {
-          "activity_Bq_per_g": "0.00000000000000007761263",
+          "activity_Bq_per_g": "0.000000000000000077562248",
           "nuclide": "B12"
         },
         {
-          "activity_Bq_per_g": "0.00000000000000000049282456",
+          "activity_Bq_per_g": "0.00000000000000000049250902",
           "nuclide": "B13"
         }
       ],
@@ -46,17 +46,17 @@
       ],
       "specific_activity": {
         "unit": "Bq/g",
-        "value": "0.00000012919473"
+        "value": "0.00000012827093"
       }
     },
     {
       "decay_heat": {
         "unit": "W/kg",
-        "value": "0.000000000000039448071"
+        "value": "0.000000000000039786525"
       },
       "dominant_nuclides": [
         {
-          "activity_Bq_per_g": "0.00061730629",
+          "activity_Bq_per_g": "0.0006229718",
           "nuclide": "Pb203"
         },
         {
@@ -64,15 +64,15 @@
           "nuclide": "Pb204"
         },
         {
-          "activity_Bq_per_g": "0.0000012544712",
+          "activity_Bq_per_g": "0.00000106986",
           "nuclide": "Pb209"
         },
         {
-          "activity_Bq_per_g": "0.00000050378463",
+          "activity_Bq_per_g": "0.00000052867002",
           "nuclide": "Hg203"
         },
         {
-          "activity_Bq_per_g": "0.0000000227906",
+          "activity_Bq_per_g": "0.000000023728794",
           "nuclide": "Tl204"
         }
       ],
@@ -84,7 +84,7 @@
       ],
       "specific_activity": {
         "unit": "Bq/g",
-        "value": "0.00062549704"
+        "value": "0.00063100376"
       }
     }
   ],
@@ -106,11 +106,11 @@
   "totals": {
     "max_specific_activity": {
       "unit": "Bq/g",
-      "value": "0.00062549704"
+      "value": "0.00063100376"
     },
     "total_decay_heat": {
       "unit": "W",
-      "value": "0.000000000022387981"
+      "value": "0.000000000022580048"
     }
   }
 }

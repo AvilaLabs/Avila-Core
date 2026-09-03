@@ -96,9 +96,10 @@ Before that point:
 
 1. Sign receipts and manifests so the requester's manifest pin is no longer
    the only anchor against a rewritten package (S-030).
-2. The deterministic slab transport capability with CADIS weight windows,
-   qualified against the Monte Carlo record, so a shielding campaign takes
-   minutes rather than hours (in progress).
+2. Diffusion synthetic acceleration for the slab S_N solver (S-031), so the
+   forward screen runs in under a second and the adjoint makes CADIS windows
+   worth their cost; then bind the solver as the shielding screen and qualify
+   it for the polyethylene families against the Monte Carlo record.
 3. Run a CASE-003 campaign under the manifest pin with the same arms as
    CASE-002 campaign 3.
 4. Make every bounded verdict require an applicable qualification record, as

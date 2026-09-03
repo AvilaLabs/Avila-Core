@@ -175,3 +175,42 @@ scope and known gaps (recorded once, at the document level, as a property of
 the data release rather than of any one layer's composition — see
 `activate.py`'s `layer_omissions()` docstring for why the two largest ledger
 lists are deliberately not repeated per layer).
+
+## Deterministic slab transport and importance windows (2026-09-03)
+
+Four new files form the speed tier's first attempt. `mgxs_build.py` builds a
+VITAMIN-J-175 multigroup neutron library (P3 scattering, four depth zones per
+material) from continuous-energy OpenMC runs; the built library is
+`mgxs-vitamin-j-175.h5` with its index, byte-stable under its seed.
+`slab_sn.py` is a one-dimensional multigroup discrete-ordinates solver (S16,
+P3, diamond difference with a step fixup, 0.5 cm cells) with an adjoint mode,
+verified against the analytic pure absorber, OpenMC's own multigroup Monte
+Carlo mode to 0.2 percent, and forward-adjoint reciprocity to 0.1 percent.
+`cadis_windows.py` turns the adjoint flux into OpenMC weight windows and
+`transport_cadis.py` is the transport capability with those windows.
+
+What the verification established, unsmoothed:
+
+- **Agreement with the Monte Carlo record.** On 28 logged designs the forward
+  solver lands inside the Monte Carlo interval 15 times; the ratio to the
+  Monte Carlo nominal runs 0.94 to 1.14 for polyethylene, 0.76 to 1.09 for
+  borated polyethylene, about 0.8 for iron ahead of polyethylene, 0.52 to
+  1.23 for lead with polyethylene, 0.44 to 0.54 for concrete with water, and
+  0.39 for bare lead. Material ordering comes out right. This is the start of
+  a qualification envelope for the polyethylene families and a refusal for
+  the others; it is not a replacement for the record.
+- **Discretisation.** The default settings sit within 0.25 percent of S32 at
+  0.25 cm on three designs.
+- **Speed: not delivered.** Unaccelerated source iteration in optically thick,
+  weakly absorbing shields takes 3 to 70 seconds per candidate, not the
+  sub-second target, and the adjoint solve costs about 420 seconds, more than
+  the Monte Carlo run it was meant to accelerate. The CADIS windows it
+  produced were worse than the existing analytic windows: figure of merit
+  0.34 for neutrons and 0.42 for photons at equal particles. The cause is
+  named: the thermal and self-scatter iterations converge too slowly without
+  a synthetic acceleration scheme, and one extrapolation attempt made things
+  worse and was reverted.
+
+The next step is therefore diffusion synthetic acceleration of the thermal
+iteration, which is what makes both the forward screen and the adjoint cheap.
+Until then the solver is evidence, not a capability bound by any case.

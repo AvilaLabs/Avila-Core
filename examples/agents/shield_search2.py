@@ -1188,6 +1188,8 @@ def main():
     parser.add_argument("--bootstrap", type=int, default=16, help="bootstrap ensemble size")
     parser.add_argument("--min-samples", type=int, default=5, help="observations before a requirement gets its own model")
     parser.add_argument("--beta", type=float, default=1.0, help="exploration-bonus weight on bootstrap spread")
+    parser.add_argument("--expect-manifest", default=None, metavar="SHA256",
+                         help="refuse any run whose package manifest digest differs from this pinned value")
     parser.add_argument("--source-root", action="append", default=[], metavar="NAME=PATH",
                          help="additional or overriding source root passed to Core (repeatable), for cases that bind more roots than CASE-001")
     parser.add_argument("--materials", nargs="*", default=None,
@@ -1238,7 +1240,7 @@ def main():
             source_roots=source_roots,
             capabilities=transport_capabilities if transport else screen_capabilities,
             environment=transport_environment if transport else None,
-            log=log,
+            log=log, extra_args=(['--expect-manifest', args.expect_manifest] if getattr(args, 'expect_manifest', None) else None),
         )
 
     core.eprint("discovering mass/thickness bounds from a bootstrap screen run...")

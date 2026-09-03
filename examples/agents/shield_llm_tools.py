@@ -178,10 +178,11 @@ def run(config, candidate_path, transport, out):
     if transport:
         capabilities.update(config["transport_capabilities"])
         environment = config["environment"]
+    extra = ["--expect-manifest", config["manifest_sha256"]] if config.get("manifest_sha256") else None
     return core.run_core(
         config["core"], config["case"], candidate_path,
         source_roots=config["source_roots"], capabilities=capabilities,
-        environment=environment, log=Path(out) / "campaign-log.jsonl",
+        environment=environment, log=Path(out) / "campaign-log.jsonl", extra_args=extra,
     )
 
 
@@ -192,8 +193,10 @@ def cmd_init(args):
     for spec in args.source_root:
         name, _, path = spec.partition("=")
         source_roots[name] = path
+    manifest = Path(args.case) / "package.json"
+    manifest_sha256 = "sha256:" + __import__("hashlib").sha256(manifest.read_bytes()).hexdigest()
     config = {
-        "core": args.core, "case": args.case, "source_roots": source_roots,
+        "core": args.core, "case": args.case, "source_roots": source_roots, "manifest_sha256": manifest_sha256,
         "screen_capabilities": {"python3": args.python3},
         "transport_capabilities": {"openmc-python": args.openmc_python},
         "environment": {"OPENMC_CROSS_SECTIONS": args.cross_sections},
@@ -203,7 +206,7 @@ def cmd_init(args):
     }
     (out / "config.json").write_text(json.dumps(config, indent=2) + "\n")
     save_state(str(out), {"screens": 0, "transports": 0, "next_index": 0, "screened": {}})
-    print(f"initialized {out}: transport budget {args.transport_budget}, screen budget {args.screen_budget}, {len(args.prior_log)} prior log(s)")
+    print(f"initialized {out}: transport budget {args.transport_budget}, screen budget {args.screen_budget}, {len(args.prior_log)} prior log(s); package pinned at {manifest_sha256}")
 
 
 def cmd_brief(args):

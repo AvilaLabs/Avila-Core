@@ -124,7 +124,7 @@ def discover_limits_via_bootstrap(core_path, case, source_roots, python3, out, l
     candidate = core.write_candidate(Path(out) / "candidates" / "bootstrap.json", "bootstrap", [(first_material, "5")])
     report = core.run_core(
         core_path, case, Path(out) / "candidates" / "bootstrap.json",
-        source_roots=source_roots, capabilities={"python3": python3}, log=log,
+        source_roots=source_roots, capabilities={"python3": python3}, log=log, extra_args=(['--expect-manifest', args.expect_manifest] if getattr(args, 'expect_manifest', None) else None),
     )
     return core.discover_limits(report)
 
@@ -186,7 +186,7 @@ def run_sweep(args):
         candidate = core.write_candidate(candidate_path, candidate_id, layers)
         report = core.run_core(
             args.core, args.case, candidate_path, source_roots=source_roots,
-            capabilities=capabilities, environment=environment, log=log,
+            capabilities=capabilities, environment=environment, log=log, extra_args=(['--expect-manifest', args.expect_manifest] if getattr(args, 'expect_manifest', None) else None),
         )
         margins = core.all_margins(report)
         row = {
@@ -331,6 +331,8 @@ def main():
                                help="skip grid points whose total thickness across all layers is less than this")
     sweep_parser.add_argument("--first-material", default=None,
                                help="keep only grid points whose first layer is this material")
+    sweep_parser.add_argument("--expect-manifest", default=None, metavar="SHA256",
+                              help="refuse any run whose package manifest digest differs from this pinned value")
     sweep_parser.add_argument("--source-root", action="append", default=[], metavar="NAME=PATH",
                               help="additional or overriding source root passed to Core (repeatable)")
     sweep_parser.add_argument("--limit", type=int, default=None,

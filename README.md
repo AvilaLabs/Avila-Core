@@ -74,6 +74,16 @@ This repository is a **pre-alpha scaffold**. It currently provides:
   pre-registered experimental protocol; its activation guide is a stated
   coverage omission at the library's required basis because Core refused the
   contract that counted it as coverage;
+- the second domain, `CASE-003`, a strip-heated heat spreader: a
+  one-dimensional resistance screen guides, two-dimensional finite-element
+  conduction decides the hotspot as an `interval` under the `enclosure`
+  basis, and the finite-element qualification record is the first to bind
+  validation evidence, a NAFEMS T4 reproduction;
+- an identity log and a manifest pin: every campaign log line names the
+  manifest, compiled snapshot, and document digests it was evaluated under,
+  and `run --expect-manifest` refuses a package whose manifest differs from
+  the requester's pin, the response to an adversarial designer arm that
+  obtained undeserved verdicts only by rewriting the package;
 - qualification envelopes: a method owner's record binds an exact executable
   and adapter to a kernel applicability predicate over facts the adapter
   reads from verified inputs; the runner evaluates it before a step runs and
@@ -256,7 +266,7 @@ docs/
   roadmap/                staged validation and 1.0 planning hypotheses
   adr/                    durable architectural decisions
 schemas/                  machine-readable interchange drafts
-examples/                 unqualified documents: composed CASE-000, CASE-001, and CASE-002,
+examples/                 unqualified documents: composed CASE-000 to CASE-003,
                           the shielding capability scripts, the first library
                           requirement set, and the scripted designer that
                           drives the search

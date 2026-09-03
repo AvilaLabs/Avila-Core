@@ -40,6 +40,7 @@ external product gate.
 | Internal composed case | Implemented as an unqualified specimen | CASE-000 revision 2 binds 14 source attestations and 6 output claims; with all three roots supplied the runner re-hashes all 18 artifacts, executes ACTINV 1.0.1 through Aftermatter's frozen R0 builder under a digest-pinned interpreter (`avila-labs.aftermatter/build-r0-case@1`) and then Aftermatter over the fresh inventory (`avila-labs.aftermatter/evaluate@1`), verifies both receipts against the committed ones, extracts all 6 claims from fresh results that reproduce the frozen artifacts byte for byte, and reproduces both technical `PASS / bounded.lt.within` verdicts with no review stage | Capability packages beyond an executable digest, a system interpreter pinned only by digest, categorical route verdicts, qualification evidence, and broader physical applicability |
 | Generative-loop case | Implemented as an unqualified specimen | CASE-001 declares a free candidate input, screens it with an unqualified attenuation script, runs OpenMC transport on request under a receipt whose required environment key is identity by name, reports exact margins on all four verdicts, appends a campaign-log line per run, and a scripted designer drives the two-fidelity loop; the reference candidate passes the screen and fails transport; the contract's coverage of the shielding library's seven-entry requirement set is assessed before execution (three covered, three omitted with accepted reasons, one omissible) and an unstated omission stops the run; the transport capability carries a qualification record whose envelope is evaluated over the candidate's facts before the step runs, and a 150 cm candidate's transport verdict is `NOT_EVALUATED` outside the envelope although transport ran; a configured agent presentation gate receives an exact content-identified dossier and instructions, may return the candidate, present it to the user, or abstain, and never gates a technical verdict | Validation evidence behind any envelope, enforcement of qualification for every bounded verdict, physical evidence, and an optimizer or constellation view over the log |
 | Coupled case | Implemented as an unqualified specimen, pre-registered experiment | CASE-002 chains screen, coupled neutron-photon OpenMC transport with per-layer FISPACT-709 spectra, and ACTINV activation per layer; six requirements with exact margins; both qualification envelopes evaluated `INSIDE` for the reference; coverage complete with activation and streaming as stated omissions; a learning designer, three practice baselines, and a control sweep exist as scripts; `PROTOCOL.md` pre-declares arms, measurements, and outcomes | The campaign itself (all arms), a bounded activation claim, validation evidence behind either envelope, and transport that is faster than minutes per finalist |
+| Thermal case | Implemented as an unqualified specimen | CASE-003: a strip-heated layered plate screened by a one-dimensional resistance estimate and decided by two-dimensional finite-element conduction as an enclosure-basis interval; the finite-element qualification record binds a NAFEMS T4 reproduction as validation evidence; reference blessed and verified with every step reused | A campaign under the manifest pin; interface and transient entries of the thermal library set |
 | Evidence records | Partial spike | Minimal record types, SHA-256 helpers, confined-path case manifest with bound capabilities and executions, explicit `not_checked` states, execution receipts verified from bytes, claim/policy binding, content-identified optional presentation requests, a separate unsigned agent routing record, and deterministic replay of claims, receipts, and campaign report | Canonical archive/package identity, writer, full lineage validation, signatures, trust roots, redaction, invalidation, and an independently implemented verifier |
 | Planning and selection | Planned | Static type satisfiability only | Bound plans, package discovery, admissibility before ranking, deterministic selection, and estimates |
 | Execution | Partial, case-specific | Fresh workspace, staged verified bytes, cleared environment, timeout, declared-output collection, execution receipts, claim extraction, receipt-based reuse with typed SC-12 change classes and `--plan`, and adversarial tests for modified inputs, unchecked bytes, wrong or missing executables, failing runs, drifting outputs, missing or edited receipts, wrong step types, reuse, requirement-only change, selective rerun across the two-step chain, supplied free inputs with receipt-bound outputs, withheld claims for a reached step that did not run, and refusal of an undeclared free input | Sandboxing, resource accounting, artifact store, generic adapter lifecycle, cancellation, recovery, signatures, and change classes a receipt cannot see (policy, qualification, advisory) |
@@ -64,8 +65,8 @@ external product gate.
 | --- | --- | --- |
 | Technical verdict independent of review | Implemented | Kernel, campaign, claims, schemas, CASE-000, and regressions contain no review-gating path |
 | Fixed requirements during search | Partial | Agent cannot silently amend the compiled contract or coverage declaration during an iteration series |
-| Known shortcut refusal | Partial | Coverage omissions and out-of-envelope transport are refused; add one benchmark-specific adversarial shortcut |
-| Autonomous search outcome | Open | Agent finds an all-gates-passing candidate or records bounded exhaustion on the chosen benchmark |
+| Known shortcut refusal | Exercised | An adversarial designer arm (CASE-002 campaign 3, amendment A6) confirmed refusals for out-of-envelope candidates, a wrong interpreter digest, a particle count below its domain, and coverage on a weaker basis, and obtained undeserved verdicts only by rewriting the package; the identity log and the manifest pin (S-030) now make a rewritten package a refusal or a visibly different identity | Signed receipts and manifests |
+| Autonomous search outcome | Reached once | CASE-002 campaign 3: a language-model designer found an all-PASS design 277 kg lighter than the sweep's best at its second transport and stopped by judgment; the seeded surrogate found one at its eleventh; see `RESULTS.md` | Repeat on a second domain (CASE-003) and under the manifest pin |
 | Optional practicality routing | Implemented for the slice | Exact instructed dossier exercises both `request_changes` and `present_to_user`; omission leaves Core fully usable |
 | Independent verification | Open | A separately implemented verifier reproduces package identity and verdicts |
 | Performance baseline | Open | Record candidates explored, wall time, compute, retries, and convergence or exhaustion |
@@ -93,16 +94,17 @@ Before that point:
 
 ## Immediate work queue
 
-1. Run the CASE-002 campaign exactly as `PROTOCOL.md` pre-declares it and
-   record the named outcome in `RESULTS.md`.
-2. Make every bounded verdict require an applicable qualification record, as
-   already deferred by ADR-0008.
-3. Bind a bounded activation claim (ACTINV with its covariance sidecar, or an
-   independent inventory bound) so activation can cover the library entry.
-4. Build an independent offline verifier for the package, compiled snapshot,
+1. Sign receipts and manifests so the requester's manifest pin is no longer
+   the only anchor against a rewritten package (S-030).
+2. The deterministic slab transport capability with CADIS weight windows,
+   qualified against the Monte Carlo record, so a shielding campaign takes
+   minutes rather than hours (in progress).
+3. Run a CASE-003 campaign under the manifest pin with the same arms as
+   CASE-002 campaign 3.
+4. Make every bounded verdict require an applicable qualification record, as
+   deferred by ADR-0008, and bind a bounded activation claim.
+5. Build an independent offline verifier for the package, compiled snapshot,
    claims, and campaign identities.
-5. Add physical or reference validation evidence to the first qualification
-   envelope and record the exact boundary it supports.
 
 ## Update rule
 

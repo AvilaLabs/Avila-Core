@@ -161,3 +161,5 @@ outcome occurred and cites the log lines that establish it.
   Outcomes as pre-declared plus A4's "search failure". The comparison of
   interest is arm 4 against arm 3 on transports to first all-`PASS` and on
   the mass of the best all-`PASS` design.
+- **A6 closed, 2026-09-03.** The adversarial arm ran; its findings and the
+  response are recorded in `RESULTS.md` under "Adversarial designer arm".

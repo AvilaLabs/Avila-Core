@@ -68,6 +68,10 @@ pub struct CaseRunOptions {
     pub environment: BTreeMap<String, String>,
     /// Append one JSON line describing this run to this file.
     pub log: Option<PathBuf>,
+    /// Refuse the run before anything is compiled or executed unless the
+    /// package manifest's digest equals this value: the requester's pin on
+    /// the exact package a campaign is allowed to evaluate.
+    pub expected_manifest_sha256: Option<String>,
 }
 
 impl Default for CaseRunOptions {
@@ -81,6 +85,7 @@ impl Default for CaseRunOptions {
             inputs: BTreeMap::new(),
             environment: BTreeMap::new(),
             log: None,
+            expected_manifest_sha256: None,
         }
     }
 }
@@ -560,6 +565,16 @@ pub fn execute_case(
         replay: None,
         notice: CASE_RUN_NOTICE.into(),
     };
+    if let Some(expected) = &options.expected_manifest_sha256
+        && expected != &report.integrity.manifest_sha256
+    {
+        report.notice = format!(
+            "package manifest sha256 {} differs from the pinned {}; the run is refused before anything is compiled or executed",
+            report.integrity.manifest_sha256, expected
+        );
+        append_log(options, &report);
+        return Ok(report);
+    }
 
     // A missing root is an explicit partial check. A supplied-but-missing or
     // different artifact is a failed integrity gate and nothing else runs.
@@ -1136,6 +1151,20 @@ fn append_log(options: &CaseRunOptions, report: &CaseRunReport) {
         campaign_sha256: Option<&'a str>,
         #[serde(skip_serializing_if = "Option::is_none")]
         workspace: Option<&'a str>,
+        /// The identities this run was evaluated under, so a rewritten
+        /// package or contract is visible in the record as a different one.
+        manifest_sha256: &'a str,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        compiled_snapshot_sha256: Option<&'a str>,
+        documents: Vec<DocumentLog<'a>>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        reused_from: Vec<(&'a str, &'a str)>,
+    }
+    #[derive(Serialize)]
+    struct DocumentLog<'a> {
+        document_id: &'a str,
+        role: &'a str,
+        sha256: &'a str,
     }
     #[derive(Serialize)]
     struct CoverageLog<'a> {
@@ -1190,6 +1219,40 @@ fn append_log(options: &CaseRunOptions, report: &CaseRunReport) {
             .execution
             .as_ref()
             .and_then(|execution| execution.workspace.as_deref()),
+        manifest_sha256: &report.integrity.manifest_sha256,
+        compiled_snapshot_sha256: report
+            .compile
+            .as_ref()
+            .and_then(|compile| compile.compiled.as_ref())
+            .map(|compiled| compiled.snapshot_sha256.as_str()),
+        documents: report
+            .integrity
+            .documents
+            .iter()
+            .map(|document| DocumentLog {
+                document_id: &document.document_id,
+                role: &document.role,
+                sha256: document
+                    .actual_sha256
+                    .as_deref()
+                    .unwrap_or(&document.expected_sha256),
+            })
+            .collect(),
+        reused_from: report
+            .execution
+            .as_ref()
+            .map(|execution| {
+                execution
+                    .steps
+                    .iter()
+                    .filter_map(|step| {
+                        step.reused_receipt
+                            .as_deref()
+                            .map(|receipt| (step.step_id.as_str(), receipt))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
     };
     if let Ok(mut line) = serde_json::to_string(&entry)
         && let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path)
@@ -3443,6 +3506,7 @@ mod tests {
             inputs: BTreeMap::new(),
             environment: BTreeMap::new(),
             log: None,
+            expected_manifest_sha256: None,
         };
         let report = execute_case(&case_000(), &options).unwrap();
         let summary = human_summary(&report);

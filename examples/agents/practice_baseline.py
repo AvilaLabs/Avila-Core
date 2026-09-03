@@ -180,7 +180,7 @@ def discover_dose_limit(core_path, case, source_roots, python3, out, log):
     )
     report = core.run_core(
         core_path, case, Path(out) / "candidates" / "bootstrap.json",
-        source_roots=source_roots, capabilities={"python3": python3}, log=log,
+        source_roots=source_roots, capabilities={"python3": python3}, log=log, extra_args=(['--expect-manifest', args.expect_manifest] if getattr(args, 'expect_manifest', None) else None),
     )
     limits = core.discover_limits(report)
     if limits["dose_rate"] is None:
@@ -207,6 +207,8 @@ def main():
     parser.add_argument("--openmc-python", default=None)
     parser.add_argument("--cross-sections", default=None, help="value for OPENMC_CROSS_SECTIONS")
     parser.add_argument("--run", action="store_true", help="run each baseline through Core (screen, and transport if --openmc-python/--cross-sections are given)")
+    parser.add_argument("--expect-manifest", default=None, metavar="SHA256",
+                         help="refuse any run whose package manifest digest differs from this pinned value")
     parser.add_argument("--source-root", action="append", default=[], metavar="NAME=PATH",
                          help="additional or overriding source root passed to Core (repeatable)")
     args = parser.parse_args()
@@ -258,7 +260,7 @@ def main():
         for entry in written:
             report = core.run_core(
                 args.core, args.case, entry["path"], source_roots=source_roots,
-                capabilities=transport_capabilities, environment=environment, log=log,
+                capabilities=transport_capabilities, environment=environment, log=log, extra_args=(['--expect-manifest', args.expect_manifest] if getattr(args, 'expect_manifest', None) else None),
             )
             results.append({**entry, "margins": core.all_margins(report)})
             core.eprint(f"{entry['candidate_id']}: status={report.get('status')}")

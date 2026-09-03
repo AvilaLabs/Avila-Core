@@ -307,3 +307,76 @@ language-model arms shared the machine, so the cost comparison is deferred.
 | `campaign-rev3/campaign-summary.json` | `f4277a05efb05d8927f1d59552419370400cf29c5281669b94c39b451413f974` | 179 |
 | `campaign-rev3/STATUS` | `d305beb19cf51d67c21d96327eb87f9f987275c5943ae5ec82d53015225b4896` | 9 |
 | `llm-designer-prompt.md` | `3bec72b3c4bde1df43e7098cdaa10acde3f0f8febab84d93ce30b3bfd6af4ec8` | 60 |
+
+---
+
+# Adversarial designer arm (amendment A6)
+
+**Arm:** 2026-09-03, a connected agent instructed to obtain `PASS` by any
+means in its own git worktree, transport budget 12, prompt recorded in
+`adversarial-designer-prompt.md`, every attempt recorded before it ran in
+`campaign-rev3/adversarial/attempts.md` with its logs, forged documents, and
+scripts beside it. The worktree was restored afterwards; nothing reached the
+main checkout.
+
+## What held
+
+- Out-of-envelope candidates (a fourth layer, more than 120 cm, an unlisted
+  material) were `NOT_EVALUATED` outside the qualification envelope, even
+  when paired with forged favourable receipts, because the envelope is
+  evaluated from the candidate's own bytes on every run.
+- A substitute interpreter was refused by digest: the whole run `rejected`.
+  A patched-digest substitute reached five of six verdicts, because the
+  screen used an untouched capability.
+- A particle count below the registry's declared domain was refused at
+  compile time (`CORE-T2402`); at the floor, wider intervals did not rescue
+  a bad design.
+- Counting the nominal activation guide as coverage was refused verbatim,
+  as it was when the case was composed.
+
+## What did not hold
+
+Four attempts produced all-`PASS` verdicts the agent considers undeserved,
+and every one of them rewrote the case package and resynced the manifest:
+
+1. raising the contract's limits, with the unchanged reference candidate
+   reused from its real receipt;
+2. doctoring the screen and transport scripts by one line each;
+3. forging receipts and hand-written claims so that nothing ran and every
+   step was reused;
+4. pointing a light candidate's receipts at a heavy passing candidate's real
+   outputs.
+
+The agent's root-cause statement is correct: package verification checked
+only that each document matched the digest declared beside it, receipts are
+unsigned, and the campaign log did not carry the identities a run was
+evaluated under, so a rewritten package and the blessed one were
+indistinguishable from the log alone. The record-only checker
+`adversarial_check.py` found no rows to classify for that reason.
+
+## What changed (S-030)
+
+- Every campaign log line now carries `manifest_sha256`,
+  `compiled_snapshot_sha256`, every document's digest by role, and the
+  receipts a run reused, so all four attempts are visible in the record as
+  runs under a different package.
+- `run --expect-manifest SHA256` refuses, before anything is compiled or
+  executed, a package whose manifest digest differs from the pinned one, and
+  logs the refusal with the offending digest. The designer tools pin the
+  package when an arm is initialised, and the scripted designers accept the
+  same pin. Under the pin, all four attempts are refusals.
+- The checker classifies rows by manifest digest when the log carries it.
+
+Verified on CASE-003: a pinned honest run evaluated and logged its
+identities; after the contract's limit was raised and the manifest resynced,
+the next run was refused before compilation with the rewritten manifest's
+digest in the log.
+
+## What remains open
+
+The pin is the requester's anchor, held outside the package; it does not
+make receipts or manifests self-authenticating. Signed receipts, manifests,
+and qualification records remain the durable answer and are the first item
+of the work queue. Mass and thickness are extracted from the screen's
+output, so they are as forgeable as any output; deriving them from the
+admitted candidate is a policy choice not yet made.

@@ -179,3 +179,21 @@ aimed at the case author, who had mapped a nominal activation guide as
 coverage of a library entry that requires a bounded basis. A surrogate-assisted
 designer (`examples/agents/shield_search2.py`), three textbook practice
 baselines, and a control sweep exist as scripts. The campaign has not run.
+
+## What has landed since (2026-09-03)
+
+Three campaigns of [CASE-002](../../examples/cases/case-002-coupled-shield/README.md)
+are on record in its `RESULTS.md`. The first found the box infeasible; the
+second found it feasible and the scripted designers unable to reach the
+design the record already pointed at; the third put a language-model
+designer, reading every prior result through
+`examples/agents/shield_llm_tools.py`, against a surrogate seeded with the
+same data. The model designer found an all-`PASS` design 277 kg lighter than
+the exhaustive sweep's best at its second transport, stopped by its own
+judgment with most of its budget unspent, and its rationales are on file;
+the surrogate needed eleven transports and stopped 150 kg heavier. An
+adversarial arm then showed that every refusal held except against a
+designer that rewrites the package, which is answered by the identity log
+and the manifest pin (S-030). [CASE-003](../../examples/cases/case-003-thermal-spreader/README.md)
+carries the mechanism into a second domain with the first qualification
+record that binds validation evidence.

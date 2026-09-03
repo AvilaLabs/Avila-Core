@@ -97,6 +97,10 @@ enum Command {
         /// Supply a value for an environment key an execution declares.
         #[arg(long = "env", value_name = "KEY=VALUE")]
         environment: Vec<String>,
+        /// Refuse the run unless the package manifest's sha256 equals this
+        /// pinned value, so a campaign cannot evaluate a rewritten package.
+        #[arg(long = "expect-manifest", value_name = "SHA256")]
+        expect_manifest: Option<String>,
         /// Append one JSON line describing this run to FILE.
         #[arg(long, value_name = "FILE")]
         log: Option<PathBuf>,
@@ -197,6 +201,7 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             capabilities,
             workspace,
             no_reuse,
+            expect_manifest,
             plan,
             inputs,
             environment,
@@ -212,6 +217,7 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 inputs: avila_core_runner::parse_inputs(&inputs)?,
                 environment: avila_core_runner::parse_environment(&environment)?,
                 log,
+                expected_manifest_sha256: expect_manifest,
             };
             let report = avila_core_runner::execute_case(&case, &options)?;
             if json {

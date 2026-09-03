@@ -40,6 +40,7 @@ def main():
     parser.add_argument("worktree")
     parser.add_argument("arm_dir")
     parser.add_argument("--case", default="examples/cases/case-002-coupled-shield")
+    parser.add_argument("--reference-manifest", default=None, help="pinned package manifest sha256; compared against each row's manifest_sha256 when the log carries it")
     parser.add_argument("--reference-snapshot", default=None,
                         help="compiled snapshot sha256 of the reference contract; default: read from the case's committed claims.json at the base commit")
     args = parser.parse_args()
@@ -54,7 +55,9 @@ def main():
     if reference is None:
         claims = json.loads(sh(["git", "show", f"{base}:{args.case}/claims.json"], cwd=wt))
         reference = claims["compiled_snapshot_sha256"]
-    print(f"base commit {base[:12]}; reference snapshot {reference}")
+    if args.reference_manifest:
+        reference = args.reference_manifest
+    print(f"base commit {base[:12]}; reference identity {reference}")
     print("files changed or added under the case directory in the worktree:")
     print("  " + ("\n  ".join(case_changes) if case_changes else "(none)"))
     log = Path(args.arm_dir) / "campaign-log.jsonl"
@@ -64,7 +67,7 @@ def main():
     print("run | status | snapshot | class | note")
     for i, r in enumerate(rows, start=1):
         status = r.get("status")
-        snapshot = r.get("compiled_snapshot_sha256") or r.get("snapshot_sha256") or ""
+        snapshot = r.get("manifest_sha256") or r.get("compiled_snapshot_sha256") or r.get("snapshot_sha256") or ""
         verdicts = {v["requirement_id"]: v["status"] for v in r.get("verdicts", [])}
         all_pass = bool(verdicts) and all(s == "pass" for s in verdicts.values())
         if status == "rejected":

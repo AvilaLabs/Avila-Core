@@ -349,6 +349,7 @@ fn run_options(synthetic: &Synthetic, workspace: PathBuf) -> CaseRunOptions {
         inputs: BTreeMap::new(),
         environment: BTreeMap::new(),
         log: None,
+        expected_manifest_sha256: None,
     }
 }
 
@@ -1525,4 +1526,67 @@ fn a_qualification_for_a_different_executable_is_refused() {
     .unwrap_err()
     .to_string();
     assert!(error.contains("covers executable"), "{error}");
+}
+
+#[test]
+fn a_pinned_manifest_refuses_a_rewritten_package_and_the_log_names_identities() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let log = dir.0.join("campaign-log.jsonl");
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options.log = Some(log.clone());
+
+    // An honest run: the log line carries the identities it was evaluated under.
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(
+        report.status,
+        CaseRunStatus::Evaluated,
+        "{}",
+        human_summary(&report)
+    );
+    let manifest = report.integrity.manifest_sha256.clone();
+    let read_log = || -> Vec<Value> {
+        fs::read_to_string(&log)
+            .unwrap()
+            .lines()
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect()
+    };
+    let lines = read_log();
+    assert_eq!(lines.len(), 1);
+    assert_eq!(lines[0]["manifest_sha256"], manifest);
+    assert!(
+        lines[0]["compiled_snapshot_sha256"]
+            .as_str()
+            .unwrap()
+            .starts_with("sha256:")
+    );
+    assert!(
+        lines[0]["documents"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|document| document["role"] == "contract")
+    );
+
+    // Pinned to a different digest: refused before compilation, and logged.
+    options.expected_manifest_sha256 = Some(format!("sha256:{}", "0".repeat(64)));
+    let refused = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(refused.status, CaseRunStatus::Rejected);
+    assert!(refused.compile.is_none());
+    assert!(refused.notice.contains("pinned"), "{}", refused.notice);
+    let lines = read_log();
+    assert_eq!(lines.len(), 2);
+    assert_eq!(lines[1]["status"], "rejected");
+    assert_eq!(lines[1]["manifest_sha256"], manifest);
+
+    // Pinned to the true digest: the run proceeds.
+    options.expected_manifest_sha256 = Some(manifest);
+    let pinned = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(
+        pinned.status,
+        CaseRunStatus::Evaluated,
+        "{}",
+        human_summary(&pinned)
+    );
 }

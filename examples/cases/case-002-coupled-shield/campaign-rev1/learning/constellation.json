@@ -1,0 +1,114 @@
+{
+  "schema": "avila.shielding/constellation/v1",
+  "notice": "The surrogate only proposes candidates and predicts their margins; it never constructs, edits, or substitutes for a Core verdict. Every status, rule, limit, and margin in this file is copied from Avila Core's own --json report or --log campaign log.",
+  "requirements": {
+    "SHIELD-R1-screen": {
+      "pass": 123,
+      "fail": 109,
+      "inconclusive": 0,
+      "not_evaluated": 0,
+      "binding": 158,
+      "unit": "uSv/h"
+    },
+    "SHIELD-R2-neutron": {
+      "pass": 0,
+      "fail": 10,
+      "inconclusive": 1,
+      "not_evaluated": 221,
+      "binding": 6,
+      "unit": "uSv/h"
+    },
+    "SHIELD-R3-photon": {
+      "pass": 0,
+      "fail": 10,
+      "inconclusive": 1,
+      "not_evaluated": 221,
+      "binding": 4,
+      "unit": "uSv/h"
+    },
+    "SHIELD-R4-mass": {
+      "pass": 232,
+      "fail": 0,
+      "inconclusive": 0,
+      "not_evaluated": 0,
+      "binding": 0,
+      "unit": "kg"
+    },
+    "SHIELD-R5-thickness": {
+      "pass": 232,
+      "fail": 0,
+      "inconclusive": 0,
+      "not_evaluated": 0,
+      "binding": 64,
+      "unit": "cm"
+    },
+    "SHIELD-R6-activation": {
+      "pass": 9,
+      "fail": 2,
+      "inconclusive": 0,
+      "not_evaluated": 221,
+      "binding": 0,
+      "unit": "Bq/g"
+    }
+  },
+  "dose_requirement_ids": [
+    "SHIELD-R2-neutron",
+    "SHIELD-R3-photon"
+  ],
+  "mass_requirement_ids": [
+    "SHIELD-R4-mass"
+  ],
+  "sensitivity_d_log_nominal_d_thickness_cm": {
+    "SHIELD-R1-screen": {
+      "borated_polyethylene": -0.10073857518114657,
+      "concrete": -0.07403525562576102,
+      "iron": -0.1030986330421946,
+      "lead": -0.07218066569066038,
+      "polyethylene": -0.10047272143774894,
+      "water": -0.09285313283998559
+    },
+    "SHIELD-R2-neutron": {
+      "borated_polyethylene": -0.0020186903033057673,
+      "concrete": 0.014840109716604691,
+      "iron": -0.018444616115023987,
+      "lead": 0.0,
+      "polyethylene": -0.008417958493554829,
+      "water": 0.0036959913145666766
+    },
+    "SHIELD-R3-photon": {
+      "borated_polyethylene": -0.005516777228756366,
+      "concrete": 0.005411195139215102,
+      "iron": -0.054716993602973635,
+      "lead": 0.0,
+      "polyethylene": 0.0009135036062648521,
+      "water": 0.0030924374887161903
+    },
+    "SHIELD-R4-mass": {
+      "borated_polyethylene": 0.016100873207932662,
+      "concrete": 0.0353899143354885,
+      "iron": 0.10654719412945009,
+      "lead": 0.1383467793373224,
+      "polyethylene": 0.015778951675268844,
+      "water": 0.0156638208076743
+    },
+    "SHIELD-R5-thickness": {
+      "borated_polyethylene": 0.01844328962680869,
+      "concrete": 0.02655526579364825,
+      "iron": 0.0159320774040374,
+      "lead": 0.01896961205530465,
+      "polyethylene": 0.01907175071782441,
+      "water": 0.018500366755937712
+    },
+    "SHIELD-R6-activation": {
+      "borated_polyethylene": -0.03749206099512561,
+      "concrete": 0.08105708213858574,
+      "iron": 0.130893737761469,
+      "lead": 0.0,
+      "polyethylene": 0.0051917619205882936,
+      "water": -0.0021427663175314035
+    }
+  },
+  "pareto_mass_vs_primary_dose": [],
+  "best_feasible_candidates": [],
+  "rows_considered": 232
+}

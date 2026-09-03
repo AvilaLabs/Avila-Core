@@ -1,0 +1,19 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "practice-fe-poly-pb",
+  "description": "classic iron/polyethylene/lead sandwich: a fixed 10 cm iron first layer (cheap inelastic removal of the highest-energy neutrons), polyethylene sized by the removal-cross-section method at the same design factor 2 for the remaining attenuation the iron and lead do not supply, and the same fixed 5 cm lead capture-gamma layer last.",
+  "layers": [
+    {
+      "material": "iron",
+      "thickness_cm": "10"
+    },
+    {
+      "material": "polyethylene",
+      "thickness_cm": "76"
+    },
+    {
+      "material": "lead",
+      "thickness_cm": "5"
+    }
+  ]
+}

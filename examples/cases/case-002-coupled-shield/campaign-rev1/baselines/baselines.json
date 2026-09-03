@@ -1,0 +1,236 @@
+[
+  {
+    "candidate_id": "practice-removal-poly",
+    "rule": "removal-cross-section method, design factor 2: polyethylene alone sized to attenuate the unshielded dose (187200 uSv/h) to limit/2 (5 uSv/h).",
+    "layers": [
+      [
+        "polyethylene",
+        "96"
+      ]
+    ],
+    "margins": [
+      {
+        "requirement_id": "SHIELD-R1-screen",
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "unit": "uSv/h",
+        "limit": "10",
+        "nominal": "2427314889021133/500000000000000",
+        "margin": "5.145370221957734"
+      },
+      {
+        "requirement_id": "SHIELD-R2-neutron",
+        "status": "fail",
+        "rule": "bounded.le.exceeds",
+        "unit": "uSv/h",
+        "limit": "7",
+        "lower": "192826501934319/15625000000000",
+        "upper": "287043530565681/15625000000000",
+        "nominal": "191948013/12500000",
+        "margin": "-11.370785956203584"
+      },
+      {
+        "requirement_id": "SHIELD-R3-photon",
+        "status": "fail",
+        "rule": "bounded.le.exceeds",
+        "unit": "uSv/h",
+        "limit": "3",
+        "lower": "523226088041409/19531250000000",
+        "upper": "548358560396091/19531250000000",
+        "nominal": "27432567/1000000",
+        "margin": "-25.0759582922798592"
+      },
+      {
+        "requirement_id": "SHIELD-R4-mass",
+        "status": "pass",
+        "rule": "bounded.le.within",
+        "unit": "kg",
+        "limit": "1500",
+        "lower": "4512/5",
+        "upper": "4512/5",
+        "nominal": "4512/5",
+        "margin": "597.6"
+      },
+      {
+        "requirement_id": "SHIELD-R5-thickness",
+        "status": "pass",
+        "rule": "bounded.le.within",
+        "unit": "cm",
+        "limit": "100",
+        "lower": "96",
+        "upper": "96",
+        "nominal": "96",
+        "margin": "4"
+      },
+      {
+        "requirement_id": "SHIELD-R6-activation",
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "unit": "Bq/g",
+        "limit": "1",
+        "nominal": "10661953/100000000000000",
+        "margin": "0.99999989338047"
+      }
+    ]
+  },
+  {
+    "candidate_id": "practice-removal-poly-pb",
+    "rule": "removal-cross-section method, design factor 2, identical polyethylene thickness as practice-removal-poly, plus the usual capture-gamma rule: a fixed 5 cm lead layer after the moderator to absorb neutron-capture gammas the removal calculation does not model.",
+    "layers": [
+      [
+        "polyethylene",
+        "96"
+      ],
+      [
+        "lead",
+        "5"
+      ]
+    ],
+    "margins": [
+      {
+        "requirement_id": "SHIELD-R1-screen",
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "unit": "uSv/h",
+        "limit": "10",
+        "nominal": "26910537432534523/10000000000000000",
+        "margin": "7.3089462567465477"
+      },
+      {
+        "requirement_id": "SHIELD-R2-neutron",
+        "status": "fail",
+        "rule": "bounded.le.exceeds",
+        "unit": "uSv/h",
+        "limit": "7",
+        "lower": "330408607994883/31250000000000",
+        "upper": "571361669505117/31250000000000",
+        "nominal": "360708111/25000000",
+        "margin": "-11.283573424163744"
+      },
+      {
+        "requirement_id": "SHIELD-R3-photon",
+        "status": "pass",
+        "rule": "bounded.le.within",
+        "unit": "uSv/h",
+        "limit": "3",
+        "lower": "510062891046039/312500000000000",
+        "upper": "564080156453961/312500000000000",
+        "nominal": "429657219/250000000",
+        "margin": "1.1949434993473248"
+      },
+      {
+        "requirement_id": "SHIELD-R4-mass",
+        "status": "pass",
+        "rule": "bounded.le.within",
+        "unit": "kg",
+        "limit": "1500",
+        "lower": "14699/10",
+        "upper": "14699/10",
+        "nominal": "14699/10",
+        "margin": "30.1"
+      },
+      {
+        "requirement_id": "SHIELD-R5-thickness",
+        "status": "fail",
+        "rule": "bounded.le.exceeds",
+        "unit": "cm",
+        "limit": "100",
+        "lower": "101",
+        "upper": "101",
+        "nominal": "101",
+        "margin": "-1"
+      },
+      {
+        "requirement_id": "SHIELD-R6-activation",
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "unit": "Bq/g",
+        "limit": "1",
+        "nominal": "6218881/50000000000",
+        "margin": "0.99987562238"
+      }
+    ]
+  },
+  {
+    "candidate_id": "practice-fe-poly-pb",
+    "rule": "classic iron/polyethylene/lead sandwich: a fixed 10 cm iron first layer (cheap inelastic removal of the highest-energy neutrons), polyethylene sized by the removal-cross-section method at the same design factor 2 for the remaining attenuation the iron and lead do not supply, and the same fixed 5 cm lead capture-gamma layer last.",
+    "layers": [
+      [
+        "iron",
+        "10"
+      ],
+      [
+        "polyethylene",
+        "76"
+      ],
+      [
+        "lead",
+        "5"
+      ]
+    ],
+    "margins": [
+      {
+        "requirement_id": "SHIELD-R1-screen",
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "unit": "uSv/h",
+        "limit": "10",
+        "nominal": "565803350372249/125000000000000",
+        "margin": "5.473573197022008"
+      },
+      {
+        "requirement_id": "SHIELD-R2-neutron",
+        "status": "fail",
+        "rule": "bounded.le.exceeds",
+        "unit": "uSv/h",
+        "limit": "7",
+        "lower": "980609614716519/62500000000000",
+        "upper": "1296523855283481/62500000000000",
+        "nominal": "227713347/12500000",
+        "margin": "-13.744381684535696"
+      },
+      {
+        "requirement_id": "SHIELD-R3-photon",
+        "status": "fail",
+        "rule": "bounded.le.exceeds",
+        "unit": "uSv/h",
+        "limit": "3",
+        "lower": "1911209579071443/625000000000000",
+        "upper": "2180084130928557/625000000000000",
+        "nominal": "409129371/125000000",
+        "margin": "-0.4881346094856912"
+      },
+      {
+        "requirement_id": "SHIELD-R4-mass",
+        "status": "fail",
+        "rule": "bounded.le.exceeds",
+        "unit": "kg",
+        "limit": "1500",
+        "lower": "20689/10",
+        "upper": "20689/10",
+        "nominal": "20689/10",
+        "margin": "-568.9"
+      },
+      {
+        "requirement_id": "SHIELD-R5-thickness",
+        "status": "pass",
+        "rule": "bounded.le.within",
+        "unit": "cm",
+        "limit": "100",
+        "lower": "91",
+        "upper": "91",
+        "nominal": "91",
+        "margin": "9"
+      },
+      {
+        "requirement_id": "SHIELD-R6-activation",
+        "status": "fail",
+        "rule": "nominal.le.exceeds",
+        "unit": "Bq/g",
+        "limit": "1",
+        "nominal": "42767117/10000000",
+        "margin": "-3.2767117"
+      }
+    ]
+  }
+]

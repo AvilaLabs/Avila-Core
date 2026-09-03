@@ -1,0 +1,14 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "c-0157",
+  "layers": [
+    {
+      "material": "water",
+      "thickness_cm": "25"
+    },
+    {
+      "material": "borated_polyethylene",
+      "thickness_cm": "70"
+    }
+  ]
+}

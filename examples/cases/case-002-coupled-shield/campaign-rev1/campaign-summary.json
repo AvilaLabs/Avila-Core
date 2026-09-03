@@ -1,0 +1,249 @@
+{
+  "baselines": [
+    {
+      "candidate": {
+        "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign/baselines/candidates/practice-removal-poly.json",
+        "sha256": "sha256:05415d1d63dbd7a1ae6491923eaed226077c476b3db547c9dc999ca654c3ad6b",
+        "layers": [
+          [
+            "polyethylene",
+            "96"
+          ]
+        ]
+      },
+      "verdicts": {
+        "SHIELD-R1-screen": [
+          "pass",
+          "5.145370221957734"
+        ],
+        "SHIELD-R2-neutron": [
+          "fail",
+          "-11.370785956203584"
+        ],
+        "SHIELD-R3-photon": [
+          "fail",
+          "-25.0759582922798592"
+        ],
+        "SHIELD-R4-mass": [
+          "pass",
+          "597.6"
+        ],
+        "SHIELD-R5-thickness": [
+          "pass",
+          "4"
+        ],
+        "SHIELD-R6-activation": [
+          "pass",
+          "0.99999989338047"
+        ]
+      },
+      "all_pass": false,
+      "campaign_sha256": "sha256:f813ab5e8b60da755e8d6fd891c8d26444d6a69bbbe675aa4be8a408250fc29d"
+    },
+    {
+      "candidate": {
+        "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign/baselines/candidates/practice-removal-poly-pb.json",
+        "sha256": "sha256:c60de341a4687930d0b27807aa9363355d6276e005421db97a97879fc4784a60",
+        "layers": [
+          [
+            "polyethylene",
+            "96"
+          ],
+          [
+            "lead",
+            "5"
+          ]
+        ]
+      },
+      "verdicts": {
+        "SHIELD-R1-screen": [
+          "pass",
+          "7.3089462567465477"
+        ],
+        "SHIELD-R2-neutron": [
+          "fail",
+          "-11.283573424163744"
+        ],
+        "SHIELD-R3-photon": [
+          "pass",
+          "1.1949434993473248"
+        ],
+        "SHIELD-R4-mass": [
+          "pass",
+          "30.1"
+        ],
+        "SHIELD-R5-thickness": [
+          "fail",
+          "-1"
+        ],
+        "SHIELD-R6-activation": [
+          "pass",
+          "0.99987562238"
+        ]
+      },
+      "all_pass": false,
+      "campaign_sha256": "sha256:d0d284c227dad4f395ac220ec8ef41af69cf99d828486fa8011d2b1d6ad8c406"
+    },
+    {
+      "candidate": {
+        "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign/baselines/candidates/practice-fe-poly-pb.json",
+        "sha256": "sha256:25024e09722d23d6425c086f3534187a864299b825a2e55cb842ac6d824f8e76",
+        "layers": [
+          [
+            "iron",
+            "10"
+          ],
+          [
+            "polyethylene",
+            "76"
+          ],
+          [
+            "lead",
+            "5"
+          ]
+        ]
+      },
+      "verdicts": {
+        "SHIELD-R1-screen": [
+          "pass",
+          "5.473573197022008"
+        ],
+        "SHIELD-R2-neutron": [
+          "fail",
+          "-13.744381684535696"
+        ],
+        "SHIELD-R3-photon": [
+          "fail",
+          "-0.4881346094856912"
+        ],
+        "SHIELD-R4-mass": [
+          "fail",
+          "-568.9"
+        ],
+        "SHIELD-R5-thickness": [
+          "pass",
+          "9"
+        ],
+        "SHIELD-R6-activation": [
+          "fail",
+          "-3.2767117"
+        ]
+      },
+      "all_pass": false,
+      "campaign_sha256": "sha256:69b43571a5471491ca43c4f640f72f842a13e71d9bb5534342b57e58301de480"
+    }
+  ],
+  "arms": {
+    "recovery": {
+      "arm": "recovery",
+      "log_lines": 53,
+      "screened_only": 45,
+      "transported": 8,
+      "verdict_histogram_transported": {
+        "SHIELD-R1-screen": {
+          "pass": 8
+        },
+        "SHIELD-R2-neutron": {
+          "fail": 8
+        },
+        "SHIELD-R3-photon": {
+          "fail": 8
+        },
+        "SHIELD-R4-mass": {
+          "pass": 8
+        },
+        "SHIELD-R5-thickness": {
+          "pass": 8
+        },
+        "SHIELD-R6-activation": {
+          "pass": 8
+        }
+      },
+      "first_all_pass_transport_index": null,
+      "all_pass_count": 0,
+      "best_all_pass": null,
+      "refused_runs": 0,
+      "inconclusive_verdicts": 0,
+      "not_evaluated": []
+    },
+    "learning": {
+      "arm": "learning",
+      "log_lines": 232,
+      "screened_only": 221,
+      "transported": 11,
+      "verdict_histogram_transported": {
+        "SHIELD-R1-screen": {
+          "pass": 7,
+          "fail": 4
+        },
+        "SHIELD-R2-neutron": {
+          "fail": 10,
+          "inconclusive": 1
+        },
+        "SHIELD-R3-photon": {
+          "fail": 10,
+          "inconclusive": 1
+        },
+        "SHIELD-R4-mass": {
+          "pass": 11
+        },
+        "SHIELD-R5-thickness": {
+          "pass": 11
+        },
+        "SHIELD-R6-activation": {
+          "pass": 9,
+          "fail": 2
+        }
+      },
+      "first_all_pass_transport_index": null,
+      "all_pass_count": 0,
+      "best_all_pass": null,
+      "refused_runs": 0,
+      "inconclusive_verdicts": 2,
+      "not_evaluated": []
+    },
+    "random": {
+      "arm": "random",
+      "log_lines": 127,
+      "screened_only": 121,
+      "transported": 6,
+      "verdict_histogram_transported": {
+        "SHIELD-R1-screen": {
+          "fail": 5,
+          "pass": 1
+        },
+        "SHIELD-R2-neutron": {
+          "fail": 6
+        },
+        "SHIELD-R3-photon": {
+          "fail": 6
+        },
+        "SHIELD-R4-mass": {
+          "pass": 6
+        },
+        "SHIELD-R5-thickness": {
+          "pass": 6
+        },
+        "SHIELD-R6-activation": {
+          "pass": 5,
+          "fail": 1
+        }
+      },
+      "first_all_pass_transport_index": null,
+      "all_pass_count": 0,
+      "best_all_pass": null,
+      "refused_runs": 0,
+      "inconclusive_verdicts": 0,
+      "not_evaluated": []
+    }
+  },
+  "sweep": {
+    "points": 17,
+    "all_pass_points": 0,
+    "optimum": null
+  },
+  "recovery_check": {
+    "applicable": false,
+    "reason": "the sweep has no all-PASS point"
+  }
+}

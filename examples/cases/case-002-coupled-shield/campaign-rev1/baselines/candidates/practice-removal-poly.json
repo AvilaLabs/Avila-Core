@@ -1,0 +1,11 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "practice-removal-poly",
+  "description": "removal-cross-section method, design factor 2: polyethylene alone sized to attenuate the unshielded dose (187200 uSv/h) to limit/2 (5 uSv/h).",
+  "layers": [
+    {
+      "material": "polyethylene",
+      "thickness_cm": "96"
+    }
+  ]
+}

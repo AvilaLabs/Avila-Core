@@ -1,0 +1,11 @@
+{
+  "schema": "avila.shielding/source/v1",
+  "description": "A synthetic plane source of 14.1 MeV neutrons, isotropic, uniformly distributed over the slab face, emitting into the shield with a vacuum behind it. The area is the slab's lateral extent; the strength is a small deuterium-tritium generator's order of magnitude.",
+  "strength_n_per_s": "1000000000",
+  "area_cm2": "10000",
+  "lateral_cm": "100",
+  "energy_MeV": "14.1",
+  "dose_coefficient_uSv_cm2": "0.00052",
+  "dose_coefficient_note": "Approximate ambient dose equivalent per unit fluence at 14 MeV for the screening step only; the transport step uses the ICRP-116 anterior-posterior coefficients shipped with OpenMC over the full transmitted spectrum.",
+  "detector_thickness_cm": "1"
+}

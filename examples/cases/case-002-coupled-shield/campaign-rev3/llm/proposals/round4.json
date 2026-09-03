@@ -1,0 +1,9 @@
+[
+  {
+    "layers": [
+      {"material": "borated_polyethylene", "thickness_cm": 106},
+      {"material": "lead", "thickness_cm": 2}
+    ],
+    "rationale": "Fills the one-cm gap in the now-tightly-bracketed R3 boundary at 2cm lead: 104cm borated_polyethylene+2cm lead (l-0015) came back R3 inconclusive (upper 3.07 of 3, essentially straddling the limit), 105cm (l-0004) passed with R3 upper 2.98 of 3 (margin 0.0239, effectively at the noise floor), and 107cm (l-0014) passed with a moderate margin (R3 upper 2.78, margin 0.218). This will not beat l-0004 on mass (1.29e3 kg/m2 vs 1.277e3 kg/m2) but pins down whether the R3 margin grows smoothly from 105 to 107, which matters for judging how much confidence to place in 105cm as the practical floor versus recommending a slightly heavier design with real margin."
+  }
+]

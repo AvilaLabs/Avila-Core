@@ -1,0 +1,10 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "bootstrap",
+  "layers": [
+    {
+      "material": "lead",
+      "thickness_cm": "5"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+12:20:36Z LLM ARM INIT
+2026-09-03T12:52:01Z CAMPAIGN START case=examples/cases/case-002-coupled-shield revision 3 scripted arms
+2026-09-03T12:52:01Z START sweep
+2026-09-03T13:50:06Z DONE sweep
+2026-09-03T13:50:06Z START recovery
+2026-09-03T14:30:58Z DONE recovery
+2026-09-03T14:30:58Z START surrogate

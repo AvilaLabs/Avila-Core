@@ -1,0 +1,24 @@
+{
+  "screens": 17,
+  "transports": 10,
+  "next_index": 17,
+  "screened": {
+    "[[\"polyethylene\", \"108\"], [\"lead\", \"4\"]]": "l-0000",
+    "[[\"polyethylene\", \"106\"], [\"lead\", \"4\"]]": "l-0001",
+    "[[\"polyethylene\", \"110\"], [\"lead\", \"3\"]]": "l-0002",
+    "[[\"borated_polyethylene\", \"105\"], [\"lead\", \"3\"]]": "l-0003",
+    "[[\"borated_polyethylene\", \"105\"], [\"lead\", \"2\"]]": "l-0004",
+    "[[\"borated_polyethylene\", \"110\"], [\"lead\", \"3\"]]": "l-0005",
+    "[[\"borated_polyethylene\", \"110\"], [\"lead\", \"2\"]]": "l-0006",
+    "[[\"polyethylene\", \"95\"], [\"borated_polyethylene\", \"10\"], [\"lead\", \"3\"]]": "l-0007",
+    "[[\"polyethylene\", \"100\"], [\"borated_polyethylene\", \"8\"], [\"lead\", \"3\"]]": "l-0008",
+    "[[\"polyethylene\", \"105\"], [\"lead\", \"4\"]]": "l-0009",
+    "[[\"polyethylene\", \"90\"], [\"borated_polyethylene\", \"15\"], [\"lead\", \"2\"]]": "l-0010",
+    "[[\"polyethylene\", \"70\"], [\"borated_polyethylene\", \"35\"], [\"lead\", \"2\"]]": "l-0011",
+    "[[\"polyethylene\", \"50\"], [\"borated_polyethylene\", \"55\"], [\"lead\", \"2\"]]": "l-0012",
+    "[[\"polyethylene\", \"30\"], [\"borated_polyethylene\", \"75\"], [\"lead\", \"2\"]]": "l-0013",
+    "[[\"borated_polyethylene\", \"107\"], [\"lead\", \"2\"]]": "l-0014",
+    "[[\"borated_polyethylene\", \"104\"], [\"lead\", \"2\"]]": "l-0015",
+    "[[\"borated_polyethylene\", \"106\"], [\"lead\", \"2\"]]": "l-0016"
+  }
+}

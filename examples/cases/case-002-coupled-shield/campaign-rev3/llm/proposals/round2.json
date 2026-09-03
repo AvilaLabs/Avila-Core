@@ -1,0 +1,48 @@
+[
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 90},
+      {"material": "borated_polyethylene", "thickness_cm": 15},
+      {"material": "lead", "thickness_cm": 2}
+    ],
+    "rationale": "105cm borated_polyethylene + 2cm lead (l-0004) just transported all-PASS at 1.28e3 kg/m2, but R3 margin was razor-thin (upper 2.98 of 3, margin 0.0239 uSv/h). Since borated_polyethylene (10.0 kg/m2/cm) costs slightly more than plain polyethylene (9.4 kg/m2/cm), and boron's mechanism is local capture-gamma suppression, this candidate keeps the same 105cm total moderator thickness and 2cm lead but pushes most of the column back to cheaper plain polyethylene, keeping only the last 15cm (nearest the lead) borated, to test how much of l-0004's R3 performance survives with far less borated material and correspondingly lower mass (1.22e3 kg/m2 if it holds)."
+  },
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 70},
+      {"material": "borated_polyethylene", "thickness_cm": 35},
+      {"material": "lead", "thickness_cm": 2}
+    ],
+    "rationale": "Same design as the 90+15+2 hybrid (matching l-0004's 105cm total moderator + 2cm lead, at the boundary already established there) but with more borated coverage (35cm instead of 15cm) to hedge against the possibility that capture-gamma production is not concentrated right at the back of the slab, in case a thin 15cm borated zone under-covers the region that matters for R3."
+  },
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 50},
+      {"material": "borated_polyethylene", "thickness_cm": 55},
+      {"material": "lead", "thickness_cm": 2}
+    ],
+    "rationale": "Third point on the same plain/borated split sweep at fixed 105cm total moderator + 2cm lead (matching l-0004's boundary case), with roughly half the column borated, to help locate where along the split R3 crosses back over the 3 uSv/h limit."
+  },
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 30},
+      {"material": "borated_polyethylene", "thickness_cm": 75},
+      {"material": "lead", "thickness_cm": 2}
+    ],
+    "rationale": "Fourth point on the plain/borated split sweep at fixed 105cm total moderator + 2cm lead: mostly borated with only 30cm plain polyethylene at the front. Completes a sweep (15, 35, 55, 75cm borated, all with 105cm total and 2cm lead) bracketing between the full 105cm all-borated case that already passed razor-thin (l-0004) and the all-plain case that is known to fail R3 badly without adequate lead (e.g. 110cm plain polyethylene alone R3 15.6-15.9)."
+  },
+  {
+    "layers": [
+      {"material": "borated_polyethylene", "thickness_cm": 107},
+      {"material": "lead", "thickness_cm": 2}
+    ],
+    "rationale": "l-0004 (105cm borated_polyethylene + 2cm lead) passed all-PASS but with R3 upper bound 2.98 against the 3 limit, essentially at the noise floor. This candidate adds 2cm more borated_polyethylene (mass cost only ~19 kg/m2) to check whether a small increase gives meaningfully more R3 margin, as a less knife-edge alternative near the same mass class (1.3e3 kg/m2)."
+  },
+  {
+    "layers": [
+      {"material": "borated_polyethylene", "thickness_cm": 104},
+      {"material": "lead", "thickness_cm": 2}
+    ],
+    "rationale": "Boundary probe just below l-0004 (105cm borated_polyethylene + 2cm lead, R3 upper 2.98 of 3): 1cm less borated_polyethylene, to see whether the true R3 boundary at 2cm lead sits at 105cm or whether 104cm (mass 1.27e3 kg/m2, lighter still) also clears it. Given R3 rose from 1.76 (3cm lead, l-0003) to 2.98 (2cm lead, l-0004) as lead alone dropped 1cm, R3 is clearly sensitive at this boundary, so this checks whether it is equally sensitive to 1cm of moderator."
+  }
+]

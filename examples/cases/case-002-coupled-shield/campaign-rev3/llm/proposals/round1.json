@@ -1,0 +1,74 @@
+[
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 108},
+      {"material": "lead", "thickness_cm": 4}
+    ],
+    "rationale": "The two on-record all-PASS designs are 110cm polyethylene+5cm lead (mass 1.6e3 kg/m2, R3 photon [1.02,1.1] vs 3 limit) and 105cm polyethylene+5cm lead (mass 1.55e3 kg/m2, R3 [1.17,1.28]). Both have R3 margin of roughly 2.3-2.7x below the 3 uSv/h limit, while lead costs ~113.5 kg/m2/cm versus polyethylene's ~9.4 kg/m2/cm, so lead thickness is the highest-leverage mass lever. This design trims lead from 5 to 4cm while raising polyethylene from 105 to 108cm (between the two known-good poly thicknesses) to protect the R2 neutron margin, which on record tightens fast with less moderator (105cm+5cm lead R2 upper=6.63 vs 110cm+5cm lead R2 upper=3.44)."
+  },
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 106},
+      {"material": "lead", "thickness_cm": 4}
+    ],
+    "rationale": "More aggressive sibling of the 108+4 candidate: same 4cm lead cut from the 105/110+5cm all-PASS baselines, but only 1cm of extra polyethylene over the 105cm baseline instead of 3cm, to see how much R2 margin above the 105cm+5cm lead result (R2 upper 6.63 of 7) is actually needed once lead is thinner. Tests the boundary between this and the 108+4 candidate."
+  },
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 110},
+      {"material": "lead", "thickness_cm": 3}
+    ],
+    "rationale": "Uses the more generous R2 margin from the 110cm polyethylene point (bare and with 5cm lead both show comfortable neutron passes, e.g. 110cm+5cm lead R2 upper=3.44 of 7, over 2x margin) to absorb a larger, 2cm lead cut. Comparing 5cm-lead vs 10cm-lead photon results at matched polyethylene thickness (e.g. 90cm poly+10cm lead R3 mid~0.21 vs the much higher photon at 90cm poly+5cm lead extrapolated from the 96/100/105/110+5cm lead trend) implies roughly a 2-3x reduction in photon dose per added cm of lead in this regime, so cutting 2cm from the 5cm baseline is a meaningful but plausibly still-passing step given the 110+5cm baseline's photon dose (1.02-1.1) started well under the 3 limit."
+  },
+  {
+    "layers": [
+      {"material": "borated_polyethylene", "thickness_cm": 105},
+      {"material": "lead", "thickness_cm": 3}
+    ],
+    "rationale": "Bare 105cm borated_polyethylene (no lead) is already on record: R2=[4.44,5.96] pass (15% margin below 7) and R3=[8.35,8.84] fail. Bare 110cm borated_polyethylene R3=[6.98,7.39] is roughly half of bare 110cm polyethylene's R3=[15.6,15.9], showing boron's low-yield capture (displacing hydrogen's 2.2 MeV capture gamma) sharply cuts photon production per unit thickness versus plain polyethylene, even though both pass R2 similarly at 110cm (borated [2.49,4.88] vs plain [2.71,4.4]). Since the borated column already starts photon production roughly 2x lower than plain poly, it should need much less lead than the 5cm plain-poly baseline to clear the 3 uSv/h R3 limit. This is an unexplored region of the constellation: no borated_polyethylene+lead combination has been transported yet."
+  },
+  {
+    "layers": [
+      {"material": "borated_polyethylene", "thickness_cm": 105},
+      {"material": "lead", "thickness_cm": 2}
+    ],
+    "rationale": "Boundary probe paired with the 105cm borated_polyethylene+3cm lead candidate: same moderator column, 1cm less lead, to bracket the minimum lead thickness the borated column needs against R3. If bare 105cm borated_polyethylene R3 upper (8.84) needs roughly a 3x reduction to clear 3 uSv/h and each cm of lead is worth roughly 2-3x (per the 5cm-vs-10cm-lead photon comparison at matched polyethylene thickness elsewhere in the constellation), 2cm may fall short while 3cm clears it; running both pins the boundary in one round. Mass would be only ~1.28e3 kg/m2 if it passes, well below any all-PASS design on record."
+  },
+  {
+    "layers": [
+      {"material": "borated_polyethylene", "thickness_cm": 110},
+      {"material": "lead", "thickness_cm": 3}
+    ],
+    "rationale": "Hedge on the 105cm borated_polyethylene+3cm lead candidate: same lead thickness, but using the 110cm borated_polyethylene point instead, which on record has more R2 margin bare (R2=[2.49,4.88], upper 4.88 of 7) than the 105cm point (upper 5.96 of 7) and a lower bare R3 (6.98-7.39 vs 8.35-8.84). If the 105+3 candidate's R2 margin turns out to be too thin once the moderator is borated (an untested combination), this design should still pass both R2 and R3 with more room, at the cost of ~5cm more moderator (~50 kg/m2)."
+  },
+  {
+    "layers": [
+      {"material": "borated_polyethylene", "thickness_cm": 110},
+      {"material": "lead", "thickness_cm": 2}
+    ],
+    "rationale": "Second boundary probe, pairing with the 105+2cm candidate at the higher, safer 110cm borated_polyethylene moderator thickness. Bare 110cm borated_polyethylene has more R2 margin (upper 4.88 of 7) and lower bare R3 (upper 7.39) than the 105cm point, so if 105+2cm fails on R3, this indicates whether 2cm lead is close to sufficient once the moderator column itself is more generous, separating an R3 shortfall from an R2 shortfall."
+  },
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 95},
+      {"material": "borated_polyethylene", "thickness_cm": 10},
+      {"material": "lead", "thickness_cm": 3}
+    ],
+    "rationale": "Hybrid testing whether most of boron's photon benefit can be captured with a thin borated_polyethylene layer placed just ahead of the lead cap rather than borating the whole column. Capture gammas produced deep in the front of a thick moderator are already largely self-absorbed by the time they would reach the exit face; the ones that matter for R3 are those produced near the back, close to the lead. Using cheaper plain polyethylene (9.4 kg/m2/cm) for the bulk of the column and reserving borated_polyethylene (10.0 kg/m2/cm) for the last 10cm before the lead tests whether the lighter hybrid still gets close to the full-borated-column photon suppression seen in the 105/110cm bare borated_polyethylene records."
+  },
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 100},
+      {"material": "borated_polyethylene", "thickness_cm": 8},
+      {"material": "lead", "thickness_cm": 3}
+    ],
+    "rationale": "Variant of the plain/borated hybrid with more total moderator (108cm vs 105cm) and a slightly thinner borated interlayer, to see how R2 and R3 trade off against the 95+10+3 hybrid candidate once real transport data is available for that geometry."
+  },
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 105},
+      {"material": "lead", "thickness_cm": 4}
+    ],
+    "rationale": "Cleanest single-variable comparison to the exact on-record all-PASS design 105cm polyethylene+5cm lead: holds polyethylene fixed at 105cm and cuts only lead, from 5 to 4cm, isolating lead's marginal effect on R2 and R3 from any change in moderator thickness. Directly tests whether the 105+5cm baseline's R3 margin (upper 1.28 of 3, over 2x headroom) survives a 1cm lead cut on its own before combining it with any polyethylene increase."
+  }
+]

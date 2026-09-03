@@ -1,0 +1,9 @@
+[
+  {
+    "layers": [
+      {"material": "graphite", "thickness_mm": 1},
+      {"material": "epoxy", "thickness_mm": 1}
+    ],
+    "rationale": "Epoxy (1200 kg/m3) is the only catalogued material lighter than graphite (1800 kg/m3), so a 1mm graphite + 1mm epoxy stack would mass 3.0 kg/m2 -- lighter than the current lightest all-PASS design (2mm graphite, 3.6 kg/m2) -- if it passes THERM-R2. Graphite is placed at the heated face (per the layer ordering convention, source outward) so it does the spreading work first, as it does when alone; epoxy is placed outward. This is a deliberately marginal/high-risk probe: the record shows pure-graphite FE hotspot is highly sensitive to how much conductive thickness is present close to and behind the source (344K at 1mm vs 335K at 2mm, a 9K swing for 1mm of added graphite), which is evidence that outward material does real thermal work here (most likely because convective cooling sits beyond the outward face, so heat must conduct through the full stack to reach it). Substituting epoxy (k=0.2 W/mK, ~750x worse than graphite's 150) for the second mm therefore seems likely to perform worse than 1mm graphite alone (344K, already a 4.44K fail) rather than better, since it adds series resistance instead of conductive spreading volume. Testing it directly rather than assuming, per the instruction to adjust to results rather than argue with them -- and because a pass would be a meaningful further mass win, cheap to check against the ample remaining budget."
+  }
+]

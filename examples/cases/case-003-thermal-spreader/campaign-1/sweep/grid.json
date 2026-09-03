@@ -1,0 +1,122 @@
+[
+ {
+  "layers": [
+   {
+    "material": "aluminium",
+    "thickness_mm": "10"
+   }
+  ],
+  "rationale": "control sweep"
+ },
+ {
+  "layers": [
+   {
+    "material": "aluminium",
+    "thickness_mm": "20"
+   }
+  ],
+  "rationale": "control sweep"
+ },
+ {
+  "layers": [
+   {
+    "material": "aluminium",
+    "thickness_mm": "30"
+   }
+  ],
+  "rationale": "control sweep"
+ },
+ {
+  "layers": [
+   {
+    "material": "copper",
+    "thickness_mm": "10"
+   }
+  ],
+  "rationale": "control sweep"
+ },
+ {
+  "layers": [
+   {
+    "material": "copper",
+    "thickness_mm": "20"
+   }
+  ],
+  "rationale": "control sweep"
+ },
+ {
+  "layers": [
+   {
+    "material": "copper",
+    "thickness_mm": "30"
+   }
+  ],
+  "rationale": "control sweep"
+ },
+ {
+  "layers": [
+   {
+    "material": "graphite",
+    "thickness_mm": "10"
+   }
+  ],
+  "rationale": "control sweep"
+ },
+ {
+  "layers": [
+   {
+    "material": "graphite",
+    "thickness_mm": "20"
+   }
+  ],
+  "rationale": "control sweep"
+ },
+ {
+  "layers": [
+   {
+    "material": "graphite",
+    "thickness_mm": "30"
+   }
+  ],
+  "rationale": "control sweep"
+ },
+ {
+  "layers": [
+   {
+    "material": "copper",
+    "thickness_mm": "2"
+   },
+   {
+    "material": "aluminium",
+    "thickness_mm": "10"
+   }
+  ],
+  "rationale": "control sweep"
+ },
+ {
+  "layers": [
+   {
+    "material": "copper",
+    "thickness_mm": "3"
+   },
+   {
+    "material": "aluminium",
+    "thickness_mm": "10"
+   }
+  ],
+  "rationale": "control sweep"
+ },
+ {
+  "layers": [
+   {
+    "material": "copper",
+    "thickness_mm": "5"
+   },
+   {
+    "material": "aluminium",
+    "thickness_mm": "10"
+   }
+  ],
+  "rationale": "control sweep"
+ }
+]

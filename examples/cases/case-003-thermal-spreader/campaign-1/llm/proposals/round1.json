@@ -1,0 +1,42 @@
+[
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 1}],
+    "rationale": "Constellation shows pure-graphite FE hotspot is flat across 10/20/30 mm (325/325/325 K, each ~15 K under the 340 K THERM-R2 limit) while mass scales linearly with thickness (18/36/54 kg/m2). Graphite also has the best conductivity-to-density ratio of the catalogued materials (150/1800=0.083 vs aluminium 200/2700=0.074, aluminium_nitride 170/3260=0.052, copper 400/8960=0.045), so it is the best mass candidate per unit thermal performance. The current lightest all-PASS design is 10 mm graphite at 18 kg/m2; this probes whether the observed thickness-flatness of the FE hotspot extends down to 1 mm, which would cut mass to ~1.8 kg/m2. Screen (R1) gets easier, not harder, as thickness drops (403/407/410 K for graphite at 10/20/30 mm, i.e. thinner is cooler under the pessimistic no-spreading model), so this candidate is expected to clear R1 comfortably; screening here is to obtain the exact mass/thickness verdicts before committing transport budget."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 2}],
+    "rationale": "Same reasoning as the 1 mm graphite candidate: probes the thin end of the thickness range where FE hotspot behavior is untested on record (only 10/20/30 mm graphite exist, all at 325 K). Mass at 2 mm would be 3.6 kg/m2, far below the 18 kg/m2 record-holder."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 3}],
+    "rationale": "Fills the low end of a spread across 1-9 mm graphite to locate where (if anywhere) the FE hotspot departs from the flat ~325 K seen at 10-30 mm. Mass at 3 mm would be 5.4 kg/m2."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 4}],
+    "rationale": "Part of the same 1-9 mm graphite spread bracketing the untested region below the 10 mm record point (325 K FE hotspot, 18 kg/m2). Mass at 4 mm would be 7.2 kg/m2."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 5}],
+    "rationale": "Midpoint of the 1-9 mm graphite spread. If the flatness seen across 10/20/30 mm (325 K throughout) holds down to 5 mm, mass would fall to 9 kg/m2, half the current lightest all-PASS design."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 6}],
+    "rationale": "Part of the 1-9 mm graphite spread used to bracket the thickness at which FE hotspot may start rising above the flat ~325 K observed at 10-30 mm. Mass at 6 mm would be 10.8 kg/m2."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 7}],
+    "rationale": "Part of the 1-9 mm graphite spread, closer to the known-good 10 mm point (325 K, 18 kg/m2) to help interpolate the trend. Mass at 7 mm would be 12.6 kg/m2."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 8}],
+    "rationale": "Part of the 1-9 mm graphite spread, immediately below the known-good 10 mm point, to check how close to that record the flat FE behavior persists. Mass at 8 mm would be 14.4 kg/m2."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 9}],
+    "rationale": "Closest untested point to the 10 mm graphite record (325 K FE, 18 kg/m2, worst margin 3). If FE hotspot is still ~325 K at 9 mm, mass drops to 16.2 kg/m2, a small but direct improvement over the current lightest all-PASS design with minimal extrapolation risk."
+  },
+  {
+    "layers": [{"material": "aluminium", "thickness_mm": 5}],
+    "rationale": "Cross-check backup material at a thin gauge, in case graphite's apparent thickness-flatness breaks down before aluminium's does. Aluminium has the second-best conductivity-to-density ratio (200/2700=0.074) and its FE hotspot on record is also flat across 10/20/30 mm (324/324/324 K, ~16 K margin), slightly more margin than graphite's ~15 K at 10 mm. Mass at 5 mm would be 13.5 kg/m2, still under the current 18 kg/m2 record if it holds."
+  }
+]

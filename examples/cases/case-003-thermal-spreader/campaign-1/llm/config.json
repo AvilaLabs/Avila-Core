@@ -1,0 +1,25 @@
+{
+  "core": "target/debug/avila-core",
+  "case": "examples/cases/case-003-thermal-spreader",
+  "source_roots": {
+    "case": "examples/cases/case-003-thermal-spreader",
+    "thermal": "examples/capabilities/thermal"
+  },
+  "manifest_sha256": "sha256:9634fcc1a39e9116e6c875c522ec8fd704dc721e5552251ea78737284158216f",
+  "screen_capabilities": {
+    "python3": "/usr/bin/python3"
+  },
+  "transport_capabilities": {
+    "thermal-python": "/home/connoravila/.venvs/thermal/bin/python"
+  },
+  "environment": {},
+  "prior_logs": [
+    "workspaces/campaign-c3/sweep/campaign-log.jsonl"
+  ],
+  "materials": "examples/capabilities/thermal",
+  "screen_budget": 60,
+  "transport_budget": 20,
+  "candidate_schema": "avila.thermal/candidate/v1",
+  "thickness_key": "thickness_mm",
+  "probe_thickness": "5"
+}

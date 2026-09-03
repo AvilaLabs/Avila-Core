@@ -1,0 +1,10 @@
+[
+  {
+    "layers": [{"material": "aluminium", "thickness_mm": 1}],
+    "rationale": "Transported results now on record show 1mm graphite FAILS THERM-R2 (344K, over by 4.44K) while 2mm graphite PASSES (335K, margin 4.69K) -- the thin-plate hotspot is spreading-resistance dominated and rises sharply below ~2-3mm, unlike the flat 322-325K seen at 10-30mm. At fixed thickness, higher conductivity gives a lower hotspot (10mm data: copper k=400 -> 322K < aluminium k=200 -> 324K < graphite k=150 -> 325K), so aluminium's higher conductivity than graphite (200 vs 150 W/mK) should reduce the thin-plate spreading penalty relative to graphite at the same 1mm thickness. Aluminium's density (2700 kg/m3) is low enough that 1mm of it (2.7 kg/m2) would still be lighter than the current lightest all-PASS design (2mm graphite, 3.6 kg/m2) if it passes. Since 1mm is the thinnest whole-mm layer possible and graphite (the only lighter-density catalogued material) already fails at 1mm, a passing 1mm aluminium design cannot be beaten in mass by any other single- or multi-layer combination from this material set."
+  },
+  {
+    "layers": [{"material": "aluminium_nitride", "thickness_mm": 1}],
+    "rationale": "Second candidate at the minimum 1mm thickness, run alongside 1mm aluminium to bracket the material trend in case aluminium narrowly fails. Aluminium_nitride's conductivity (170 W/mK) sits between graphite's (150, fails at 1mm/344K) and aluminium's (200, untested at 1mm), so its thin-plate hotspot should fall between theirs. Its density (3260 kg/m3) gives 1mm a mass of 3.26 kg/m2, still lighter than the current lightest all-PASS design (2mm graphite, 3.6 kg/m2), so a PASS here would also be an improvement even if not as good as aluminium."
+  }
+]

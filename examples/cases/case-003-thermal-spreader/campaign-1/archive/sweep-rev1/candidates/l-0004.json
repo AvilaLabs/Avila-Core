@@ -1,0 +1,10 @@
+{
+  "schema": "avila.thermal/candidate/v1",
+  "candidate_id": "l-0004",
+  "layers": [
+    {
+      "material": "copper",
+      "thickness_mm": "20"
+    }
+  ]
+}

@@ -257,6 +257,7 @@ crates/
                           adapters
   avila-core-cli/         headless local interface
   avila-core-app/         thin egui workbench over the runner and compiler
+experiments/             experiment registry, completed interpretations, protocols, and future test backlog
 docs/
   strategy/               north star, economics, and counter-positioning
   product/                product definition, evidence contracts, and UX

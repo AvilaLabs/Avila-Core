@@ -1,0 +1,164 @@
+{
+  "schema_version": "avila.core/execution-receipt/v0.1-draft",
+  "case_id": "CASE-002",
+  "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
+  "step_id": "activation",
+  "capability_type": {
+    "id": "shielding.slab-activation",
+    "major": 1
+  },
+  "adapter": "avila-labs.shielding/activation@1",
+  "capability": {
+    "capability_id": "python3",
+    "package_id": "org.python/cpython@3.14.4",
+    "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+  },
+  "parameters": {},
+  "inputs": [
+    {
+      "input_slot": "actinv",
+      "evidence_id": "input:actinv-executable",
+      "workspace_path": "tools/actinv",
+      "media_type": "application/x-executable",
+      "sha256": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426",
+      "bytes": 9442064
+    },
+    {
+      "input_slot": "activation-index",
+      "evidence_id": "input:actinv-library-index",
+      "workspace_path": "data/activation/tendl-2025-neutron-709g_index.json",
+      "media_type": "application/json",
+      "sha256": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb",
+      "bytes": 2653304
+    },
+    {
+      "input_slot": "activation-library",
+      "evidence_id": "input:actinv-activation-library",
+      "workspace_path": "data/activation/tendl-2025-neutron-709g.npz",
+      "media_type": "application/vnd.numpy.npz",
+      "sha256": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44",
+      "bytes": 123897743
+    },
+    {
+      "input_slot": "decay-fallback",
+      "evidence_id": "input:actinv-decay-fallback",
+      "workspace_path": "data/decay/jeff-3-3_decay.dat",
+      "media_type": "application/octet-stream",
+      "sha256": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123",
+      "bytes": 45718116
+    },
+    {
+      "input_slot": "decay-primary",
+      "evidence_id": "input:actinv-decay-primary",
+      "workspace_path": "data/decay/endf-b-viii-0_decay.dat",
+      "media_type": "application/octet-stream",
+      "sha256": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb",
+      "bytes": 68313052
+    },
+    {
+      "input_slot": "materials",
+      "evidence_id": "input:materials",
+      "workspace_path": "inputs/materials.json",
+      "media_type": "application/vnd.avila.shield-materials+json",
+      "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb",
+      "bytes": 1551
+    },
+    {
+      "input_slot": "schedule",
+      "evidence_id": "input:schedule",
+      "workspace_path": "inputs/schedule.json",
+      "media_type": "application/vnd.avila.shield-schedule+json",
+      "sha256": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03",
+      "bytes": 294
+    },
+    {
+      "input_slot": "script",
+      "evidence_id": "input:activate-script",
+      "workspace_path": "tools/activate.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:0ce443ee6b182e7bcc954b64920f4d5554d258851511c3a031b5e15bc51d3fc4",
+      "bytes": 27064
+    },
+    {
+      "input_slot": "spectra",
+      "evidence_id": "transport-layer-spectra",
+      "workspace_path": "inputs/layer-spectra.json",
+      "media_type": "application/vnd.avila.shield-layer-spectra+json",
+      "sha256": "sha256:3f7418f1ac1f80ad50863705a05fca73bc417ec803e3fdc3d25000b1c4cc2501",
+      "bytes": 37367
+    }
+  ],
+  "invocation": {
+    "program": "python3.14",
+    "arguments": [
+      "tools/activate.py",
+      "--spectra",
+      "inputs/layer-spectra.json",
+      "--materials",
+      "inputs/materials.json",
+      "--schedule",
+      "inputs/schedule.json",
+      "--actinv",
+      "tools/actinv",
+      "--activation-library",
+      "data/activation/tendl-2025-neutron-709g.npz",
+      "--activation-index",
+      "data/activation/tendl-2025-neutron-709g_index.json",
+      "--decay-primary",
+      "data/decay/endf-b-viii-0_decay.dat",
+      "--decay-fallback",
+      "data/decay/jeff-3-3_decay.dat",
+      "--output",
+      "outputs/activation-result.json"
+    ],
+    "working_directory": ".",
+    "environment": {
+      "ACTINV_CACHE_DIR": ".cache/actinv"
+    },
+    "timeout_ms": 900000
+  },
+  "invocation_sha256": "sha256:2535b64b6a5817e3eb03bd59de3c9938945eabf09239c29cb3f472237e6b0af0",
+  "process": {
+    "started_at": "2026-09-03T00:43:51.505Z",
+    "finished_at": "2026-09-03T00:44:03.867Z",
+    "duration_ms": 12361,
+    "exit_status": 0,
+    "timed_out": false
+  },
+  "logs": [
+    {
+      "stream": "stdout",
+      "workspace_path": "logs/stdout.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "stream": "stderr",
+      "workspace_path": "logs/stderr.log",
+      "sha256": "sha256:21ed4e6c6c8f4303e26435a24f83ed271f7f5a26ad121e11cf0dbf12c895e2ae",
+      "bytes": 90
+    }
+  ],
+  "outputs": [
+    {
+      "output_id": "activation-result",
+      "workspace_path": "outputs/activation-result.json",
+      "media_type": "application/vnd.avila.shield-activation+json",
+      "state": "collected",
+      "sha256": "sha256:c33f9051693b78a82129e26a02ac3590da3e133b2089045bb89c55941ede319f",
+      "bytes": 5124
+    }
+  ],
+  "runner": {
+    "runner": "avila.core/cli-rust@0.1.0",
+    "os": "linux",
+    "arch": "x86_64"
+  },
+  "status": "completed",
+  "limitations": [
+    "Exit status and output digests are process evidence, not scientific success.",
+    "The executable digest identifies the bytes that ran; it does not qualify the method.",
+    "No sandbox, resource accounting, or signature was applied; the environment was cleared and the working directory confined to the workspace."
+  ],
+  "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, practical suitability, or regulatory suitability."
+}

@@ -1,0 +1,7 @@
+{
+  "schema": "avila.shielding/irradiation-schedule/v1",
+  "description": "Thirty days of continuous irradiation at the source strength, then one day of cooling; the case author's allocation for a research specimen.",
+  "irradiation_s": "2592000",
+  "cooling_s": "86400",
+  "flux_scale": "1"
+}

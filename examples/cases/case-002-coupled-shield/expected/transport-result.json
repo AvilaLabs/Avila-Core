@@ -1,0 +1,151 @@
+{
+  "schema": "avila.shielding/transport-result/v2",
+  "candidate_id": "case-002-reference",
+  "engine": {
+    "name": "openmc",
+    "version": "0.15.3",
+    "executable_sha256": "d939af8f885800c8727e687e628c2802138674e7f3b108371ef813a606939f51",
+    "python": "3.12.13"
+  },
+  "data_library": {
+    "index_sha256": "2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db",
+    "note": "identity of the index only; the nuclide files it names are not re-hashed"
+  },
+  "run": {
+    "particles": 200000,
+    "batches": 10,
+    "seed": 1,
+    "threads": 8,
+    "photon_transport": true,
+    "variance_reduction": {
+      "seed": 1,
+      "survival_biasing": true,
+      "weight_windows": {
+        "applied": true,
+        "particle_type": "neutron",
+        "method": "deterministic-analytic-exponential",
+        "construction": "lower_bound(x_mid) = exp(-optical_depth(x_mid)) at each mesh cell's x midpoint; optical_depth(x) sums removal_cross_section_cm_inv (materials.json) times overlap length in cm over every layer between the slab front (x=0) and x; upper_bound = lower_bound * upper_bound_ratio. No WeightWindowGenerator, no iteration: the mesh and every bound are computed once from the candidate and material table, so the same inputs always give the same windows.",
+        "mesh": {
+          "dimension": [
+            43,
+            1,
+            1
+          ],
+          "lower_left_cm": [
+            "0",
+            "-50",
+            "-50"
+          ],
+          "upper_right_cm": [
+            "85",
+            "50",
+            "50"
+          ],
+          "bin_width_cm": "1.9767442"
+        },
+        "upper_bound_ratio": "5",
+        "survival_ratio": "5",
+        "max_split": 10,
+        "lower_bounds": [
+          "0.8969807",
+          "0.72168769",
+          "0.58065143",
+          "0.46717726",
+          "0.37587886",
+          "0.3024225",
+          "0.2433214",
+          "0.19577016",
+          "0.15751166",
+          "0.12672984",
+          "0.10196359",
+          "0.082037289",
+          "0.066005101",
+          "0.053106013",
+          "0.042727738",
+          "0.034377643",
+          "0.027659371",
+          "0.022254021",
+          "0.017905015",
+          "0.014405917",
+          "0.011590631",
+          "0.0093255251",
+          "0.0075030786",
+          "0.0060367848",
+          "0.0048570424",
+          "0.0039078519",
+          "0.0031441575",
+          "0.0025297086",
+          "0.0020353387",
+          "0.0016375814",
+          "0.001317556",
+          "0.0010600718",
+          "0.00085290664",
+          "0.00068622683",
+          "0.00055212053",
+          "0.00044422203",
+          "0.00035740967",
+          "0.00028756266",
+          "0.00023136555",
+          "0.00018615079",
+          "0.00014970252",
+          "0.00011855705",
+          "0.000093891369"
+        ]
+      }
+    }
+  },
+  "tally": {
+    "neutron": {
+      "mean_pSv_cm_per_particle": "0.195018",
+      "std_dev": "0.011841516"
+    },
+    "photon": {
+      "mean_pSv_cm_per_particle": "0.0092757251",
+      "std_dev": "0.0001911046"
+    },
+    "significant_digits": 8,
+    "detector_volume_cm3": "10000.0"
+  },
+  "neutron_dose_rate": {
+    "nominal": {
+      "value": "70.20648",
+      "unit": "uSv/h"
+    },
+    "lower": {
+      "value": "61.85125977644736",
+      "unit": "uSv/h"
+    },
+    "upper": {
+      "value": "78.56170022355264",
+      "unit": "uSv/h"
+    },
+    "coverage": "0.95",
+    "interpretation": "normal approximation of the tally statistics at the stated coverage; statistical error only"
+  },
+  "photon_dose_rate": {
+    "nominal": {
+      "value": "3.339261036",
+      "unit": "uSv/h"
+    },
+    "lower": {
+      "value": "3.204420106955616",
+      "unit": "uSv/h"
+    },
+    "upper": {
+      "value": "3.474101965044384",
+      "unit": "uSv/h"
+    },
+    "coverage": "0.95",
+    "interpretation": "normal approximation of the tally statistics at the stated coverage; statistical error only"
+  },
+  "limitations": [
+    "Both dose-rate intervals bound Monte Carlo statistical error only; nuclear-data, geometry, and model uncertainty are not evaluated.",
+    "The slab is laterally infinite by reflection; a finite shield would leak around its edges.",
+    "The photon dose rate counts only photons produced inside the shield by the transported neutrons (capture, inelastic scattering, and other secondary-photon-producing reactions); no separate photon source is modeled and no bremsstrahlung or annihilation transport beyond OpenMC's local photon physics is added.",
+    "Tally statistics are rounded to 8 significant digits so that the thread-dependent reduction order of the Monte Carlo sums does not change the output bytes; the discarded digits are far below the statistical uncertainty.",
+    "Variance reduction (survival biasing and/or the neutron weight windows) changes which histories are tracked and with what weight; it does not change the expectation being estimated, but the reported statistical uncertainty is a property of the biased estimator, not of an analog calculation.",
+    "The deterministic weight-window lower bounds are an approximate analytic importance function (exponential attenuation from the screening removal cross sections); they were not iteratively refined against this model's actual adjoint flux, so they are a heuristic for efficiency, not a certified variance-reduction scheme.",
+    "The per-layer flux spectra are track-length estimators in the FISPACT-709 group structure for a downstream activation step; they carry no claim about activation, decay heat, or dose from the activated material itself.",
+    "Not qualified for any regulatory, safety, or operational decision."
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "probe-iron-first",
+  "description": "Probe: 10 cm of iron in front of 70 cm of polyethylene, to measure activation of iron under the unshielded 14.1 MeV flux.",
+  "layers": [
+    { "material": "iron", "thickness_cm": "10" },
+    { "material": "polyethylene", "thickness_cm": "70" }
+  ]
+}

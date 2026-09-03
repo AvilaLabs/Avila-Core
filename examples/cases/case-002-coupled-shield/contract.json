@@ -1,0 +1,546 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "case-002.coupled-shield-search",
+  "revision": 1,
+  "status": "draft",
+  "question": "Does a candidate layered slab keep both the neutron and the shield-produced photon ambient dose-equivalent rates behind it within their allocations (7 and 3 uSv/h of a 10 uSv/h design point) for the synthetic 14.1 MeV plane source, and stay within 1500 kg per square metre and 100 cm, as established by coupled Monte Carlo transport rather than by the screening estimate, while an ACTINV inventory keeps the shield's specific activity after 30 days of irradiation and 1 day of cooling at or below 1 Bq/g as a nominal guide?",
+  "assumptions": [
+    "The source is a synthetic isotropic plane source of 14.1 MeV neutrons at 1e9 neutrons per second over one square metre; no real generator, facility, or occupancy is represented.",
+    "The slab is laterally infinite by reflection; edge leakage and streaming paths are not evaluated.",
+    "The 10 uSv/h design-point limit is allocated 7 uSv/h to neutrons and 3 uSv/h to shield-produced photons; Core evaluates each allocation, not their sum.",
+    "The screening estimate uses approximate removal cross sections without buildup and is evaluated on a nominal basis only; the transport intervals bound statistical error only.",
+    "Activation is evaluated by ACTINV on each layer's Monte Carlo group flux for 30 days of continuous irradiation at the source strength followed by 1 day of cooling. The result is nominal with no bound, so it is a search guide only: the shielding library requires activation on a bounded basis and this case declares that entry omitted at the required basis. The 1 Bq/g limit is the case author's allocation, not a regulatory level.",
+    "Material compositions and densities are nominal literature values; no material, executable, or data library is qualified.",
+    "This contract is a research-only design-search specimen and excludes every regulatory, safety, or operational purpose."
+  ],
+  "execution_policy": {
+    "permit_nominal_basis": true
+  },
+  "inputs": [
+    {
+      "input_id": "candidate",
+      "role": {
+        "id": "shielding.candidate",
+        "major": 1
+      },
+      "media_type": "application/vnd.avila.shield-candidate+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "materials",
+      "role": {
+        "id": "shielding.material-table",
+        "major": 1
+      },
+      "media_type": "application/vnd.avila.shield-materials+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "source",
+      "role": {
+        "id": "shielding.source-spec",
+        "major": 1
+      },
+      "media_type": "application/vnd.avila.shield-source+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "screen-script",
+      "role": {
+        "id": "shielding.screen-script",
+        "major": 1
+      },
+      "media_type": "text/x-python",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "transport-script",
+      "role": {
+        "id": "shielding.transport-script",
+        "major": 1
+      },
+      "media_type": "text/x-python",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "reviewer-script",
+      "role": {
+        "id": "core.review.agent-implementation",
+        "major": 1
+      },
+      "media_type": "text/x-python",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "cross-section-index",
+      "role": {
+        "id": "nuclear.cross-section-index",
+        "major": 1
+      },
+      "media_type": "application/xml",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "groups",
+      "role": {
+        "id": "shielding.group-structure",
+        "major": 1
+      },
+      "media_type": "application/vnd.avila.shield-groups+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "activate-script",
+      "role": {
+        "id": "shielding.activate-script",
+        "major": 1
+      },
+      "media_type": "text/x-python",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "schedule",
+      "role": {
+        "id": "shielding.irradiation-schedule",
+        "major": 1
+      },
+      "media_type": "application/vnd.avila.shield-schedule+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "actinv-executable",
+      "role": {
+        "id": "actinv.executable",
+        "major": 1
+      },
+      "media_type": "application/x-executable",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "actinv-activation-library",
+      "role": {
+        "id": "actinv.activation-library",
+        "major": 1
+      },
+      "media_type": "application/vnd.numpy.npz",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "actinv-library-index",
+      "role": {
+        "id": "actinv.library-index",
+        "major": 1
+      },
+      "media_type": "application/json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "actinv-decay-primary",
+      "role": {
+        "id": "actinv.decay-data",
+        "major": 1
+      },
+      "media_type": "application/octet-stream",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "actinv-decay-fallback",
+      "role": {
+        "id": "actinv.decay-data",
+        "major": 1
+      },
+      "media_type": "application/octet-stream",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "step_id": "screen",
+      "capability_type": {
+        "id": "shielding.attenuation-screen",
+        "major": 1
+      },
+      "bindings": [
+        {
+          "input_slot": "script",
+          "source": {
+            "source": "contract_input",
+            "input_id": "screen-script"
+          }
+        },
+        {
+          "input_slot": "candidate",
+          "source": {
+            "source": "contract_input",
+            "input_id": "candidate"
+          }
+        },
+        {
+          "input_slot": "materials",
+          "source": {
+            "source": "contract_input",
+            "input_id": "materials"
+          }
+        },
+        {
+          "input_slot": "source",
+          "source": {
+            "source": "contract_input",
+            "input_id": "source"
+          }
+        }
+      ]
+    },
+    {
+      "step_id": "transport",
+      "capability_type": {
+        "id": "shielding.slab-transport-coupled",
+        "major": 1
+      },
+      "bindings": [
+        {
+          "input_slot": "script",
+          "source": {
+            "source": "contract_input",
+            "input_id": "transport-script"
+          }
+        },
+        {
+          "input_slot": "candidate",
+          "source": {
+            "source": "contract_input",
+            "input_id": "candidate"
+          }
+        },
+        {
+          "input_slot": "materials",
+          "source": {
+            "source": "contract_input",
+            "input_id": "materials"
+          }
+        },
+        {
+          "input_slot": "source",
+          "source": {
+            "source": "contract_input",
+            "input_id": "source"
+          }
+        },
+        {
+          "input_slot": "cross-section-index",
+          "source": {
+            "source": "contract_input",
+            "input_id": "cross-section-index"
+          }
+        },
+        {
+          "input_slot": "groups",
+          "source": {
+            "source": "contract_input",
+            "input_id": "groups"
+          }
+        }
+      ],
+      "parameters": {
+        "particles": 200000,
+        "batches": 10
+      },
+      "reproducibility": {
+        "seed": "1"
+      }
+    },
+    {
+      "step_id": "activation",
+      "capability_type": {
+        "id": "shielding.slab-activation",
+        "major": 1
+      },
+      "bindings": [
+        {
+          "input_slot": "script",
+          "source": {
+            "source": "contract_input",
+            "input_id": "activate-script"
+          }
+        },
+        {
+          "input_slot": "spectra",
+          "source": {
+            "source": "step_output",
+            "step_id": "transport",
+            "output_slot": "layer-spectra"
+          }
+        },
+        {
+          "input_slot": "materials",
+          "source": {
+            "source": "contract_input",
+            "input_id": "materials"
+          }
+        },
+        {
+          "input_slot": "schedule",
+          "source": {
+            "source": "contract_input",
+            "input_id": "schedule"
+          }
+        },
+        {
+          "input_slot": "actinv",
+          "source": {
+            "source": "contract_input",
+            "input_id": "actinv-executable"
+          }
+        },
+        {
+          "input_slot": "activation-library",
+          "source": {
+            "source": "contract_input",
+            "input_id": "actinv-activation-library"
+          }
+        },
+        {
+          "input_slot": "activation-index",
+          "source": {
+            "source": "contract_input",
+            "input_id": "actinv-library-index"
+          }
+        },
+        {
+          "input_slot": "decay-primary",
+          "source": {
+            "source": "contract_input",
+            "input_id": "actinv-decay-primary"
+          }
+        },
+        {
+          "input_slot": "decay-fallback",
+          "source": {
+            "source": "contract_input",
+            "input_id": "actinv-decay-fallback"
+          }
+        }
+      ]
+    },
+    {
+      "step_id": "practical-review",
+      "capability_type": {
+        "id": "shielding.practical-agent-review",
+        "major": 1
+      },
+      "bindings": [
+        {
+          "input_slot": "reviewer",
+          "source": {
+            "source": "contract_input",
+            "input_id": "reviewer-script"
+          }
+        },
+        {
+          "input_slot": "candidate",
+          "source": {
+            "source": "contract_input",
+            "input_id": "candidate"
+          }
+        },
+        {
+          "input_slot": "screen-result",
+          "source": {
+            "source": "step_output",
+            "step_id": "screen",
+            "output_slot": "screen-result"
+          }
+        },
+        {
+          "input_slot": "transport-result",
+          "source": {
+            "source": "step_output",
+            "step_id": "transport",
+            "output_slot": "transport-result"
+          }
+        }
+      ],
+      "review": {
+        "reviewer_eligibility_policy": {
+          "policy_id": "avila-labs.shielding/practical-agent-review",
+          "revision": 1,
+          "sha256": "sha256:4242b3af100c4c07aa316a22b883eb50c3e285f74c6d6df99d7b942d6b3cc2ca"
+        },
+        "independence": {
+          "mode": "none"
+        },
+        "instructions": [
+          "Use Core's recorded requirement statuses and rules; never derive, edit, or override a technical verdict.",
+          "Request changes unless every compiled requirement is PASS.",
+          "After technical PASS, request changes for adjacent identical layers, a layer thinner than 10 cm, or liquid water without explicit containment evidence.",
+          "After technical and practical checks pass, route the candidate to the user without altering Core's verdict."
+        ]
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "SHIELD-R1-screen",
+      "statement": "Screening estimate of the neutron dose rate behind the slab is at or below 10 uSv/h (nominal basis; guides the search, establishes nothing).",
+      "purpose": {
+        "id": "avila-labs.shielding.design-search",
+        "major": 1
+      },
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "dose-rate"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "nuclear.ambient-dose-equivalent-rate",
+        "value": "10",
+        "unit": "uSv/h"
+      },
+      "basis": {
+        "kind": "nominal"
+      }
+    },
+    {
+      "requirement_id": "SHIELD-R2-neutron",
+      "statement": "Monte Carlo neutron dose rate behind the slab is at or below its 7 uSv/h allocation within its statistical interval.",
+      "purpose": {
+        "id": "avila-labs.shielding.design-search",
+        "major": 1
+      },
+      "metric": {
+        "source": "step_output",
+        "step_id": "transport",
+        "output_slot": "neutron-dose-rate"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "nuclear.ambient-dose-equivalent-rate",
+        "value": "7",
+        "unit": "uSv/h"
+      },
+      "basis": {
+        "kind": "bounded"
+      }
+    },
+    {
+      "requirement_id": "SHIELD-R3-photon",
+      "statement": "Monte Carlo dose rate from shield-produced photons behind the slab is at or below its 3 uSv/h allocation within its statistical interval.",
+      "purpose": {
+        "id": "avila-labs.shielding.design-search",
+        "major": 1
+      },
+      "metric": {
+        "source": "step_output",
+        "step_id": "transport",
+        "output_slot": "photon-dose-rate"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "nuclear.ambient-dose-equivalent-rate",
+        "value": "3",
+        "unit": "uSv/h"
+      },
+      "basis": {
+        "kind": "bounded"
+      }
+    },
+    {
+      "requirement_id": "SHIELD-R4-mass",
+      "statement": "Areal mass of the slab is at or below 1500 kg per square metre.",
+      "purpose": {
+        "id": "avila-labs.shielding.design-search",
+        "major": 1
+      },
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "mass"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "core.mass",
+        "value": "1500",
+        "unit": "kg"
+      },
+      "basis": {
+        "kind": "bounded"
+      }
+    },
+    {
+      "requirement_id": "SHIELD-R5-thickness",
+      "statement": "Total slab thickness is at or below 100 cm.",
+      "purpose": {
+        "id": "avila-labs.shielding.design-search",
+        "major": 1
+      },
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "thickness"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "core.length",
+        "value": "100",
+        "unit": "cm"
+      },
+      "basis": {
+        "kind": "bounded"
+      }
+    },
+    {
+      "requirement_id": "SHIELD-R6-activation",
+      "statement": "Highest specific activity of any shield layer after 30 days of irradiation and 1 day of cooling is at or below 1 Bq/g (nominal basis; ACTINV inventory with no bound: guides the search away from activating designs, establishes nothing).",
+      "purpose": {
+        "id": "avila-labs.shielding.design-search",
+        "major": 1
+      },
+      "metric": {
+        "source": "step_output",
+        "step_id": "activation",
+        "output_slot": "specific-activity"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "nuclear.specific-activity",
+        "value": "1",
+        "unit": "Bq/g"
+      },
+      "basis": {
+        "kind": "nominal"
+      }
+    }
+  ]
+}

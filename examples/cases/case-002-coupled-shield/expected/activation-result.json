@@ -1,0 +1,116 @@
+{
+  "actinv": {
+    "decay": {
+      "fallback_sha256": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123",
+      "primary_sha256": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb"
+    },
+    "executable_sha256": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426",
+    "library_index_sha256": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb",
+    "library_sha256": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44",
+    "version": "1.0.1"
+  },
+  "candidate_id": "case-002-reference",
+  "layers": [
+    {
+      "decay_heat": {
+        "unit": "W/kg",
+        "value": "0.0000000000000000015973142"
+      },
+      "dominant_nuclides": [
+        {
+          "activity_Bq_per_g": "0.00000010582031",
+          "nuclide": "C14"
+        },
+        {
+          "activity_Bq_per_g": "0.0000000233744",
+          "nuclide": "Be10"
+        },
+        {
+          "activity_Bq_per_g": "0.00000000000001635276",
+          "nuclide": "Be8"
+        },
+        {
+          "activity_Bq_per_g": "0.00000000000000007761263",
+          "nuclide": "B12"
+        },
+        {
+          "activity_Bq_per_g": "0.00000000000000000049282456",
+          "nuclide": "B13"
+        }
+      ],
+      "index": 0,
+      "mass_kg": "752",
+      "material": "polyethylene",
+      "omissions": [
+        "contact gamma dose-rate proxy unavailable: no actinv-photon-response-1 table was staged for this run, so ACTINV computed no dose response"
+      ],
+      "specific_activity": {
+        "unit": "Bq/g",
+        "value": "0.00000012919473"
+      }
+    },
+    {
+      "decay_heat": {
+        "unit": "W/kg",
+        "value": "0.000000000000039448071"
+      },
+      "dominant_nuclides": [
+        {
+          "activity_Bq_per_g": "0.00061730629",
+          "nuclide": "Pb203"
+        },
+        {
+          "activity_Bq_per_g": "0.0000064095352",
+          "nuclide": "Pb204"
+        },
+        {
+          "activity_Bq_per_g": "0.0000012544712",
+          "nuclide": "Pb209"
+        },
+        {
+          "activity_Bq_per_g": "0.00000050378463",
+          "nuclide": "Hg203"
+        },
+        {
+          "activity_Bq_per_g": "0.0000000227906",
+          "nuclide": "Tl204"
+        }
+      ],
+      "index": 1,
+      "mass_kg": "567.5",
+      "material": "lead",
+      "omissions": [
+        "contact gamma dose-rate proxy unavailable: no actinv-photon-response-1 table was staged for this run, so ACTINV computed no dose response"
+      ],
+      "specific_activity": {
+        "unit": "Bq/g",
+        "value": "0.00062549704"
+      }
+    }
+  ],
+  "limitations": [
+    "Nominal only: ACTINV reports no per-value uncertainty bound for specific activity, decay heat, or the contact-dose proxy; these are unquantified claims under a nominal-basis requirement.",
+    "No transported shutdown dose: this is a 0-D activation calculation over the transport step's cell-averaged flux spectrum for each layer; it does not transport decay photons through the geometry.",
+    "The contact-dose figure, when present, is ACTINV's semi-infinite homogeneous-slab air-kerma screening proxy at the reported material's own surface, not a transported or finite-geometry dose rate; it is reported here in uSv/h by treating photon air kerma (Gy) as numerically equal to equivalent dose (Sv), the standard w_R = 1 photon approximation.",
+    "The activation data library and decay sublibraries used here have their own scope, energy range, and validation limits; see the ACTINV qualification boundary (docs/QUALIFICATION.md) and this run's `actinv` block for exact identities.",
+    "Each layer is activated independently over its own cell-averaged spectrum; no inter-layer photon or neutron coupling from activation products is modeled.",
+    "Composition is converted to ACTINV's wt_percent basis by this script using embedded standard atomic weights for atom-fraction table entries; this is an arithmetic conversion, not an independent composition measurement.",
+    "The bound activation library and decay data (see the `actinv` block) record up to 166 activation product nuclide(s) with no evaluated decay data and up to 187 target nuclide(s) absent from the decay library entirely, per ACTINV's own ledger. These counts are a property of the bound data release, not of any one layer's composition: they were observed identical across every layer of this run and across an unrelated iron reference problem, because ACTINV's trace-mode solve explores the same broad chain network regardless of material; they are not filtered to nuclides actually reachable from a given layer's own composition, and are dominated by heavy nuclides no light- or structural-metal activation reaches in practice."
+  ],
+  "schedule": {
+    "cooling_s": "86400",
+    "flux_scale": "1",
+    "irradiation_s": "2592000"
+  },
+  "schema": "avila.shielding/activation-result/v1",
+  "totals": {
+    "max_specific_activity": {
+      "unit": "Bq/g",
+      "value": "0.00062549704"
+    },
+    "total_decay_heat": {
+      "unit": "W",
+      "value": "0.000000000022387981"
+    }
+  }
+}

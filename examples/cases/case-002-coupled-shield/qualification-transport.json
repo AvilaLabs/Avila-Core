@@ -1,0 +1,134 @@
+{
+  "schema_version": "avila.core/qualification/v0.1-draft",
+  "qualification_id": "avila-labs.shielding/slab-transport-coupled-openmc",
+  "revision": 1,
+  "owner": "avila-labs.shielding",
+  "adapter": "avila-labs.shielding/slab-transport@2",
+  "capability": {
+    "capability_id": "openmc-python",
+    "executable_sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
+  },
+  "statement": "The one-dimensional coupled neutron-photon OpenMC slab model with variance reduction, as run by this exact interpreter and script over the ENDF/B-VII.1 index the case binds, is claimed applicable to a plane source of 0.1 to 20 MeV neutrons through at most three layers of the listed materials with a total thickness of at most 120 cm. Other materials, geometries, and thicknesses have no validation evidence here.",
+  "scope": {
+    "all": [
+      {
+        "fact": {
+          "name": "source.energy",
+          "op": "ge",
+          "value": {
+            "value": "0.1",
+            "unit": "MeV"
+          },
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.shielding/slab-transport@2"
+          }
+        }
+      },
+      {
+        "fact": {
+          "name": "source.energy",
+          "op": "le",
+          "value": {
+            "value": "20",
+            "unit": "MeV"
+          },
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.shielding/slab-transport@2"
+          }
+        }
+      },
+      {
+        "fact": {
+          "name": "source.geometry",
+          "op": "eq",
+          "value": "plane",
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.shielding/slab-transport@2"
+          }
+        }
+      },
+      {
+        "fact": {
+          "name": "slab.total_thickness",
+          "op": "le",
+          "value": {
+            "value": "120",
+            "unit": "cm"
+          },
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.shielding/slab-transport@2"
+          }
+        }
+      },
+      {
+        "fact": {
+          "name": "slab.layer_count",
+          "op": "le",
+          "value": 3,
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.shielding/slab-transport@2"
+          }
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "candidate",
+          "attribute": "layer.1.material",
+          "values": [
+            "polyethylene",
+            "borated_polyethylene",
+            "water",
+            "concrete",
+            "iron",
+            "lead",
+            "none"
+          ]
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "candidate",
+          "attribute": "layer.2.material",
+          "values": [
+            "polyethylene",
+            "borated_polyethylene",
+            "water",
+            "concrete",
+            "iron",
+            "lead",
+            "none"
+          ]
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "candidate",
+          "attribute": "layer.3.material",
+          "values": [
+            "polyethylene",
+            "borated_polyethylene",
+            "water",
+            "concrete",
+            "iron",
+            "lead",
+            "none"
+          ]
+        }
+      }
+    ]
+  },
+  "fact_kinds": {
+    "source.energy": "nuclear.energy",
+    "slab.total_thickness": "core.length"
+  },
+  "validation_evidence": [],
+  "limitations": [
+    "No validation evidence is bound: this envelope records the case author's claim of where the model has been exercised, not a method owner's qualification. It exists so that Core can refuse candidates outside it and so that a real qualification has a place to go.",
+    "Statistical error only; nuclear-data and model uncertainty, and the adequacy of the weight windows, are outside the claim."
+  ]
+}

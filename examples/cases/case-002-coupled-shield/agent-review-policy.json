@@ -1,0 +1,27 @@
+{
+  "schema_version": "avila.core/review-policy/v0.1-draft",
+  "policy_id": "avila-labs.shielding/practical-agent-review",
+  "revision": 1,
+  "owner": "Connor Avila, CASE-001 author",
+  "reviewer_role": "agent",
+  "eligible_reviewer": {
+    "identity": "sha256:3a0dee30ebb247df36ddec543fcf88c9c48fa0eecc3b5e71dd5b0bfb90574a34",
+    "implementation": "examples/agents/shield_review.py"
+  },
+  "instructions": [
+    "Use Core's recorded requirement statuses and rules; never derive, edit, or override a technical verdict.",
+    "Request changes unless every compiled requirement is PASS.",
+    "After technical PASS, request changes for adjacent identical layers, a layer thinner than 10 cm, or liquid water without explicit containment evidence.",
+    "After technical and practical checks pass, route the candidate to the user without altering Core's verdict."
+  ],
+  "allowed_dispositions": [
+    "present_to_user",
+    "request_changes",
+    "abstain"
+  ],
+  "limitations": [
+    "This specimen policy names a deterministic scripted practicality critic; Core can also be used without this optional stage.",
+    "Its practical rules are authored CASE-001 instructions, not generally valid shielding design rules.",
+    "A present_to_user result means only that the candidate passed these authored practical instructions; it does not certify the design or alter Core's verdict."
+  ]
+}

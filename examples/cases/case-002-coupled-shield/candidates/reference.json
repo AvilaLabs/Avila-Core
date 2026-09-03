@@ -1,0 +1,9 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "case-002-reference",
+  "description": "Reference specimen: 80 cm of polyethylene followed by 5 cm of lead. Expected to fail the neutron allocation; it exists to freeze one run of every step.",
+  "layers": [
+    { "material": "polyethylene", "thickness_cm": "80" },
+    { "material": "lead", "thickness_cm": "5" }
+  ]
+}

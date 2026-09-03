@@ -1,0 +1,592 @@
+{
+  "claims": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-screen+json",
+        "sha256": "sha256:90ce23892005a9125dc113fc1da02375ce28e10e30c1f776317a53d268d5b256"
+      },
+      "claim": {
+        "model": "unquantified",
+        "nominal": {
+          "unit": "uSv/h",
+          "value": "15.641581407633426"
+        }
+      },
+      "claim_id": "screen-dose-rate",
+      "output_slot": "dose-rate",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "screen"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-screen+json",
+        "sha256": "sha256:90ce23892005a9125dc113fc1da02375ce28e10e30c1f776317a53d268d5b256"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "kg",
+          "value": "1319.5"
+        }
+      },
+      "claim_id": "screen-mass",
+      "output_slot": "mass",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "screen"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-screen+json",
+        "sha256": "sha256:90ce23892005a9125dc113fc1da02375ce28e10e30c1f776317a53d268d5b256"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "cm",
+          "value": "85"
+        }
+      },
+      "claim_id": "screen-thickness",
+      "output_slot": "thickness",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "screen"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-screen+json",
+        "sha256": "sha256:90ce23892005a9125dc113fc1da02375ce28e10e30c1f776317a53d268d5b256"
+      },
+      "claim": {
+        "model": "unquantified"
+      },
+      "claim_id": "screen-result",
+      "output_slot": "screen-result",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "screen"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-transport+json",
+        "sha256": "sha256:fa49fd20d946009eaf4aeee4d63c58dc1bd26f95aa5b8b72fdef834e77b88885"
+      },
+      "claim": {
+        "coverage": "0.95",
+        "lower": {
+          "unit": "uSv/h",
+          "value": "61.85125977644736"
+        },
+        "model": "coverage_interval",
+        "nominal": {
+          "unit": "uSv/h",
+          "value": "70.20648"
+        },
+        "upper": {
+          "unit": "uSv/h",
+          "value": "78.56170022355264"
+        }
+      },
+      "claim_id": "transport-neutron-dose-rate",
+      "output_slot": "neutron-dose-rate",
+      "producer": {
+        "package_id": "org.python/cpython@3.12.13+openmc-0.15.3",
+        "sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
+      },
+      "qualification": {
+        "qualification_id": "avila-labs.shielding/slab-transport-coupled-openmc",
+        "revision": 1,
+        "sha256": "sha256:8e27e777b2ddaf7ba22cb85ef09f7fa29aee6ab7911e9ff31ebe87a22c1645f5",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.energy\",\"op\":\"ge\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"MeV\",\"value\":\"0.1\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.energy\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"MeV\",\"value\":\"20\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.geometry\",\"op\":\"eq\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":\"plane\"}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"cm\",\"value\":\"120\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
+      "step_id": "transport"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-transport+json",
+        "sha256": "sha256:fa49fd20d946009eaf4aeee4d63c58dc1bd26f95aa5b8b72fdef834e77b88885"
+      },
+      "claim": {
+        "coverage": "0.95",
+        "lower": {
+          "unit": "uSv/h",
+          "value": "3.204420106955616"
+        },
+        "model": "coverage_interval",
+        "nominal": {
+          "unit": "uSv/h",
+          "value": "3.339261036"
+        },
+        "upper": {
+          "unit": "uSv/h",
+          "value": "3.474101965044384"
+        }
+      },
+      "claim_id": "transport-photon-dose-rate",
+      "output_slot": "photon-dose-rate",
+      "producer": {
+        "package_id": "org.python/cpython@3.12.13+openmc-0.15.3",
+        "sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
+      },
+      "qualification": {
+        "qualification_id": "avila-labs.shielding/slab-transport-coupled-openmc",
+        "revision": 1,
+        "sha256": "sha256:8e27e777b2ddaf7ba22cb85ef09f7fa29aee6ab7911e9ff31ebe87a22c1645f5",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.energy\",\"op\":\"ge\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"MeV\",\"value\":\"0.1\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.energy\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"MeV\",\"value\":\"20\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.geometry\",\"op\":\"eq\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":\"plane\"}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"cm\",\"value\":\"120\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
+      "step_id": "transport"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-transport+json",
+        "sha256": "sha256:fa49fd20d946009eaf4aeee4d63c58dc1bd26f95aa5b8b72fdef834e77b88885"
+      },
+      "claim": {
+        "model": "unquantified"
+      },
+      "claim_id": "transport-result",
+      "output_slot": "transport-result",
+      "producer": {
+        "package_id": "org.python/cpython@3.12.13+openmc-0.15.3",
+        "sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
+      },
+      "qualification": {
+        "qualification_id": "avila-labs.shielding/slab-transport-coupled-openmc",
+        "revision": 1,
+        "sha256": "sha256:8e27e777b2ddaf7ba22cb85ef09f7fa29aee6ab7911e9ff31ebe87a22c1645f5",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.energy\",\"op\":\"ge\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"MeV\",\"value\":\"0.1\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.energy\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"MeV\",\"value\":\"20\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.geometry\",\"op\":\"eq\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":\"plane\"}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"cm\",\"value\":\"120\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
+      "step_id": "transport"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-layer-spectra+json",
+        "sha256": "sha256:3f7418f1ac1f80ad50863705a05fca73bc417ec803e3fdc3d25000b1c4cc2501"
+      },
+      "claim": {
+        "model": "unquantified"
+      },
+      "claim_id": "transport-layer-spectra",
+      "output_slot": "layer-spectra",
+      "producer": {
+        "package_id": "org.python/cpython@3.12.13+openmc-0.15.3",
+        "sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
+      },
+      "qualification": {
+        "qualification_id": "avila-labs.shielding/slab-transport-coupled-openmc",
+        "revision": 1,
+        "sha256": "sha256:8e27e777b2ddaf7ba22cb85ef09f7fa29aee6ab7911e9ff31ebe87a22c1645f5",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.energy\",\"op\":\"ge\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"MeV\",\"value\":\"0.1\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.energy\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"MeV\",\"value\":\"20\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.geometry\",\"op\":\"eq\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":\"plane\"}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"cm\",\"value\":\"120\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
+      "step_id": "transport"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-activation+json",
+        "sha256": "sha256:c33f9051693b78a82129e26a02ac3590da3e133b2089045bb89c55941ede319f"
+      },
+      "claim": {
+        "model": "unquantified",
+        "nominal": {
+          "unit": "Bq/g",
+          "value": "0.00062549704"
+        }
+      },
+      "claim_id": "activation-specific-activity",
+      "output_slot": "specific-activity",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "qualification": {
+        "qualification_id": "avila-labs.shielding/slab-activation-actinv",
+        "revision": 1,
+        "sha256": "sha256:e0cce97d7b93b88289550df0ea83750af1e6c94cd9f4250e3fa5efa186b62c64",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/activation@1\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"schedule.irradiation\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/activation@1\"},\"value\":{\"unit\":\"s\",\"value\":\"31536000\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"schedule.cooling\",\"op\":\"ge\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/activation@1\"},\"value\":{\"unit\":\"s\",\"value\":\"3600\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"spectra\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"spectra\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"spectra\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
+      "step_id": "activation"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-activation+json",
+        "sha256": "sha256:c33f9051693b78a82129e26a02ac3590da3e133b2089045bb89c55941ede319f"
+      },
+      "claim": {
+        "model": "unquantified",
+        "nominal": {
+          "unit": "W",
+          "value": "0.000000000022387981"
+        }
+      },
+      "claim_id": "activation-decay-heat",
+      "output_slot": "decay-heat",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "qualification": {
+        "qualification_id": "avila-labs.shielding/slab-activation-actinv",
+        "revision": 1,
+        "sha256": "sha256:e0cce97d7b93b88289550df0ea83750af1e6c94cd9f4250e3fa5efa186b62c64",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/activation@1\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"schedule.irradiation\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/activation@1\"},\"value\":{\"unit\":\"s\",\"value\":\"31536000\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"schedule.cooling\",\"op\":\"ge\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/activation@1\"},\"value\":{\"unit\":\"s\",\"value\":\"3600\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"spectra\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"spectra\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"spectra\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
+      "step_id": "activation"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-activation+json",
+        "sha256": "sha256:c33f9051693b78a82129e26a02ac3590da3e133b2089045bb89c55941ede319f"
+      },
+      "claim": {
+        "model": "unquantified"
+      },
+      "claim_id": "activation-result",
+      "output_slot": "activation-result",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "qualification": {
+        "qualification_id": "avila-labs.shielding/slab-activation-actinv",
+        "revision": 1,
+        "sha256": "sha256:e0cce97d7b93b88289550df0ea83750af1e6c94cd9f4250e3fa5efa186b62c64",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/activation@1\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"schedule.irradiation\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/activation@1\"},\"value\":{\"unit\":\"s\",\"value\":\"31536000\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"schedule.cooling\",\"op\":\"ge\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/activation@1\"},\"value\":{\"unit\":\"s\",\"value\":\"3600\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"spectra\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"spectra\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"spectra\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
+      "step_id": "activation"
+    }
+  ],
+  "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
+  "inputs": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.numpy.npz",
+        "sha256": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44"
+      },
+      "input_id": "actinv-activation-library"
+    },
+    {
+      "artifact": {
+        "media_type": "application/octet-stream",
+        "sha256": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123"
+      },
+      "input_id": "actinv-decay-fallback"
+    },
+    {
+      "artifact": {
+        "media_type": "application/octet-stream",
+        "sha256": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb"
+      },
+      "input_id": "actinv-decay-primary"
+    },
+    {
+      "artifact": {
+        "media_type": "application/x-executable",
+        "sha256": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426"
+      },
+      "input_id": "actinv-executable"
+    },
+    {
+      "artifact": {
+        "media_type": "application/json",
+        "sha256": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb"
+      },
+      "input_id": "actinv-library-index"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:0ce443ee6b182e7bcc954b64920f4d5554d258851511c3a031b5e15bc51d3fc4"
+      },
+      "input_id": "activate-script"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-candidate+json",
+        "sha256": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80"
+      },
+      "input_id": "candidate"
+    },
+    {
+      "artifact": {
+        "media_type": "application/xml",
+        "sha256": "sha256:2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db"
+      },
+      "input_id": "cross-section-index"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-groups+json",
+        "sha256": "sha256:5d5cc7fbc486339158a6f87fb78ab2ac2d336f0c795dfc725c2d05d101cb94f4"
+      },
+      "input_id": "groups"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-materials+json",
+        "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb"
+      },
+      "input_id": "materials"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:3a0dee30ebb247df36ddec543fcf88c9c48fa0eecc3b5e71dd5b0bfb90574a34"
+      },
+      "input_id": "reviewer-script"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-schedule+json",
+        "sha256": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03"
+      },
+      "input_id": "schedule"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:5fd0bd9415ec19e7f15d5bd167976d5852b6984efeea7443aa6323d13cd0253d"
+      },
+      "input_id": "screen-script"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.shield-source+json",
+        "sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b"
+      },
+      "input_id": "source"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:7578e1c101320dd8c811a3cc5958e77d5e490cc21af10385af76b6e845a39fb9"
+      },
+      "input_id": "transport-script"
+    }
+  ],
+  "schema_version": "avila.core/evidence-claims/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft"
+}

@@ -1,0 +1,109 @@
+{
+  "schema_version": "avila.core/qualification/v0.1-draft",
+  "qualification_id": "avila-labs.shielding/slab-activation-actinv",
+  "revision": 1,
+  "owner": "avila-labs.shielding",
+  "adapter": "avila-labs.shielding/activation@1",
+  "capability": {
+    "capability_id": "python3",
+    "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+  },
+  "statement": "ACTINV 1.0.1 over the TENDL-2025 709-group neutron library and ENDF/B-VIII.0 decay data, driven by this exact script per layer, is claimed applicable to at most three layers of the listed materials irradiated for at most one year and cooled for at least one hour. The claim is where the chain has been exercised, not a validated activation envelope.",
+  "scope": {
+    "all": [
+      {
+        "fact": {
+          "name": "slab.layer_count",
+          "op": "le",
+          "value": 3,
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.shielding/activation@1"
+          }
+        }
+      },
+      {
+        "fact": {
+          "name": "schedule.irradiation",
+          "op": "le",
+          "value": {
+            "value": "31536000",
+            "unit": "s"
+          },
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.shielding/activation@1"
+          }
+        }
+      },
+      {
+        "fact": {
+          "name": "schedule.cooling",
+          "op": "ge",
+          "value": {
+            "value": "3600",
+            "unit": "s"
+          },
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.shielding/activation@1"
+          }
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "spectra",
+          "attribute": "layer.1.material",
+          "values": [
+            "polyethylene",
+            "borated_polyethylene",
+            "water",
+            "concrete",
+            "iron",
+            "lead",
+            "none"
+          ]
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "spectra",
+          "attribute": "layer.2.material",
+          "values": [
+            "polyethylene",
+            "borated_polyethylene",
+            "water",
+            "concrete",
+            "iron",
+            "lead",
+            "none"
+          ]
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "spectra",
+          "attribute": "layer.3.material",
+          "values": [
+            "polyethylene",
+            "borated_polyethylene",
+            "water",
+            "concrete",
+            "iron",
+            "lead",
+            "none"
+          ]
+        }
+      }
+    ]
+  },
+  "fact_kinds": {
+    "schedule.irradiation": "core.time",
+    "schedule.cooling": "core.time"
+  },
+  "validation_evidence": [],
+  "limitations": [
+    "No validation evidence is bound. ACTINV's own FNS decay-heat validation covers other spectra and materials and is not attached here.",
+    "Results are nominal inventories; no uncertainty is propagated, and the contact dose is a slab proxy, not a transported shutdown dose."
+  ]
+}

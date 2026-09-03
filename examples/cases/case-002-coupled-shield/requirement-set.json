@@ -1,0 +1,70 @@
+{
+  "schema_version": "avila.core/requirement-set/v0.1-draft",
+  "set_id": "avila-labs.shielding/slab-shield",
+  "revision": 1,
+  "owner": "avila-labs.shielding",
+  "title": "What any slab-shield design search must address",
+  "requirements": [
+    {
+      "set_requirement_id": "neutron-dose-rate",
+      "statement": "Neutron ambient dose equivalent rate at the design point behind the shield is at or below the design limit.",
+      "kind": "nuclear.ambient-dose-equivalent-rate",
+      "comparison": "less_than_or_equal",
+      "minimum_basis": "bounded",
+      "omission": "must_state",
+      "rationale": "The quantity the shield exists to control. A screening estimate may guide a search but cannot establish it."
+    },
+    {
+      "set_requirement_id": "secondary-photon-dose-rate",
+      "statement": "Photon ambient dose equivalent rate at the design point, from capture and inelastic-scattering photons produced in the shield, is at or below the design limit.",
+      "kind": "nuclear.ambient-dose-equivalent-rate",
+      "comparison": "less_than_or_equal",
+      "minimum_basis": "bounded",
+      "omission": "must_state",
+      "rationale": "Hydrogenous shields convert neutrons into 2.2 MeV capture photons; a neutron-only optimum can fail on photons."
+    },
+    {
+      "set_requirement_id": "areal-mass",
+      "statement": "Areal mass of the shield is at or below the structural limit.",
+      "kind": "core.mass",
+      "comparison": "less_than_or_equal",
+      "minimum_basis": "bounded",
+      "omission": "must_state"
+    },
+    {
+      "set_requirement_id": "total-thickness",
+      "statement": "Total shield thickness is at or below the space available.",
+      "kind": "core.length",
+      "comparison": "less_than_or_equal",
+      "minimum_basis": "bounded",
+      "omission": "must_state"
+    },
+    {
+      "set_requirement_id": "shield-material-activation",
+      "statement": "Specific activity of the shield materials after the operating life is at or below the handling and disposal limits.",
+      "kind": "nuclear.specific-activity",
+      "comparison": "less_than_or_equal",
+      "minimum_basis": "bounded",
+      "omission": "must_state",
+      "rationale": "A shield that meets its dose limit and becomes waste that cannot be handled is not a design."
+    },
+    {
+      "set_requirement_id": "streaming-paths",
+      "statement": "Dose contributions through penetrations, gaps, and edges of the shield are at or below the design limit.",
+      "kind": "nuclear.ambient-dose-equivalent-rate",
+      "comparison": "less_than_or_equal",
+      "minimum_basis": "bounded",
+      "omission": "must_state",
+      "rationale": "One-dimensional models cannot see the paths that dominate many real shields."
+    },
+    {
+      "set_requirement_id": "skyshine",
+      "statement": "Skyshine contribution at the site boundary is at or below the site limit.",
+      "kind": "nuclear.ambient-dose-equivalent-rate",
+      "comparison": "less_than_or_equal",
+      "minimum_basis": "bounded",
+      "omission": "may_omit",
+      "rationale": "Relevant only when the shield is a roof or the source is outdoors."
+    }
+  ]
+}

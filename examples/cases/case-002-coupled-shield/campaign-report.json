@@ -1,0 +1,398 @@
+{
+  "schema_version": "avila.core/campaign-report/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "status": "evaluated",
+  "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
+  "claims_sha256": "sha256:68e9c1e5035e64c98db63bc53f430a4455b368c8baafce2bc61d0f315abe45ae",
+  "admissions": [
+    {
+      "evidence_id": "input:actinv-activation-library",
+      "source": {
+        "source": "contract_input",
+        "input_id": "actinv-activation-library"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:actinv-decay-fallback",
+      "source": {
+        "source": "contract_input",
+        "input_id": "actinv-decay-fallback"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:actinv-decay-primary",
+      "source": {
+        "source": "contract_input",
+        "input_id": "actinv-decay-primary"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:actinv-executable",
+      "source": {
+        "source": "contract_input",
+        "input_id": "actinv-executable"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:actinv-library-index",
+      "source": {
+        "source": "contract_input",
+        "input_id": "actinv-library-index"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:activate-script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "activate-script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:candidate",
+      "source": {
+        "source": "contract_input",
+        "input_id": "candidate"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:cross-section-index",
+      "source": {
+        "source": "contract_input",
+        "input_id": "cross-section-index"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:groups",
+      "source": {
+        "source": "contract_input",
+        "input_id": "groups"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:materials",
+      "source": {
+        "source": "contract_input",
+        "input_id": "materials"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:reviewer-script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "reviewer-script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:schedule",
+      "source": {
+        "source": "contract_input",
+        "input_id": "schedule"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:screen-script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "screen-script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:source",
+      "source": {
+        "source": "contract_input",
+        "input_id": "source"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:transport-script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "transport-script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "screen-dose-rate",
+      "source": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "dose-rate"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "screen-mass",
+      "source": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "mass"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "screen-thickness",
+      "source": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "thickness"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "screen-result",
+      "source": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "screen-result"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "transport-neutron-dose-rate",
+      "source": {
+        "source": "step_output",
+        "step_id": "transport",
+        "output_slot": "neutron-dose-rate"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "transport-photon-dose-rate",
+      "source": {
+        "source": "step_output",
+        "step_id": "transport",
+        "output_slot": "photon-dose-rate"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "transport-result",
+      "source": {
+        "source": "step_output",
+        "step_id": "transport",
+        "output_slot": "transport-result"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "transport-layer-spectra",
+      "source": {
+        "source": "step_output",
+        "step_id": "transport",
+        "output_slot": "layer-spectra"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "activation-specific-activity",
+      "source": {
+        "source": "step_output",
+        "step_id": "activation",
+        "output_slot": "specific-activity"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "activation-decay-heat",
+      "source": {
+        "source": "step_output",
+        "step_id": "activation",
+        "output_slot": "decay-heat"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "activation-result",
+      "source": {
+        "source": "step_output",
+        "step_id": "activation",
+        "output_slot": "activation-result"
+      },
+      "state": "admitted"
+    }
+  ],
+  "verdicts": [
+    {
+      "requirement_id": "SHIELD-R1-screen",
+      "statement": "Screening estimate of the neutron dose rate behind the slab is at or below 10 uSv/h (nominal basis; guides the search, establishes nothing).",
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "dose-rate"
+      },
+      "evidence_ids": [
+        "screen-dose-rate"
+      ],
+      "verdict": {
+        "status": "fail",
+        "rule": "nominal.le.exceeds",
+        "canonical_unit": "uSv/h",
+        "limit_canonical": "10",
+        "nominal_canonical": "7820790703816713/500000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
+        "claims_sha256": "sha256:68e9c1e5035e64c98db63bc53f430a4455b368c8baafce2bc61d0f315abe45ae"
+      }
+    },
+    {
+      "requirement_id": "SHIELD-R2-neutron",
+      "statement": "Monte Carlo neutron dose rate behind the slab is at or below its 7 uSv/h allocation within its statistical interval.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "transport",
+        "output_slot": "neutron-dose-rate"
+      },
+      "evidence_ids": [
+        "transport-neutron-dose-rate"
+      ],
+      "verdict": {
+        "status": "fail",
+        "rule": "bounded.le.exceeds",
+        "canonical_unit": "uSv/h",
+        "limit_canonical": "7",
+        "lower_canonical": "96642593400699/1562500000000",
+        "upper_canonical": "122752656599301/1562500000000",
+        "nominal_canonical": "877581/12500"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
+        "claims_sha256": "sha256:68e9c1e5035e64c98db63bc53f430a4455b368c8baafce2bc61d0f315abe45ae"
+      }
+    },
+    {
+      "requirement_id": "SHIELD-R3-photon",
+      "statement": "Monte Carlo dose rate from shield-produced photons behind the slab is at or below its 3 uSv/h allocation within its statistical interval.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "transport",
+        "output_slot": "photon-dose-rate"
+      },
+      "evidence_ids": [
+        "transport-photon-dose-rate"
+      ],
+      "verdict": {
+        "status": "fail",
+        "rule": "bounded.le.exceeds",
+        "canonical_unit": "uSv/h",
+        "limit_canonical": "3",
+        "lower_canonical": "100138128342363/31250000000000",
+        "upper_canonical": "108565686407637/31250000000000",
+        "nominal_canonical": "834815259/250000000"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
+        "claims_sha256": "sha256:68e9c1e5035e64c98db63bc53f430a4455b368c8baafce2bc61d0f315abe45ae"
+      }
+    },
+    {
+      "requirement_id": "SHIELD-R4-mass",
+      "statement": "Areal mass of the slab is at or below 1500 kg per square metre.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "mass"
+      },
+      "evidence_ids": [
+        "screen-mass"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "bounded.le.within",
+        "canonical_unit": "kg",
+        "limit_canonical": "1500",
+        "lower_canonical": "2639/2",
+        "upper_canonical": "2639/2",
+        "nominal_canonical": "2639/2"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
+        "claims_sha256": "sha256:68e9c1e5035e64c98db63bc53f430a4455b368c8baafce2bc61d0f315abe45ae"
+      }
+    },
+    {
+      "requirement_id": "SHIELD-R5-thickness",
+      "statement": "Total slab thickness is at or below 100 cm.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "thickness"
+      },
+      "evidence_ids": [
+        "screen-thickness"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "bounded.le.within",
+        "canonical_unit": "cm",
+        "limit_canonical": "100",
+        "lower_canonical": "85",
+        "upper_canonical": "85",
+        "nominal_canonical": "85"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
+        "claims_sha256": "sha256:68e9c1e5035e64c98db63bc53f430a4455b368c8baafce2bc61d0f315abe45ae"
+      }
+    },
+    {
+      "requirement_id": "SHIELD-R6-activation",
+      "statement": "Highest specific activity of any shield layer after 30 days of irradiation and 1 day of cooling is at or below 1 Bq/g (nominal basis; ACTINV inventory with no bound: guides the search away from activating designs, establishes nothing).",
+      "metric": {
+        "source": "step_output",
+        "step_id": "activation",
+        "output_slot": "specific-activity"
+      },
+      "evidence_ids": [
+        "activation-specific-activity"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "Bq/g",
+        "limit_canonical": "1",
+        "nominal_canonical": "7818713/12500000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
+        "claims_sha256": "sha256:68e9c1e5035e64c98db63bc53f430a4455b368c8baafce2bc61d0f315abe45ae"
+      }
+    }
+  ],
+  "campaign_sha256": "sha256:b23ad222900ca62e6c91dee928fc765e81b622b2373f8af0684125d33d533fd5",
+  "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
+}

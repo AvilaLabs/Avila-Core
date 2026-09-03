@@ -1,0 +1,1304 @@
+{
+  "schema_version": "avila.core/registry-snapshot/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "registry_id": "case-002.coupled-shield-search.registry",
+  "revision": 1,
+  "kinds": [
+    {
+      "kind_id": "nuclear.ambient-dose-equivalent-rate",
+      "canonical_unit": "uSv/h",
+      "unit_class": "nuclear.ambient-dose-equivalent-rate.units@1",
+      "owner": "avila-labs.shielding",
+      "units": [
+        {
+          "symbol": "uSv/h",
+          "factor": "1"
+        },
+        {
+          "symbol": "mSv/h",
+          "factor": "1000"
+        },
+        {
+          "symbol": "Sv/h",
+          "factor": "1000000"
+        }
+      ]
+    },
+    {
+      "kind_id": "core.mass",
+      "canonical_unit": "kg",
+      "unit_class": "core.mass.units@1",
+      "owner": "avila-labs.core",
+      "units": [
+        {
+          "symbol": "kg",
+          "factor": "1"
+        },
+        {
+          "symbol": "g",
+          "factor": "1/1000"
+        },
+        {
+          "symbol": "t",
+          "factor": "1000"
+        }
+      ]
+    },
+    {
+      "kind_id": "core.length",
+      "canonical_unit": "cm",
+      "unit_class": "core.length.units@1",
+      "owner": "avila-labs.core",
+      "units": [
+        {
+          "symbol": "cm",
+          "factor": "1"
+        },
+        {
+          "symbol": "mm",
+          "factor": "1/10"
+        },
+        {
+          "symbol": "m",
+          "factor": "100"
+        }
+      ]
+    },
+    {
+      "kind_id": "nuclear.energy",
+      "canonical_unit": "eV",
+      "unit_class": "nuclear.energy.units@1",
+      "owner": "avila-labs.shielding",
+      "units": [
+        {
+          "symbol": "eV",
+          "factor": "1"
+        },
+        {
+          "symbol": "keV",
+          "factor": "1000"
+        },
+        {
+          "symbol": "MeV",
+          "factor": "1000000"
+        }
+      ]
+    },
+    {
+      "kind_id": "nuclear.specific-activity",
+      "canonical_unit": "Bq/g",
+      "unit_class": "nuclear.specific-activity.units@1",
+      "owner": "avila-labs.shielding",
+      "units": [
+        {
+          "symbol": "Bq/g",
+          "factor": "1"
+        },
+        {
+          "symbol": "Bq/kg",
+          "factor": "1/1000"
+        },
+        {
+          "symbol": "kBq/g",
+          "factor": "1000"
+        },
+        {
+          "symbol": "MBq/g",
+          "factor": "1000000"
+        }
+      ]
+    },
+    {
+      "kind_id": "core.power",
+      "canonical_unit": "W",
+      "unit_class": "core.power.units@1",
+      "owner": "avila-labs.core",
+      "units": [
+        {
+          "symbol": "W",
+          "factor": "1"
+        },
+        {
+          "symbol": "mW",
+          "factor": "1/1000"
+        },
+        {
+          "symbol": "kW",
+          "factor": "1000"
+        }
+      ]
+    },
+    {
+      "kind_id": "core.time",
+      "canonical_unit": "s",
+      "unit_class": "core.time.units@1",
+      "owner": "avila-labs.core",
+      "units": [
+        {
+          "symbol": "s",
+          "factor": "1"
+        },
+        {
+          "symbol": "h",
+          "factor": "3600"
+        },
+        {
+          "symbol": "d",
+          "factor": "86400"
+        }
+      ]
+    }
+  ],
+  "purposes": [
+    {
+      "purpose": {
+        "id": "avila-labs.shielding.design-search",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "description": "Research-only search over synthetic shielding configurations inside Avila Labs."
+    },
+    {
+      "purpose": {
+        "id": "nuclear.regulatory-or-operational-use",
+        "major": 1
+      },
+      "owner": "external-responsible-authority",
+      "description": "Any regulatory, safety, licensing, or operational use; every output of this case excludes it."
+    }
+  ],
+  "roles": [
+    {
+      "role": {
+        "id": "shielding.candidate",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.candidate@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-candidate+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.material-table",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.material-table@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-materials+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ],
+      "non_claims": [
+        "Removal cross sections in the table are approximate screening values; nothing in it is qualified."
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.source-spec",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.source-spec@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-source+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.screen-script",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.script@1",
+      "accepted_media_types": [
+        "text/x-python"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.transport-script",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.script@1",
+      "accepted_media_types": [
+        "text/x-python"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "nuclear.cross-section-index",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "nuclear.validate.cross-section-index@1",
+      "accepted_media_types": [
+        "application/xml"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ],
+      "non_claims": [
+        "The index digest identifies the library's file list; the nuclide files it names are not re-hashed by this case."
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.dose-rate-screen",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.dose-rate-screen@1",
+      "quantity_kind": "nuclear.ambient-dose-equivalent-rate",
+      "unit_class": "nuclear.ambient-dose-equivalent-rate.units@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-screen+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ],
+      "non_claims": [
+        "A screening estimate with no bound; it can guide a search and can never establish a bounded verdict."
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.dose-rate-bounded",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.dose-rate-bounded@1",
+      "quantity_kind": "nuclear.ambient-dose-equivalent-rate",
+      "unit_class": "nuclear.ambient-dose-equivalent-rate.units@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-transport+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "coverage_interval"
+        }
+      ],
+      "non_claims": [
+        "The interval bounds Monte Carlo statistical error only; nuclear-data, geometry, and model uncertainty are not evaluated."
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.mass",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.mass@1",
+      "quantity_kind": "core.mass",
+      "unit_class": "core.mass.units@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-screen+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "exact"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.thickness",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.thickness@1",
+      "quantity_kind": "core.length",
+      "unit_class": "core.length.units@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-screen+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "exact"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.screen-result",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.screen-result@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-screen+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.transport-result",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.transport-result@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-transport+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "core.review.agent-implementation",
+        "major": 1
+      },
+      "owner": "avila-labs.core",
+      "validator": "core.validate.agent-implementation@1",
+      "accepted_media_types": [
+        "text/x-python"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ],
+      "non_claims": [
+        "An implementation digest identifies the connected reviewing software; it does not create or alter a Core verdict."
+      ]
+    },
+    {
+      "role": {
+        "id": "core.presentation.routing-record",
+        "major": 1
+      },
+      "owner": "avila-labs.core",
+      "validator": "core.validate.presentation-routing@1",
+      "accepted_media_types": [
+        "application/vnd.avila-core.presentation-routing+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ],
+      "non_claims": [
+        "An agent routing decision can return work or present a candidate to the user; it never creates or alters a technical verdict."
+      ]
+    },
+    {
+      "role": {
+        "id": "actinv.activation-library",
+        "major": 1
+      },
+      "owner": "avila-labs.actinv",
+      "validator": "actinv.validate.activation-library@1",
+      "accepted_media_types": [
+        "application/vnd.numpy.npz"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "actinv.library-index",
+        "major": 1
+      },
+      "owner": "avila-labs.actinv",
+      "validator": "actinv.validate.library-index@1",
+      "accepted_media_types": [
+        "application/json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "actinv.decay-data",
+        "major": 1
+      },
+      "owner": "avila-labs.actinv",
+      "validator": "actinv.validate.decay-data@1",
+      "accepted_media_types": [
+        "application/octet-stream"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "actinv.executable",
+        "major": 1
+      },
+      "owner": "avila-labs.actinv",
+      "validator": "actinv.validate.executable@1",
+      "accepted_media_types": [
+        "application/x-executable"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ],
+      "non_claims": [
+        "An executable's digest identifies the bytes that run; it does not qualify the method they implement."
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.group-structure",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.group-structure@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-groups+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.irradiation-schedule",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.irradiation-schedule@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-schedule+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.activate-script",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.script@1",
+      "accepted_media_types": [
+        "text/x-python"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.layer-spectra",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.layer-spectra@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-layer-spectra+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ],
+      "non_claims": [
+        "Per-layer group fluxes carry Monte Carlo statistical error and no bound; they feed the activation step and establish nothing themselves."
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.activation-result",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.activation-result@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-activation+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.specific-activity",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.specific-activity@1",
+      "quantity_kind": "nuclear.specific-activity",
+      "unit_class": "nuclear.specific-activity.units@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-activation+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ],
+      "non_claims": [
+        "A nominal inventory result with no bound; it can satisfy only a nominal-basis requirement."
+      ]
+    },
+    {
+      "role": {
+        "id": "shielding.decay-heat",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "validator": "shielding.validate.decay-heat@1",
+      "quantity_kind": "core.power",
+      "unit_class": "core.power.units@1",
+      "accepted_media_types": [
+        "application/vnd.avila.shield-activation+json"
+      ],
+      "permitted_claim_models": [
+        {
+          "model": "unquantified"
+        }
+      ],
+      "non_claims": [
+        "A nominal inventory result with no bound."
+      ]
+    }
+  ],
+  "capability_types": [
+    {
+      "capability_type": {
+        "id": "shielding.attenuation-screen",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "reproducibility": {
+        "determinism": "deterministic"
+      },
+      "inputs": [
+        {
+          "slot_id": "script",
+          "role": {
+            "id": "shielding.screen-script",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "text/x-python"
+          ]
+        },
+        {
+          "slot_id": "candidate",
+          "role": {
+            "id": "shielding.candidate",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-candidate+json"
+          ]
+        },
+        {
+          "slot_id": "materials",
+          "role": {
+            "id": "shielding.material-table",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-materials+json"
+          ]
+        },
+        {
+          "slot_id": "source",
+          "role": {
+            "id": "shielding.source-spec",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-source+json"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "slot_id": "dose-rate",
+          "role": {
+            "id": "shielding.dose-rate-screen",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-screen+json",
+          "permitted_claim_models": [
+            {
+              "model": "unquantified"
+            }
+          ],
+          "excluded_purposes": [
+            {
+              "id": "nuclear.regulatory-or-operational-use",
+              "major": 1
+            }
+          ]
+        },
+        {
+          "slot_id": "mass",
+          "role": {
+            "id": "shielding.mass",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-screen+json",
+          "permitted_claim_models": [
+            {
+              "model": "exact"
+            }
+          ],
+          "excluded_purposes": [
+            {
+              "id": "nuclear.regulatory-or-operational-use",
+              "major": 1
+            }
+          ]
+        },
+        {
+          "slot_id": "thickness",
+          "role": {
+            "id": "shielding.thickness",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-screen+json",
+          "permitted_claim_models": [
+            {
+              "model": "exact"
+            }
+          ],
+          "excluded_purposes": [
+            {
+              "id": "nuclear.regulatory-or-operational-use",
+              "major": 1
+            }
+          ]
+        },
+        {
+          "slot_id": "screen-result",
+          "role": {
+            "id": "shielding.screen-result",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-screen+json",
+          "permitted_claim_models": [
+            {
+              "model": "unquantified"
+            }
+          ],
+          "excluded_purposes": [
+            {
+              "id": "nuclear.regulatory-or-operational-use",
+              "major": 1
+            }
+          ]
+        }
+      ],
+      "non_claims": [
+        "The screen is a one-dimensional removal-cross-section estimate with no buildup; it is an unqualified guide for searching and is evaluated only on a nominal basis."
+      ]
+    },
+    {
+      "capability_type": {
+        "id": "shielding.slab-transport",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "reproducibility": {
+        "determinism": "seeded_stochastic"
+      },
+      "inputs": [
+        {
+          "slot_id": "script",
+          "role": {
+            "id": "shielding.transport-script",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "text/x-python"
+          ]
+        },
+        {
+          "slot_id": "candidate",
+          "role": {
+            "id": "shielding.candidate",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-candidate+json"
+          ]
+        },
+        {
+          "slot_id": "materials",
+          "role": {
+            "id": "shielding.material-table",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-materials+json"
+          ]
+        },
+        {
+          "slot_id": "source",
+          "role": {
+            "id": "shielding.source-spec",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-source+json"
+          ]
+        },
+        {
+          "slot_id": "cross-section-index",
+          "role": {
+            "id": "nuclear.cross-section-index",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/xml"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "slot_id": "dose-rate",
+          "role": {
+            "id": "shielding.dose-rate-bounded",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-transport+json",
+          "permitted_claim_models": [
+            {
+              "model": "coverage_interval"
+            }
+          ],
+          "excluded_purposes": [
+            {
+              "id": "nuclear.regulatory-or-operational-use",
+              "major": 1
+            }
+          ]
+        },
+        {
+          "slot_id": "transport-result",
+          "role": {
+            "id": "shielding.transport-result",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-transport+json",
+          "permitted_claim_models": [
+            {
+              "model": "unquantified"
+            }
+          ],
+          "excluded_purposes": [
+            {
+              "id": "nuclear.regulatory-or-operational-use",
+              "major": 1
+            }
+          ]
+        }
+      ],
+      "parameters": [
+        {
+          "parameter_id": "particles",
+          "required": true,
+          "value_type": {
+            "type": "integer",
+            "min": {
+              "value": 1000,
+              "inclusive": true
+            }
+          }
+        },
+        {
+          "parameter_id": "batches",
+          "required": true,
+          "value_type": {
+            "type": "integer",
+            "min": {
+              "value": 2,
+              "inclusive": true
+            }
+          }
+        }
+      ],
+      "non_claims": [
+        "Monte Carlo transport of a laterally infinite slab; the coverage interval is statistical only. Not qualified for any decision."
+      ]
+    },
+    {
+      "capability_type": {
+        "id": "shielding.practical-agent-review",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "reproducibility": {
+        "determinism": "deterministic"
+      },
+      "inputs": [
+        {
+          "slot_id": "reviewer",
+          "role": {
+            "id": "core.review.agent-implementation",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "text/x-python"
+          ]
+        },
+        {
+          "slot_id": "candidate",
+          "role": {
+            "id": "shielding.candidate",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-candidate+json"
+          ]
+        },
+        {
+          "slot_id": "screen-result",
+          "role": {
+            "id": "shielding.screen-result",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-screen+json"
+          ]
+        },
+        {
+          "slot_id": "transport-result",
+          "role": {
+            "id": "shielding.transport-result",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-transport+json"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "slot_id": "decision",
+          "role": {
+            "id": "core.presentation.routing-record",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila-core.presentation-routing+json",
+          "permitted_claim_models": [
+            {
+              "model": "unquantified"
+            }
+          ]
+        }
+      ],
+      "review": {
+        "reviewer_role": "agent",
+        "presented_input_slots": [
+          "reviewer",
+          "candidate",
+          "screen-result",
+          "transport-result"
+        ],
+        "decision_output_slot": "decision",
+        "allowed_dispositions": [
+          "present_to_user",
+          "request_changes",
+          "abstain"
+        ]
+      },
+      "non_claims": [
+        "This optional stage applies CASE-001's practical instructions after Core evaluates the requirements. It can return a candidate or route it to the user, but cannot change a technical verdict."
+      ]
+    },
+    {
+      "capability_type": {
+        "id": "shielding.slab-transport-coupled",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "reproducibility": {
+        "determinism": "seeded_stochastic"
+      },
+      "inputs": [
+        {
+          "slot_id": "script",
+          "role": {
+            "id": "shielding.transport-script",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "text/x-python"
+          ]
+        },
+        {
+          "slot_id": "candidate",
+          "role": {
+            "id": "shielding.candidate",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-candidate+json"
+          ]
+        },
+        {
+          "slot_id": "materials",
+          "role": {
+            "id": "shielding.material-table",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-materials+json"
+          ]
+        },
+        {
+          "slot_id": "source",
+          "role": {
+            "id": "shielding.source-spec",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-source+json"
+          ]
+        },
+        {
+          "slot_id": "cross-section-index",
+          "role": {
+            "id": "nuclear.cross-section-index",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/xml"
+          ]
+        },
+        {
+          "slot_id": "groups",
+          "role": {
+            "id": "shielding.group-structure",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-groups+json"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "slot_id": "neutron-dose-rate",
+          "role": {
+            "id": "shielding.dose-rate-bounded",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-transport+json",
+          "permitted_claim_models": [
+            {
+              "model": "coverage_interval"
+            }
+          ],
+          "excluded_purposes": [
+            {
+              "id": "nuclear.regulatory-or-operational-use",
+              "major": 1
+            }
+          ]
+        },
+        {
+          "slot_id": "photon-dose-rate",
+          "role": {
+            "id": "shielding.dose-rate-bounded",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-transport+json",
+          "permitted_claim_models": [
+            {
+              "model": "coverage_interval"
+            }
+          ],
+          "excluded_purposes": [
+            {
+              "id": "nuclear.regulatory-or-operational-use",
+              "major": 1
+            }
+          ]
+        },
+        {
+          "slot_id": "layer-spectra",
+          "role": {
+            "id": "shielding.layer-spectra",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-layer-spectra+json",
+          "permitted_claim_models": [
+            {
+              "model": "unquantified"
+            }
+          ],
+          "excluded_purposes": [
+            {
+              "id": "nuclear.regulatory-or-operational-use",
+              "major": 1
+            }
+          ]
+        },
+        {
+          "slot_id": "transport-result",
+          "role": {
+            "id": "shielding.transport-result",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-transport+json",
+          "permitted_claim_models": [
+            {
+              "model": "unquantified"
+            }
+          ],
+          "excluded_purposes": [
+            {
+              "id": "nuclear.regulatory-or-operational-use",
+              "major": 1
+            }
+          ]
+        }
+      ],
+      "parameters": [
+        {
+          "parameter_id": "particles",
+          "required": true,
+          "value_type": {
+            "type": "integer",
+            "min": {
+              "value": 1000,
+              "inclusive": true
+            }
+          }
+        },
+        {
+          "parameter_id": "batches",
+          "required": true,
+          "value_type": {
+            "type": "integer",
+            "min": {
+              "value": 2,
+              "inclusive": true
+            }
+          }
+        }
+      ],
+      "non_claims": [
+        "Coupled neutron-photon Monte Carlo over a laterally infinite slab with variance reduction; the intervals bound statistical error only. The photon dose counts photons produced in the shield; the per-layer spectra are Monte Carlo estimates that feed activation and establish nothing themselves."
+      ]
+    },
+    {
+      "capability_type": {
+        "id": "shielding.slab-activation",
+        "major": 1
+      },
+      "owner": "avila-labs.shielding",
+      "reproducibility": {
+        "determinism": "deterministic"
+      },
+      "inputs": [
+        {
+          "slot_id": "script",
+          "role": {
+            "id": "shielding.activate-script",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "text/x-python"
+          ]
+        },
+        {
+          "slot_id": "spectra",
+          "role": {
+            "id": "shielding.layer-spectra",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-layer-spectra+json"
+          ]
+        },
+        {
+          "slot_id": "materials",
+          "role": {
+            "id": "shielding.material-table",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-materials+json"
+          ]
+        },
+        {
+          "slot_id": "schedule",
+          "role": {
+            "id": "shielding.irradiation-schedule",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.avila.shield-schedule+json"
+          ]
+        },
+        {
+          "slot_id": "actinv",
+          "role": {
+            "id": "actinv.executable",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/x-executable"
+          ]
+        },
+        {
+          "slot_id": "activation-library",
+          "role": {
+            "id": "actinv.activation-library",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/vnd.numpy.npz"
+          ]
+        },
+        {
+          "slot_id": "activation-index",
+          "role": {
+            "id": "actinv.library-index",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/json"
+          ]
+        },
+        {
+          "slot_id": "decay-primary",
+          "role": {
+            "id": "actinv.decay-data",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/octet-stream"
+          ]
+        },
+        {
+          "slot_id": "decay-fallback",
+          "role": {
+            "id": "actinv.decay-data",
+            "major": 1
+          },
+          "accepted_media_types": [
+            "application/octet-stream"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "slot_id": "specific-activity",
+          "role": {
+            "id": "shielding.specific-activity",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-activation+json",
+          "permitted_claim_models": [
+            {
+              "model": "unquantified"
+            }
+          ],
+          "excluded_purposes": [
+            {
+              "id": "nuclear.regulatory-or-operational-use",
+              "major": 1
+            }
+          ]
+        },
+        {
+          "slot_id": "decay-heat",
+          "role": {
+            "id": "shielding.decay-heat",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-activation+json",
+          "permitted_claim_models": [
+            {
+              "model": "unquantified"
+            }
+          ],
+          "excluded_purposes": [
+            {
+              "id": "nuclear.regulatory-or-operational-use",
+              "major": 1
+            }
+          ]
+        },
+        {
+          "slot_id": "activation-result",
+          "role": {
+            "id": "shielding.activation-result",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-activation+json",
+          "permitted_claim_models": [
+            {
+              "model": "unquantified"
+            }
+          ],
+          "excluded_purposes": [
+            {
+              "id": "nuclear.regulatory-or-operational-use",
+              "major": 1
+            }
+          ]
+        }
+      ],
+      "non_claims": [
+        "Runs ACTINV 1.0.1 once per layer over the transport step's group fluxes under the declared schedule and reports the summed specific activity and total decay heat at the end of cooling. Core verifies the executable and data by digest and qualifies none of them; the results are nominal inventories with no bound. No transported or proxy shutdown dose is produced: the photon-response table ACTINV needs for its slab proxy is not among the bound data."
+      ]
+    }
+  ]
+}

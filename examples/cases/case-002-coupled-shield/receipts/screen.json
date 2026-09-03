@@ -1,0 +1,112 @@
+{
+  "schema_version": "avila.core/execution-receipt/v0.1-draft",
+  "case_id": "CASE-002",
+  "compiled_snapshot_sha256": "sha256:72f8afcb194e74f15e280764f779c4e233533fed317ab75261796d9118f8d87f",
+  "step_id": "screen",
+  "capability_type": {
+    "id": "shielding.attenuation-screen",
+    "major": 1
+  },
+  "adapter": "avila-labs.shielding/screen@1",
+  "capability": {
+    "capability_id": "python3",
+    "package_id": "org.python/cpython@3.14.4",
+    "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+  },
+  "parameters": {},
+  "inputs": [
+    {
+      "input_slot": "candidate",
+      "evidence_id": "input:candidate",
+      "workspace_path": "inputs/candidate.json",
+      "media_type": "application/vnd.avila.shield-candidate+json",
+      "sha256": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80",
+      "bytes": 384
+    },
+    {
+      "input_slot": "materials",
+      "evidence_id": "input:materials",
+      "workspace_path": "inputs/materials.json",
+      "media_type": "application/vnd.avila.shield-materials+json",
+      "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb",
+      "bytes": 1551
+    },
+    {
+      "input_slot": "script",
+      "evidence_id": "input:screen-script",
+      "workspace_path": "tools/screen.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:5fd0bd9415ec19e7f15d5bd167976d5852b6984efeea7443aa6323d13cd0253d",
+      "bytes": 3589
+    },
+    {
+      "input_slot": "source",
+      "evidence_id": "input:source",
+      "workspace_path": "inputs/source.json",
+      "media_type": "application/vnd.avila.shield-source+json",
+      "sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+      "bytes": 753
+    }
+  ],
+  "invocation": {
+    "program": "python3.14",
+    "arguments": [
+      "tools/screen.py",
+      "--candidate",
+      "inputs/candidate.json",
+      "--materials",
+      "inputs/materials.json",
+      "--source",
+      "inputs/source.json",
+      "--output",
+      "outputs/screen-result.json"
+    ],
+    "working_directory": ".",
+    "environment": {},
+    "timeout_ms": 120000
+  },
+  "invocation_sha256": "sha256:d96dc148ebb760da4c90ff10bfe11143ea86909d6a57be3741df8985907bd50a",
+  "process": {
+    "started_at": "2026-09-03T00:41:43.627Z",
+    "finished_at": "2026-09-03T00:41:43.728Z",
+    "duration_ms": 101,
+    "exit_status": 0,
+    "timed_out": false
+  },
+  "logs": [
+    {
+      "stream": "stdout",
+      "workspace_path": "logs/stdout.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "stream": "stderr",
+      "workspace_path": "logs/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "outputs": [
+    {
+      "output_id": "screen-result",
+      "workspace_path": "outputs/screen-result.json",
+      "media_type": "application/vnd.avila.shield-screen+json",
+      "state": "collected",
+      "sha256": "sha256:90ce23892005a9125dc113fc1da02375ce28e10e30c1f776317a53d268d5b256",
+      "bytes": 975
+    }
+  ],
+  "runner": {
+    "runner": "avila.core/cli-rust@0.1.0",
+    "os": "linux",
+    "arch": "x86_64"
+  },
+  "status": "completed",
+  "limitations": [
+    "Exit status and output digests are process evidence, not scientific success.",
+    "The executable digest identifies the bytes that ran; it does not qualify the method.",
+    "No sandbox, resource accounting, or signature was applied; the environment was cleared and the working directory confined to the workspace."
+  ],
+  "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, practical suitability, or regulatory suitability."
+}

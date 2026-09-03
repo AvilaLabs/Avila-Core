@@ -5,6 +5,7 @@
 //! knows are the ones a committed case declares.
 
 pub mod actinv_build;
+pub mod activation;
 #[cfg(test)]
 mod adversarial_tests;
 pub mod aftermatter;
@@ -60,6 +61,7 @@ pub enum Adapter {
     ActinvBuild,
     ShieldingScreen,
     ShieldingTransport,
+    ShieldingActivation,
 }
 
 impl Adapter {
@@ -69,6 +71,7 @@ impl Adapter {
             actinv_build::ADAPTER_ID => Some(Self::ActinvBuild),
             shielding::SCREEN_ADAPTER_ID => Some(Self::ShieldingScreen),
             shielding::TRANSPORT_ADAPTER_ID => Some(Self::ShieldingTransport),
+            activation::ADAPTER_ID => Some(Self::ShieldingActivation),
             _ => None,
         }
     }
@@ -79,6 +82,7 @@ impl Adapter {
             Self::ActinvBuild => actinv_build::ADAPTER_ID,
             Self::ShieldingScreen => shielding::SCREEN_ADAPTER_ID,
             Self::ShieldingTransport => shielding::TRANSPORT_ADAPTER_ID,
+            Self::ShieldingActivation => activation::ADAPTER_ID,
         }
     }
 
@@ -100,6 +104,10 @@ impl Adapter {
                 id: shielding::TRANSPORT_TYPE_ID.into(),
                 major: 1,
             },
+            Self::ShieldingActivation => CapabilityTypeRef {
+                id: activation::CAPABILITY_TYPE_ID.into(),
+                major: activation::CAPABILITY_TYPE_MAJOR,
+            },
         }
     }
 
@@ -109,6 +117,7 @@ impl Adapter {
             Self::ActinvBuild => actinv_build::INPUT_SLOTS,
             Self::ShieldingScreen => shielding::SCREEN_INPUT_SLOTS,
             Self::ShieldingTransport => shielding::TRANSPORT_INPUT_SLOTS,
+            Self::ShieldingActivation => activation::INPUT_SLOTS,
         }
     }
 
@@ -118,6 +127,7 @@ impl Adapter {
             Self::ActinvBuild => actinv_build::OUTPUTS,
             Self::ShieldingScreen => shielding::SCREEN_OUTPUTS,
             Self::ShieldingTransport => shielding::TRANSPORT_OUTPUTS,
+            Self::ShieldingActivation => activation::OUTPUTS,
         }
     }
 
@@ -127,6 +137,7 @@ impl Adapter {
             Self::ActinvBuild => actinv_build::OUTPUT_SLOTS,
             Self::ShieldingScreen => shielding::SCREEN_OUTPUT_SLOTS,
             Self::ShieldingTransport => shielding::TRANSPORT_OUTPUT_SLOTS,
+            Self::ShieldingActivation => activation::OUTPUT_SLOTS,
         }
     }
 
@@ -136,6 +147,7 @@ impl Adapter {
             Self::ActinvBuild => actinv_build::TIMEOUT,
             Self::ShieldingScreen => shielding::SCREEN_TIMEOUT,
             Self::ShieldingTransport => shielding::TRANSPORT_TIMEOUT,
+            Self::ShieldingActivation => activation::TIMEOUT,
         }
     }
 
@@ -143,7 +155,10 @@ impl Adapter {
     /// by the adapter, valued by the operator, and recorded in the receipt.
     pub const fn required_environment(self) -> &'static [&'static str] {
         match self {
-            Self::AftermatterEvaluate | Self::ActinvBuild | Self::ShieldingScreen => &[],
+            Self::AftermatterEvaluate
+            | Self::ActinvBuild
+            | Self::ShieldingScreen
+            | Self::ShieldingActivation => &[],
             Self::ShieldingTransport => shielding::TRANSPORT_ENVIRONMENT_KEYS,
         }
     }
@@ -155,6 +170,7 @@ impl Adapter {
             Self::AftermatterEvaluate | Self::ShieldingScreen => BTreeMap::new(),
             Self::ActinvBuild => actinv_build::environment(),
             Self::ShieldingTransport => shielding::transport_environment(),
+            Self::ShieldingActivation => activation::environment(),
         }
     }
 
@@ -187,6 +203,9 @@ impl Adapter {
         if self == Self::ShieldingTransport {
             shielding::transport_facts(staged, invocation_sha256, &mut facts, &mut inputs)?;
         }
+        if self == Self::ShieldingActivation {
+            activation::activation_facts(staged, invocation_sha256, &mut facts, &mut inputs)?;
+        }
         Ok(serde_json::json!({ "facts": facts, "inputs": inputs }))
     }
 
@@ -201,6 +220,7 @@ impl Adapter {
             Self::ActinvBuild => actinv_build::arguments(staged),
             Self::ShieldingScreen => shielding::screen_arguments(staged, context),
             Self::ShieldingTransport => shielding::transport_arguments(staged, context),
+            Self::ShieldingActivation => activation::arguments(staged, context),
         }
     }
 
@@ -214,6 +234,7 @@ impl Adapter {
             Self::ActinvBuild => actinv_build::extract_claims(outputs, &context.parameters),
             Self::ShieldingScreen => shielding::screen_claims(outputs, context),
             Self::ShieldingTransport => shielding::transport_claims(outputs, context),
+            Self::ShieldingActivation => activation::extract_claims(outputs, context),
         }
     }
 }

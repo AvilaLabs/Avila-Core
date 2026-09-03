@@ -1,0 +1,6 @@
+{
+  "cooling_s": "86400",
+  "flux_scale": "1",
+  "irradiation_s": "2592000",
+  "schema": "avila.shielding/irradiation-schedule/v1"
+}

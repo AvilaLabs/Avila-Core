@@ -8,8 +8,11 @@ Method
 flux on the S_N solver's own fine mesh (default 0.5 cm) and 175 groups. This
 script collapses both onto a coarser `openmc.RegularMesh` along x (cells of
 1 to 2 cm, default 2 to match transport.py's own analytic-window mesh) and a
-coarse energy grid (about 10 log-spaced bins spanning the library's full
-group range), then sets
+coarse energy grid (about 10 bins spanning the library's full group range,
+each a contiguous run of ~n_groups/10 fine groups -- not log-uniform energy
+edges, which on this library's actual (non-log-uniform) group spacing can
+leave a bin with zero fine groups in it; see build_coarse_energy_bins()),
+then sets
 
     lower_bound(x, E) = C / adjoint_coarse(x, E)
     upper_bound(x, E) = lower_bound(x, E) * upper_bound_ratio
@@ -37,7 +40,6 @@ in-process rather than shelling out, and never regenerates it stochastically.
 
 import argparse
 import json
-import sys
 from decimal import Decimal, getcontext
 
 import numpy as np
@@ -78,12 +80,33 @@ def round_sig_array(values: np.ndarray, digits: int = SIGNIFICANT_DIGITS) -> np.
 
 
 def build_coarse_energy_bins(boundaries_eV: np.ndarray, n_bins: int):
-    """n_bins log-spaced coarse bin edges spanning the library's full group
-    range; returns (coarse_edges[n_bins+1], fine_group_to_bin[n_groups])."""
-    lo, hi = boundaries_eV[0], boundaries_eV[-1]
-    coarse_edges = np.exp(np.linspace(np.log(lo), np.log(hi), n_bins + 1))
-    group_mid = np.sqrt(boundaries_eV[:-1] * boundaries_eV[1:])  # log-midpoint of each fine group
-    fine_to_bin = np.clip(np.searchsorted(coarse_edges, group_mid, side="right") - 1, 0, n_bins - 1)
+    """n_bins coarse bins spanning the library's full group range, each a
+    contiguous run of roughly n_groups/n_bins fine groups; returns
+    (coarse_edges[n_bins+1], fine_group_to_bin[n_groups]).
+
+    Partitioning by fine-group INDEX rather than by n_bins log-uniform
+    energy edges is deliberate: VITAMIN-J-175 is not close to log-uniform
+    (much finer in some regions, coarser in others), so picking edges
+    log-uniformly and assigning each fine group to whichever edge-defined
+    bin contains its log-midpoint can leave some coarse bins with ZERO fine
+    groups in them -- confirmed directly on this library at n_bins=10.
+    collapse_adjoint() then has nothing to average for that bin at any
+    spatial cell, so it silently produces exactly 0 everywhere, which
+    upstream turns into every lower bound in that whole energy bin sitting
+    on the numerical floor rather than tracking the real (if partly
+    unconverged) adjoint importance -- and en route to a working weight
+    window, a floor that flat made rouletting fire on effectively every
+    history that scattered out of the source's own energy bin, killing the
+    run. Index-contiguous partitioning guarantees every bin gets at least
+    one fine group (as long as n_bins <= n_groups), so this cannot happen.
+    """
+    n_groups = len(boundaries_eV) - 1
+    if n_bins > n_groups:
+        raise ValueError(f"n_energy_bins ({n_bins}) must be <= the library's group count ({n_groups})")
+    fine_to_bin = np.minimum((np.arange(n_groups) * n_bins) // n_groups, n_bins - 1)
+    # coarse edges: the fine-group boundary at the start of each bin, plus the top edge
+    bin_starts = np.searchsorted(fine_to_bin, np.arange(n_bins))
+    coarse_edges = np.concatenate([boundaries_eV[bin_starts], boundaries_eV[-1:]])
     return coarse_edges, fine_to_bin
 
 
@@ -181,25 +204,38 @@ def build_cadis_windows(
     adjoint_phi = adjoint_result.phi[:, :, 0]
     coarse_adjoint = collapse_adjoint(forward_phi, adjoint_phi, fine_to_coarse_x, fine_to_bin_e, n_x, n_e)
 
-    # Floor relative to this array's own MAXIMUM, not its minimum: the adjoint
-    # solve's source iteration (see slab_sn.py) converges the thermal-upscatter
-    # group cluster to a stated tolerance but does not run enough inner
-    # iterations to fully diffuse importance back through 100+ cm of a strongly
-    # self-scattering medium for every one of the other 149 groups, so some
-    # (cell, energy-bin) adjoint values are numerically near-zero without that
-    # meaning the true importance there is actually that small -- flooring
-    # against the array's own minimum would let exactly those under-converged
-    # values set an absurdly tiny floor (observed directly: values down to
-    # ~1e-108 next to a max of ~1e3, giving lower bounds like 1e116 before this
-    # fix). Flooring at a small fraction of the array's maximum keeps every
-    # bound finite and large-but-sane in an under-converged region -- still
-    # directionally correct (low importance there, so bias hard against it)
-    # -- without the absurd magnitude. See the case report for the runtime/
-    # convergence limitation this works around.
-    RELATIVE_FLOOR = 1e-8
+    # Two floors, for two different failure modes of an under-converged adjoint
+    # (slab_sn.py's source iteration does not fully diffuse importance back
+    # through 100+ cm of a strongly self-scattering shield for groups outside
+    # its upscatter/self-scatter re-sweep set -- see that module and the case
+    # report's runtime findings):
+    #
+    # 1. A GLOBAL floor, relative to the whole array's maximum: without it, a
+    #    numerically near-zero (cell, energy-bin) value (observed directly:
+    #    down to ~1e-108) turns into an absurd lower bound (observed: ~1e116)
+    #    once divided into the normalization. This keeps every bound finite.
+    #
+    # 2. A PER-CELL floor, relative to that same spatial cell's OWN best
+    #    (highest-adjoint, most reliable -- closest to the source group,
+    #    fewest re-sweeps needed) energy bin. Without it, the source energy's
+    #    bin can sit near 1 immediately at the source face while every OTHER
+    #    energy bin at that same shallow depth sits far below it (their
+    #    importance is still climbing out of under-convergence) -- a cliff a
+    #    real particle falls off at its very first collision, since scattering
+    #    changes group essentially immediately, while position barely has.
+    #    Confirmed directly: without this floor, a real transport_cadis.py run
+    #    (5,000 particles x 5 batches) came back with exactly zero neutron
+    #    detector hits -- every history rouletted to death within its first
+    #    few collisions, near the source face. This floor limits how far any
+    #    one energy bin can trail the best-converged bin *at the same depth*,
+    #    which is a much smaller, more targeted concession than flattening
+    #    the mesh's overall (well-behaved, spatial) dynamic range.
+    GLOBAL_RELATIVE_FLOOR = 1e-8
+    PER_CELL_RELATIVE_FLOOR = 0.1
     positive = coarse_adjoint[coarse_adjoint > 0]
-    floor = (positive.max() * RELATIVE_FLOOR) if positive.size else 1e-300
-    safe_adjoint = np.maximum(coarse_adjoint, floor)
+    global_floor = (positive.max() * GLOBAL_RELATIVE_FLOOR) if positive.size else 1e-300
+    per_cell_floor = coarse_adjoint.max(axis=1, keepdims=True) * PER_CELL_RELATIVE_FLOOR
+    safe_adjoint = np.maximum(coarse_adjoint, np.maximum(global_floor, per_cell_floor))
 
     normalization = safe_adjoint[0, source_bin]
     lower = normalization / safe_adjoint

@@ -342,22 +342,40 @@ class Result:
     pass
 
 
-def _identify_thermal_set(mesh: Mesh, library: Library, legendre_order: int) -> np.ndarray:
-    """Groups involved in any upscatter transition (g_from -> g_to with
-    g_to > g_from, i.e. to higher energy, in the ascending-energy index
-    convention) for any (material, zone) actually present on this mesh --
-    as either the slower source or the faster target of the transition, so
-    the same set is the right one to re-sweep for both the forward pass
-    (which needs fresh data for upscatter *targets*, processing
-    fastest-to-slowest) and the adjoint pass (which needs fresh data for
-    upscatter *sources* in its transposed contraction, processing
-    slowest-to-fastest). Returns a boolean mask over group indices, filled
-    contiguously from the thermal end (0) up to the highest group index any
-    upscatter transition touches, since real upscatter clusters contiguously
-    near thermal; a mild over-inclusion versus the exact minimal set costs a
-    few extra group-sweeps, never correctness. Empty iff no material/zone
-    touched by this candidate has any upscatter at all, in which case one
-    Gauss-Seidel pass is already the converged answer.
+SELF_SCATTER_RATIO_THRESHOLD = 0.35
+
+
+def _identify_thermal_set(mesh: Mesh, library: Library, legendre_order: int, adjoint: bool) -> np.ndarray:
+    """Groups that a single Gauss-Seidel pass does not resolve well, and so
+    need re-sweeping. Two distinct reasons feed this, both filled
+    contiguously from the thermal end (0) since both cluster there for
+    realistic materials; a mild over-inclusion versus the exact minimal set
+    costs a few extra group-sweeps, never correctness:
+
+    - Upscatter (g_from -> g_to, g_to > g_from in this ascending-energy
+      convention): the forward pass needs fresh data for upscatter
+      *targets*; the adjoint's transposed contraction needs fresh data for
+      upscatter *sources*. Always included, both directions.
+
+    - Adjoint only: significant SELF-scatter (sigma_s(g->g)/sigma_t(g)
+      above SELF_SCATTER_RATIO_THRESHOLD). The forward boundary condition
+      sits at the domain's own front face, so one pass already gives every
+      group a reasonable value there and self-scatter mostly just refines
+      it in place; the adjoint's source sits at the detector, so a group
+      outside the upscatter set gets exactly one pass plus
+      `inner_iterations` self-scatter sub-iterations to diffuse that source
+      back across the whole shield -- and confirmed directly, that is far
+      too few for a group with real self-scatter over 100+ cm (some coarse
+      cadis_windows.py adjoint values were numerically underflowing toward
+      zero at the front face before this was added). This does not fully
+      converge those groups either (a real fix is a proper synthetic-
+      acceleration scheme, out of scope here -- see the case report), but
+      it gets them re-swept enough times that the result is a smooth,
+      finite decay rather than a one-pass near-zero.
+
+    Empty iff neither condition applies to any material/zone touched by
+    this candidate, in which case one Gauss-Seidel pass is already the
+    converged answer.
     """
     n_groups = library.n_groups
     max_involved = -1
@@ -368,6 +386,14 @@ def _identify_thermal_set(mesh: Mesh, library: Library, legendre_order: int) -> 
         up = g_out > g_in
         if np.any(up):
             max_involved = max(max_involved, int(g_out[up].max()), int(g_in[up].max()))
+        if adjoint:
+            total = library.materials[material]["total"][zone]
+            self_scat = scat[np.arange(n_groups), np.arange(n_groups)]
+            with np.errstate(divide="ignore", invalid="ignore"):
+                ratio = np.where(total > 0, self_scat / total, 0.0)
+            significant = np.nonzero(ratio > SELF_SCATTER_RATIO_THRESHOLD)[0]
+            if significant.size:
+                max_involved = max(max_involved, int(significant.max()))
     mask = np.zeros(n_groups, dtype=bool)
     if max_involved >= 0:
         mask[: max_involved + 1] = True
@@ -423,7 +449,7 @@ def solve(
     boundary_front = np.zeros((n_groups, n_ord))  # angular flux at x=0, all ordinates (post-solve)
     boundary_back = np.zeros((n_groups, n_ord))  # angular flux at x=L
 
-    thermal_mask = _identify_thermal_set(mesh, library, legendre_order)
+    thermal_mask = _identify_thermal_set(mesh, library, legendre_order, adjoint)
 
     def sweep_one_group(g, use_self_scatter_from_phi):
         """Run inner_iterations self-scatter sub-iterations for group g,

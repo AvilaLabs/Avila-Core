@@ -56,6 +56,18 @@ SURROGATE_NOTICE = (
 # CASE-001 and the coupled case as long as both share a materials table.
 # ----------------------------------------------------------------------
 
+# "Heavy" is density above this threshold in the materials table;
+# "moderator" is the rest. This is what the photon requirement responds
+# to: a heavy layer behind the moderator attenuates the capture photons
+# the moderator itself generates; one in front of the moderator does not
+# (revision 2's learning designer never learned this and put its heavy
+# layer in front every time it passed neutron).
+HEAVY_DENSITY_THRESHOLD_G_CM3 = 2.0
+
+
+def is_heavy(material, materials_table, threshold=HEAVY_DENSITY_THRESHOLD_G_CM3):
+    return float(materials_table[material]["density_g_cm3"]) > threshold
+
 
 class FeatureLayout:
     def __init__(self, material_names):
@@ -73,6 +85,12 @@ class FeatureLayout:
             "density_order_correlation",
             "front_loaded_mass_fraction",
             "adjacent_same_material_pairs",
+            "moderator_cm_before_first_heavy",
+            "heavy_cm_after_last_moderator",
+            "heavy_cm_before_first_moderator",
+            "moderator_total_cm",
+            "heavy_total_cm",
+            "last_layer_is_heavy",
         ]
         return names
 
@@ -130,6 +148,33 @@ class FeatureLayout:
             )
         )
 
+        # Ordering-aware features. Each "before/after" pair is a leading or
+        # trailing run: it stops at the first layer of the *other* class, so
+        # it is naturally 0 when that other class never appears after (or
+        # before) it, and it is naturally the full run when the anchor class
+        # (heavy, for the "before/after moderator" pair; moderator, for the
+        # "before first heavy" one) never appears in the stack at all -- a
+        # vacuous but consistent reading, not a special case.
+        heavy_flags = [d > HEAVY_DENSITY_THRESHOLD_G_CM3 for d in densities]
+        moderator_cm_before_first_heavy = 0.0
+        for t, heavy in zip(thicknesses, heavy_flags):
+            if heavy:
+                break
+            moderator_cm_before_first_heavy += t
+        heavy_cm_after_last_moderator = 0.0
+        for t, heavy in zip(reversed(thicknesses), reversed(heavy_flags)):
+            if not heavy:
+                break
+            heavy_cm_after_last_moderator += t
+        heavy_cm_before_first_moderator = 0.0
+        for t, heavy in zip(thicknesses, heavy_flags):
+            if not heavy:
+                break
+            heavy_cm_before_first_moderator += t
+        moderator_total_cm = sum(t for t, heavy in zip(thicknesses, heavy_flags) if not heavy)
+        heavy_total_cm = sum(t for t, heavy in zip(thicknesses, heavy_flags) if heavy)
+        last_layer_is_heavy = 1.0 if heavy_flags[-1] else 0.0
+
         return np.concatenate(
             [
                 thickness_by_material,
@@ -141,6 +186,12 @@ class FeatureLayout:
                     density_order_correlation,
                     front_loaded_mass_fraction,
                     adjacent_same_material_pairs,
+                    moderator_cm_before_first_heavy,
+                    heavy_cm_after_last_moderator,
+                    heavy_cm_before_first_moderator,
+                    moderator_total_cm,
+                    heavy_total_cm,
+                    last_layer_is_heavy,
                 ],
             ]
         )
@@ -777,6 +828,128 @@ def propose_pool(rng, size, material_names, grid_cm, max_layers, max_total_cm,
 
 
 # ----------------------------------------------------------------------
+# Prior-log seeding: before round 1, load every row of each prior
+# campaign's --log file whose verdict requirement ids match the current
+# contract's, adding it to the dataset exactly as a live report would be.
+# The archived logs under examples/cases/.../campaign-rev1/ and
+# campaign-rev2/ record absolute workspace paths that no longer exist in a
+# fresh checkout; their candidates/ directories were archived beside the
+# logs precisely so this fallback can find the design anyway.
+# ----------------------------------------------------------------------
+
+
+def row_was_transported(verdicts):
+    """Whether a campaign-log row's own `verdicts` (or a report's
+    `margins`, same shape) carry a real bounded dose-rate result -- i.e.
+    transport actually ran for this exact call, as opposed to a
+    screen-only call where the dose-rate requirements are
+    `not_evaluated`. Found by unit and rule prefix, exactly as
+    `SurrogateBank.dose_requirement_ids` finds "the primary dose metric",
+    never by a hard-coded step name or requirement id.
+    """
+    for entry in verdicts:
+        if entry.get("status") == STATUS_NOT_EVALUATED:
+            continue
+        if core.is_bounded_rule(entry.get("rule")) and unit_role(entry.get("unit")) == "dose_rate":
+            return True
+    return False
+
+
+def _prior_candidate_path(row, log_path):
+    """The on-disk path of a prior-log row's candidate: the recorded
+    `supplied_inputs[].path` if it still exists, else `<directory of the
+    log>/candidates/<basename>`. None if the row has no candidate input,
+    or neither path exists.
+    """
+    supplied = next(
+        (s for s in row.get("supplied_inputs", []) if s.get("input_id") == "candidate"),
+        None,
+    )
+    if not supplied or not supplied.get("path"):
+        return None
+    recorded_path = Path(supplied["path"])
+    if recorded_path.exists():
+        return recorded_path
+    fallback_path = Path(log_path).parent / "candidates" / recorded_path.name
+    if fallback_path.exists():
+        return fallback_path
+    return None
+
+
+def resolve_prior_candidate(row, log_path):
+    """`(candidate_id, canonical layers)` for a prior-log row, or None if
+    the candidate cannot be resolved or is unusable (unreadable, missing,
+    or empty layers). Never raises: any I/O or shape problem is "cannot be
+    resolved", for the caller to skip and count.
+    """
+    path = _prior_candidate_path(row, log_path)
+    if path is None:
+        return None
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    layers = canonical_layers(data.get("layers") or [])
+    if not layers:
+        return None
+    candidate_id = data.get("candidate_id") or Path(path).stem
+    return candidate_id, layers
+
+
+def seed_prior_logs(dataset, prior_log_paths, current_requirement_ids):
+    """Seed `dataset` with every row of each `prior_log_paths` campaign log
+    whose verdict requirement ids equal `current_requirement_ids` (the
+    live contract's own set, read from the bootstrap run's report -- never
+    assumed). A row from a different contract shape is skipped and
+    counted, not guessed at; so is one whose candidate cannot be resolved.
+    Every resolved row is added to `dataset` exactly as a live report
+    would be -- the surrogate trains on it like any other observation --
+    merging multiple rows of the same original candidate_id within one
+    log (a screen call, then later a transport call) into one record,
+    exactly as Core's own semantics do; a candidate_id is namespaced by
+    which prior log it came from so two arms that both start their own
+    candidates at "c-0000" cannot collide.
+
+    Returns `(stats, transported_signatures)`. `stats` is
+    `{"logs", "seeded", "transported", "skipped"}`. `transported_signatures`
+    is the set of canonical layer signatures a prior log already sent
+    through real transport (a bounded dose-rate result, not
+    `not_evaluated`), for finalist selection to avoid re-spending budget on.
+    """
+    stats = {"logs": 0, "seeded": 0, "transported": 0, "skipped": 0}
+    transported_signatures = set()
+    for log_index, raw_path in enumerate(prior_log_paths):
+        log_path = Path(raw_path)
+        if not log_path.exists():
+            raise SystemExit(f"--prior-log {log_path}: file does not exist")
+        stats["logs"] += 1
+        for row in core.read_jsonl(log_path):
+            verdicts = row.get("verdicts", [])
+            row_ids = {v["requirement_id"] for v in verdicts if v.get("requirement_id")}
+            if row_ids != current_requirement_ids:
+                stats["skipped"] += 1
+                continue
+            resolved = resolve_prior_candidate(row, log_path)
+            if resolved is None:
+                stats["skipped"] += 1
+                continue
+            original_id, layers = resolved
+            candidate = {"candidate_id": f"prior-{log_index}-{original_id}", "layers": layers}
+            report = {"margins": verdicts, "campaign": {"verdicts": []}}
+            try:
+                dataset.add_report(candidate, report)
+            except (KeyError, ValueError) as exc:
+                core.eprint(f"--prior-log {log_path}: skipping a row, could not build features ({exc})")
+                stats["skipped"] += 1
+                continue
+            stats["seeded"] += 1
+            if row_was_transported(verdicts):
+                stats["transported"] += 1
+                transported_signatures.add(layer_signature(layers))
+    return stats, transported_signatures
+
+
+# ----------------------------------------------------------------------
 # Real (not predicted) bookkeeping straight from Core's margins: used for
 # the stopping rule and for what "feasible" and "binding" mean.
 # ----------------------------------------------------------------------
@@ -793,6 +966,45 @@ def stopping_decision(best_so_far, rounds_since_improvement, current_best, toler
     if current_best is not None and (best_so_far is None or current_best > best_so_far + tolerance):
         return current_best, 0, True
     return best_so_far, rounds_since_improvement + 1, False
+
+
+def transport_stopping_decision(best_so_far, transports_since_improvement, transport_margins, tolerance=1e-9):
+    """The transport-counted half of the stopping rule: fold this round's
+    sequence of newly-transported worst-case *real* margins (in the order
+    they were transported -- there may be several, now that a round sends
+    `--finalists-per-round` candidates to transport at once) one at a
+    time, so that a round with several non-improving transports costs
+    several units of patience, not one. A `None` margin (nothing usable
+    from that transport) is ignored. Returns `(new_best_so_far,
+    new_transports_since_improvement)`. Pure and Core-independent, like
+    `stopping_decision`, and meant to be folded across rounds the same way:
+    the caller passes this call's return values back in as the next one's
+    `best_so_far`/`transports_since_improvement`.
+    """
+    for margin_value in transport_margins:
+        if margin_value is None:
+            continue
+        if best_so_far is None or margin_value > best_so_far + tolerance:
+            best_so_far = margin_value
+            transports_since_improvement = 0
+        else:
+            transports_since_improvement += 1
+    return best_so_far, transports_since_improvement
+
+
+def patience_exhausted(transport_calls, rounds_since_improvement, patience_rounds,
+                        transports_since_improvement, patience_transports):
+    """Which half of the patience rule governs stopping: round-based
+    before any transport has run, transport-based once at least one has
+    -- a discrete switch, not an OR of both, because the screen-level
+    margin the round-based rule watches saturates long before the
+    bounded requirements do (revision 2's finding). Pure and directly
+    testable, like `stopping_decision`; budget exhaustion is a separate
+    condition in the caller's loop.
+    """
+    if transport_calls > 0:
+        return transports_since_improvement >= patience_transports
+    return rounds_since_improvement >= patience_rounds
 
 
 def worst_real_margin(report):
@@ -965,9 +1177,13 @@ def main():
     parser.add_argument("--transport-budget", type=int, default=6)
     parser.add_argument("--batch-size", type=int, default=20)
     parser.add_argument("--pool-multiplier", type=int, default=4)
-    parser.add_argument("--finalists-per-round", type=int, default=1)
+    parser.add_argument("--finalists-per-round", type=int, default=3)
     parser.add_argument("--patience", type=int, default=5,
-                         help="rounds with no improvement in the best observed worst-case margin before stopping")
+                         help="before the first transport: rounds with no improvement in the best observed "
+                              "worst-case margin before stopping")
+    parser.add_argument("--patience-transports", type=int, default=10,
+                         help="once any transport has run: consecutive transports with no improvement in the "
+                              "best transported worst-case real margin before stopping")
     parser.add_argument("--alpha", type=float, default=2.0, help="ridge regularization strength")
     parser.add_argument("--bootstrap", type=int, default=16, help="bootstrap ensemble size")
     parser.add_argument("--min-samples", type=int, default=5, help="observations before a requirement gets its own model")
@@ -978,6 +1194,13 @@ def main():
                          help="restrict the search to these materials from the table (default: every material)")
     parser.add_argument("--random", action="store_true",
                          help="random-search arm: propose uniformly at random, never mutate the best-so-far, and pick finalists by observed screen margin instead of the surrogate")
+    parser.add_argument("--prior-log", action="append", default=[], metavar="FILE",
+                         help="seed the dataset from a prior campaign's --log file before round 1 (repeatable); "
+                              "rows whose requirement ids differ from this run's contract, or whose candidate "
+                              "cannot be resolved, are skipped and counted")
+    parser.add_argument("--retransport-prior", action="store_true",
+                         help="allow finalist selection to send a design to transport even if a --prior-log "
+                              "already transported its canonical layer signature (default: it will not)")
     args = parser.parse_args()
 
     out = Path(args.out)
@@ -1030,20 +1253,48 @@ def main():
     if mass_limit_kg is not None:
         core.eprint(f"discovered mass bound: {mass_limit_kg} kg")
 
+    # The current contract's own requirement-id set, from the bootstrap
+    # run's own report -- never assumed -- is the yardstick prior-log
+    # seeding uses to recognize "this row belongs to the same contract
+    # shape", before the dataset has any live requirement_specs of its own.
+    current_requirement_ids = {
+        entry["requirement_id"] for entry in core.all_margins(_bootstrap_report) if entry.get("requirement_id")
+    }
+
     dataset = CampaignDataset(layout, materials_table)
+    seed_stats = {"logs": 0, "seeded": 0, "transported": 0, "skipped": 0}
+    prior_transported_signatures = set()
+    if args.prior_log:
+        seed_stats, prior_transported_signatures = seed_prior_logs(
+            dataset, args.prior_log, current_requirement_ids
+        )
+        core.eprint(
+            f"prior-log seeding: {seed_stats['seeded']} prior observations "
+            f"({seed_stats['transported']} transported) from {seed_stats['logs']} logs; "
+            f"{seed_stats['skipped']} rows skipped"
+        )
+
     bank = SurrogateBank(dataset, alpha=args.alpha, n_bootstrap=args.bootstrap,
                           min_samples=args.min_samples, seed=args.seed)
+    bank.refit()  # a no-op on an empty dataset; on a seeded one, round 1's
+    # own proposal ranking (not just its finalist selection, refit after
+    # screening) already benefits from the prior campaigns' observations.
 
     screened = []       # every screened candidate's bookkeeping, in order
     transported_ids = set()
     finalists = []
     best_worst_margin = None
     rounds_since_improvement = 0
+    best_transported_margin = None
+    transports_since_improvement = 0
     screen_calls = 0
     transport_calls = 0
     round_index = 0
 
-    while screen_calls < args.screen_budget and rounds_since_improvement < args.patience:
+    while screen_calls < args.screen_budget and not patience_exhausted(
+        transport_calls, rounds_since_improvement, args.patience,
+        transports_since_improvement, args.patience_transports,
+    ):
         round_index += 1
         remaining = args.screen_budget - screen_calls
         batch_size = min(args.batch_size, remaining)
@@ -1125,8 +1376,11 @@ def main():
         # (screen- and transport-fed alike, via SurrogateBank's sibling
         # correction) only for what has not been evaluated for it yet.
         candidates_for_transport = [
-            s for s in screened if s["id"] not in transported_ids
+            s for s in screened
+            if s["id"] not in transported_ids
+            and (args.retransport_prior or layer_signature(s["layers"]) not in prior_transported_signatures)
         ]
+        just_transported_margins = []
         if candidates_for_transport and transport_calls < args.transport_budget:
             requirement_ids = sorted(dataset.requirement_ids())
             candidate_ids = [s["id"] for s in candidates_for_transport]
@@ -1152,6 +1406,7 @@ def main():
                 entry["worst_real_margin"] = wrm
                 entry["fully_feasible"] = is_fully_feasible(report)
                 finalists.append({**entry, "report": report})
+                just_transported_margins.append(wrm)
                 core.eprint(
                     f"round {round_index}: transported {entry['id']}: "
                     f"worst_real_margin={wrm if wrm is None else round(wrm, 4)}, "
@@ -1159,9 +1414,13 @@ def main():
                 )
             bank.refit()
 
-        # Once transport has run, the stopping rule follows the transported
-        # candidates' real margins: the screen's margin saturates long before
-        # the bounded requirements do, and stopping on it left budget unspent.
+        # Before the first transport, the stopping rule follows the
+        # screened candidates' best real margin, counted in rounds. Once
+        # any transport has run, it switches (see `patience_exhausted`) to
+        # this round's newly-transported real margins, counted one
+        # transport at a time -- the screen's margin saturates long before
+        # the bounded requirements do, and stopping on it (or on it only
+        # once per round) left budget unspent.
         stop_population = (
             [s for s in screened if s["id"] in transported_ids] if transported_ids else screened
         )
@@ -1172,24 +1431,39 @@ def main():
         best_worst_margin, rounds_since_improvement, _improved = stopping_decision(
             best_worst_margin, rounds_since_improvement, current_best
         )
+        best_transported_margin, transports_since_improvement = transport_stopping_decision(
+            best_transported_margin, transports_since_improvement, just_transported_margins
+        )
         core.eprint(
             f"round {round_index} done: best_worst_margin={best_worst_margin}, "
             f"rounds_since_improvement={rounds_since_improvement}, "
+            f"best_transported_margin={best_transported_margin}, "
+            f"transports_since_improvement={transports_since_improvement}, "
             f"screen_calls={screen_calls}, transport_calls={transport_calls}"
         )
 
-    stop_reason = (
-        "screen budget exhausted" if screen_calls >= args.screen_budget
-        else f"no improvement in best worst-case margin for {args.patience} rounds"
-    )
+    if screen_calls >= args.screen_budget:
+        stop_reason = "screen budget exhausted"
+    elif transport_calls > 0:
+        stop_reason = (
+            f"{args.patience_transports} consecutive transports with no improvement in the "
+            "best transported worst-case real margin"
+        )
+    else:
+        stop_reason = f"no improvement in best worst-case margin for {args.patience} rounds"
     core.eprint(f"stopping: {stop_reason}")
 
     # ---- Outputs -------------------------------------------------
     feasible_finalists = [f for f in finalists if f["fully_feasible"]]
+    seeding_sentence = (
+        f"Seeded with {seed_stats['seeded']} prior observations ({seed_stats['transported']} transported) "
+        f"from {seed_stats['logs']} logs; {seed_stats['skipped']} rows skipped."
+    )
     lines = [
         "# Surrogate-assisted shielding configuration search", "",
         f"{screen_calls} candidates screened over {round_index} round(s); "
         f"{transport_calls} sent to transport; stopped because {stop_reason}.",
+        seeding_sentence,
         "",
         "| candidate | layers | worst real margin | fully feasible |",
         "| --- | --- | ---: | --- |",
@@ -1213,7 +1487,8 @@ def main():
     constellation = build_constellation(log_rows, bank=bank, layout=layout)
     (out / "constellation.json").write_text(json.dumps(constellation, indent=2, default=str) + "\n")
 
-    md = ["# Engineering constellation", "", SURROGATE_NOTICE, "", "## Requirement states", "",
+    md = ["# Engineering constellation", "", SURROGATE_NOTICE, "", seeding_sentence, "",
+          "## Requirement states", "",
           "| requirement | pass | fail | inconclusive | not_evaluated | times binding |",
           "| --- | ---: | ---: | ---: | ---: | ---: |"]
     for requirement_id, stats in sorted(constellation["requirements"].items()):

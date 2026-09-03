@@ -1,7 +1,11 @@
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 import numpy as np
 
+import control_sweep as cs
 import shield_search2 as ss
 
 KNOWN_STATUSES = {"pass", "fail", "inconclusive", "not_evaluated"}
@@ -23,9 +27,10 @@ class FeatureConstructionTests(unittest.TestCase):
 
     def test_feature_count_matches_names(self):
         self.assertEqual(self.layout.n_features, len(self.layout.names()))
-        # n materials * 3 (thickness, first one-hot, last one-hot) + layer_count + 4 ordering scalars
+        # n materials * 3 (thickness, first one-hot, last one-hot) + layer_count
+        # + 4 old ordering scalars + 6 new heavy/moderator ordering scalars
         n = len(self.materials_table)
-        self.assertEqual(self.layout.n_features, 3 * n + 1 + 4)
+        self.assertEqual(self.layout.n_features, 3 * n + 1 + 4 + 6)
 
     def test_thickness_by_material_sums_repeated_layers(self):
         layers = [
@@ -647,3 +652,382 @@ class CanonicalLayersTest(unittest.TestCase):
         for layers in pool:
             for a, b in zip(layers, layers[1:]):
                 self.assertNotEqual(a["material"], b["material"], layers)
+
+
+# ----------------------------------------------------------------------
+# Ordering-aware features: "heavy" (density > 2.0 g/cm3) vs "moderator"
+# (the rest). A heavy layer behind the moderator attenuates the capture
+# photons the moderator generates; one in front does not -- revision 2's
+# designer never learned this, and it is exactly what these features encode.
+# ----------------------------------------------------------------------
+
+
+class OrderingFeatureTests(unittest.TestCase):
+    def setUp(self):
+        self.materials_table = {
+            "polyethylene": {"density_g_cm3": "0.94"},  # moderator
+            "lead": {"density_g_cm3": "11.35"},  # heavy
+        }
+        self.layout = ss.FeatureLayout(sorted(self.materials_table))
+
+    def _vector(self, layers):
+        return dict(zip(self.layout.names(), self.layout.vector(layers, self.materials_table)))
+
+    def test_feature_names_include_the_new_ones_exactly_once(self):
+        names = self.layout.names()
+        for name in [
+            "moderator_cm_before_first_heavy", "heavy_cm_after_last_moderator",
+            "heavy_cm_before_first_moderator", "moderator_total_cm",
+            "heavy_total_cm", "last_layer_is_heavy",
+        ]:
+            self.assertEqual(names.count(name), 1, name)
+
+    def test_heavy_behind_moderator_vs_heavy_in_front(self):
+        heavy_behind = self._vector([
+            {"material": "polyethylene", "thickness_cm": "60"},
+            {"material": "lead", "thickness_cm": "10"},
+        ])
+        heavy_front = self._vector([
+            {"material": "lead", "thickness_cm": "10"},
+            {"material": "polyethylene", "thickness_cm": "60"},
+        ])
+
+        # The new ordering-aware features differ, in the direction the
+        # physics implies: moderator ahead of a heavy layer (good, the
+        # heavy layer can attenuate what the moderator generates) versus
+        # heavy ahead of the first moderator layer (useless for that).
+        self.assertEqual(heavy_behind["moderator_cm_before_first_heavy"], 60.0)
+        self.assertEqual(heavy_front["moderator_cm_before_first_heavy"], 0.0)
+        self.assertEqual(heavy_behind["heavy_cm_after_last_moderator"], 10.0)
+        self.assertEqual(heavy_front["heavy_cm_after_last_moderator"], 0.0)
+        self.assertEqual(heavy_behind["heavy_cm_before_first_moderator"], 0.0)
+        self.assertEqual(heavy_front["heavy_cm_before_first_moderator"], 10.0)
+        self.assertEqual(heavy_behind["last_layer_is_heavy"], 1.0)
+        self.assertEqual(heavy_front["last_layer_is_heavy"], 0.0)
+
+        # The order-independent new totals agree, as they must: same
+        # multiset of materials either way.
+        self.assertEqual(heavy_behind["moderator_total_cm"], heavy_front["moderator_total_cm"])
+        self.assertEqual(heavy_behind["heavy_total_cm"], heavy_front["heavy_total_cm"])
+
+        # The old "content" features -- not position-sensitive ones like
+        # first/last-layer one-hot, which legitimately differ under any
+        # reordering -- are unaffected by adding the new ones.
+        for material in self.layout.material_names:
+            key = f"thickness_cm:{material}"
+            self.assertEqual(heavy_behind[key], heavy_front[key])
+        self.assertEqual(heavy_behind["layer_count"], heavy_front["layer_count"])
+        self.assertEqual(heavy_behind["distinct_materials"], heavy_front["distinct_materials"])
+
+    def test_all_moderator_stack(self):
+        v = self._vector([{"material": "polyethylene", "thickness_cm": "50"}])
+        self.assertEqual(v["moderator_total_cm"], 50.0)
+        self.assertEqual(v["heavy_total_cm"], 0.0)
+        self.assertEqual(v["last_layer_is_heavy"], 0.0)
+        self.assertEqual(v["heavy_cm_after_last_moderator"], 0.0)
+        self.assertEqual(v["heavy_cm_before_first_moderator"], 0.0)
+        # No heavy layer at all: vacuously, every bit of moderator present
+        # is "before the first heavy layer".
+        self.assertEqual(v["moderator_cm_before_first_heavy"], 50.0)
+
+    def test_all_heavy_stack(self):
+        v = self._vector([{"material": "lead", "thickness_cm": "20"}])
+        self.assertEqual(v["moderator_total_cm"], 0.0)
+        self.assertEqual(v["heavy_total_cm"], 20.0)
+        self.assertEqual(v["last_layer_is_heavy"], 1.0)
+        self.assertEqual(v["moderator_cm_before_first_heavy"], 0.0)
+        # No moderator layer at all: vacuously, every bit of heavy is both
+        # "after the last moderator" and "before the first moderator".
+        self.assertEqual(v["heavy_cm_after_last_moderator"], 20.0)
+        self.assertEqual(v["heavy_cm_before_first_moderator"], 20.0)
+
+    def test_multi_layer_stack_matches_hand_computed_values(self):
+        # heavy(5) moderator(30) heavy(8) moderator(20) heavy(12)
+        layers = [
+            {"material": "lead", "thickness_cm": "5"},
+            {"material": "polyethylene", "thickness_cm": "30"},
+            {"material": "lead", "thickness_cm": "8"},
+            {"material": "polyethylene", "thickness_cm": "20"},
+            {"material": "lead", "thickness_cm": "12"},
+        ]
+        v = self._vector(layers)
+        self.assertEqual(v["moderator_cm_before_first_heavy"], 0.0)  # first layer is already heavy
+        self.assertEqual(v["heavy_cm_after_last_moderator"], 12.0)  # only the trailing lead(12)
+        self.assertEqual(v["heavy_cm_before_first_moderator"], 5.0)  # only the leading lead(5)
+        self.assertEqual(v["moderator_total_cm"], 50.0)
+        self.assertEqual(v["heavy_total_cm"], 25.0)
+        self.assertEqual(v["last_layer_is_heavy"], 1.0)
+
+
+# ----------------------------------------------------------------------
+# Prior-log seeding.
+# ----------------------------------------------------------------------
+
+
+class PriorLogSeedingTests(unittest.TestCase):
+    """`seed_prior_logs` reads archived campaign logs the way a live report
+    is read: same requirement-id-set guard, same candidate-file fallback,
+    same skip-and-count discipline. Exercised here against real files on
+    disk, written into a temporary directory under `workspaces/` (the
+    project's own gitignored scratch root, resolved from this repo's root
+    regardless of the directory tests are run from) and removed when the
+    test ends.
+    """
+
+    CURRENT_IDS = frozenset({"R1-screen", "R2-transport", "R3-mass"})
+
+    def setUp(self):
+        workspaces_root = Path(__file__).resolve().parents[2] / "workspaces"
+        workspaces_root.mkdir(parents=True, exist_ok=True)
+        self._tmp = tempfile.TemporaryDirectory(dir=str(workspaces_root))
+        self.root = Path(self._tmp.name)
+        self.materials_table = {"polyethylene": {"density_g_cm3": "0.94"}, "lead": {"density_g_cm3": "11.35"}}
+        self.layout = ss.FeatureLayout(sorted(self.materials_table))
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    @staticmethod
+    def _write_candidate(path, candidate_id, layers):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({
+            "schema": "avila.shielding/candidate/v1", "candidate_id": candidate_id, "layers": layers,
+        }))
+
+    def _row(self, recorded_path, *, transported=None, requirement_ids=None):
+        """`transported`: None for a screen-only row (R2 not_evaluated), or
+        the transported nominal uSv/h value."""
+        ids = requirement_ids if requirement_ids is not None else self.CURRENT_IDS
+        verdicts = []
+        if "R1-screen" in ids:
+            verdicts.append({"requirement_id": "R1-screen", "status": "pass", "rule": "nominal.le.within",
+                              "unit": "uSv/h", "limit": "10", "nominal": "5", "margin": "5"})
+        if "R3-mass" in ids:
+            verdicts.append({"requirement_id": "R3-mass", "status": "pass", "rule": "bounded.le.within",
+                              "unit": "kg", "limit": "1500", "nominal": "500", "margin": "1000"})
+        if "R2-transport" in ids:
+            if transported is None:
+                verdicts.append({"requirement_id": "R2-transport", "status": "not_evaluated",
+                                  "rule": "not_evaluated.missing"})
+            else:
+                verdicts.append({
+                    "requirement_id": "R2-transport",
+                    "status": "pass" if transported <= 10 else "fail",
+                    "rule": "bounded.le.within" if transported <= 10 else "bounded.le.exceeds",
+                    "unit": "uSv/h", "limit": "10", "nominal": str(transported), "margin": str(10 - transported),
+                })
+        return {
+            "supplied_inputs": [{"input_id": "candidate", "path": str(recorded_path)}],
+            "verdicts": verdicts,
+        }
+
+    def _write_log(self, log_path, rows):
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("w") as handle:
+            for row in rows:
+                handle.write(json.dumps(row) + "\n")
+
+    def test_seeds_records_and_reports_counts(self):
+        log_dir = self.root / "arm-a"
+        candidates_dir = log_dir / "candidates"
+        # Row 0: primary recorded path resolves directly, and was
+        # transported (a real bounded R2 result).
+        self._write_candidate(candidates_dir / "c-0.json", "c-0",
+                               [{"material": "polyethylene", "thickness_cm": "60"}])
+        row0 = self._row(candidates_dir / "c-0.json", transported=4.0)
+        # Row 1: the recorded path is stale (never written); must fall
+        # back to "<directory of the log>/candidates/<basename>", which
+        # *is* on disk, screen-only (R2 not_evaluated).
+        self._write_candidate(candidates_dir / "c-1.json", "c-1",
+                               [{"material": "polyethylene", "thickness_cm": "80"},
+                                {"material": "lead", "thickness_cm": "5"}])
+        stale_path = self.root / "gone" / "candidates" / "c-1.json"
+        row1 = self._row(stale_path, transported=None)
+
+        log_path = log_dir / "campaign-log.jsonl"
+        self._write_log(log_path, [row0, row1])
+
+        dataset = ss.CampaignDataset(self.layout, self.materials_table)
+        stats, transported_signatures = ss.seed_prior_logs(dataset, [str(log_path)], self.CURRENT_IDS)
+
+        self.assertEqual(stats, {"logs": 1, "seeded": 2, "transported": 1, "skipped": 0})
+        self.assertEqual(len(dataset.records), 2)
+        self.assertIn(
+            ss.layer_signature([{"material": "polyethylene", "thickness_cm": "60"}]),
+            transported_signatures,
+        )
+        # The screen-only row's design was never transported.
+        self.assertNotIn(
+            ss.layer_signature([{"material": "polyethylene", "thickness_cm": "80"},
+                                 {"material": "lead", "thickness_cm": "5"}]),
+            transported_signatures,
+        )
+
+    def test_skips_rows_with_a_different_requirement_set(self):
+        log_dir = self.root / "arm-b"
+        candidates_dir = log_dir / "candidates"
+        self._write_candidate(candidates_dir / "c-0.json", "c-0",
+                               [{"material": "polyethylene", "thickness_cm": "40"}])
+        # This row belongs to a different contract shape (no R3-mass): it
+        # must be skipped and counted, never guessed into the dataset.
+        other_ids = frozenset({"R1-screen", "R2-transport"})
+        row = self._row(candidates_dir / "c-0.json", transported=None, requirement_ids=other_ids)
+        log_path = log_dir / "campaign-log.jsonl"
+        self._write_log(log_path, [row])
+
+        dataset = ss.CampaignDataset(self.layout, self.materials_table)
+        stats, _sigs = ss.seed_prior_logs(dataset, [str(log_path)], self.CURRENT_IDS)
+        self.assertEqual(stats, {"logs": 1, "seeded": 0, "transported": 0, "skipped": 1})
+        self.assertEqual(len(dataset.records), 0)
+
+    def test_skips_rows_whose_candidate_cannot_be_resolved(self):
+        log_dir = self.root / "arm-c"
+        # Neither the recorded path nor the candidates/ fallback exists.
+        row = self._row(self.root / "nowhere" / "candidates" / "missing.json", transported=None)
+        log_path = log_dir / "campaign-log.jsonl"
+        self._write_log(log_path, [row])
+
+        dataset = ss.CampaignDataset(self.layout, self.materials_table)
+        stats, _sigs = ss.seed_prior_logs(dataset, [str(log_path)], self.CURRENT_IDS)
+        self.assertEqual(stats, {"logs": 1, "seeded": 0, "transported": 0, "skipped": 1})
+        self.assertEqual(len(dataset.records), 0)
+
+    def test_missing_prior_log_file_is_a_hard_error(self):
+        dataset = ss.CampaignDataset(self.layout, self.materials_table)
+        with self.assertRaises(SystemExit):
+            ss.seed_prior_logs(dataset, [str(self.root / "does-not-exist.jsonl")], self.CURRENT_IDS)
+
+    def test_candidate_ids_stay_unique_across_two_logs_reusing_the_same_id(self):
+        # Two different arms both name their first candidate "c-0"; seeding
+        # must not let the second clobber the first in dataset.records.
+        log_a_dir = self.root / "arm-d1"
+        log_b_dir = self.root / "arm-d2"
+        self._write_candidate(log_a_dir / "candidates" / "c-0.json", "c-0",
+                               [{"material": "polyethylene", "thickness_cm": "30"}])
+        self._write_candidate(log_b_dir / "candidates" / "c-0.json", "c-0",
+                               [{"material": "polyethylene", "thickness_cm": "90"}])
+        log_a = log_a_dir / "campaign-log.jsonl"
+        log_b = log_b_dir / "campaign-log.jsonl"
+        self._write_log(log_a, [self._row(log_a_dir / "candidates" / "c-0.json", transported=None)])
+        self._write_log(log_b, [self._row(log_b_dir / "candidates" / "c-0.json", transported=None)])
+
+        dataset = ss.CampaignDataset(self.layout, self.materials_table)
+        stats, _sigs = ss.seed_prior_logs(dataset, [str(log_a), str(log_b)], self.CURRENT_IDS)
+        self.assertEqual(stats["seeded"], 2)
+        self.assertEqual(len(dataset.records), 2)
+
+
+# ----------------------------------------------------------------------
+# Transport-counted patience.
+# ----------------------------------------------------------------------
+
+
+class TransportPatienceTests(unittest.TestCase):
+    def test_first_transport_is_an_improvement(self):
+        best, count = ss.transport_stopping_decision(None, 0, [4.0])
+        self.assertEqual(best, 4.0)
+        self.assertEqual(count, 0)
+
+    def test_strictly_better_resets_the_count(self):
+        best, count = ss.transport_stopping_decision(2.0, 3, [5.0])
+        self.assertEqual(best, 5.0)
+        self.assertEqual(count, 0)
+
+    def test_worse_or_equal_increments_by_one_per_transport(self):
+        best, count = ss.transport_stopping_decision(5.0, 0, [5.0, 4.0, 1.0])
+        self.assertEqual(best, 5.0)
+        self.assertEqual(count, 3)
+
+    def test_none_margins_are_ignored(self):
+        best, count = ss.transport_stopping_decision(5.0, 1, [None, None])
+        self.assertEqual(best, 5.0)
+        self.assertEqual(count, 1)
+
+    def test_an_improvement_partway_through_a_batch_resets_the_count(self):
+        # 0.5 (worse, count 4->5), 3.0 (better, best->3.0, count->0), 2.0 (worse, count->1)
+        best, count = ss.transport_stopping_decision(1.0, 4, [0.5, 3.0, 2.0])
+        self.assertEqual(best, 3.0)
+        self.assertEqual(count, 1)
+
+    def test_empty_batch_is_a_no_op(self):
+        best, count = ss.transport_stopping_decision(2.0, 2, [])
+        self.assertEqual(best, 2.0)
+        self.assertEqual(count, 2)
+
+    def test_accumulates_across_calls_like_across_rounds(self):
+        best, count = ss.transport_stopping_decision(5.0, 0, [4.0])
+        best, count = ss.transport_stopping_decision(best, count, [3.0])
+        self.assertEqual(best, 5.0)
+        self.assertEqual(count, 2)
+
+
+class PatienceExhaustedTests(unittest.TestCase):
+    def test_round_based_before_any_transport(self):
+        self.assertFalse(ss.patience_exhausted(0, 4, 5, 0, 10))
+        self.assertTrue(ss.patience_exhausted(0, 5, 5, 0, 10))
+        # the transport-side counters are irrelevant before the first transport
+        self.assertTrue(ss.patience_exhausted(0, 5, 5, 0, 1000))
+
+    def test_transport_based_once_any_transport_has_run(self):
+        self.assertFalse(ss.patience_exhausted(3, 0, 5, 9, 10))
+        self.assertTrue(ss.patience_exhausted(3, 0, 5, 10, 10))
+        # the round-side counters are irrelevant once transport has started
+        self.assertFalse(ss.patience_exhausted(1, 99, 5, 0, 10))
+
+
+# ----------------------------------------------------------------------
+# control_sweep.py's grid filters: pure enumeration, no Core involved.
+# ----------------------------------------------------------------------
+
+
+class SweepFilterTests(unittest.TestCase):
+    def test_min_total_cm_drops_thin_points(self):
+        points = [
+            [("polyethylene", "10")],
+            [("polyethylene", "50")],
+            [("polyethylene", "40"), ("lead", "10")],
+        ]
+        kept = cs.filter_grid_points(points, min_total_cm=50)
+        self.assertEqual(kept, [
+            [("polyethylene", "50")],
+            [("polyethylene", "40"), ("lead", "10")],
+        ])
+
+    def test_first_material_keeps_only_matching_points(self):
+        points = [
+            [("polyethylene", "50")],
+            [("lead", "10"), ("polyethylene", "50")],
+            [("polyethylene", "40"), ("lead", "10")],
+        ]
+        kept = cs.filter_grid_points(points, first_material="polyethylene")
+        self.assertEqual(kept, [
+            [("polyethylene", "50")],
+            [("polyethylene", "40"), ("lead", "10")],
+        ])
+
+    def test_both_filters_compose(self):
+        points = [
+            [("polyethylene", "10")],
+            [("polyethylene", "60")],
+            [("lead", "10"), ("polyethylene", "60")],
+        ]
+        kept = cs.filter_grid_points(points, min_total_cm=50, first_material="polyethylene")
+        self.assertEqual(kept, [[("polyethylene", "60")]])
+
+    def test_neither_filter_is_a_no_op(self):
+        points = [[("polyethylene", "5")], [("lead", "5")]]
+        self.assertEqual(cs.filter_grid_points(points), points)
+
+    def test_min_total_cm_compares_exact_decimals_not_fuzzy_floats(self):
+        # 0.1 + 0.2 != 0.3 in binary float; canonical decimal strings must
+        # still compare exactly equal here.
+        points = [[("polyethylene", "0.1"), ("lead", "0.2")]]
+        self.assertEqual(cs.filter_grid_points(points, min_total_cm=0.3), points)
+
+    def test_accepts_a_generator_like_enumerate_grid_returns(self):
+        def gen():
+            yield [("polyethylene", "10")]
+            yield [("polyethylene", "60")]
+
+        kept = cs.filter_grid_points(gen(), min_total_cm=50)
+        self.assertEqual(kept, [[("polyethylene", "60")]])

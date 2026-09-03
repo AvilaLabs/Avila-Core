@@ -84,6 +84,24 @@ def enumerate_grid(materials, grid_cm, max_total_cm, max_layers):
         )
 
 
+def filter_grid_points(points, min_total_cm=None, first_material=None):
+    """Grid points (each a list of `(material, thickness_cm)` pairs) whose
+    total thickness is at least `min_total_cm` (if given) and whose first
+    layer's material is `first_material` (if given). Pure: no Core calls,
+    no mass/limit lookups -- `run_sweep` applies the mass bound separately.
+    """
+    kept = []
+    for layers in points:
+        if min_total_cm is not None:
+            total_cm = sum(Decimal(thickness_cm) for _material, thickness_cm in layers)
+            if total_cm < Decimal(str(min_total_cm)):
+                continue
+        if first_material is not None and layers[0][0] != first_material:
+            continue
+        kept.append(layers)
+    return kept
+
+
 def estimated_mass_kg(layers, materials_table, area_cm2):
     total_g = Decimal(0)
     for material, thickness_cm in layers:
@@ -129,6 +147,8 @@ def run_sweep(args):
     for material in materials:
         if material not in materials_table:
             raise SystemExit(f"unknown material {material!r}; choose from {sorted(materials_table)}")
+    if args.first_material is not None and args.first_material not in materials:
+        raise SystemExit(f"--first-material {args.first_material!r} is not among the swept materials {materials}")
 
     limits = discover_limits_via_bootstrap(args.core, args.case, source_roots, args.python3, out, log, materials[0])
     thickness_limit = args.max_total_cm if args.max_total_cm is not None else limits["length"]
@@ -139,12 +159,19 @@ def run_sweep(args):
                 f"max_total={thickness_limit} cm, mass_limit={mass_limit}")
 
     points = []
-    for layers in enumerate_grid(materials, args.grid_cm, thickness_limit, args.max_layers):
+    for layers in filter_grid_points(
+        enumerate_grid(materials, args.grid_cm, thickness_limit, args.max_layers),
+        min_total_cm=args.min_total_cm, first_material=args.first_material,
+    ):
         if mass_limit is not None and area_cm2 is not None:
             if estimated_mass_kg(layers, materials_table, area_cm2) > Decimal(str(mass_limit)):
                 continue
         points.append(layers)
-    core.eprint(f"grid has {len(points)} point(s) within bounds")
+    core.eprint(
+        f"grid has {len(points)} point(s) within bounds"
+        + (f", min_total_cm={args.min_total_cm}" if args.min_total_cm is not None else "")
+        + (f", first_material={args.first_material}" if args.first_material is not None else "")
+    )
     if args.limit is not None:
         points = points[: args.limit]
         core.eprint(f"running only the first {len(points)} point(s) (--limit {args.limit})")
@@ -300,6 +327,10 @@ def main():
     sweep_parser.add_argument("--max-layers", type=int, default=2)
     sweep_parser.add_argument("--max-total-cm", type=float, default=None, help="override; else discovered from Core")
     sweep_parser.add_argument("--mass-limit-kg", type=float, default=None, help="override; else discovered from Core")
+    sweep_parser.add_argument("--min-total-cm", type=float, default=None,
+                               help="skip grid points whose total thickness across all layers is less than this")
+    sweep_parser.add_argument("--first-material", default=None,
+                               help="keep only grid points whose first layer is this material")
     sweep_parser.add_argument("--source-root", action="append", default=[], metavar="NAME=PATH",
                               help="additional or overriding source root passed to Core (repeatable)")
     sweep_parser.add_argument("--limit", type=int, default=None,

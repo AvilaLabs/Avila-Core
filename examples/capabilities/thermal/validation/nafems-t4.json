@@ -1,0 +1,53 @@
+{
+  "schema": "avila.thermal/validation/v1",
+  "benchmark": "NAFEMS Test 4M (2-D steady conduction, mixed Dirichlet/Robin/insulated boundaries)",
+  "source": "NAFEMS Selected Benchmarks for Thermal Analysis",
+  "problem": {
+    "width_m": "0.6",
+    "height_m": "1",
+    "conductivity_W_mK": "52",
+    "convection_W_m2K": "750",
+    "ambient_C": "0",
+    "fixed_edge_C": "100",
+    "boundary_conditions": "y=0 Dirichlet (fixed_edge_C); x=0 insulated; x=width and y=height Robin (convection_W_m2K to ambient_C)"
+  },
+  "probe_point_m": [
+    "0.6",
+    "0.2"
+  ],
+  "reference_C": "18.25",
+  "levels": [
+    {
+      "refinements": 0,
+      "dofs": 169,
+      "computed_C": "18.621045",
+      "relative_deviation": "0.020331233"
+    },
+    {
+      "refinements": 1,
+      "dofs": 625,
+      "computed_C": "18.264136",
+      "relative_deviation": "0.00077457534"
+    },
+    {
+      "refinements": 2,
+      "dofs": 2401,
+      "computed_C": "18.249126",
+      "relative_deviation": "-0.000047890411"
+    }
+  ],
+  "within_tolerance": {
+    "threshold": "0.001",
+    "finest_level": true
+  },
+  "engine": {
+    "name": "scikit-fem",
+    "version": "12.0.2",
+    "python": "3.14.4",
+    "solver_module": "thermal_fe.py (build_tensor_mesh, solve_conduction, probe_point -- imported, not duplicated)"
+  },
+  "limitations": [
+    "This reproduces one published benchmark point on this case's own solver code path; it does not itself qualify the spreader problem's different geometry, layered conductivity, or boundary layout -- it establishes that the shared assembly-and-solve routine those problems both call is correct on a problem with an independently published reference answer.",
+    "The relative deviation is computed from an already-rounded computed value against an exact reference; it is a deviation from one published benchmark point, not a general error bound."
+  ]
+}

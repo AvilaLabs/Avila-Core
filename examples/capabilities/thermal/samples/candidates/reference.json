@@ -1,0 +1,8 @@
+{
+  "schema": "avila.thermal/candidate/v1",
+  "candidate_id": "reference-copper-on-aluminium",
+  "layers": [
+    {"material": "copper", "thickness_mm": "3"},
+    {"material": "aluminium", "thickness_mm": "10"}
+  ]
+}

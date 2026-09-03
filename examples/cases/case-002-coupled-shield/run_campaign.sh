@@ -39,6 +39,14 @@ run_stage() {
   fi
 }
 
+# Re-exec under a suspend inhibitor so an overnight campaign is not paused
+# with the machine (revision 2's learning arm lost five hours that way).
+if [ -z "${AVILA_CAMPAIGN_INHIBITED:-}" ] && command -v systemd-inhibit > /dev/null; then
+  export AVILA_CAMPAIGN_INHIBITED=1
+  exec systemd-inhibit --what=sleep:idle --who="avila-core campaign" \
+    --why="CASE-002 campaign in progress" "$0" "$@"
+fi
+
 say "CAMPAIGN START case=$CASE"
 
 # Arm 1: practice baselines, every step (screen, transport, activation).

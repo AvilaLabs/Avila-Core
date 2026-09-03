@@ -1,0 +1,15 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "practice-removal-poly-pb",
+  "description": "removal-cross-section method, design factor 2, identical polyethylene thickness as practice-removal-poly, plus the usual capture-gamma rule: a fixed 5 cm lead layer after the moderator to absorb neutron-capture gammas the removal calculation does not model.",
+  "layers": [
+    {
+      "material": "polyethylene",
+      "thickness_cm": "96"
+    },
+    {
+      "material": "lead",
+      "thickness_cm": "5"
+    }
+  ]
+}

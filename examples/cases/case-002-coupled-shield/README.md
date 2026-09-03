@@ -24,7 +24,9 @@ The experiment this case exists for is pre-registered in
 [PROTOCOL.md](PROTOCOL.md). The contract is at revision 2: revision 1's
 campaign found no feasible design within 1500 kg and 100 cm (outcome F1 in
 [RESULTS.md](RESULTS.md)), so the box was widened to 2000 kg and 120 cm and
-the particle budget raised, as amendment A3 records.
+the particle budget raised, as amendment A3 records. Revision 2's campaign
+is a recorded search failure: 110 cm polyethylene behind 5 cm lead passes
+every requirement and no arm proposed it (amendment A4, `RESULTS.md`).
 
 ## Requirements
 

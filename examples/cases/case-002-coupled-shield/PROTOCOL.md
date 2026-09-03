@@ -132,3 +132,12 @@ outcome occurred and cites the log lines that establish it.
   follows transported margins once any transport has run. Allocations, the
   activation guide, the arms, the measurements, and the pre-declared
   outcomes are unchanged. Revision 1's results stay on record.
+- **A4, 2026-09-03, after the revision 2 campaign.** A fourth outcome is
+  added for future campaigns: **search failure**, no arm finds an all-`PASS`
+  candidate while a feasible design is established by a candidate evaluated
+  outside the arms and labelled exploratory. Revision 2 is reported under
+  that name (see `RESULTS.md`): 110 cm polyethylene followed by 5 cm lead
+  passes every requirement at 1601.5 kg and no arm proposed it. The campaign
+  driver now runs under a suspend inhibitor. The control sweep for the next
+  campaign must be declared on a grid that can express the lead thickness
+  the box admits.

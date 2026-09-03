@@ -1,0 +1,10 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "c-0029",
+  "layers": [
+    {
+      "material": "iron",
+      "thickness_cm": "20"
+    }
+  ]
+}

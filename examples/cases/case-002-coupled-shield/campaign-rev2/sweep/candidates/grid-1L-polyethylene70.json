@@ -1,0 +1,10 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "grid-1L-polyethylene70",
+  "layers": [
+    {
+      "material": "polyethylene",
+      "thickness_cm": "70"
+    }
+  ]
+}

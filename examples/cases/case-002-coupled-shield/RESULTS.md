@@ -97,3 +97,121 @@ Driver status lines: `2026-09-03T00:53:38Z` start, `2026-09-03T02:16:17Z` end, a
 | `campaign-rev1/campaign-summary.md` | `9336afa3ae8835740dec4cd5df6853c8d1c4d330ab2c2276b5dfc973b9d79aaf` | 35 |
 | `campaign-rev1/campaign-summary.json` | `e25b4bc3dae6a9d77eb866c1c5f7cb0e0a3af7890c2d40da795ac549219347aa` | 249 |
 | `campaign-rev1/STATUS` | `6e5367c2941b4f570dabd5c7113239ec52284c1529e87f491bb1e23fcf34c09f` | 12 |
+
+---
+
+# CASE-002 results, contract revision 2
+
+**Campaign:** 2026-09-03, `run_campaign.sh`, seed 1 for every arm, contract
+revision 2 (neutron 7 uSv/h, photon 3 uSv/h, activation guide 1 Bq/g,
+2000 kg, 120 cm, 500 000 particles), transports capped at 40 per search arm
+(amendment A3). Arms in the pre-declared order.
+**Summary tables:** `campaign-rev2/campaign-summary.md`, derived from the
+logs by `summarize_campaign.py`; logs, candidates, and arm summaries under
+`campaign-rev2/` with the digests listed at the end.
+
+## Outcome: no arm found an all-PASS design, and the box is not exhausted
+
+By the letter of the pre-declared list this is F1, "no arm finds an all-PASS
+candidate within the limits". By its meaning it is not: F1 was written for a
+box with no feasible design, and this box almost certainly has one. The
+sweep's 110 cm of polyethylene passes neutron at [~2.7, ~4.4] uSv/h and
+fails only photon; the baselines' 5 cm of lead cuts the photon dose of
+96 cm of polyethylene from ~27 to ~1.8 uSv/h; so 110 cm of polyethylene
+followed by 5 cm of lead, at about 1600 kg and 115 cm, is expected to pass
+every requirement. No arm evaluated it:
+
+- **Practice baselines.** All three fail the neutron allocation, because the
+  removal-method sizing underestimates the transported dose by about a
+  factor of three. Adding 5 cm of lead does fix photons (~1.75 uSv/h).
+- **Control sweep.** 31 points on a 10 cm grid of polyethylene and lead.
+  None passes. This is the protocol's fault, not the model's: at 10 cm
+  steps the only lead option is 10 cm, which with enough polyethylene to
+  pass neutron exceeds 2000 kg, while polyethylene alone passes neutron at
+  110 cm and 120 cm and fails photon by a factor of three to five.
+- **Recovery run.** The confined designer screened the whole grid without
+  one identical-layer split (the revision 1 fix works), transported five
+  distinct designs, found nothing, and stopped when the grid was exhausted.
+  The recovery check is inapplicable because the sweep has no all-PASS point.
+- **Learning designer.** 120 screened, 6 transported, none passes. Every
+  finalist that passed neutron put its heavy layer in front of the
+  moderator (5 cm concrete, 10 cm iron, 5 cm iron ahead of 100 to 105 cm of
+  polyethylene), which helps neutrons and does nothing for the capture
+  photons made behind it, so photon failed by a factor of seven to nine each
+  time. The surrogate had not learned ordering from six transports, and the
+  stopping rule, now keyed on transported margins, ended the arm after five
+  rounds with one finalist each: 34 of 40 transports unspent.
+- **Random search.** 240 screened, 12 transported, none passes. Uniform
+  sampling reached the neutron allocation 7 times, all with borated
+  polyethylene of 105 cm or more or a water-concrete mixture, and never put
+  a heavy layer behind the moderator, so photon failed every time, by a
+  factor of two to five. Its best worst-case margin, about −4.4 uSv/h on
+  110 cm of borated polyethylene, was nevertheless closer to feasibility
+  than anything the learning arm transported.
+
+This is a search failure, recorded as such: the designer did not propose the
+design the evidence pointed at, and its stopping rule let it quit with most
+of its budget unspent. Core evaluated everything it was given exactly, and
+the campaign log now holds the ordering effect in numbers: heavy layer in
+front, neutron pass and photon fail; heavy layer behind (revision 1's
+learning arm), photon near its allocation and neutron short.
+
+**Post-campaign exploratory check, not pre-registered.** The obvious
+polyethylene-lead designs, run once each through the same contract after
+the arms had finished, with their logs under `campaign-rev2/posthoc/`:
+
+| candidate | neutron uSv/h | photon uSv/h | mass kg | cm | activation | all PASS |
+| --- | --- | --- | ---: | ---: | --- | --- |
+| 110 cm polyethylene + 5 cm lead | [1.85, 3.44] pass | [1.02, 1.1] pass | 1.6e+03 | 115 | pass | yes |
+| 105 cm polyethylene + 5 cm lead | [2.97, 6.63] pass | [1.17, 1.28] pass | 1.55e+03 | 110 | pass | yes |
+| 100 cm polyethylene + 5 cm lead | [6.57, 10] inconclusive | [1.47, 1.56] pass | 1.51e+03 | 105 | pass | no |
+
+The box is feasible. The best design found by anyone in this campaign was
+found by the case author reading the sweep, not by a search arm.
+
+## Wall clock
+
+One transport in the learning arm spans 05:45 to 11:00 UTC in the log. The
+system journal shows a suspend at 01:48 local time and a resume near 07:00;
+the campaign paused with the machine. Every other transport at 500 000
+particles took four to six minutes. Future campaigns run under a suspend
+inhibitor.
+
+## What changes for revision 3
+
+The designer, not the contract:
+
+1. Patience counted in transports, not rounds, and at least three finalists
+   per round, so a stall costs budget rather than ending the arm.
+2. Ordering-aware features: the moderator thickness ahead of each heavy
+   layer, and the heavy thickness behind the moderator, which is what the
+   photon requirement responds to.
+3. The surrogate seeded from prior campaigns' logs for the same requirement
+   ids, so revision 1's 25 transports and revision 2's are training data
+   rather than discarded. That is the constellation being read for the
+   first time.
+4. The control sweep declared on a grid that can express thin lead.
+
+## Amendments
+
+- **A4, 2026-09-03, after the revision 2 campaign.** A fourth outcome is
+  added for future campaigns: "search failure", no all-PASS candidate found
+  while a feasible design is established by an evaluated candidate outside
+  the arms. Revision 2 is reported under that name with F1's letter, as
+  above. The campaign driver runs under a suspend inhibitor.
+
+## Record
+
+Driver status lines: `2026-09-03T02:23:31Z` start, `2026-09-03T11:48:01Z` end, all arms `DONE`.
+
+| file | sha256 | lines |
+| --- | --- | ---: |
+| `campaign-rev2/baselines/campaign-log.jsonl` | `102d72f196887b20256ee89e461122b14b91c47af71fd55b105a07cdf6a0c950` | 4 |
+| `campaign-rev2/sweep/campaign-log.jsonl` | `f90c5fabb19293dc5faa1111683a0a2b9c4ade4ad7c6f9fa49456cc9e5339187` | 32 |
+| `campaign-rev2/recovery/campaign-log.jsonl` | `09bc3da33e60deedddb7b256fcf6ce3af42aa89a572a0f609fbf94f1025278a6` | 30 |
+| `campaign-rev2/learning/campaign-log.jsonl` | `2484ee29bc0d447b5f83e73ad1d9a8466be1b7dc79cc80f16022ac098076b662` | 127 |
+| `campaign-rev2/random/campaign-log.jsonl` | `e3a8604d5beb2df895c4953bea953194c83b4426003f5201f3cc976d5a6713ad` | 253 |
+| `campaign-rev2/campaign-summary.md` | `d9249c366211a8d59419622cdc90da02438be07e70d5ae8515660b9be88c3815` | 35 |
+| `campaign-rev2/campaign-summary.json` | `ab60b5636b9bc0369195d3cb78ae92ac4dd7fc5399717db9d5e0195e581b0b1a` | 253 |
+| `campaign-rev2/STATUS` | `93eb29ecad9f9b407a11a127e5ca6416748ef068fffa8f778d83548ec45c363a` | 12 |
+| `campaign-rev2/posthoc/campaign-log.jsonl` | `d73960baca2c6951aabbc197dcb48ea6b626477476ea8c20ad39ebfb7dca1561` | 3 |

@@ -1,0 +1,14 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "c-0121",
+  "layers": [
+    {
+      "material": "water",
+      "thickness_cm": "15"
+    },
+    {
+      "material": "iron",
+      "thickness_cm": "15"
+    }
+  ]
+}

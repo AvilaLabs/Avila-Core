@@ -1,0 +1,9 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "posthoc-poly105-lead5",
+  "description": "Exploratory post-campaign check, not pre-registered: 105 cm polyethylene followed by 5 cm lead.",
+  "layers": [
+    { "material": "polyethylene", "thickness_cm": "105" },
+    { "material": "lead", "thickness_cm": "5" }
+  ]
+}

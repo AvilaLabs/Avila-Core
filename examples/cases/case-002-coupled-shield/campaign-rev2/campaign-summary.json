@@ -1,0 +1,253 @@
+{
+  "baselines": [
+    {
+      "candidate": {
+        "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-rev2/baselines/candidates/practice-removal-poly.json",
+        "sha256": "sha256:05415d1d63dbd7a1ae6491923eaed226077c476b3db547c9dc999ca654c3ad6b",
+        "layers": [
+          [
+            "polyethylene",
+            "96"
+          ]
+        ]
+      },
+      "verdicts": {
+        "SHIELD-R1-screen": [
+          "pass",
+          "5.145370221957734"
+        ],
+        "SHIELD-R2-neutron": [
+          "fail",
+          "-12.20754355928912"
+        ],
+        "SHIELD-R3-photon": [
+          "fail",
+          "-24.7282359659807424"
+        ],
+        "SHIELD-R4-mass": [
+          "pass",
+          "1097.6"
+        ],
+        "SHIELD-R5-thickness": [
+          "pass",
+          "24"
+        ],
+        "SHIELD-R6-activation": [
+          "pass",
+          "0.99999989313646"
+        ]
+      },
+      "all_pass": false,
+      "campaign_sha256": "sha256:d10aa062664c55d3bbe7a6b719b15edc7307204674d472821a860cc14660f373"
+    },
+    {
+      "candidate": {
+        "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-rev2/baselines/candidates/practice-removal-poly-pb.json",
+        "sha256": "sha256:c60de341a4687930d0b27807aa9363355d6276e005421db97a97879fc4784a60",
+        "layers": [
+          [
+            "polyethylene",
+            "96"
+          ],
+          [
+            "lead",
+            "5"
+          ]
+        ]
+      },
+      "verdicts": {
+        "SHIELD-R1-screen": [
+          "pass",
+          "7.3089462567465477"
+        ],
+        "SHIELD-R2-neutron": [
+          "fail",
+          "-10.2854827877888"
+        ],
+        "SHIELD-R3-photon": [
+          "pass",
+          "1.19704348078667616"
+        ],
+        "SHIELD-R4-mass": [
+          "pass",
+          "530.1"
+        ],
+        "SHIELD-R5-thickness": [
+          "pass",
+          "19"
+        ],
+        "SHIELD-R6-activation": [
+          "pass",
+          "0.99986036998"
+        ]
+      },
+      "all_pass": false,
+      "campaign_sha256": "sha256:53641724bf96eda7da959e278594c8ec6caf0097f269f2f5c46eec7969ccaf51"
+    },
+    {
+      "candidate": {
+        "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-rev2/baselines/candidates/practice-fe-poly-pb.json",
+        "sha256": "sha256:25024e09722d23d6425c086f3534187a864299b825a2e55cb842ac6d824f8e76",
+        "layers": [
+          [
+            "iron",
+            "10"
+          ],
+          [
+            "polyethylene",
+            "76"
+          ],
+          [
+            "lead",
+            "5"
+          ]
+        ]
+      },
+      "verdicts": {
+        "SHIELD-R1-screen": [
+          "pass",
+          "5.473573197022008"
+        ],
+        "SHIELD-R2-neutron": [
+          "fail",
+          "-12.892857455735264"
+        ],
+        "SHIELD-R3-photon": [
+          "fail",
+          "-0.2797596421689696"
+        ],
+        "SHIELD-R4-mass": [
+          "fail",
+          "-68.9"
+        ],
+        "SHIELD-R5-thickness": [
+          "pass",
+          "29"
+        ],
+        "SHIELD-R6-activation": [
+          "fail",
+          "-3.2792992"
+        ]
+      },
+      "all_pass": false,
+      "campaign_sha256": "sha256:5579f8b603e616d5bb412a788356ff56e582bbeaf0bc8b9bb90b2091e4696367"
+    }
+  ],
+  "arms": {
+    "recovery": {
+      "arm": "recovery",
+      "log_lines": 30,
+      "screened_only": 25,
+      "transported": 5,
+      "verdict_histogram_transported": {
+        "SHIELD-R1-screen": {
+          "pass": 5
+        },
+        "SHIELD-R2-neutron": {
+          "pass": 1,
+          "fail": 4
+        },
+        "SHIELD-R3-photon": {
+          "fail": 3,
+          "pass": 2
+        },
+        "SHIELD-R4-mass": {
+          "pass": 5
+        },
+        "SHIELD-R5-thickness": {
+          "pass": 5
+        },
+        "SHIELD-R6-activation": {
+          "pass": 4,
+          "fail": 1
+        }
+      },
+      "first_all_pass_transport_index": null,
+      "all_pass_count": 0,
+      "best_all_pass": null,
+      "refused_runs": 0,
+      "inconclusive_verdicts": 0,
+      "not_evaluated": []
+    },
+    "learning": {
+      "arm": "learning",
+      "log_lines": 127,
+      "screened_only": 121,
+      "transported": 6,
+      "verdict_histogram_transported": {
+        "SHIELD-R1-screen": {
+          "pass": 5,
+          "fail": 1
+        },
+        "SHIELD-R2-neutron": {
+          "fail": 2,
+          "inconclusive": 1,
+          "pass": 3
+        },
+        "SHIELD-R3-photon": {
+          "fail": 6
+        },
+        "SHIELD-R4-mass": {
+          "pass": 6
+        },
+        "SHIELD-R5-thickness": {
+          "pass": 6
+        },
+        "SHIELD-R6-activation": {
+          "pass": 1,
+          "fail": 5
+        }
+      },
+      "first_all_pass_transport_index": null,
+      "all_pass_count": 0,
+      "best_all_pass": null,
+      "refused_runs": 0,
+      "inconclusive_verdicts": 1,
+      "not_evaluated": []
+    },
+    "random": {
+      "arm": "random",
+      "log_lines": 253,
+      "screened_only": 241,
+      "transported": 12,
+      "verdict_histogram_transported": {
+        "SHIELD-R1-screen": {
+          "pass": 12
+        },
+        "SHIELD-R2-neutron": {
+          "fail": 3,
+          "inconclusive": 2,
+          "pass": 7
+        },
+        "SHIELD-R3-photon": {
+          "fail": 12
+        },
+        "SHIELD-R4-mass": {
+          "pass": 12
+        },
+        "SHIELD-R5-thickness": {
+          "pass": 12
+        },
+        "SHIELD-R6-activation": {
+          "pass": 10,
+          "fail": 2
+        }
+      },
+      "first_all_pass_transport_index": null,
+      "all_pass_count": 0,
+      "best_all_pass": null,
+      "refused_runs": 0,
+      "inconclusive_verdicts": 2,
+      "not_evaluated": []
+    }
+  },
+  "sweep": {
+    "points": 31,
+    "all_pass_points": 0,
+    "optimum": null
+  },
+  "recovery_check": {
+    "applicable": false,
+    "reason": "the sweep has no all-PASS point"
+  }
+}

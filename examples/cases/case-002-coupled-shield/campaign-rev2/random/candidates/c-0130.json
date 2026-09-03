@@ -1,0 +1,14 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "c-0130",
+  "layers": [
+    {
+      "material": "polyethylene",
+      "thickness_cm": "60"
+    },
+    {
+      "material": "lead",
+      "thickness_cm": "5"
+    }
+  ]
+}

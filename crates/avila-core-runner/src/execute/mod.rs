@@ -12,6 +12,7 @@ pub mod aftermatter;
 pub mod claims;
 pub mod shielding;
 pub mod shielding_coupled;
+pub mod thermal;
 
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -64,6 +65,8 @@ pub enum Adapter {
     ShieldingTransport,
     ShieldingActivation,
     ShieldingTransportCoupled,
+    ThermalScreen,
+    ThermalSpreaderFe,
 }
 
 impl Adapter {
@@ -75,6 +78,8 @@ impl Adapter {
             shielding::TRANSPORT_ADAPTER_ID => Some(Self::ShieldingTransport),
             activation::ADAPTER_ID => Some(Self::ShieldingActivation),
             shielding_coupled::TRANSPORT_ADAPTER_ID => Some(Self::ShieldingTransportCoupled),
+            thermal::SCREEN_ADAPTER_ID => Some(Self::ThermalScreen),
+            thermal::FE_ADAPTER_ID => Some(Self::ThermalSpreaderFe),
             _ => None,
         }
     }
@@ -87,6 +92,8 @@ impl Adapter {
             Self::ShieldingTransport => shielding::TRANSPORT_ADAPTER_ID,
             Self::ShieldingActivation => activation::ADAPTER_ID,
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_ADAPTER_ID,
+            Self::ThermalScreen => thermal::SCREEN_ADAPTER_ID,
+            Self::ThermalSpreaderFe => thermal::FE_ADAPTER_ID,
         }
     }
 
@@ -116,6 +123,14 @@ impl Adapter {
                 id: shielding_coupled::TRANSPORT_TYPE_ID.into(),
                 major: 1,
             },
+            Self::ThermalScreen => CapabilityTypeRef {
+                id: thermal::SCREEN_TYPE_ID.into(),
+                major: 1,
+            },
+            Self::ThermalSpreaderFe => CapabilityTypeRef {
+                id: thermal::FE_TYPE_ID.into(),
+                major: 1,
+            },
         }
     }
 
@@ -127,6 +142,8 @@ impl Adapter {
             Self::ShieldingTransport => shielding::TRANSPORT_INPUT_SLOTS,
             Self::ShieldingActivation => activation::INPUT_SLOTS,
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_INPUT_SLOTS,
+            Self::ThermalScreen => thermal::SCREEN_INPUT_SLOTS,
+            Self::ThermalSpreaderFe => thermal::FE_INPUT_SLOTS,
         }
     }
 
@@ -138,6 +155,8 @@ impl Adapter {
             Self::ShieldingTransport => shielding::TRANSPORT_OUTPUTS,
             Self::ShieldingActivation => activation::OUTPUTS,
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_OUTPUTS,
+            Self::ThermalScreen => thermal::SCREEN_OUTPUTS,
+            Self::ThermalSpreaderFe => thermal::FE_OUTPUTS,
         }
     }
 
@@ -149,6 +168,8 @@ impl Adapter {
             Self::ShieldingTransport => shielding::TRANSPORT_OUTPUT_SLOTS,
             Self::ShieldingActivation => activation::OUTPUT_SLOTS,
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_OUTPUT_SLOTS,
+            Self::ThermalScreen => thermal::SCREEN_OUTPUT_SLOTS,
+            Self::ThermalSpreaderFe => thermal::FE_OUTPUT_SLOTS,
         }
     }
 
@@ -160,6 +181,8 @@ impl Adapter {
             Self::ShieldingTransport => shielding::TRANSPORT_TIMEOUT,
             Self::ShieldingActivation => activation::TIMEOUT,
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_TIMEOUT,
+            Self::ThermalScreen => thermal::SCREEN_TIMEOUT,
+            Self::ThermalSpreaderFe => thermal::FE_TIMEOUT,
         }
     }
 
@@ -170,7 +193,9 @@ impl Adapter {
             Self::AftermatterEvaluate
             | Self::ActinvBuild
             | Self::ShieldingScreen
-            | Self::ShieldingActivation => &[],
+            | Self::ShieldingActivation
+            | Self::ThermalScreen
+            | Self::ThermalSpreaderFe => &[],
             Self::ShieldingTransport => shielding::TRANSPORT_ENVIRONMENT_KEYS,
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_ENVIRONMENT_KEYS,
         }
@@ -180,7 +205,10 @@ impl Adapter {
     /// else; whatever an adapter needs is declared here and recorded.
     pub fn environment(self) -> BTreeMap<String, String> {
         match self {
-            Self::AftermatterEvaluate | Self::ShieldingScreen => BTreeMap::new(),
+            Self::AftermatterEvaluate
+            | Self::ShieldingScreen
+            | Self::ThermalScreen
+            | Self::ThermalSpreaderFe => BTreeMap::new(),
             Self::ActinvBuild => actinv_build::environment(),
             Self::ShieldingTransport => shielding::transport_environment(),
             Self::ShieldingActivation => activation::environment(),
@@ -228,6 +256,9 @@ impl Adapter {
                 &mut inputs,
             )?;
         }
+        if self == Self::ThermalSpreaderFe {
+            thermal::thermal_facts(staged, invocation_sha256, &mut facts, &mut inputs)?;
+        }
         Ok(serde_json::json!({ "facts": facts, "inputs": inputs }))
     }
 
@@ -246,6 +277,8 @@ impl Adapter {
             Self::ShieldingTransportCoupled => {
                 shielding_coupled::transport_arguments(staged, context)
             }
+            Self::ThermalScreen => thermal::screen_arguments(staged, context),
+            Self::ThermalSpreaderFe => thermal::fe_arguments(staged, context),
         }
     }
 
@@ -263,6 +296,8 @@ impl Adapter {
             Self::ShieldingTransportCoupled => {
                 shielding_coupled::transport_claims(outputs, context)
             }
+            Self::ThermalScreen => thermal::screen_claims(outputs, context),
+            Self::ThermalSpreaderFe => thermal::fe_claims(outputs, context),
         }
     }
 }

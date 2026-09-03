@@ -36,12 +36,7 @@ pub const OUTPUTS: &[AdapterOutput] = &[AdapterOutput {
     workspace_path: "outputs/activation-result.json",
     media_type: "application/vnd.avila.shield-activation+json",
 }];
-pub const OUTPUT_SLOTS: &[&str] = &[
-    "specific-activity",
-    "decay-heat",
-    "contact-dose-rate",
-    "activation-result",
-];
+pub const OUTPUT_SLOTS: &[&str] = &["specific-activity", "decay-heat", "activation-result"];
 pub const TIMEOUT: Duration = Duration::from_secs(900);
 pub const SCHEMA: &str = "avila.shielding/activation-result/v1";
 
@@ -139,15 +134,13 @@ fn quantity(document: &Value, pointer: &str) -> Result<Value, String> {
     Ok(json!({ "value": lowered, "unit": unit }))
 }
 
-/// The three numeric totals are `unquantified` claims under a nominal-basis
-/// requirement (I4: "ACTINV reports no per-value bound for this use"), the
-/// same basis and claim model CASE-001's screen uses. The contact-dose
-/// total is extracted only when the run's I4 document actually carries
-/// `totals.max_contact_dose_rate`; ACTINV only produces that response when
-/// a photon-response table was staged for the run, which this adapter's own
-/// input slots do not include, so today's runs never emit it. The slot
-/// exists so a future run that does stage one is extracted without an
-/// adapter change.
+/// The two numeric totals are `unquantified` claims under a nominal-basis
+/// requirement (I4: ACTINV reports no per-value bound for this use), the
+/// same basis and claim model CASE-001's screen uses. ACTINV's contact-dose
+/// proxy is not extracted: it needs a photon-response table that is not
+/// among this adapter's inputs, and the case runner requires every adapter
+/// output slot to be bound and produced, so an output that no bound data
+/// can produce is not a slot.
 pub fn extract_claims(
     outputs: &BTreeMap<String, Vec<u8>>,
     _context: &StepContext,
@@ -172,16 +165,6 @@ pub fn extract_claims(
             }),
         },
     ];
-    if result.pointer("/totals/max_contact_dose_rate").is_some() {
-        claims.push(ExtractedClaim {
-            output_slot: "contact-dose-rate".into(),
-            output_id: output_id.clone(),
-            claim: json!({
-                "model": "unquantified",
-                "nominal": quantity(&result, "/totals/max_contact_dose_rate")?,
-            }),
-        });
-    }
     claims.push(ExtractedClaim {
         output_slot: "activation-result".into(),
         output_id,
@@ -335,22 +318,21 @@ mod tests {
         );
     }
 
-    fn result_document(with_contact_dose: bool) -> Value {
-        let mut totals = json!({
-            "max_specific_activity": { "value": "13.646396", "unit": "Bq/g" },
-            "total_decay_heat": { "value": "0.0000002201145", "unit": "W" },
-        });
-        if with_contact_dose {
-            totals["max_contact_dose_rate"] = json!({ "value": "0.005", "unit": "uSv/h" });
-        }
-        json!({ "schema": SCHEMA, "totals": totals })
+    fn result_document() -> Value {
+        json!({
+            "schema": SCHEMA,
+            "totals": {
+                "max_specific_activity": { "value": "13.646396", "unit": "Bq/g" },
+                "total_decay_heat": { "value": "0.0000002201145", "unit": "W" },
+            }
+        })
     }
 
     #[test]
     fn claims_are_extracted_as_canonical_unquantified_quantities() {
         let outputs = BTreeMap::from([(
             "activation-result".to_string(),
-            result_document(false).to_string().into_bytes(),
+            result_document().to_string().into_bytes(),
         )]);
         let claims = extract_claims(&outputs, &StepContext::default()).unwrap();
         let slots: Vec<&str> = claims
@@ -369,30 +351,6 @@ mod tests {
             json!("0.0000002201145")
         );
         assert_eq!(claims[2].claim, json!({ "model": "unquantified" }));
-    }
-
-    #[test]
-    fn contact_dose_rate_is_extracted_only_when_the_document_carries_it() {
-        let outputs = BTreeMap::from([(
-            "activation-result".to_string(),
-            result_document(true).to_string().into_bytes(),
-        )]);
-        let claims = extract_claims(&outputs, &StepContext::default()).unwrap();
-        let slots: Vec<&str> = claims
-            .iter()
-            .map(|claim| claim.output_slot.as_str())
-            .collect();
-        assert_eq!(
-            slots,
-            [
-                "specific-activity",
-                "decay-heat",
-                "contact-dose-rate",
-                "activation-result"
-            ]
-        );
-        assert_eq!(claims[2].claim["nominal"]["value"], json!("0.005"));
-        assert_eq!(claims[2].claim["nominal"]["unit"], json!("uSv/h"));
     }
 
     #[test]

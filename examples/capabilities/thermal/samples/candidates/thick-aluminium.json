@@ -1,0 +1,7 @@
+{
+  "schema": "avila.thermal/candidate/v1",
+  "candidate_id": "sentinel-thick-aluminium",
+  "layers": [
+    {"material": "aluminium", "thickness_mm": "30"}
+  ]
+}

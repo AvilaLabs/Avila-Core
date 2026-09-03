@@ -1,0 +1,7 @@
+{
+  "schema": "avila.thermal/candidate/v1",
+  "candidate_id": "sentinel-steel-only",
+  "layers": [
+    {"material": "stainless_steel", "thickness_mm": "10"}
+  ]
+}

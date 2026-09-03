@@ -1,0 +1,7 @@
+{
+  "schema": "avila.thermal/candidate/v1",
+  "candidate_id": "sentinel-polymer-only",
+  "layers": [
+    {"material": "epoxy", "thickness_mm": "5"}
+  ]
+}

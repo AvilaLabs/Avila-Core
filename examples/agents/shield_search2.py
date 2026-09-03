@@ -24,7 +24,6 @@ import argparse
 import copy
 import json
 import math
-import sys
 from decimal import Decimal
 from fractions import Fraction
 from pathlib import Path
@@ -32,12 +31,7 @@ from pathlib import Path
 import numpy as np
 
 import shield_common as core
-from shield_common import (
-    STATUS_FAIL,
-    STATUS_INCONCLUSIVE,
-    STATUS_NOT_EVALUATED,
-    STATUS_PASS,
-)
+from shield_common import STATUS_NOT_EVALUATED, STATUS_PASS
 
 try:  # optional accelerant; a numpy-only closed form is always available.
     from sklearn.linear_model import Ridge as _SklearnRidge
@@ -264,6 +258,16 @@ class CampaignDataset:
         self.materials_table = materials_table
         self.records = {}  # candidate_id -> record
         self.metric_sources = {}  # requirement_id -> {"step_id", "output_slot"}
+        # requirement_id -> {"comparison", "limit", "unit"}, from the
+        # *compiled contract*, present in a --json report the instant
+        # compilation succeeds, whether or not anything has been evaluated
+        # yet. This is what makes a requirement's limit and direction known
+        # even before its first PASS/FAIL/INCONCLUSIVE observation -- a
+        # NOT_EVALUATED verdict carries no limit at all (the kernel leaves
+        # every number unset), so a requirement with zero observations of
+        # its own (every requirement, before its first run) would otherwise
+        # have no knowable limit or direction until this exists.
+        self.requirement_specs = {}
 
     def add_report(self, candidate, report):
         candidate_id = candidate["candidate_id"]
@@ -272,6 +276,21 @@ class CampaignDataset:
             candidate_id,
             {"features": features, "layers": candidate["layers"], "requirements": {}},
         )
+        compiled = ((report.get("compile") or {}).get("compiled")) or {}
+        for spec in compiled.get("requirements", []):
+            requirement_id = spec.get("requirement_id")
+            if not requirement_id:
+                continue
+            metric = spec.get("metric") or {}
+            self.metric_sources.setdefault(requirement_id, {
+                "step_id": metric.get("step_id"), "output_slot": metric.get("output_slot"),
+            })
+            limit = spec.get("limit") or {}
+            self.requirement_specs[requirement_id] = {
+                "comparison": spec.get("comparison"),
+                "limit": limit.get("value"),
+                "unit": limit.get("unit"),
+            }
         for requirement_id, source in core.metric_sources(report).items():
             self.metric_sources.setdefault(requirement_id, source)
         for entry in core.all_margins(report):
@@ -380,7 +399,7 @@ class SurrogateBank:
         return (hash(key) & 0xFFFFFFFF) ^ self.seed
 
     def refit(self):
-        requirement_ids = self.dataset.requirement_ids()
+        requirement_ids = self.dataset.requirement_ids() | set(self.dataset.requirement_specs)
         for requirement_id in requirement_ids:
             X, y, _ids = self.dataset.xy(requirement_id, "log_nominal")
             observations = []
@@ -400,13 +419,32 @@ class SurrogateBank:
                 if all(k in data for k in ("limit", "nominal", "margin")):
                     observations.append((data["limit"], data["nominal"], data["margin"]))
             self.rules_seen[requirement_id] = rules
-            direction = infer_direction(observations)
+            # The compiled contract's own statement of a requirement's
+            # limit, unit, and comparison is authoritative and available
+            # the instant compilation succeeds -- in particular before this
+            # requirement has ever been evaluated, when a NOT_EVALUATED
+            # verdict alone would leave all three unknown. Observed margins
+            # are the fallback for a report shape that has no compiled
+            # section at all (a hand-built one, in a test, for instance).
+            spec = self.dataset.requirement_specs.get(requirement_id)
+            direction = None
+            if spec and spec.get("limit") is not None and spec.get("unit") is not None:
+                self.limits[requirement_id] = float(Fraction(spec["limit"]))
+                self.units[requirement_id] = spec["unit"]
+                comparison = spec.get("comparison")
+                if comparison in ("less_than", "less_than_or_equal"):
+                    direction = 1
+                elif comparison in ("greater_than", "greater_than_or_equal"):
+                    direction = -1
+            else:
+                if limit_value is not None:
+                    self.limits[requirement_id] = limit_value
+                if unit_value is not None:
+                    self.units[requirement_id] = unit_value
+            if direction is None:
+                direction = infer_direction(observations)
             if direction is not None:
                 self.directions[requirement_id] = direction
-            if limit_value is not None:
-                self.limits[requirement_id] = limit_value
-            if unit_value is not None:
-                self.units[requirement_id] = unit_value
             model = self.own_models.setdefault(
                 requirement_id,
                 BootstrapRidge(
@@ -429,6 +467,16 @@ class SurrogateBank:
         ]
 
     def _refit_residuals(self, requirement_ids):
+        """Register a sibling prior for every requirement whose own data is
+        too thin, *including one with zero observations of its own* — that
+        is exactly the state a requirement is in before its very first
+        transport call, and it is precisely then that a prediction (even a
+        crude, inflated-uncertainty one) is most useful for choosing what
+        to spend that first call on. The residual correction on top of the
+        prior only engages once `residual_min_samples` of the corrected
+        requirement's own data exist; until then `predict_log_nominal`
+        falls back to the sibling's prediction alone.
+        """
         self.residual_models = {}
         for requirement_id in requirement_ids:
             best = None
@@ -437,15 +485,17 @@ class SurrogateBank:
                 if not sibling_model or not sibling_model.ready:
                     continue
                 X, y, _ids = self.dataset.xy(requirement_id, "log_nominal")
-                if len(y) < self.residual_min_samples:
-                    continue
-                sibling_mean, _sibling_std = sibling_model.predict(X)
-                residual_y = y - sibling_mean
-                residual_model = BootstrapRidge(
-                    self.alpha, self.n_bootstrap, self.residual_min_samples,
-                    seed=self._seed_for(("residual", requirement_id, sibling)),
-                ).fit(X, residual_y)
-                # Prefer the sibling with the most paired observations.
+                residual_model = None
+                if len(y) >= self.residual_min_samples:
+                    sibling_mean, _sibling_std = sibling_model.predict(X)
+                    residual_y = y - sibling_mean
+                    residual_model = BootstrapRidge(
+                        self.alpha, self.n_bootstrap, self.residual_min_samples,
+                        seed=self._seed_for(("residual", requirement_id, sibling)),
+                    ).fit(X, residual_y)
+                # Prefer the sibling with the most paired observations (more
+                # correction evidence), falling back to any ready sibling at
+                # all when every candidate has zero paired observations.
                 if best is None or len(y) > best[2]:
                     best = (sibling, residual_model, len(y))
             if best is not None:
@@ -454,7 +504,9 @@ class SurrogateBank:
     def predict_log_nominal(self, requirement_id, X):
         """(mean, std, source) in log-nominal space, or None if unmodeled.
         `source` is "own", "corrected" (prior sibling plus a fitted
-        residual), or "prior" (sibling only, own data still too thin).
+        residual), or "prior" (sibling only, own data still too thin or
+        entirely absent — including before this requirement's first
+        observation of any kind).
         """
         own = self.own_models.get(requirement_id)
         if own and own.ready:
@@ -465,7 +517,7 @@ class SurrogateBank:
             sibling_model = self.own_models.get(sibling)
             if sibling_model and sibling_model.ready:
                 sibling_mean, sibling_std = sibling_model.predict(X)
-                if residual_model.ready:
+                if residual_model is not None and residual_model.ready:
                     residual_mean, residual_std = residual_model.predict(X)
                     mean = sibling_mean + residual_mean
                     std = np.sqrt(sibling_std**2 + residual_std**2)
@@ -506,7 +558,7 @@ class SurrogateBank:
             sibling_model = self.own_models.get(sibling)
             if sibling_model and sibling_model.ready:
                 coefficients = sibling_model.point_model.raw_coefficients()
-                if residual_model.ready:
+                if residual_model is not None and residual_model.ready:
                     coefficients = coefficients + residual_model.point_model.raw_coefficients()
         if coefficients is None:
             return None
@@ -563,6 +615,54 @@ def score_pool(bank, requirement_ids, features, beta):
     score = worst_mean + beta * worst_std
     binding = [used[i] for i in worst_index]
     return score, worst_mean, binding, used
+
+
+def score_screened_candidates(bank, dataset, requirement_ids, candidate_ids, beta):
+    """Rank already-screened candidates for finalist selection. Unlike
+    `score_pool` (used to propose *unscreened* candidates, where nothing
+    is known yet and every number must come from the surrogate), a
+    screened candidate already carries Core's own exact margin for every
+    requirement its steps so far have actually evaluated -- most often
+    mass and thickness, which are deterministic and have no uncertainty
+    left for a transport call to resolve. Using the surrogate for those
+    instead of the real number both throws away a fact Core already
+    established and can point the exploration bonus at a requirement
+    transport cannot inform at all. So: the real observed margin (std 0,
+    nothing to explore) wherever Core has already reported one for that
+    exact candidate; the surrogate's prediction only for a requirement
+    that candidate has not yet been evaluated on (transport, typically).
+    Returns `(score, worst_margin_mean, binding_requirement_ids)` arrays
+    aligned with `candidate_ids`, or None if not one candidate has any
+    usable number at all.
+    """
+    scores, worst_means, binding = [], [], []
+    any_usable = False
+    for candidate_id in candidate_ids:
+        record = dataset.records[candidate_id]
+        best_requirement, best_mean, best_std = None, None, None
+        for requirement_id in requirement_ids:
+            data = record["requirements"].get(requirement_id)
+            if data and data.get("status") != STATUS_NOT_EVALUATED and data.get("margin") is not None:
+                mean, std = data["margin"], 0.0
+            else:
+                prediction = bank.predict_margin(requirement_id, record["features"][None, :])
+                if prediction is None:
+                    continue
+                mean, std = float(prediction[0][0]), float(prediction[1][0])
+            if best_mean is None or mean < best_mean:
+                best_requirement, best_mean, best_std = requirement_id, mean, std
+        if best_requirement is None:
+            scores.append(-math.inf)
+            worst_means.append(None)
+            binding.append(None)
+            continue
+        any_usable = True
+        scores.append(best_mean + beta * best_std)
+        worst_means.append(best_mean)
+        binding.append(best_requirement)
+    if not any_usable:
+        return None
+    return np.array(scores), worst_means, binding
 
 
 # ----------------------------------------------------------------------
@@ -979,19 +1079,21 @@ def main():
         bank.refit()
 
         # Finalist selection: among screened candidates never yet
-        # transported, rank by predicted worst-case margin over every
-        # requirement Core currently reports (screen- and transport-fed
-        # alike, via SurrogateBank's sibling correction).
+        # transported, rank by worst-case margin over every requirement
+        # Core currently reports -- Core's own exact number wherever this
+        # candidate already has one (mass and thickness, almost always;
+        # transport has nothing to add there), the surrogate's prediction
+        # (screen- and transport-fed alike, via SurrogateBank's sibling
+        # correction) only for what has not been evaluated for it yet.
         candidates_for_transport = [
             s for s in screened if s["id"] not in transported_ids
         ]
         if candidates_for_transport and transport_calls < args.transport_budget:
-            pool_layers = [s["layers"] for s in candidates_for_transport]
-            pool_features = np.stack([layout.vector(layers, materials_table) for layers in pool_layers])
             requirement_ids = sorted(dataset.requirement_ids())
-            scored = score_pool(bank, requirement_ids, pool_features, args.beta)
+            candidate_ids = [s["id"] for s in candidates_for_transport]
+            scored = score_screened_candidates(bank, dataset, requirement_ids, candidate_ids, args.beta)
             if scored is not None:
-                score, _worst_mean, _binding, _used = scored
+                score, _worst_mean, _binding = scored
                 order = list(np.argsort(-score))
             else:
                 order = sorted(

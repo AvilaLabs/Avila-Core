@@ -211,7 +211,30 @@ def fake_screen_transport_report(thickness_poly, transport, scale=3.0):
         })
     else:
         margins.append({"requirement_id": "SHIELD-R2-transport", "status": "not_evaluated", "rule": "not_evaluated.missing"})
-    return {"status": "evaluated", "margins": margins, "campaign": {"verdicts": verdicts}}
+    # A real --json report's compiled contract states every requirement's
+    # limit, unit, and comparison unconditionally, before anything has been
+    # evaluated -- this is what lets a requirement's margin be computed even
+    # with zero observations of its own (see CampaignDataset.requirement_specs).
+    compiled_requirements = [
+        {"requirement_id": "SHIELD-R1-screen", "comparison": "less_than_or_equal",
+         "limit": {"kind": "nuclear.ambient-dose-equivalent-rate", "value": "10", "unit": "uSv/h"},
+         "metric": {"source": "step_output", "step_id": "screen", "output_slot": "dose-rate"}, "basis": {"kind": "nominal"}},
+        {"requirement_id": "SHIELD-R2-transport", "comparison": "less_than_or_equal",
+         "limit": {"kind": "nuclear.ambient-dose-equivalent-rate", "value": "10", "unit": "uSv/h"},
+         "metric": {"source": "step_output", "step_id": "transport", "output_slot": "dose-rate"}, "basis": {"kind": "bounded"}},
+        {"requirement_id": "SHIELD-R3-mass", "comparison": "less_than_or_equal",
+         "limit": {"kind": "core.mass", "value": "1500", "unit": "kg"},
+         "metric": {"source": "step_output", "step_id": "screen", "output_slot": "mass"}, "basis": {"kind": "bounded"}},
+        {"requirement_id": "SHIELD-R4-thickness", "comparison": "less_than_or_equal",
+         "limit": {"kind": "core.length", "value": "100", "unit": "cm"},
+         "metric": {"source": "step_output", "step_id": "screen", "output_slot": "thickness"}, "basis": {"kind": "bounded"}},
+    ]
+    return {
+        "status": "evaluated",
+        "margins": margins,
+        "campaign": {"verdicts": verdicts},
+        "compile": {"compiled": {"requirements": compiled_requirements}},
+    }
 
 
 class AcquisitionOrderingTests(unittest.TestCase):
@@ -285,9 +308,68 @@ class AcquisitionOrderingTests(unittest.TestCase):
         features = np.stack([self.layout.vector([{"material": "polyethylene", "thickness_cm": "40"}], self.materials_table)])
         self.assertIsNone(ss.score_pool(empty_bank, ["SHIELD-R1-screen"], features, beta=1.0))
 
+    def test_screened_candidates_use_the_observed_margin_not_a_prediction(self):
+        # SHIELD-R3-mass is deterministic and has already been measured
+        # exactly by the screen for every candidate in setUp; finalist
+        # ranking must use that real, zero-uncertainty number, not a
+        # regression guess with its own (nonzero) bootstrap spread.
+        requirement_ids = sorted(self.dataset.requirement_ids())
+        candidate_ids = list(self.dataset.records)
+        scored = ss.score_screened_candidates(self.bank, self.dataset, requirement_ids, candidate_ids, beta=1.0)
+        self.assertIsNotNone(scored)
+        score, worst_mean, binding = scored
+        for candidate_id, mean, bound in zip(candidate_ids, worst_mean, binding):
+            record = self.dataset.records[candidate_id]
+            observed = {rid: d for rid, d in record["requirements"].items() if d.get("status") != "not_evaluated"}
+            if bound in observed and observed[bound].get("margin") is not None:
+                self.assertAlmostEqual(mean, observed[bound]["margin"], places=6)
+
+    def test_screened_candidate_falls_back_to_prediction_for_unevaluated_requirement(self):
+        # A candidate that was only ever screened (never transported) has
+        # no real SHIELD-R2-transport margin; scoring it must still be able
+        # to use the sibling-corrected prediction for that one requirement.
+        requirement_ids = ["SHIELD-R2-transport"]
+        candidate_ids = ["c-0"]  # thickness 40, screen-only in setUp
+        scored = ss.score_screened_candidates(self.bank, self.dataset, requirement_ids, candidate_ids, beta=1.0)
+        self.assertIsNotNone(scored)
+        _score, worst_mean, binding = scored
+        self.assertEqual(binding[0], "SHIELD-R2-transport")
+        self.assertIsNotNone(worst_mean[0])
+
     def test_sensitivity_sign_matches_attenuation(self):
         sensitivity = self.bank.sensitivity_to_thickness("SHIELD-R1-screen", self.layout)
         self.assertLess(sensitivity["polyethylene"], 0.0)
+
+    def test_sibling_prior_activates_before_any_transport_data_exists(self):
+        # A screen-only campaign: SHIELD-R2-transport has ZERO observations
+        # of its own (not even one), which is exactly the state it is in
+        # before the very first transport call. Choosing that first call
+        # is precisely when a prior from the sibling (R1) matters most, so
+        # it must not require R2 to already have data to bootstrap from.
+        materials_table = {"polyethylene": {"density_g_cm3": "0.94"}}
+        layout = ss.FeatureLayout(["polyethylene"])
+        dataset = ss.CampaignDataset(layout, materials_table)
+        for i, t in enumerate(range(40, 100, 3)):
+            candidate = {"candidate_id": f"c-{i}", "layers": [{"material": "polyethylene", "thickness_cm": str(t)}]}
+            dataset.add_report(candidate, fake_screen_transport_report(t, transport=False))
+        bank = ss.SurrogateBank(dataset, alpha=1.0, n_bootstrap=12, min_samples=5, residual_min_samples=2, seed=0)
+        bank.refit()
+        self.assertTrue(bank.own_models["SHIELD-R1-screen"].ready)
+        own_r2 = bank.own_models.get("SHIELD-R2-transport")
+        self.assertFalse(own_r2 is not None and own_r2.ready)
+
+        features = np.stack([
+            layout.vector([{"material": "polyethylene", "thickness_cm": "60"}], materials_table)
+        ])
+        prediction = bank.predict_margin("SHIELD-R2-transport", features)
+        self.assertIsNotNone(prediction, "a sibling-only prior must be available with zero of R2's own data")
+        _mean, std, source = prediction
+        self.assertEqual(source, "prior")
+        self.assertGreater(std[0], 0.0)
+
+        # sensitivity must not crash on a pure (no-residual) sibling prior either
+        sensitivity = bank.sensitivity_to_thickness("SHIELD-R2-transport", layout)
+        self.assertIsNotNone(sensitivity)
 
 
 # ----------------------------------------------------------------------

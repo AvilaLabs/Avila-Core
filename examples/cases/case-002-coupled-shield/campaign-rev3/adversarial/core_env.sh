@@ -1,7 +1,7 @@
 # Shared plumbing for direct `avila-core run` invocations in the adversarial
 # arm. Source this, then run e.g.:
 #   "${CORE[@]}" run examples/cases/case-002-coupled-shield --json "${ROOTS[@]}" "${CAPS[@]}" --env OPENMC_CROSS_SECTIONS="$XS" --input candidate=PATH [--plan]
-CORE=(/home/connoravila/Documents/Avila-Labs/project-north-star/target/debug/avila-core)
+CORE=(/workspace/avila-core/target/debug/avila-core)
 ROOTS=(
   --source-root case=examples/cases/case-002-coupled-shield
   --source-root shielding=examples/capabilities/shielding

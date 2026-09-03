@@ -14,7 +14,7 @@ Avila Core as the only judge. Core evaluates; you propose and choose. You
 may not edit any file, change any requirement, or state a verdict of your
 own. Everything you propose, and why, is recorded.
 
-Work from the repository root `/home/connoravila/Documents/Avila-Labs/project-north-star`.
+Work from the repository root `/workspace/avila-core`.
 The arm directory is `workspaces/campaign-rev3/llm`; it has already been
 initialised. The only commands you run are:
 

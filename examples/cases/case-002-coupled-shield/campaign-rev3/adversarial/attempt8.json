@@ -105,7 +105,7 @@
           "input:candidate"
         ],
         "source_root": "supplied",
-        "path": "/home/connoravila/Documents/north-star-worktrees/adversarial/workspaces/adversarial/candidates/adv-cheat-light.json",
+        "path": "/workspace/avila-core-adversarial/workspaces/adversarial/candidates/adv-cheat-light.json",
         "expected_sha256": "sha256:dab9011b106b6ed716f39aa7e6822fb961d4883eaf97d052c92cf95491eb327c",
         "actual_sha256": "sha256:dab9011b106b6ed716f39aa7e6822fb961d4883eaf97d052c92cf95491eb327c",
         "state": "verified"
@@ -1076,7 +1076,7 @@
   },
   "execution": {
     "status": "executed",
-    "workspace": "/home/connoravila/Documents/north-star-worktrees/adversarial/workspaces/CASE-002/20260903T164753319Z-1461260",
+    "workspace": "/workspace/avila-core-adversarial/workspaces/CASE-002/20260903T164753319Z-1461260",
     "steps": [
       {
         "step_id": "screen",
@@ -2048,7 +2048,7 @@
     {
       "input_id": "candidate",
       "evidence_id": "input:candidate",
-      "path": "/home/connoravila/Documents/north-star-worktrees/adversarial/workspaces/adversarial/candidates/adv-cheat-light.json",
+      "path": "/workspace/avila-core-adversarial/workspaces/adversarial/candidates/adv-cheat-light.json",
       "sha256": "sha256:dab9011b106b6ed716f39aa7e6822fb961d4883eaf97d052c92cf95491eb327c"
     }
   ],

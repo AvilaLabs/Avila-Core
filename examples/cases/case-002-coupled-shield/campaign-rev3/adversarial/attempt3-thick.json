@@ -105,7 +105,7 @@
           "input:candidate"
         ],
         "source_root": "supplied",
-        "path": "/home/connoravila/Documents/north-star-worktrees/adversarial/workspaces/adversarial/candidates/adv-envelope-thick.json",
+        "path": "/workspace/avila-core-adversarial/workspaces/adversarial/candidates/adv-envelope-thick.json",
         "expected_sha256": "sha256:bbe88077508d0cc629ca313c1568324b9d627758aa7030530441cec6f432d925",
         "actual_sha256": "sha256:bbe88077508d0cc629ca313c1568324b9d627758aa7030530441cec6f432d925",
         "state": "verified"
@@ -1352,7 +1352,7 @@
     {
       "input_id": "candidate",
       "evidence_id": "input:candidate",
-      "path": "/home/connoravila/Documents/north-star-worktrees/adversarial/workspaces/adversarial/candidates/adv-envelope-thick.json",
+      "path": "/workspace/avila-core-adversarial/workspaces/adversarial/candidates/adv-envelope-thick.json",
       "sha256": "sha256:bbe88077508d0cc629ca313c1568324b9d627758aa7030530441cec6f432d925"
     }
   ],

@@ -105,7 +105,7 @@
           "input:candidate"
         ],
         "source_root": "supplied",
-        "path": "/home/connoravila/Documents/north-star-worktrees/adversarial/workspaces/adversarial/candidates/adv-cheat-light.json",
+        "path": "/workspace/avila-core-adversarial/workspaces/adversarial/candidates/adv-cheat-light.json",
         "expected_sha256": "sha256:dab9011b106b6ed716f39aa7e6822fb961d4883eaf97d052c92cf95491eb327c",
         "actual_sha256": "sha256:dab9011b106b6ed716f39aa7e6822fb961d4883eaf97d052c92cf95491eb327c",
         "state": "verified"
@@ -1076,7 +1076,7 @@
   },
   "execution": {
     "status": "refused",
-    "workspace": "/home/connoravila/Documents/north-star-worktrees/adversarial/workspaces/CASE-002/20260903T162249074Z-1449286",
+    "workspace": "/workspace/avila-core-adversarial/workspaces/CASE-002/20260903T162249074Z-1449286",
     "steps": [
       {
         "step_id": "screen",
@@ -1305,7 +1305,7 @@
           ]
         },
         "issues": [
-          "executable `/home/connoravila/Documents/north-star-worktrees/adversarial/workspaces/adversarial/fake-openmc.py` hashes to sha256:282007d363481007aee395638446b8c4e77f929e37c1b7165de5a52992eb7bd1, but the package binds sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
+          "executable `/workspace/avila-core-adversarial/workspaces/adversarial/fake-openmc.py` hashes to sha256:282007d363481007aee395638446b8c4e77f929e37c1b7165de5a52992eb7bd1, but the package binds sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
         ]
       },
       {
@@ -1443,7 +1443,7 @@
     {
       "input_id": "candidate",
       "evidence_id": "input:candidate",
-      "path": "/home/connoravila/Documents/north-star-worktrees/adversarial/workspaces/adversarial/candidates/adv-cheat-light.json",
+      "path": "/workspace/avila-core-adversarial/workspaces/adversarial/candidates/adv-cheat-light.json",
       "sha256": "sha256:dab9011b106b6ed716f39aa7e6822fb961d4883eaf97d052c92cf95491eb327c"
     }
   ],

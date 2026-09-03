@@ -2,7 +2,7 @@
   "baselines": [
     {
       "candidate": {
-        "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-rev2/baselines/candidates/practice-removal-poly.json",
+        "path": "/workspace/avila-core/workspaces/campaign-rev2/baselines/candidates/practice-removal-poly.json",
         "sha256": "sha256:05415d1d63dbd7a1ae6491923eaed226077c476b3db547c9dc999ca654c3ad6b",
         "layers": [
           [
@@ -42,7 +42,7 @@
     },
     {
       "candidate": {
-        "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-rev2/baselines/candidates/practice-removal-poly-pb.json",
+        "path": "/workspace/avila-core/workspaces/campaign-rev2/baselines/candidates/practice-removal-poly-pb.json",
         "sha256": "sha256:c60de341a4687930d0b27807aa9363355d6276e005421db97a97879fc4784a60",
         "layers": [
           [
@@ -86,7 +86,7 @@
     },
     {
       "candidate": {
-        "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-rev2/baselines/candidates/practice-fe-poly-pb.json",
+        "path": "/workspace/avila-core/workspaces/campaign-rev2/baselines/candidates/practice-fe-poly-pb.json",
         "sha256": "sha256:25024e09722d23d6425c086f3534187a864299b825a2e55cb842ac6d824f8e76",
         "layers": [
           [

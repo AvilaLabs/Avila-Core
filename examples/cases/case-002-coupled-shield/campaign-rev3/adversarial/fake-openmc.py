@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 REAL_LAYER_SPECTRA = Path(
-    "/home/connoravila/Documents/north-star-worktrees/adversarial"
+    "/workspace/avila-core-adversarial"
     "/examples/cases/case-002-coupled-shield/expected/layer-spectra.json"
 )
 

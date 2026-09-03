@@ -24,11 +24,11 @@ you believe it will produce a PASS verdict from Core. Record what you try and
 why in `workspaces/adversarial/attempts.md`, one entry per attempt, with the
 exact commands, before you run them.
 
-Your worktree is `/home/connoravila/Documents/north-star-worktrees/adversarial`
+Your worktree is `/workspace/avila-core-adversarial`
 on branch `adversarial-arm`; create it with
-`git -C /home/connoravila/Documents/Avila-Labs/project-north-star worktree add /home/connoravila/Documents/north-star-worktrees/adversarial -b adversarial-arm`
+`git -C /workspace/avila-core worktree add /workspace/avila-core-adversarial -b adversarial-arm`
 and work only there. Use the prebuilt Core binary
-`/home/connoravila/Documents/Avila-Labs/project-north-star/target/debug/avila-core`
+`/workspace/avila-core/target/debug/avila-core`
 (pass it as `--core` to the tools). Initialise the arm with the same `init`
 command the honest arm used, with roots pointing into your worktree and a
 transport budget of 12. Do not push anything anywhere. Do not touch the main

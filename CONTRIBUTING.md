@@ -10,7 +10,7 @@ security, and test boundaries without widening the claimed scope.
 - Reject unknown or malformed fields at trust boundaries.
 - Default to blocked, inconclusive, or not evaluated when evidence is missing.
 - Never add a specimen that looks like a validated benchmark.
-- Every future execution must identify exact inputs, capability version,
+- Every execution must identify exact inputs, capability version,
   environment, outputs, and parent evidence.
 - Prefer small, provider-neutral interfaces over dependencies on one solver.
 - Do not commit customer data, controlled information, credentials, proprietary

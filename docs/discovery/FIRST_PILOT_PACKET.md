@@ -6,7 +6,7 @@
 **Last update:** 2026-09-02
 
 This packet turns the Stage 0 questions into one auditable decision record. The
-current candidate comes from the north-star strategy; it is retained only if
+current candidate comes from the product strategy; it is retained only if
 benchmark, workflow, and user evidence support it. This packet may guide
 product discovery, but no interview or professional review is a prerequisite
 for engineering progress or a Core verdict.
@@ -46,7 +46,7 @@ Every non-unknown answer names a source reference, participant role, and date.
 | Field | Current answer | State | Source / owner |
 | --- | --- | --- | --- |
 | Organization | Unanswered | unknown | — |
-| Bounded technical question | Establish whether a shutdown-dose requirement remains satisfied for a declared irradiated component and boundary | inferred | North-star candidate; requester confirmation required |
+| Bounded technical question | Establish whether a shutdown-dose requirement remains satisfied for a declared irradiated component and boundary | inferred | Strategy candidate; requester confirmation required |
 | Decision that follows | Unanswered | unknown | Decision owner required |
 | Decision owner | Unanswered | unknown | — |
 | Recurrence or case volume | Unanswered | unknown | Buyer/requester required |

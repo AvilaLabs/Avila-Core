@@ -25,7 +25,7 @@
       "all_pass_count": 5,
       "best_all_pass": {
         "candidate": {
-          "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-c3/llm/candidates/l-0001.json",
+          "path": "/workspace/avila-core/workspaces/campaign-c3/llm/candidates/l-0001.json",
           "sha256": "sha256:c5381d36b52d9e225b43bc9739ca1599729d9f772602f139ce53b3081fbc81d2",
           "layers": [
             [
@@ -47,7 +47,7 @@
     "all_pass_points": 10,
     "optimum": {
       "candidate": {
-        "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-c3/sweep/candidates/l-0006.json",
+        "path": "/workspace/avila-core/workspaces/campaign-c3/sweep/candidates/l-0006.json",
         "sha256": "sha256:bb582f5e26cab19168987f2af4e2a38b990d3b41c811ef75ba7fa474c4dd7f27",
         "layers": [
           [

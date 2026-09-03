@@ -33,7 +33,7 @@
       "all_pass_count": 6,
       "best_all_pass": {
         "candidate": {
-          "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-rev3/llm/candidates/l-0004.json",
+          "path": "/workspace/avila-core/workspaces/campaign-rev3/llm/candidates/l-0004.json",
           "sha256": "sha256:c15a68290137438eabf035349e99a81cd9be9068cb5831c23b45b479057b4d6b",
           "layers": [
             [
@@ -123,7 +123,7 @@
       "all_pass_count": 4,
       "best_all_pass": {
         "candidate": {
-          "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-rev3/surrogate/candidates/c-0081.json",
+          "path": "/workspace/avila-core/workspaces/campaign-rev3/surrogate/candidates/c-0081.json",
           "sha256": "sha256:039432d3be3582b1e4d853491ea862e1832dfed352e8a879c1ac4b0870da97be",
           "layers": [
             [
@@ -153,7 +153,7 @@
     "all_pass_points": 3,
     "optimum": {
       "candidate": {
-        "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-rev3/sweep/candidates/grid-2L-polyethylene105-lead5.json",
+        "path": "/workspace/avila-core/workspaces/campaign-rev3/sweep/candidates/grid-2L-polyethylene105-lead5.json",
         "sha256": "sha256:5fb8e5f35f5f6f0e2f767533e90e719e1d970de6bb3d5eefb03290105ff74a04",
         "layers": [
           [

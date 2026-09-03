@@ -1,7 +1,6 @@
 # Project charter
 
 **Product name:** Avila Core  
-**Internal codename:** Project North Star  
 **Status:** exploratory research and pre-alpha engineering  
 **Charter date:** 2026-08-31
 
@@ -12,7 +11,7 @@ engineering problems through rigorous, repeatable search. It translates a
 bounded technical question into a reproducible chain of methods, evidence, and
 explicit verdicts, then tells an iterating agent exactly what failed and why.
 
-The north-star product is a neutral semantic, market, and trust layer for
+The long-term product is a neutral semantic, market, and trust layer for
 computational engineering:
 
 > People or agents submit evidence contracts; capabilities compete and compose

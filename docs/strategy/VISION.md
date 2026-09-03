@@ -1,4 +1,4 @@
-# North-star strategy
+# Product vision
 
 ## The destination
 
@@ -32,7 +32,7 @@ or the gatekeeper demanding a professional review for each result.
 
 ## The wedge
 
-The north star cannot be built horizontally on day one. Core begins with one
+The full product cannot be built horizontally on day one. Core begins with one
 expensive, recurring, cross-tool technical question in a domain where Avila
 already has useful pieces and access to practitioners.
 

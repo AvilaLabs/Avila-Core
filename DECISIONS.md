@@ -5,7 +5,7 @@ decision records (ADRs). “Proposed” items are intentionally reversible.
 
 | ID | Status | Decision |
 | --- | --- | --- |
-| S-001 | Accepted | Public product name is **Avila Core**; repository folder codename is **project-north-star**. |
+| S-001 | Accepted | Product and repository identity are **Avila Core**. |
 | S-002 | Accepted | Core begins with a technical question and evidence contract, not a solver catalog or blank workflow canvas. |
 | S-003 | Accepted | Core is infrastructure for people and software agents; it does not present Avila Labs as the domain authority for every supported method or require a professional reviewer for ordinary technical verdicts. |
 | S-004 | Accepted | Public positioning centers on rigorous computational evidence, not implementation trends. |

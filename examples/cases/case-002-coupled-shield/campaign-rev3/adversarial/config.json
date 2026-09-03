@@ -1,5 +1,5 @@
 {
-  "core": "/home/connoravila/Documents/Avila-Labs/project-north-star/target/debug/avila-core",
+  "core": "/workspace/avila-core/target/debug/avila-core",
   "case": "examples/cases/case-002-coupled-shield",
   "source_roots": {
     "case": "examples/cases/case-002-coupled-shield",

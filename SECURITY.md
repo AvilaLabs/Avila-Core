@@ -3,12 +3,16 @@
 Avila Core is pre-alpha and must not receive sensitive, export-controlled,
 regulated, or proprietary production data.
 
-Please report vulnerabilities privately to Avila Labs rather than opening a
-public issue. A dedicated security contact and disclosure SLA must be established
-before external pilot use.
+Please report vulnerabilities through this repository's private vulnerability
+reporting channel rather than opening a public issue. If that channel is not
+available, contact Avila Labs privately before disclosing details.
 
-The current code does not execute capability processes. When execution is added,
-the threat model must cover at least:
+The runner can execute exact, content-identified capability processes with a
+cleared environment and staged inputs. This is an evidence boundary, not a
+sandbox or containment boundary. Run only capabilities you trust on a machine
+appropriate for their risk.
+
+The threat model includes:
 
 - untrusted capability packages and input documents;
 - command, path, environment, and container injection;
@@ -19,6 +23,6 @@ the threat model must cover at least:
 - signing-key compromise and replayed attestations; and
 - unsafe interpretation of untrusted evidence in the desktop application.
 
-No process runner may be enabled until its isolation and evidence-receipt design
-has a reviewed ADR and adversarial tests.
-
+The current receipt and execution design is recorded in ADR 0007 and exercised
+by adversarial tests. Stronger isolation remains required before Core can accept
+untrusted capability packages or production data.

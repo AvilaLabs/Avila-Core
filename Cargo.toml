@@ -14,6 +14,9 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.95"
 authors = ["Avila Labs"]
+description = "Evidence compiler and controlled execution layer for reproducible, agent-assisted computational engineering"
+repository = "https://github.com/AvilaLabs/Avila-Core"
+homepage = "https://github.com/AvilaLabs/Avila-Core"
 publish = false
 
 [workspace.dependencies]

@@ -184,18 +184,12 @@ def markdown(summary):
         vs = ", ".join(f"{rid.split('-')[1]} {st} ({fmt_margin(m)})" for rid, (st, m) in b["verdicts"].items())
         lines.append(f"| {layers_text(b['candidate']['layers'])} | {'yes' if b['all_pass'] else 'no'} | {vs} |")
     lines += ["", "## Search arms", "", "| arm | screened only | transported | all-PASS | first all-PASS at transport # | best all-PASS (mass) | refused runs | INCONCLUSIVE verdicts |", "| --- | ---: | ---: | ---: | ---: | --- | ---: | ---: |"]
-    for arm in ("recovery", "learning", "random"):
-        a = summary["arms"].get(arm)
-        if not a:
-            continue
+    for arm, a in summary["arms"].items():
         best = a["best_all_pass"]
         best_text = "-" if best is None else f"{layers_text(best['candidate']['layers'])} ({float(Fraction(best['mass_kg'])):.4g} kg)"
         lines.append(f"| {arm} | {a['screened_only']} | {a['transported']} | {a['all_pass_count']} | {a['first_all_pass_transport_index'] or '-'} | {best_text} | {a['refused_runs']} | {a['inconclusive_verdicts']} |")
     lines += ["", "## Verdict histograms over transported candidates", ""]
-    for arm in ("recovery", "learning", "random"):
-        a = summary["arms"].get(arm)
-        if not a:
-            continue
+    for arm, a in summary["arms"].items():
         lines.append(f"**{arm}**: " + "; ".join(f"{rid.split('-')[1]}: " + ", ".join(f"{k} {v}" for k, v in sorted(h.items())) for rid, h in sorted(a["verdict_histogram_transported"].items())))
         lines.append("")
     s = summary["sweep"]
@@ -213,7 +207,9 @@ def main():
     parser.add_argument("--json")
     args = parser.parse_args()
     root = Path(args.campaign_dir)
-    arms = {arm: summarize_arm(arm, root / arm) for arm in ("recovery", "learning", "random") if (root / arm).is_dir()}
+    search_arms = sorted(d.name for d in root.iterdir()
+                         if d.is_dir() and d.name not in ("baselines", "sweep") and (d / "campaign-log.jsonl").is_file())
+    arms = {arm: summarize_arm(arm, root / arm) for arm in search_arms}
     sweep = sweep_optimum(root / "sweep") if (root / "sweep").is_dir() else {"points": 0, "all_pass_points": 0, "optimum": None, "rows": []}
     summary = {
         "baselines": baseline_table(root / "baselines") if (root / "baselines").is_dir() else [],

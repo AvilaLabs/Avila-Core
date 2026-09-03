@@ -73,14 +73,15 @@ def load_source(path):
     return load_json(path)
 
 
-def write_candidate(path, candidate_id, layers, description=None):
+def write_candidate(path, candidate_id, layers, description=None, schema=None, thickness_key=None):
     """Write a candidate in the frozen `avila.shielding/candidate/v1` schema,
     byte-for-byte in the same shape `shield_search.py` writes (schema,
     candidate_id, layers; description optional)."""
-    candidate = {"schema": SCHEMA_CANDIDATE, "candidate_id": candidate_id}
+    candidate = {"schema": schema or SCHEMA_CANDIDATE, "candidate_id": candidate_id}
     if description:
         candidate["description"] = description
-    candidate["layers"] = [{"material": m, "thickness_cm": t} for m, t in layers]
+    key = thickness_key or "thickness_cm"
+    candidate["layers"] = [{"material": m, key: t} for m, t in layers]
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text(json.dumps(candidate, indent=2) + "\n")
     return candidate

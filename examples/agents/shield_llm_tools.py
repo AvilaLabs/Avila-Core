@@ -191,6 +191,7 @@ def cmd_init(args):
         "environment": {"OPENMC_CROSS_SECTIONS": args.cross_sections},
         "prior_logs": args.prior_log, "materials": args.materials,
         "screen_budget": args.screen_budget, "transport_budget": args.transport_budget,
+        "candidate_schema": args.candidate_schema, "thickness_key": args.thickness_key, "probe_thickness": args.probe_thickness,
     }
     (out / "config.json").write_text(json.dumps(config, indent=2) + "\n")
     save_state(str(out), {"screens": 0, "transports": 0, "next_index": 0, "screened": {}})
@@ -204,7 +205,8 @@ def cmd_brief(args):
     materials = core.load_materials(Path(config["materials"]) / "materials.json")
     # A bootstrap screen run exposes the compiled requirements.
     probe = Path(out) / "candidates" / "brief-probe.json"
-    core.write_candidate(probe, "brief-probe", [(sorted(materials)[0], "5")])
+    core.write_candidate(probe, "brief-probe", [(sorted(materials)[0], config.get("probe_thickness", "5"))],
+                         schema=config.get("candidate_schema"), thickness_key=config.get("thickness_key"))
     report = run(config, probe, False, out)
     compiled = report.get("compile", {}).get("compiled", {})
     print("# Contract")
@@ -215,10 +217,15 @@ def cmd_brief(args):
         limit = req.get("limit", {})
         print(f"{req.get('requirement_id')} | {req.get('comparison')} | {limit.get('value')} {limit.get('unit')} | {req.get('basis', {}).get('kind')} | {req.get('statement', '')}")
     print()
-    print("# Materials (name | density g/cm3 | heavy? | composition)")
-    for name, spec in sorted(materials.items()):
-        density = Decimal(spec["density_g_cm3"])
-        print(f"{name} | {density} | {'heavy' if density > HEAVY_DENSITY else 'moderator'} | {json.dumps(spec['composition']['elements'])}")
+    if all("density_g_cm3" in spec and "composition" in spec for spec in materials.values()):
+        print("# Materials (name | density g/cm3 | heavy? | composition)")
+        for name, spec in sorted(materials.items()):
+            density = Decimal(spec["density_g_cm3"])
+            print(f"{name} | {density} | {'heavy' if density > HEAVY_DENSITY else 'moderator'} | {json.dumps(spec['composition']['elements'])}")
+    else:
+        print("# Materials (name | properties as the table declares them)")
+        for name, spec in sorted(materials.items()):
+            print(f"{name} | " + ", ".join(f"{k} {v}" for k, v in spec.items() if not isinstance(v, (dict, list))))
     print()
     print("# Constellation: every transported design on record, best worst-case margin first")
     print_table(constellation_rows(config, out))
@@ -257,7 +264,8 @@ def cmd_propose(args):
         candidate_id = f"l-{state['next_index']:04d}"
         state["next_index"] += 1
         path = Path(out) / "candidates" / f"{candidate_id}.json"
-        core.write_candidate(path, candidate_id, [(l["material"], l["thickness_cm"]) for l in layers])
+        core.write_candidate(path, candidate_id, [(l["material"], l["thickness_cm"]) for l in layers],
+                             schema=config.get("candidate_schema"), thickness_key=config.get("thickness_key"))
         report = run(config, path, False, out)
         state["screens"] += 1
         state["screened"][key] = candidate_id
@@ -355,6 +363,9 @@ def main():
     p.add_argument("--prior-log", action="append", default=[])
     p.add_argument("--screen-budget", type=int, default=400)
     p.add_argument("--transport-budget", type=int, default=40)
+    p.add_argument("--candidate-schema", default=None, help="candidate schema id when the case is not the shielding one")
+    p.add_argument("--thickness-key", default=None, help="layer thickness field name when it is not thickness_cm")
+    p.add_argument("--probe-thickness", default="5")
     p.set_defaults(func=cmd_init)
     for name, func in (("brief", cmd_brief), ("status", cmd_status), ("finish", cmd_finish)):
         p = sub.add_parser(name)

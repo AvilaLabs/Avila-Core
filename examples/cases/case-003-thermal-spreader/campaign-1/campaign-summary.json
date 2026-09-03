@@ -1,0 +1,56 @@
+{
+  "baselines": [],
+  "arms": {
+    "llm": {
+      "arm": "llm",
+      "log_lines": 23,
+      "screened_only": 15,
+      "transported": 8,
+      "verdict_histogram_transported": {
+        "THERM-R1-screen": {
+          "pass": 8
+        },
+        "THERM-R2-hotspot": {
+          "fail": 3,
+          "pass": 5
+        },
+        "THERM-R3-mass": {
+          "pass": 8
+        },
+        "THERM-R4-thickness": {
+          "pass": 8
+        }
+      },
+      "first_all_pass_transport_index": 2,
+      "all_pass_count": 5,
+      "best_all_pass": {
+        "candidate": {
+          "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-c3/llm/candidates/l-0001.json",
+          "sha256": "sha256:c5381d36b52d9e225b43bc9739ca1599729d9f772602f139ce53b3081fbc81d2",
+          "layers": null
+        },
+        "mass_kg": "18/5",
+        "campaign_sha256": "sha256:d795b292e951962623c839b495f0e1e018b84d626bc3014dd837ad74bea08a63"
+      },
+      "refused_runs": 0,
+      "inconclusive_verdicts": 0,
+      "not_evaluated": []
+    }
+  },
+  "sweep": {
+    "points": 12,
+    "all_pass_points": 10,
+    "optimum": {
+      "candidate": {
+        "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/campaign-c3/sweep/candidates/l-0006.json",
+        "sha256": "sha256:bb582f5e26cab19168987f2af4e2a38b990d3b41c811ef75ba7fa474c4dd7f27",
+        "layers": null
+      },
+      "mass_kg": "18"
+    }
+  },
+  "recovery_check": {
+    "applicable": false,
+    "reason": "no recovery arm"
+  }
+}

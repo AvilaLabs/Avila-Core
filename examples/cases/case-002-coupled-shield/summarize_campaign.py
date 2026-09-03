@@ -75,8 +75,11 @@ def transported(row):
 
 
 def mass_of(row):
-    v = verdicts_of(row).get("SHIELD-R4-mass") or {}
-    return exact(v.get("nominal")) if v.get("nominal") else None
+    """The areal-mass verdict is the one reported in kilograms, whatever its id."""
+    for v in verdicts_of(row).values():
+        if v.get("unit") == "kg" and v.get("nominal") is not None:
+            return exact(v["nominal"])
+    return None
 
 
 def layers_text(layers):

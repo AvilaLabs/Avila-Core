@@ -1,0 +1,254 @@
+{
+  "batches_per_material": 20,
+  "cross_sections_index_sha256": "2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db",
+  "group_order": "ascending_energy",
+  "group_structure": "VITAMIN-J-175",
+  "legendre_order": 3,
+  "library_file": "mgxs-vitamin-j-175.h5",
+  "limitations": [
+    "Each material's zone constants come from a homogeneous 120 cm slab of that material alone, source-side out; a material's depth zone is selected by the candidate's own depth from its front face, not by that material's depth within its own contiguous run of layers, so a layer preceded by a different material picks up the spectral history of a pure block of its own material at that absolute depth, not the true upstream history. This is a documented approximation, not a certified spectral-zoning scheme.",
+    "Whole-slab-condensed constants (materials/<name>/diagnostics) are derived from the same four zone tallies by summing raw reaction-rate and flux tally means before dividing, not from a separate run; they are not used by slab_sn.py.",
+    "Statistical uncertainty on each constant is set by particles_per_material x batches_per_material and is not itself reported per-value in this file (see the zone_stats provenance for aggregate nonzero-group counts and median relative error).",
+    "No fission, delayed data, or upscatter iteration is implied by this library beyond the physical thermal upscatter already present in the flux-weighted group constants; slab_sn.py's thermal upscatter iteration operates on these constants as given."
+  ],
+  "materials": {
+    "borated_polyethylene": {
+      "composition": {
+        "basis": "wo",
+        "elements": {
+          "B": "0.05",
+          "C": "0.8132",
+          "H": "0.1368"
+        }
+      },
+      "density_g_cm3": "1.00",
+      "n_zones": 4,
+      "wall_time_s": 27.582,
+      "zone_bounds_cm": [
+        0.0,
+        30.0,
+        60.0,
+        90.0,
+        120.0
+      ],
+      "zone_stats": [
+        {
+          "median_rel_err_nonzero": 0.0053218008,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.019237568,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.080776343,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.36138012,
+          "nonzero_groups": 168
+        }
+      ]
+    },
+    "concrete": {
+      "composition": {
+        "basis": "wo",
+        "elements": {
+          "Al": "0.034",
+          "C": "0.003",
+          "Ca": "0.044",
+          "Fe": "0.014",
+          "H": "0.010",
+          "K": "0.013",
+          "Na": "0.016",
+          "O": "0.529",
+          "Si": "0.337"
+        }
+      },
+      "density_g_cm3": "2.30",
+      "n_zones": 4,
+      "wall_time_s": 186.997,
+      "zone_bounds_cm": [
+        0.0,
+        30.0,
+        60.0,
+        90.0,
+        120.0
+      ],
+      "zone_stats": [
+        {
+          "median_rel_err_nonzero": 0.0058567921,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.0137273,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.046977738,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.15080464,
+          "nonzero_groups": 168
+        }
+      ]
+    },
+    "iron": {
+      "composition": {
+        "basis": "ao",
+        "elements": {
+          "Fe": "1"
+        }
+      },
+      "density_g_cm3": "7.87",
+      "n_zones": 4,
+      "wall_time_s": 153.383,
+      "zone_bounds_cm": [
+        0.0,
+        30.0,
+        60.0,
+        90.0,
+        120.0
+      ],
+      "zone_stats": [
+        {
+          "median_rel_err_nonzero": 0.0050935845,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.0077064209,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.011215124,
+          "nonzero_groups": 167
+        },
+        {
+          "median_rel_err_nonzero": 0.015532294,
+          "nonzero_groups": 124
+        }
+      ]
+    },
+    "lead": {
+      "composition": {
+        "basis": "ao",
+        "elements": {
+          "Pb": "1"
+        }
+      },
+      "density_g_cm3": "11.35",
+      "n_zones": 4,
+      "wall_time_s": 320.069,
+      "zone_bounds_cm": [
+        0.0,
+        30.0,
+        60.0,
+        90.0,
+        120.0
+      ],
+      "zone_stats": [
+        {
+          "median_rel_err_nonzero": 0.0053145667,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.0051365371,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.0068094503,
+          "nonzero_groups": 167
+        },
+        {
+          "median_rel_err_nonzero": 0.010295883,
+          "nonzero_groups": 157
+        }
+      ]
+    },
+    "polyethylene": {
+      "composition": {
+        "basis": "ao",
+        "elements": {
+          "C": "1",
+          "H": "2"
+        }
+      },
+      "density_g_cm3": "0.94",
+      "n_zones": 4,
+      "wall_time_s": 101.519,
+      "zone_bounds_cm": [
+        0.0,
+        30.0,
+        60.0,
+        90.0,
+        120.0
+      ],
+      "zone_stats": [
+        {
+          "median_rel_err_nonzero": 0.0052575916,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.018075223,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.072682856,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.29490876,
+          "nonzero_groups": 168
+        }
+      ]
+    },
+    "water": {
+      "composition": {
+        "basis": "ao",
+        "elements": {
+          "H": "2",
+          "O": "1"
+        }
+      },
+      "density_g_cm3": "1.00",
+      "n_zones": 4,
+      "wall_time_s": 178.949,
+      "zone_bounds_cm": [
+        0.0,
+        30.0,
+        60.0,
+        90.0,
+        120.0
+      ],
+      "zone_stats": [
+        {
+          "median_rel_err_nonzero": 0.0060495007,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.015940942,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.059137455,
+          "nonzero_groups": 168
+        },
+        {
+          "median_rel_err_nonzero": 0.1964931,
+          "nonzero_groups": 168
+        }
+      ]
+    }
+  },
+  "n_groups": 175,
+  "n_zones": 4,
+  "openmc_version": "0.15.3",
+  "particles_per_material": 250000,
+  "rounding": "every stored constant is rounded to 8 significant digits before it is written: total/absorption/dose-response scalars via Decimal(repr(value)) quantization (transport.py's stable()); the scattering-matrix arrays via an equivalent vectorized numpy log10/round (see round_sig_array()). This removes MC thread-reduction-order noise, not physical precision -- the statistical uncertainty is far larger than the 8th significant digit -- so the file is byte-identical across two runs at the same seed.",
+  "schema": "avila.shielding/mgxs-library-index/v1",
+  "seed": 1,
+  "significant_digits": 8,
+  "slab_thickness_cm": 120.0,
+  "total_histories_per_material": 5000000
+}

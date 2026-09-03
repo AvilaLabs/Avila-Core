@@ -108,7 +108,10 @@ def candidate_layers(row, log_path):
 
 
 def transported(row):
-    return any(list(s) == ["transport", "executed"] or list(s) == ["transport", "reused"] for s in row.get("steps", []))
+    """A row counts as fully evaluated when every declared step ran or was
+    reused; a screen-only run leaves its later steps `not_run`."""
+    steps = row.get("steps", [])
+    return bool(steps) and all(list(s)[1] in ("executed", "reused") for s in steps)
 
 
 def verdict_map(row):

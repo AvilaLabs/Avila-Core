@@ -69,9 +69,9 @@ def transported(row):
             step_id, state = step.get("step_id"), step.get("state")
         else:
             continue
-        if step_id == "transport" and state in ("executed", "reused"):
-            return True
-    return False
+        if state not in ("executed", "reused"):
+            return False
+    return bool(row.get("steps"))
 
 
 def mass_of(row):

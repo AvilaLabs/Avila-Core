@@ -1,0 +1,1367 @@
+{
+  "schema_version": "avila.core/case-run-report/v0.2-draft",
+  "case_id": "CASE-002",
+  "title": "Coupled shielding search: screen -> coupled transport -> activation -> Avila Core",
+  "status": "planned",
+  "integrity": {
+    "schema_version": "avila.core/package-integrity-report/v0.1-draft",
+    "case_id": "CASE-002",
+    "status": "complete",
+    "manifest_sha256": "sha256:1b2e28fff09f1100e0f8e7ef7adaa3044190290bcec6652aaaeb21fef8dd8201",
+    "documents": [
+      {
+        "document_id": "case-002-contract",
+        "role": "contract",
+        "path": "contract.json",
+        "expected_sha256": "sha256:06901653f896bd87735dad774056f87ea55708b7cda491e59249da38b4673d8c",
+        "actual_sha256": "sha256:06901653f896bd87735dad774056f87ea55708b7cda491e59249da38b4673d8c",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-registry",
+        "role": "registry",
+        "path": "registry.json",
+        "expected_sha256": "sha256:cd729afcc4fb987d7bee395b8792f202f496c84d516e34bfd8115d49f0c08e7a",
+        "actual_sha256": "sha256:cd729afcc4fb987d7bee395b8792f202f496c84d516e34bfd8115d49f0c08e7a",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-claims",
+        "role": "claims",
+        "path": "claims.json",
+        "expected_sha256": "sha256:cdc24a3138c5bc6df59667ec7f79bcc188073a545809fea44c428ec996172410",
+        "actual_sha256": "sha256:cdc24a3138c5bc6df59667ec7f79bcc188073a545809fea44c428ec996172410",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-requirement-set",
+        "role": "requirement_set",
+        "path": "requirement-set.json",
+        "expected_sha256": "sha256:5f5eaa10d3867ddb5905dfc578103403966291da5eab6a854e5b1f354f5b63f4",
+        "actual_sha256": "sha256:5f5eaa10d3867ddb5905dfc578103403966291da5eab6a854e5b1f354f5b63f4",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-transport-qualification",
+        "role": "qualification",
+        "path": "qualification-transport.json",
+        "expected_sha256": "sha256:8e27e777b2ddaf7ba22cb85ef09f7fa29aee6ab7911e9ff31ebe87a22c1645f5",
+        "actual_sha256": "sha256:8e27e777b2ddaf7ba22cb85ef09f7fa29aee6ab7911e9ff31ebe87a22c1645f5",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-activation-qualification",
+        "role": "qualification",
+        "path": "qualification-activation.json",
+        "expected_sha256": "sha256:e0cce97d7b93b88289550df0ea83750af1e6c94cd9f4250e3fa5efa186b62c64",
+        "actual_sha256": "sha256:e0cce97d7b93b88289550df0ea83750af1e6c94cd9f4250e3fa5efa186b62c64",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-agent-review-policy",
+        "role": "review_policy",
+        "path": "agent-review-policy.json",
+        "expected_sha256": "sha256:4242b3af100c4c07aa316a22b883eb50c3e285f74c6d6df99d7b942d6b3cc2ca",
+        "actual_sha256": "sha256:4242b3af100c4c07aa316a22b883eb50c3e285f74c6d6df99d7b942d6b3cc2ca",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-expected-campaign",
+        "role": "expected_campaign_report",
+        "path": "campaign-report.json",
+        "expected_sha256": "sha256:3dcf6daa8334d24b9339b644a1cb8ed59f05b450da5e7a275535fa8cf7f70549",
+        "actual_sha256": "sha256:3dcf6daa8334d24b9339b644a1cb8ed59f05b450da5e7a275535fa8cf7f70549",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-screen-receipt",
+        "role": "execution_receipt",
+        "path": "receipts/screen.json",
+        "expected_sha256": "sha256:cd84eb80b15f625d184cc49a1128590c224ef12ae045e686bb9969b79602af68",
+        "actual_sha256": "sha256:cd84eb80b15f625d184cc49a1128590c224ef12ae045e686bb9969b79602af68",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-transport-receipt",
+        "role": "execution_receipt",
+        "path": "receipts/transport.json",
+        "expected_sha256": "sha256:7f317ed46c4c5047e72a1edfa41536c48a0b2ac8897d41fdac297f363b4b3a81",
+        "actual_sha256": "sha256:7f317ed46c4c5047e72a1edfa41536c48a0b2ac8897d41fdac297f363b4b3a81",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-activation-receipt",
+        "role": "execution_receipt",
+        "path": "receipts/activation.json",
+        "expected_sha256": "sha256:d6862a5cb03d6dd253ee0296d28995ebda6a2aaa66405529862782997288fcec",
+        "actual_sha256": "sha256:d6862a5cb03d6dd253ee0296d28995ebda6a2aaa66405529862782997288fcec",
+        "state": "verified"
+      }
+    ],
+    "artifacts": [
+      {
+        "artifact_id": "reference-candidate",
+        "evidence_ids": [
+          "input:candidate"
+        ],
+        "source_root": "supplied",
+        "path": "/home/connoravila/Documents/north-star-worktrees/adversarial/workspaces/adversarial/candidates/adv-envelope-thick.json",
+        "expected_sha256": "sha256:bbe88077508d0cc629ca313c1568324b9d627758aa7030530441cec6f432d925",
+        "actual_sha256": "sha256:bbe88077508d0cc629ca313c1568324b9d627758aa7030530441cec6f432d925",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "materials",
+        "evidence_ids": [
+          "input:materials"
+        ],
+        "source_root": "coupled",
+        "path": "materials.json",
+        "expected_sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb",
+        "actual_sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "source",
+        "evidence_ids": [
+          "input:source"
+        ],
+        "source_root": "coupled",
+        "path": "source.json",
+        "expected_sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+        "actual_sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "groups",
+        "evidence_ids": [
+          "input:groups"
+        ],
+        "source_root": "coupled",
+        "path": "fispact-709-groups.json",
+        "expected_sha256": "sha256:5d5cc7fbc486339158a6f87fb78ab2ac2d336f0c795dfc725c2d05d101cb94f4",
+        "actual_sha256": "sha256:5d5cc7fbc486339158a6f87fb78ab2ac2d336f0c795dfc725c2d05d101cb94f4",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "schedule",
+        "evidence_ids": [
+          "input:schedule"
+        ],
+        "source_root": "case",
+        "path": "schedule.json",
+        "expected_sha256": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03",
+        "actual_sha256": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "screen-script",
+        "evidence_ids": [
+          "input:screen-script"
+        ],
+        "source_root": "shielding",
+        "path": "screen.py",
+        "expected_sha256": "sha256:5fd0bd9415ec19e7f15d5bd167976d5852b6984efeea7443aa6323d13cd0253d",
+        "actual_sha256": "sha256:5fd0bd9415ec19e7f15d5bd167976d5852b6984efeea7443aa6323d13cd0253d",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "transport-script",
+        "evidence_ids": [
+          "input:transport-script"
+        ],
+        "source_root": "coupled",
+        "path": "transport.py",
+        "expected_sha256": "sha256:7578e1c101320dd8c811a3cc5958e77d5e490cc21af10385af76b6e845a39fb9",
+        "actual_sha256": "sha256:7578e1c101320dd8c811a3cc5958e77d5e490cc21af10385af76b6e845a39fb9",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "activate-script",
+        "evidence_ids": [
+          "input:activate-script"
+        ],
+        "source_root": "coupled",
+        "path": "activate.py",
+        "expected_sha256": "sha256:0ce443ee6b182e7bcc954b64920f4d5554d258851511c3a031b5e15bc51d3fc4",
+        "actual_sha256": "sha256:0ce443ee6b182e7bcc954b64920f4d5554d258851511c3a031b5e15bc51d3fc4",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "practical-reviewer-script",
+        "evidence_ids": [
+          "input:reviewer-script"
+        ],
+        "source_root": "agents",
+        "path": "shield_review.py",
+        "expected_sha256": "sha256:3a0dee30ebb247df36ddec543fcf88c9c48fa0eecc3b5e71dd5b0bfb90574a34",
+        "actual_sha256": "sha256:3a0dee30ebb247df36ddec543fcf88c9c48fa0eecc3b5e71dd5b0bfb90574a34",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "cross-section-index",
+        "evidence_ids": [
+          "input:cross-section-index"
+        ],
+        "source_root": "nuclear-data",
+        "path": "cross_sections.xml",
+        "expected_sha256": "sha256:2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db",
+        "actual_sha256": "sha256:2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "actinv-executable",
+        "evidence_ids": [
+          "input:actinv-executable"
+        ],
+        "source_root": "actinv-release",
+        "path": "actinv",
+        "expected_sha256": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426",
+        "actual_sha256": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "actinv-activation-library",
+        "evidence_ids": [
+          "input:actinv-activation-library"
+        ],
+        "source_root": "actinv-data",
+        "path": "activation/tendl-2025-neutron-709g.npz",
+        "expected_sha256": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44",
+        "actual_sha256": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "actinv-library-index",
+        "evidence_ids": [
+          "input:actinv-library-index"
+        ],
+        "source_root": "actinv-data",
+        "path": "activation/tendl-2025-neutron-709g_index.json",
+        "expected_sha256": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb",
+        "actual_sha256": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "actinv-decay-primary",
+        "evidence_ids": [
+          "input:actinv-decay-primary"
+        ],
+        "source_root": "actinv-data",
+        "path": "decay/endf-b-viii-0_decay.dat",
+        "expected_sha256": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb",
+        "actual_sha256": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "actinv-decay-fallback",
+        "evidence_ids": [
+          "input:actinv-decay-fallback"
+        ],
+        "source_root": "actinv-data",
+        "path": "decay/jeff-3-3_decay.dat",
+        "expected_sha256": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123",
+        "actual_sha256": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "reference-screen-result",
+        "evidence_ids": [
+          "screen-dose-rate",
+          "screen-mass",
+          "screen-thickness",
+          "screen-result"
+        ],
+        "source_root": "case",
+        "path": "expected/screen-result.json",
+        "expected_sha256": "sha256:90ce23892005a9125dc113fc1da02375ce28e10e30c1f776317a53d268d5b256",
+        "actual_sha256": "sha256:90ce23892005a9125dc113fc1da02375ce28e10e30c1f776317a53d268d5b256",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "reference-transport-result",
+        "evidence_ids": [
+          "transport-neutron-dose-rate",
+          "transport-photon-dose-rate",
+          "transport-result"
+        ],
+        "source_root": "case",
+        "path": "expected/transport-result.json",
+        "expected_sha256": "sha256:6f0f9c7f509f8e0af250aaa02e6152d2816b79b8eb4de7819dda2854cc43a927",
+        "actual_sha256": "sha256:6f0f9c7f509f8e0af250aaa02e6152d2816b79b8eb4de7819dda2854cc43a927",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "reference-layer-spectra",
+        "evidence_ids": [
+          "transport-layer-spectra"
+        ],
+        "source_root": "case",
+        "path": "expected/layer-spectra.json",
+        "expected_sha256": "sha256:567999c7d7c6bc4b02aa310603078314125e20cfa9c14eb5a3c08646dfbf66d6",
+        "actual_sha256": "sha256:567999c7d7c6bc4b02aa310603078314125e20cfa9c14eb5a3c08646dfbf66d6",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "reference-activation-result",
+        "evidence_ids": [
+          "activation-specific-activity",
+          "activation-decay-heat",
+          "activation-result"
+        ],
+        "source_root": "case",
+        "path": "expected/activation-result.json",
+        "expected_sha256": "sha256:b7f95e8f42e240f74a833a2398c4efd3c3167cf963f4953f4dee64314e4a18bc",
+        "actual_sha256": "sha256:b7f95e8f42e240f74a833a2398c4efd3c3167cf963f4953f4dee64314e4a18bc",
+        "state": "verified"
+      }
+    ],
+    "limitations": [
+      "CASE-002 is a research-only design-search specimen over a synthetic plane source; no facility, generator, or occupancy is represented.",
+      "The screening capability is unqualified and evaluated on a nominal basis; the coupled transport capability produces bounded claims whose intervals cover statistical error only; the activation capability produces nominal inventories with no bound and satisfies only a nominal-basis requirement.",
+      "Executables are bound by digest: a system Python interpreter for the screen and activation drivers, the OpenMC environment's interpreter for transport, and the ACTINV 1.0.1 executable as a hash-bound input; none is a qualified package.",
+      "The nuclear data library is identified by the digest of its index; the nuclide files it names are not re-hashed by this case. The ACTINV activation library and decay data are re-hashed.",
+      "The 10 uSv/h design point is allocated between neutrons and shield-produced photons by the case author; Core evaluates each allocation and does not sum them.",
+      "An optional connected-agent practicality gate is compiled with exact instructions and a hash-bound implementation; it never changes Core's technical verdict and Core does not require the stage when a contract omits it."
+    ],
+    "notice": "Package integrity checks byte identity only. It does not verify schemas, media semantics, execution receipts, signatures, qualification, practical suitability, or scientific correctness."
+  },
+  "compile": {
+    "schema_version": "avila.core/compile-report/v0.2-draft",
+    "semantic_profile": "avila.core/semantic/0.2-draft",
+    "status": "compiled",
+    "source_identities": [
+      {
+        "document": "contract",
+        "sha256": "sha256:9180b5e78f09ba692ac9a22a8ec627a5c26b4d40fc00ed193a0c022ee48d9ef0"
+      },
+      {
+        "document": "registry",
+        "sha256": "sha256:5ea6880ca1bab90fd2e96a2b695f8c06b9fb598b9bb736c01f9166ab0ae9fd07"
+      }
+    ],
+    "compiled": {
+      "schema_version": "avila.core/compiled-contract/v0.2-draft",
+      "semantic_profile": "avila.core/semantic/0.2-draft",
+      "compiler": "avila.core/compiler-rust@0.1.0",
+      "contract_id": "case-002.coupled-shield-search",
+      "contract_revision": 2,
+      "contract_sha256": "sha256:9180b5e78f09ba692ac9a22a8ec627a5c26b4d40fc00ed193a0c022ee48d9ef0",
+      "question": "Does a candidate layered slab keep both the neutron and the shield-produced photon ambient dose-equivalent rates behind it within their allocations (7 and 3 uSv/h of a 10 uSv/h design point) for the synthetic 14.1 MeV plane source, and stay within 2000 kg per square metre and 120 cm, as established by coupled Monte Carlo transport rather than by the screening estimate, while an ACTINV inventory keeps the shield's specific activity after 30 days of irradiation and 1 day of cooling at or below 1 Bq/g as a nominal guide?",
+      "assumptions": [
+        "The source is a synthetic isotropic plane source of 14.1 MeV neutrons at 1e9 neutrons per second over one square metre; no real generator, facility, or occupancy is represented.",
+        "The slab is laterally infinite by reflection; edge leakage and streaming paths are not evaluated.",
+        "The 10 uSv/h design-point limit is allocated 7 uSv/h to neutrons and 3 uSv/h to shield-produced photons; Core evaluates each allocation, not their sum.",
+        "The screening estimate uses approximate removal cross sections without buildup and is evaluated on a nominal basis only; the transport intervals bound statistical error only.",
+        "Activation is evaluated by ACTINV on each layer's Monte Carlo group flux for 30 days of continuous irradiation at the source strength followed by 1 day of cooling. The result is nominal with no bound, so it is a search guide only: the shielding library requires activation on a bounded basis and this case declares that entry omitted at the required basis. The 1 Bq/g limit is the case author's allocation, not a regulatory level.",
+        "Material compositions and densities are nominal literature values; no material, executable, or data library is qualified.",
+        "This contract is a research-only design-search specimen and excludes every regulatory, safety, or operational purpose.",
+        "Revision 2 widens the box from 1500 kg and 100 cm to 2000 kg and 120 cm after revision 1's campaign found no feasible design within the original limits, and raises the transport particle budget from 200000 to 500000 so that a candidate within about twenty percent of a dose allocation can be decided rather than left INCONCLUSIVE; the transport envelope's 120 cm bound is unchanged, so the box now reaches it."
+      ],
+      "registry_id": "case-002.coupled-shield-search.registry",
+      "registry_revision": 1,
+      "registry_sha256": "sha256:5ea6880ca1bab90fd2e96a2b695f8c06b9fb598b9bb736c01f9166ab0ae9fd07",
+      "execution_policy": {
+        "permitted_nondeterministic_roles": [],
+        "permit_nominal_basis": true
+      },
+      "inputs": [
+        {
+          "input_id": "actinv-activation-library",
+          "role": {
+            "id": "actinv.activation-library",
+            "major": 1
+          },
+          "media_type": "application/vnd.numpy.npz",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "actinv-decay-fallback",
+          "role": {
+            "id": "actinv.decay-data",
+            "major": 1
+          },
+          "media_type": "application/octet-stream",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "actinv-decay-primary",
+          "role": {
+            "id": "actinv.decay-data",
+            "major": 1
+          },
+          "media_type": "application/octet-stream",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "actinv-executable",
+          "role": {
+            "id": "actinv.executable",
+            "major": 1
+          },
+          "media_type": "application/x-executable",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "actinv-library-index",
+          "role": {
+            "id": "actinv.library-index",
+            "major": 1
+          },
+          "media_type": "application/json",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "activate-script",
+          "role": {
+            "id": "shielding.activate-script",
+            "major": 1
+          },
+          "media_type": "text/x-python",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "candidate",
+          "role": {
+            "id": "shielding.candidate",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-candidate+json",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "cross-section-index",
+          "role": {
+            "id": "nuclear.cross-section-index",
+            "major": 1
+          },
+          "media_type": "application/xml",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "groups",
+          "role": {
+            "id": "shielding.group-structure",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-groups+json",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "materials",
+          "role": {
+            "id": "shielding.material-table",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-materials+json",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "reviewer-script",
+          "role": {
+            "id": "core.review.agent-implementation",
+            "major": 1
+          },
+          "media_type": "text/x-python",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "schedule",
+          "role": {
+            "id": "shielding.irradiation-schedule",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-schedule+json",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "screen-script",
+          "role": {
+            "id": "shielding.screen-script",
+            "major": 1
+          },
+          "media_type": "text/x-python",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "source",
+          "role": {
+            "id": "shielding.source-spec",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.shield-source+json",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "transport-script",
+          "role": {
+            "id": "shielding.transport-script",
+            "major": 1
+          },
+          "media_type": "text/x-python",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        }
+      ],
+      "workflow": [
+        {
+          "step_id": "screen",
+          "capability_type": {
+            "id": "shielding.attenuation-screen",
+            "major": 1
+          },
+          "bindings": [
+            {
+              "input_slot": "candidate",
+              "source": {
+                "source": "contract_input",
+                "input_id": "candidate"
+              }
+            },
+            {
+              "input_slot": "materials",
+              "source": {
+                "source": "contract_input",
+                "input_id": "materials"
+              }
+            },
+            {
+              "input_slot": "script",
+              "source": {
+                "source": "contract_input",
+                "input_id": "screen-script"
+              }
+            },
+            {
+              "input_slot": "source",
+              "source": {
+                "source": "contract_input",
+                "input_id": "source"
+              }
+            }
+          ],
+          "parameters": {},
+          "reproducibility": {
+            "determinism": "deterministic",
+            "material_factors": {}
+          }
+        },
+        {
+          "step_id": "transport",
+          "capability_type": {
+            "id": "shielding.slab-transport-coupled",
+            "major": 1
+          },
+          "bindings": [
+            {
+              "input_slot": "candidate",
+              "source": {
+                "source": "contract_input",
+                "input_id": "candidate"
+              }
+            },
+            {
+              "input_slot": "cross-section-index",
+              "source": {
+                "source": "contract_input",
+                "input_id": "cross-section-index"
+              }
+            },
+            {
+              "input_slot": "groups",
+              "source": {
+                "source": "contract_input",
+                "input_id": "groups"
+              }
+            },
+            {
+              "input_slot": "materials",
+              "source": {
+                "source": "contract_input",
+                "input_id": "materials"
+              }
+            },
+            {
+              "input_slot": "script",
+              "source": {
+                "source": "contract_input",
+                "input_id": "transport-script"
+              }
+            },
+            {
+              "input_slot": "source",
+              "source": {
+                "source": "contract_input",
+                "input_id": "source"
+              }
+            }
+          ],
+          "parameters": {
+            "batches": {
+              "type": "integer",
+              "value": 10
+            },
+            "particles": {
+              "type": "integer",
+              "value": 500000
+            }
+          },
+          "reproducibility": {
+            "determinism": "seeded_stochastic",
+            "seed": "1",
+            "material_factors": {}
+          }
+        },
+        {
+          "step_id": "activation",
+          "capability_type": {
+            "id": "shielding.slab-activation",
+            "major": 1
+          },
+          "bindings": [
+            {
+              "input_slot": "actinv",
+              "source": {
+                "source": "contract_input",
+                "input_id": "actinv-executable"
+              }
+            },
+            {
+              "input_slot": "activation-index",
+              "source": {
+                "source": "contract_input",
+                "input_id": "actinv-library-index"
+              }
+            },
+            {
+              "input_slot": "activation-library",
+              "source": {
+                "source": "contract_input",
+                "input_id": "actinv-activation-library"
+              }
+            },
+            {
+              "input_slot": "decay-fallback",
+              "source": {
+                "source": "contract_input",
+                "input_id": "actinv-decay-fallback"
+              }
+            },
+            {
+              "input_slot": "decay-primary",
+              "source": {
+                "source": "contract_input",
+                "input_id": "actinv-decay-primary"
+              }
+            },
+            {
+              "input_slot": "materials",
+              "source": {
+                "source": "contract_input",
+                "input_id": "materials"
+              }
+            },
+            {
+              "input_slot": "schedule",
+              "source": {
+                "source": "contract_input",
+                "input_id": "schedule"
+              }
+            },
+            {
+              "input_slot": "script",
+              "source": {
+                "source": "contract_input",
+                "input_id": "activate-script"
+              }
+            },
+            {
+              "input_slot": "spectra",
+              "source": {
+                "source": "step_output",
+                "step_id": "transport",
+                "output_slot": "layer-spectra"
+              }
+            }
+          ],
+          "parameters": {},
+          "reproducibility": {
+            "determinism": "deterministic",
+            "material_factors": {}
+          }
+        },
+        {
+          "step_id": "practical-review",
+          "capability_type": {
+            "id": "shielding.practical-agent-review",
+            "major": 1
+          },
+          "bindings": [
+            {
+              "input_slot": "candidate",
+              "source": {
+                "source": "contract_input",
+                "input_id": "candidate"
+              }
+            },
+            {
+              "input_slot": "reviewer",
+              "source": {
+                "source": "contract_input",
+                "input_id": "reviewer-script"
+              }
+            },
+            {
+              "input_slot": "screen-result",
+              "source": {
+                "source": "step_output",
+                "step_id": "screen",
+                "output_slot": "screen-result"
+              }
+            },
+            {
+              "input_slot": "transport-result",
+              "source": {
+                "source": "step_output",
+                "step_id": "transport",
+                "output_slot": "transport-result"
+              }
+            }
+          ],
+          "parameters": {},
+          "reproducibility": {
+            "determinism": "deterministic",
+            "material_factors": {}
+          },
+          "presentation_gate": {
+            "state": "awaiting_agent",
+            "reviewer_role": "agent",
+            "presented_evidence": [
+              {
+                "input_slot": "reviewer",
+                "source": {
+                  "source": "contract_input",
+                  "input_id": "reviewer-script"
+                }
+              },
+              {
+                "input_slot": "candidate",
+                "source": {
+                  "source": "contract_input",
+                  "input_id": "candidate"
+                }
+              },
+              {
+                "input_slot": "screen-result",
+                "source": {
+                  "source": "step_output",
+                  "step_id": "screen",
+                  "output_slot": "screen-result"
+                }
+              },
+              {
+                "input_slot": "transport-result",
+                "source": {
+                  "source": "step_output",
+                  "step_id": "transport",
+                  "output_slot": "transport-result"
+                }
+              }
+            ],
+            "decision_output_slot": "decision",
+            "decision_role": {
+              "id": "core.presentation.routing-record",
+              "major": 1
+            },
+            "decision_media_type": "application/vnd.avila-core.presentation-routing+json",
+            "allowed_dispositions": [
+              "present_to_user",
+              "request_changes",
+              "abstain"
+            ],
+            "reviewer_eligibility_policy": {
+              "policy_id": "avila-labs.shielding/practical-agent-review",
+              "revision": 1,
+              "sha256": "sha256:4242b3af100c4c07aa316a22b883eb50c3e285f74c6d6df99d7b942d6b3cc2ca"
+            },
+            "independence": {
+              "mode": "none"
+            },
+            "instructions": [
+              "Use Core's recorded requirement statuses and rules; never derive, edit, or override a technical verdict.",
+              "Request changes unless every compiled requirement is PASS.",
+              "After technical PASS, request changes for adjacent identical layers, a layer thinner than 10 cm, or liquid water without explicit containment evidence.",
+              "After technical and practical checks pass, route the candidate to the user without altering Core's verdict."
+            ]
+          }
+        }
+      ],
+      "requirements": [
+        {
+          "requirement_id": "SHIELD-R1-screen",
+          "statement": "Screening estimate of the neutron dose rate behind the slab is at or below 10 uSv/h (nominal basis; guides the search, establishes nothing).",
+          "purpose": {
+            "id": "avila-labs.shielding.design-search",
+            "major": 1
+          },
+          "metric": {
+            "source": "step_output",
+            "step_id": "screen",
+            "output_slot": "dose-rate"
+          },
+          "metric_role": {
+            "id": "shielding.dose-rate-screen",
+            "major": 1
+          },
+          "comparison": "less_than_or_equal",
+          "limit": {
+            "kind": "nuclear.ambient-dose-equivalent-rate",
+            "value": "10",
+            "unit": "uSv/h"
+          },
+          "basis": {
+            "kind": "nominal"
+          }
+        },
+        {
+          "requirement_id": "SHIELD-R2-neutron",
+          "statement": "Monte Carlo neutron dose rate behind the slab is at or below its 7 uSv/h allocation within its statistical interval.",
+          "purpose": {
+            "id": "avila-labs.shielding.design-search",
+            "major": 1
+          },
+          "metric": {
+            "source": "step_output",
+            "step_id": "transport",
+            "output_slot": "neutron-dose-rate"
+          },
+          "metric_role": {
+            "id": "shielding.dose-rate-bounded",
+            "major": 1
+          },
+          "comparison": "less_than_or_equal",
+          "limit": {
+            "kind": "nuclear.ambient-dose-equivalent-rate",
+            "value": "7",
+            "unit": "uSv/h"
+          },
+          "basis": {
+            "kind": "bounded"
+          }
+        },
+        {
+          "requirement_id": "SHIELD-R3-photon",
+          "statement": "Monte Carlo dose rate from shield-produced photons behind the slab is at or below its 3 uSv/h allocation within its statistical interval.",
+          "purpose": {
+            "id": "avila-labs.shielding.design-search",
+            "major": 1
+          },
+          "metric": {
+            "source": "step_output",
+            "step_id": "transport",
+            "output_slot": "photon-dose-rate"
+          },
+          "metric_role": {
+            "id": "shielding.dose-rate-bounded",
+            "major": 1
+          },
+          "comparison": "less_than_or_equal",
+          "limit": {
+            "kind": "nuclear.ambient-dose-equivalent-rate",
+            "value": "3",
+            "unit": "uSv/h"
+          },
+          "basis": {
+            "kind": "bounded"
+          }
+        },
+        {
+          "requirement_id": "SHIELD-R4-mass",
+          "statement": "Areal mass of the slab is at or below 2000 kg per square metre.",
+          "purpose": {
+            "id": "avila-labs.shielding.design-search",
+            "major": 1
+          },
+          "metric": {
+            "source": "step_output",
+            "step_id": "screen",
+            "output_slot": "mass"
+          },
+          "metric_role": {
+            "id": "shielding.mass",
+            "major": 1
+          },
+          "comparison": "less_than_or_equal",
+          "limit": {
+            "kind": "core.mass",
+            "value": "2000",
+            "unit": "kg"
+          },
+          "basis": {
+            "kind": "bounded"
+          }
+        },
+        {
+          "requirement_id": "SHIELD-R5-thickness",
+          "statement": "Total slab thickness is at or below 120 cm.",
+          "purpose": {
+            "id": "avila-labs.shielding.design-search",
+            "major": 1
+          },
+          "metric": {
+            "source": "step_output",
+            "step_id": "screen",
+            "output_slot": "thickness"
+          },
+          "metric_role": {
+            "id": "shielding.thickness",
+            "major": 1
+          },
+          "comparison": "less_than_or_equal",
+          "limit": {
+            "kind": "core.length",
+            "value": "120",
+            "unit": "cm"
+          },
+          "basis": {
+            "kind": "bounded"
+          }
+        },
+        {
+          "requirement_id": "SHIELD-R6-activation",
+          "statement": "Highest specific activity of any shield layer after 30 days of irradiation and 1 day of cooling is at or below 1 Bq/g (nominal basis; ACTINV inventory with no bound: guides the search away from activating designs, establishes nothing).",
+          "purpose": {
+            "id": "avila-labs.shielding.design-search",
+            "major": 1
+          },
+          "metric": {
+            "source": "step_output",
+            "step_id": "activation",
+            "output_slot": "specific-activity"
+          },
+          "metric_role": {
+            "id": "shielding.specific-activity",
+            "major": 1
+          },
+          "comparison": "less_than_or_equal",
+          "limit": {
+            "kind": "nuclear.specific-activity",
+            "value": "1",
+            "unit": "Bq/g"
+          },
+          "basis": {
+            "kind": "nominal"
+          }
+        }
+      ],
+      "snapshot_sha256": "sha256:2f76e8428d5ce664bae8d9dbfc77728064f2b214d1fa8c33e30886d30284d780"
+    },
+    "notice": "Compilation establishes structural and semantic consistency under the named draft profile only. It performs no execution, optional presentation-gate run, agent-identity or trust evaluation, evidence admission, scientific qualification, or requirement verdict."
+  },
+  "coverage": {
+    "schema_version": "avila.core/coverage-report/v0.1-draft",
+    "set_id": "avila-labs.shielding/slab-shield",
+    "set_revision": 1,
+    "set_sha256": "sha256:5f5eaa10d3867ddb5905dfc578103403966291da5eab6a854e5b1f354f5b63f4",
+    "set_owner": "avila-labs.shielding",
+    "contract_id": "case-002.coupled-shield-search",
+    "contract_revision": 2,
+    "status": "complete",
+    "entries": [
+      {
+        "set_requirement_id": "neutron-dose-rate",
+        "statement": "Neutron ambient dose equivalent rate at the design point behind the shield is at or below the design limit.",
+        "state": "covered",
+        "covered_by": [
+          {
+            "requirement_id": "SHIELD-R1-screen",
+            "basis": "nominal",
+            "adequate": false
+          },
+          {
+            "requirement_id": "SHIELD-R2-neutron",
+            "basis": "bounded",
+            "adequate": true
+          }
+        ]
+      },
+      {
+        "set_requirement_id": "secondary-photon-dose-rate",
+        "statement": "Photon ambient dose equivalent rate at the design point, from capture and inelastic-scattering photons produced in the shield, is at or below the design limit.",
+        "state": "covered",
+        "covered_by": [
+          {
+            "requirement_id": "SHIELD-R3-photon",
+            "basis": "bounded",
+            "adequate": true
+          }
+        ]
+      },
+      {
+        "set_requirement_id": "areal-mass",
+        "statement": "Areal mass of the shield is at or below the structural limit.",
+        "state": "covered",
+        "covered_by": [
+          {
+            "requirement_id": "SHIELD-R4-mass",
+            "basis": "bounded",
+            "adequate": true
+          }
+        ]
+      },
+      {
+        "set_requirement_id": "total-thickness",
+        "statement": "Total shield thickness is at or below the space available.",
+        "state": "covered",
+        "covered_by": [
+          {
+            "requirement_id": "SHIELD-R5-thickness",
+            "basis": "bounded",
+            "adequate": true
+          }
+        ]
+      },
+      {
+        "set_requirement_id": "shield-material-activation",
+        "statement": "Specific activity of the shield materials after the operating life is at or below the handling and disposal limits.",
+        "state": "omitted_stated",
+        "reason": "Activation is evaluated only on a nominal basis: ACTINV reports the inventory without an uncertainty band because no covariance data is bound in this case, and the library requires a bounded basis. SHIELD-R6-activation therefore guides the search and does not cover this entry. The missing capability is a bounded activation claim (ACTINV with its MF=33 covariance sidecar, or an independent inventory bound).",
+        "accepted_by": "Connor Avila, case author (research specimen; no design use)"
+      },
+      {
+        "set_requirement_id": "streaming-paths",
+        "statement": "Dose contributions through penetrations, gaps, and edges of the shield are at or below the design limit.",
+        "state": "omitted_stated",
+        "reason": "The slab is laterally infinite by reflection; penetrations, gaps, and edges do not exist in this one-dimensional specimen, so their dose contribution cannot be evaluated here and any real shield derived from a finalist would need a three-dimensional analysis.",
+        "accepted_by": "Connor Avila, case author (research specimen; no design use)"
+      },
+      {
+        "set_requirement_id": "skyshine",
+        "statement": "Skyshine contribution at the site boundary is at or below the site limit.",
+        "state": "omissible"
+      }
+    ],
+    "additional_requirements": [
+      "SHIELD-R6-activation"
+    ]
+  },
+  "execution": {
+    "status": "planned",
+    "steps": [
+      {
+        "step_id": "screen",
+        "adapter": "avila-labs.shielding/screen@1",
+        "capability_id": "python3",
+        "state": "planned",
+        "inputs": [
+          {
+            "input_slot": "candidate",
+            "evidence_id": "input:candidate",
+            "workspace_path": "inputs/candidate.json",
+            "sha256": "sha256:bbe88077508d0cc629ca313c1568324b9d627758aa7030530441cec6f432d925",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "materials",
+            "evidence_id": "input:materials",
+            "workspace_path": "inputs/materials.json",
+            "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "script",
+            "evidence_id": "input:screen-script",
+            "workspace_path": "tools/screen.py",
+            "sha256": "sha256:5fd0bd9415ec19e7f15d5bd167976d5852b6984efeea7443aa6323d13cd0253d",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "source",
+            "evidence_id": "input:source",
+            "workspace_path": "inputs/source.json",
+            "sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+            "integrity": "verified"
+          }
+        ],
+        "planned_invocation_sha256": "sha256:5f4bfc6e26d37bccd26da0011e9faa29eb5460d631ce4e68af954a0fa35fc4d7",
+        "changes": [
+          {
+            "class": "input_bytes",
+            "detail": "slot `candidate` bytes sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80 → sha256:bbe88077508d0cc629ca313c1568324b9d627758aa7030530441cec6f432d925"
+          }
+        ]
+      },
+      {
+        "step_id": "transport",
+        "adapter": "avila-labs.shielding/slab-transport@2",
+        "capability_id": "openmc-python",
+        "state": "planned",
+        "inputs": [
+          {
+            "input_slot": "candidate",
+            "evidence_id": "input:candidate",
+            "workspace_path": "inputs/candidate.json",
+            "sha256": "sha256:bbe88077508d0cc629ca313c1568324b9d627758aa7030530441cec6f432d925",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "cross-section-index",
+            "evidence_id": "input:cross-section-index",
+            "workspace_path": "inputs/cross_sections.xml",
+            "sha256": "sha256:2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "groups",
+            "evidence_id": "input:groups",
+            "workspace_path": "inputs/fispact-709-groups.json",
+            "sha256": "sha256:5d5cc7fbc486339158a6f87fb78ab2ac2d336f0c795dfc725c2d05d101cb94f4",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "materials",
+            "evidence_id": "input:materials",
+            "workspace_path": "inputs/materials.json",
+            "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "script",
+            "evidence_id": "input:transport-script",
+            "workspace_path": "tools/transport.py",
+            "sha256": "sha256:7578e1c101320dd8c811a3cc5958e77d5e490cc21af10385af76b6e845a39fb9",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "source",
+            "evidence_id": "input:source",
+            "workspace_path": "inputs/source.json",
+            "sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+            "integrity": "verified"
+          }
+        ],
+        "planned_invocation_sha256": "sha256:a1b38dea3eb71cf31c15278327b82e71c63c6f36d866bf9ae242e3f5c73e3045",
+        "changes": [
+          {
+            "class": "input_bytes",
+            "detail": "slot `candidate` bytes sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80 → sha256:bbe88077508d0cc629ca313c1568324b9d627758aa7030530441cec6f432d925"
+          }
+        ],
+        "qualification": {
+          "qualification_id": "avila-labs.shielding/slab-transport-coupled-openmc",
+          "revision": 1,
+          "sha256": "sha256:8e27e777b2ddaf7ba22cb85ef09f7fa29aee6ab7911e9ff31ebe87a22c1645f5",
+          "state": "outside",
+          "terms": [
+            {
+              "predicate": "{\"fact\":{\"name\":\"source.energy\",\"op\":\"ge\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"MeV\",\"value\":\"0.1\"}}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"fact\":{\"name\":\"source.energy\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"MeV\",\"value\":\"20\"}}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"fact\":{\"name\":\"source.geometry\",\"op\":\"eq\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":\"plane\"}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"fact\":{\"name\":\"slab.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":{\"unit\":\"cm\",\"value\":\"120\"}}}",
+              "result": "false"
+            },
+            {
+              "predicate": "{\"fact\":{\"name\":\"slab.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/slab-transport@2\"},\"value\":3}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+              "result": "true"
+            }
+          ]
+        }
+      },
+      {
+        "step_id": "activation",
+        "adapter": "avila-labs.shielding/activation@1",
+        "capability_id": "python3",
+        "state": "reused",
+        "inputs": [
+          {
+            "input_slot": "actinv",
+            "evidence_id": "input:actinv-executable",
+            "workspace_path": "tools/actinv",
+            "sha256": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "activation-index",
+            "evidence_id": "input:actinv-library-index",
+            "workspace_path": "data/activation/tendl-2025-neutron-709g_index.json",
+            "sha256": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "activation-library",
+            "evidence_id": "input:actinv-activation-library",
+            "workspace_path": "data/activation/tendl-2025-neutron-709g.npz",
+            "sha256": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "decay-fallback",
+            "evidence_id": "input:actinv-decay-fallback",
+            "workspace_path": "data/decay/jeff-3-3_decay.dat",
+            "sha256": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "decay-primary",
+            "evidence_id": "input:actinv-decay-primary",
+            "workspace_path": "data/decay/endf-b-viii-0_decay.dat",
+            "sha256": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "materials",
+            "evidence_id": "input:materials",
+            "workspace_path": "inputs/materials.json",
+            "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "schedule",
+            "evidence_id": "input:schedule",
+            "workspace_path": "inputs/schedule.json",
+            "sha256": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "script",
+            "evidence_id": "input:activate-script",
+            "workspace_path": "tools/activate.py",
+            "sha256": "sha256:0ce443ee6b182e7bcc954b64920f4d5554d258851511c3a031b5e15bc51d3fc4",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "spectra",
+            "evidence_id": "transport-layer-spectra",
+            "workspace_path": "inputs/layer-spectra.json",
+            "sha256": "sha256:567999c7d7c6bc4b02aa310603078314125e20cfa9c14eb5a3c08646dfbf66d6",
+            "integrity": "verified"
+          }
+        ],
+        "planned_invocation_sha256": "sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
+        "reused_receipt": "case-002-activation-receipt",
+        "qualification": {
+          "qualification_id": "avila-labs.shielding/slab-activation-actinv",
+          "revision": 1,
+          "sha256": "sha256:e0cce97d7b93b88289550df0ea83750af1e6c94cd9f4250e3fa5efa186b62c64",
+          "state": "inside",
+          "terms": [
+            {
+              "predicate": "{\"fact\":{\"name\":\"slab.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/activation@1\"},\"value\":3}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"fact\":{\"name\":\"schedule.irradiation\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/activation@1\"},\"value\":{\"unit\":\"s\",\"value\":\"31536000\"}}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"fact\":{\"name\":\"schedule.cooling\",\"op\":\"ge\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/activation@1\"},\"value\":{\"unit\":\"s\",\"value\":\"3600\"}}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"spectra\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"spectra\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"spectra\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+              "result": "true"
+            }
+          ]
+        },
+        "receipt": {
+          "workspace_path": "receipts/activation.json",
+          "sha256": "sha256:d6862a5cb03d6dd253ee0296d28995ebda6a2aaa66405529862782997288fcec",
+          "invocation_sha256": "sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
+          "status": "completed",
+          "exit_status": 0,
+          "duration_ms": 12435
+        },
+        "outputs": [
+          {
+            "output_id": "activation-result",
+            "workspace_path": "outputs/activation-result.json",
+            "state": "collected",
+            "sha256": "sha256:b7f95e8f42e240f74a833a2398c4efd3c3167cf963f4953f4dee64314e4a18bc",
+            "bytes": 5127,
+            "reproduces_bound_artifact": true
+          }
+        ]
+      }
+    ],
+    "not_executed": [
+      {
+        "step_id": "practical-review",
+        "reason": "optional agent practicality gate; the runner materializes its exact dossier for the connected agent"
+      }
+    ]
+  },
+  "supplied_inputs": [
+    {
+      "input_id": "candidate",
+      "evidence_id": "input:candidate",
+      "path": "/home/connoravila/Documents/north-star-worktrees/adversarial/workspaces/adversarial/candidates/adv-envelope-thick.json",
+      "sha256": "sha256:bbe88077508d0cc629ca313c1568324b9d627758aa7030530441cec6f432d925"
+    }
+  ],
+  "invalidated_steps": [
+    "activation",
+    "practical-review",
+    "screen",
+    "transport"
+  ],
+  "replay_applicable": false,
+  "notice": "This workflow separates byte-integrity checks, semantic compilation, controlled execution with receipts, claim generation, identity binding, campaign evaluation, and replay. Re-hashing bytes proves identity only; a verified receipt proves that a named executable ran over named bytes and produced named bytes; structural admission and a Core verdict do not establish scientific correctness, qualification, certification, or regulatory approval."
+}

@@ -1,0 +1,249 @@
+{
+  "schema_version": "avila.core/case-package/v0.1-draft",
+  "case_id": "CASE-003",
+  "title": "Thermal spreader search: screen -> finite-element conduction -> Avila Core",
+  "documents": [
+    {
+      "document_id": "case-003-contract",
+      "role": "contract",
+      "path": "contract.json",
+      "sha256": "sha256:eacb8a774a9c781142390d68b18966612ecd447c9956b642e03b86690ab14911"
+    },
+    {
+      "document_id": "case-003-registry",
+      "role": "registry",
+      "path": "registry.json",
+      "sha256": "sha256:bdb20503fe8359eab869ddcb776f8d4ec9557f8e666bf160a60a7af3a51857fe"
+    },
+    {
+      "document_id": "case-003-claims",
+      "role": "claims",
+      "path": "claims.json",
+      "sha256": "sha256:0324f594b850aceaa476e61a3df1367d6de0564d4a18a291cff057a302dc384e"
+    },
+    {
+      "document_id": "case-003-requirement-set",
+      "role": "requirement_set",
+      "path": "requirement-set.json",
+      "sha256": "sha256:260f6ccbfe3d505af4b4fcc848662d0cc7e8a31d156b2381d1b8639c5a40c66f"
+    },
+    {
+      "document_id": "case-003-fe-qualification",
+      "role": "qualification",
+      "path": "qualification-fe.json",
+      "sha256": "sha256:04b4298ba669a90624fff3e738aa039a502b824b7d74eb95712ad15ba580b623"
+    },
+    {
+      "role": "expected_campaign_report",
+      "document_id": "case-003-expected-campaign",
+      "path": "campaign-report.json",
+      "sha256": "sha256:58eb14f6649249b5180c5712c69ae0c70d074c7bf1e968cbca01437e13d236c1"
+    },
+    {
+      "role": "execution_receipt",
+      "document_id": "case-003-screen-receipt",
+      "path": "receipts/screen.json",
+      "sha256": "sha256:dc9d2dcdc1cce67da52e4308d721ed5dcbdd244b50c2f3dfc29d7c7abac85239",
+      "step_id": "screen"
+    },
+    {
+      "role": "execution_receipt",
+      "document_id": "case-003-fe-receipt",
+      "path": "receipts/fe.json",
+      "sha256": "sha256:712d446c002124f98c96d031d5ac29ff50ad331142dce157296093e04ed8915d",
+      "step_id": "fe"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "reference-candidate",
+      "evidence_ids": [
+        "input:candidate"
+      ],
+      "source_root": "case",
+      "path": "candidates/reference.json",
+      "sha256": "sha256:4f90e6c3690930b4ed5ffe45fb9d4ee64bddbf7b2ac246d9d19cc4b98b92232e"
+    },
+    {
+      "artifact_id": "materials",
+      "evidence_ids": [
+        "input:materials"
+      ],
+      "source_root": "thermal",
+      "path": "materials.json",
+      "sha256": "sha256:08cc8fb37c2d154f3dc0d032019b64b14a98b4a76124b44ac9128e8e762fb0f6"
+    },
+    {
+      "artifact_id": "source",
+      "evidence_ids": [
+        "input:source"
+      ],
+      "source_root": "thermal",
+      "path": "source.json",
+      "sha256": "sha256:749971e02a4872605082bf643f7bfcfbbb7be889bdcfe09af9a1fb81e4117f1f"
+    },
+    {
+      "artifact_id": "screen-script",
+      "evidence_ids": [
+        "input:screen-script"
+      ],
+      "source_root": "thermal",
+      "path": "thermal_screen.py",
+      "sha256": "sha256:98fc4c68cbdf2eefb1857e8d3cce31770ce59788d736fce395f69db8e2da5a75"
+    },
+    {
+      "artifact_id": "fe-script",
+      "evidence_ids": [
+        "input:fe-script"
+      ],
+      "source_root": "thermal",
+      "path": "thermal_fe.py",
+      "sha256": "sha256:9a64eb0922b786bd50ece00e8b60206e23194f7566296ccd6ef900a71c491b63"
+    },
+    {
+      "artifact_id": "reference-screen-result",
+      "evidence_ids": [
+        "screen-hotspot-temperature",
+        "screen-areal-mass",
+        "screen-thickness",
+        "screen-result"
+      ],
+      "source_root": "case",
+      "path": "expected/screen-result.json",
+      "sha256": "sha256:9ac38e73f5f6e2b4c8d23a5d7e47dc7adf011092087f612da0dd87c3be8d1aa9"
+    },
+    {
+      "artifact_id": "reference-fe-result",
+      "evidence_ids": [
+        "fe-hotspot-temperature",
+        "fe-result"
+      ],
+      "source_root": "case",
+      "path": "expected/fe-result.json",
+      "sha256": "sha256:24b33977bd6f5d00aabe1d98865f2512d24b7890a23e8ba66156b29d54a80409"
+    }
+  ],
+  "capabilities": [
+    {
+      "capability_id": "python3",
+      "package_id": "org.python/cpython@3.14.4",
+      "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+    },
+    {
+      "capability_id": "thermal-python",
+      "package_id": "org.python/cpython@3.14.4+scikit-fem-12.0.2",
+      "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+    }
+  ],
+  "executions": [
+    {
+      "step_id": "screen",
+      "adapter": "avila-labs.thermal/screen@1",
+      "capability_id": "python3",
+      "inputs": [
+        {
+          "input_slot": "script",
+          "workspace_path": "tools/thermal_screen.py"
+        },
+        {
+          "input_slot": "candidate",
+          "workspace_path": "inputs/candidate.json"
+        },
+        {
+          "input_slot": "materials",
+          "workspace_path": "inputs/materials.json"
+        },
+        {
+          "input_slot": "source",
+          "workspace_path": "inputs/source.json"
+        }
+      ],
+      "outputs": [
+        {
+          "output_slot": "hotspot-temperature",
+          "claim_id": "screen-hotspot-temperature"
+        },
+        {
+          "output_slot": "areal-mass",
+          "claim_id": "screen-areal-mass"
+        },
+        {
+          "output_slot": "thickness",
+          "claim_id": "screen-thickness"
+        },
+        {
+          "output_slot": "screen-result",
+          "claim_id": "screen-result"
+        }
+      ]
+    },
+    {
+      "step_id": "fe",
+      "adapter": "avila-labs.thermal/spreader-fe@1",
+      "capability_id": "thermal-python",
+      "inputs": [
+        {
+          "input_slot": "script",
+          "workspace_path": "tools/thermal_fe.py"
+        },
+        {
+          "input_slot": "candidate",
+          "workspace_path": "inputs/candidate.json"
+        },
+        {
+          "input_slot": "materials",
+          "workspace_path": "inputs/materials.json"
+        },
+        {
+          "input_slot": "source",
+          "workspace_path": "inputs/source.json"
+        }
+      ],
+      "outputs": [
+        {
+          "output_slot": "hotspot-temperature",
+          "claim_id": "fe-hotspot-temperature"
+        },
+        {
+          "output_slot": "fe-result",
+          "claim_id": "fe-result"
+        }
+      ]
+    }
+  ],
+  "coverage": {
+    "requirement_set": "case-003-requirement-set",
+    "mapping": {
+      "hotspot-temperature": [
+        "THERM-R1-screen",
+        "THERM-R2-hotspot"
+      ],
+      "areal-mass": [
+        "THERM-R3-mass"
+      ],
+      "total-thickness": [
+        "THERM-R4-thickness"
+      ]
+    },
+    "omissions": [
+      {
+        "set_requirement_id": "interface-temperature",
+        "reason": "No interface limit is declared for these materials; every interface is modelled as perfect and no adhesive or solder is represented, so the entry cannot be evaluated in this specimen.",
+        "accepted_by": "Connor Avila, case author (research specimen; no design use)"
+      },
+      {
+        "set_requirement_id": "transient-overshoot",
+        "reason": "The model is steady state; no transient is declared and no transient capability is bound.",
+        "accepted_by": "Connor Avila, case author (research specimen; no design use)"
+      }
+    ]
+  },
+  "free_inputs": [
+    "candidate"
+  ],
+  "limitations": [
+    "CASE-003 is a research-only design-search specimen over a synthetic strip-heated plate; no device, enclosure, or operating envelope is represented.",
+    "The screening capability is unqualified and evaluated on a nominal basis; the finite-element capability produces an enclosure claim whose interval brackets discretisation only, under a qualification record that binds one NAFEMS benchmark reproduction as validation evidence.",
+    "The finite-element interpreter is the system Python binary, identified by digest; the finite-element package beside it is identified only by the version the result records."
+  ]
+}

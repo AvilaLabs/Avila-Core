@@ -1,0 +1,241 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "case-003.thermal-spreader-search",
+  "revision": 1,
+  "status": "draft",
+  "question": "Does a candidate layered heat spreader keep the steady-state hotspot temperature on its heated face at or below the design limit for the declared strip heat flux and convective cooling, within the areal-mass and thickness limits, as established by two-dimensional finite-element conduction rather than by the one-dimensional screening estimate?",
+  "assumptions": [
+    "The spreader is a two-dimensional cross-section of a plate of declared width heated by a uniform flux over a central strip of its heated face, insulated elsewhere on that face and on its lateral faces, and cooled by convection to a fixed ambient on its far face; the model is steady state.",
+    "The heated strip is 20 mm wide on a 100 mm plate at 50 kW/m2, cooled by 500 W/m2/K convection to 300 K; the 340 K hotspot, 100 kg/m2, and 40 mm limits are the case author's allocations chosen so that a thick aluminium plate passes, a copper-on-aluminium spreader passes lighter, and steel or polymer alone fails.",
+    "Material conductivities are isotropic nominal literature values; interfaces are perfect; no material, script, or interpreter is qualified.",
+    "The screening estimate is a one-dimensional series resistance that ignores lateral spreading and is evaluated on a nominal basis only; the finite-element interval brackets discretisation only.",
+    "This contract is a research-only design-search specimen and excludes every safety, qualification, or operational purpose."
+  ],
+  "execution_policy": {
+    "permit_nominal_basis": true
+  },
+  "inputs": [
+    {
+      "input_id": "candidate",
+      "role": {
+        "id": "thermal.candidate",
+        "major": 1
+      },
+      "media_type": "application/vnd.avila.thermal-candidate+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "materials",
+      "role": {
+        "id": "thermal.material-table",
+        "major": 1
+      },
+      "media_type": "application/vnd.avila.thermal-materials+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "source",
+      "role": {
+        "id": "thermal.source-spec",
+        "major": 1
+      },
+      "media_type": "application/vnd.avila.thermal-source+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "screen-script",
+      "role": {
+        "id": "thermal.screen-script",
+        "major": 1
+      },
+      "media_type": "text/x-python",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "fe-script",
+      "role": {
+        "id": "thermal.fe-script",
+        "major": 1
+      },
+      "media_type": "text/x-python",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "step_id": "screen",
+      "capability_type": {
+        "id": "thermal.spreader-screen",
+        "major": 1
+      },
+      "bindings": [
+        {
+          "input_slot": "script",
+          "source": {
+            "source": "contract_input",
+            "input_id": "screen-script"
+          }
+        },
+        {
+          "input_slot": "candidate",
+          "source": {
+            "source": "contract_input",
+            "input_id": "candidate"
+          }
+        },
+        {
+          "input_slot": "materials",
+          "source": {
+            "source": "contract_input",
+            "input_id": "materials"
+          }
+        },
+        {
+          "input_slot": "source",
+          "source": {
+            "source": "contract_input",
+            "input_id": "source"
+          }
+        }
+      ]
+    },
+    {
+      "step_id": "fe",
+      "capability_type": {
+        "id": "thermal.spreader-fe",
+        "major": 1
+      },
+      "bindings": [
+        {
+          "input_slot": "script",
+          "source": {
+            "source": "contract_input",
+            "input_id": "fe-script"
+          }
+        },
+        {
+          "input_slot": "candidate",
+          "source": {
+            "source": "contract_input",
+            "input_id": "candidate"
+          }
+        },
+        {
+          "input_slot": "materials",
+          "source": {
+            "source": "contract_input",
+            "input_id": "materials"
+          }
+        },
+        {
+          "input_slot": "source",
+          "source": {
+            "source": "contract_input",
+            "input_id": "source"
+          }
+        }
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "THERM-R1-screen",
+      "statement": "Screening estimate of the hotspot temperature is at or below 340 K (nominal basis; guides the search, establishes nothing).",
+      "purpose": {
+        "id": "avila-labs.thermal.design-search",
+        "major": 1
+      },
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "hotspot-temperature"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "core.temperature",
+        "value": "340",
+        "unit": "K"
+      },
+      "basis": {
+        "kind": "nominal"
+      }
+    },
+    {
+      "requirement_id": "THERM-R2-hotspot",
+      "statement": "Finite-element hotspot temperature on the heated face is at or below 340 K within its discretisation bracket.",
+      "purpose": {
+        "id": "avila-labs.thermal.design-search",
+        "major": 1
+      },
+      "metric": {
+        "source": "step_output",
+        "step_id": "fe",
+        "output_slot": "hotspot-temperature"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "core.temperature",
+        "value": "340",
+        "unit": "K"
+      },
+      "basis": {
+        "kind": "enclosure"
+      }
+    },
+    {
+      "requirement_id": "THERM-R3-mass",
+      "statement": "Areal mass of the plate is at or below 100 kg per square metre.",
+      "purpose": {
+        "id": "avila-labs.thermal.design-search",
+        "major": 1
+      },
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "areal-mass"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "core.mass",
+        "value": "100",
+        "unit": "kg"
+      },
+      "basis": {
+        "kind": "bounded"
+      }
+    },
+    {
+      "requirement_id": "THERM-R4-thickness",
+      "statement": "Total plate thickness is at or below 40 mm.",
+      "purpose": {
+        "id": "avila-labs.thermal.design-search",
+        "major": 1
+      },
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "thickness"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "core.length",
+        "value": "40",
+        "unit": "mm"
+      },
+      "basis": {
+        "kind": "bounded"
+      }
+    }
+  ]
+}

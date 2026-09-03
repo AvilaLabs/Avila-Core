@@ -1,0 +1,15 @@
+{
+  "schema": "avila.thermal/candidate/v1",
+  "candidate_id": "case-003-reference",
+  "description": "Reference specimen: 3 mm of copper on 10 mm of aluminium, heated face first. It exists to freeze one run of every step.",
+  "layers": [
+    {
+      "material": "copper",
+      "thickness_mm": "3"
+    },
+    {
+      "material": "aluminium",
+      "thickness_mm": "10"
+    }
+  ]
+}

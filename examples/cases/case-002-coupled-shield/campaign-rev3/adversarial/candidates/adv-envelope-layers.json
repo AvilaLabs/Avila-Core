@@ -1,0 +1,10 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "adv-envelope-layers",
+  "layers": [
+    {"material": "polyethylene", "thickness_cm": "10"},
+    {"material": "iron", "thickness_cm": "10"},
+    {"material": "lead", "thickness_cm": "10"},
+    {"material": "concrete", "thickness_cm": "10"}
+  ]
+}

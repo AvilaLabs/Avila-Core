@@ -1,0 +1,7 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "adv-envelope-material",
+  "layers": [
+    {"material": "tungsten", "thickness_cm": "20"}
+  ]
+}

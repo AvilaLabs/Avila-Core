@@ -1,0 +1,368 @@
+{
+  "schema_version": "avila.core/case-run-report/v0.2-draft",
+  "case_id": "CASE-002",
+  "title": "Coupled shielding search: screen -> coupled transport -> activation -> Avila Core",
+  "status": "rejected",
+  "integrity": {
+    "schema_version": "avila.core/package-integrity-report/v0.1-draft",
+    "case_id": "CASE-002",
+    "status": "complete",
+    "manifest_sha256": "sha256:2f0b3bc9fe2aece088e30036f6f7611f65d08e7fff12be31819c66db61abec0f",
+    "documents": [
+      {
+        "document_id": "case-002-contract",
+        "role": "contract",
+        "path": "contract.json",
+        "expected_sha256": "sha256:59e9e7dfdda3928bd07b39af5458646fb88252e4671f3c70be4c816daf8f1cf2",
+        "actual_sha256": "sha256:59e9e7dfdda3928bd07b39af5458646fb88252e4671f3c70be4c816daf8f1cf2",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-registry",
+        "role": "registry",
+        "path": "registry.json",
+        "expected_sha256": "sha256:cd729afcc4fb987d7bee395b8792f202f496c84d516e34bfd8115d49f0c08e7a",
+        "actual_sha256": "sha256:cd729afcc4fb987d7bee395b8792f202f496c84d516e34bfd8115d49f0c08e7a",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-claims",
+        "role": "claims",
+        "path": "claims.json",
+        "expected_sha256": "sha256:cdc24a3138c5bc6df59667ec7f79bcc188073a545809fea44c428ec996172410",
+        "actual_sha256": "sha256:cdc24a3138c5bc6df59667ec7f79bcc188073a545809fea44c428ec996172410",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-requirement-set",
+        "role": "requirement_set",
+        "path": "requirement-set.json",
+        "expected_sha256": "sha256:5f5eaa10d3867ddb5905dfc578103403966291da5eab6a854e5b1f354f5b63f4",
+        "actual_sha256": "sha256:5f5eaa10d3867ddb5905dfc578103403966291da5eab6a854e5b1f354f5b63f4",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-transport-qualification",
+        "role": "qualification",
+        "path": "qualification-transport.json",
+        "expected_sha256": "sha256:8e27e777b2ddaf7ba22cb85ef09f7fa29aee6ab7911e9ff31ebe87a22c1645f5",
+        "actual_sha256": "sha256:8e27e777b2ddaf7ba22cb85ef09f7fa29aee6ab7911e9ff31ebe87a22c1645f5",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-activation-qualification",
+        "role": "qualification",
+        "path": "qualification-activation.json",
+        "expected_sha256": "sha256:e0cce97d7b93b88289550df0ea83750af1e6c94cd9f4250e3fa5efa186b62c64",
+        "actual_sha256": "sha256:e0cce97d7b93b88289550df0ea83750af1e6c94cd9f4250e3fa5efa186b62c64",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-agent-review-policy",
+        "role": "review_policy",
+        "path": "agent-review-policy.json",
+        "expected_sha256": "sha256:4242b3af100c4c07aa316a22b883eb50c3e285f74c6d6df99d7b942d6b3cc2ca",
+        "actual_sha256": "sha256:4242b3af100c4c07aa316a22b883eb50c3e285f74c6d6df99d7b942d6b3cc2ca",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-expected-campaign",
+        "role": "expected_campaign_report",
+        "path": "campaign-report.json",
+        "expected_sha256": "sha256:3dcf6daa8334d24b9339b644a1cb8ed59f05b450da5e7a275535fa8cf7f70549",
+        "actual_sha256": "sha256:3dcf6daa8334d24b9339b644a1cb8ed59f05b450da5e7a275535fa8cf7f70549",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-screen-receipt",
+        "role": "execution_receipt",
+        "path": "receipts/screen.json",
+        "expected_sha256": "sha256:cd84eb80b15f625d184cc49a1128590c224ef12ae045e686bb9969b79602af68",
+        "actual_sha256": "sha256:cd84eb80b15f625d184cc49a1128590c224ef12ae045e686bb9969b79602af68",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-transport-receipt",
+        "role": "execution_receipt",
+        "path": "receipts/transport.json",
+        "expected_sha256": "sha256:7f317ed46c4c5047e72a1edfa41536c48a0b2ac8897d41fdac297f363b4b3a81",
+        "actual_sha256": "sha256:7f317ed46c4c5047e72a1edfa41536c48a0b2ac8897d41fdac297f363b4b3a81",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-002-activation-receipt",
+        "role": "execution_receipt",
+        "path": "receipts/activation.json",
+        "expected_sha256": "sha256:d6862a5cb03d6dd253ee0296d28995ebda6a2aaa66405529862782997288fcec",
+        "actual_sha256": "sha256:d6862a5cb03d6dd253ee0296d28995ebda6a2aaa66405529862782997288fcec",
+        "state": "verified"
+      }
+    ],
+    "artifacts": [
+      {
+        "artifact_id": "reference-candidate",
+        "evidence_ids": [
+          "input:candidate"
+        ],
+        "source_root": "supplied",
+        "path": "/home/connoravila/Documents/north-star-worktrees/adversarial/workspaces/adversarial/candidates/adv-cheat-light.json",
+        "expected_sha256": "sha256:dab9011b106b6ed716f39aa7e6822fb961d4883eaf97d052c92cf95491eb327c",
+        "actual_sha256": "sha256:dab9011b106b6ed716f39aa7e6822fb961d4883eaf97d052c92cf95491eb327c",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "materials",
+        "evidence_ids": [
+          "input:materials"
+        ],
+        "source_root": "coupled",
+        "path": "materials.json",
+        "expected_sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb",
+        "actual_sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "source",
+        "evidence_ids": [
+          "input:source"
+        ],
+        "source_root": "coupled",
+        "path": "source.json",
+        "expected_sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+        "actual_sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "groups",
+        "evidence_ids": [
+          "input:groups"
+        ],
+        "source_root": "coupled",
+        "path": "fispact-709-groups.json",
+        "expected_sha256": "sha256:5d5cc7fbc486339158a6f87fb78ab2ac2d336f0c795dfc725c2d05d101cb94f4",
+        "actual_sha256": "sha256:5d5cc7fbc486339158a6f87fb78ab2ac2d336f0c795dfc725c2d05d101cb94f4",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "schedule",
+        "evidence_ids": [
+          "input:schedule"
+        ],
+        "source_root": "case",
+        "path": "schedule.json",
+        "expected_sha256": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03",
+        "actual_sha256": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "screen-script",
+        "evidence_ids": [
+          "input:screen-script"
+        ],
+        "source_root": "shielding",
+        "path": "screen.py",
+        "expected_sha256": "sha256:5fd0bd9415ec19e7f15d5bd167976d5852b6984efeea7443aa6323d13cd0253d",
+        "actual_sha256": "sha256:5fd0bd9415ec19e7f15d5bd167976d5852b6984efeea7443aa6323d13cd0253d",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "transport-script",
+        "evidence_ids": [
+          "input:transport-script"
+        ],
+        "source_root": "coupled",
+        "path": "transport.py",
+        "expected_sha256": "sha256:7578e1c101320dd8c811a3cc5958e77d5e490cc21af10385af76b6e845a39fb9",
+        "actual_sha256": "sha256:7578e1c101320dd8c811a3cc5958e77d5e490cc21af10385af76b6e845a39fb9",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "activate-script",
+        "evidence_ids": [
+          "input:activate-script"
+        ],
+        "source_root": "coupled",
+        "path": "activate.py",
+        "expected_sha256": "sha256:0ce443ee6b182e7bcc954b64920f4d5554d258851511c3a031b5e15bc51d3fc4",
+        "actual_sha256": "sha256:0ce443ee6b182e7bcc954b64920f4d5554d258851511c3a031b5e15bc51d3fc4",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "practical-reviewer-script",
+        "evidence_ids": [
+          "input:reviewer-script"
+        ],
+        "source_root": "agents",
+        "path": "shield_review.py",
+        "expected_sha256": "sha256:3a0dee30ebb247df36ddec543fcf88c9c48fa0eecc3b5e71dd5b0bfb90574a34",
+        "actual_sha256": "sha256:3a0dee30ebb247df36ddec543fcf88c9c48fa0eecc3b5e71dd5b0bfb90574a34",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "cross-section-index",
+        "evidence_ids": [
+          "input:cross-section-index"
+        ],
+        "source_root": "nuclear-data",
+        "path": "cross_sections.xml",
+        "expected_sha256": "sha256:2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db",
+        "actual_sha256": "sha256:2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "actinv-executable",
+        "evidence_ids": [
+          "input:actinv-executable"
+        ],
+        "source_root": "actinv-release",
+        "path": "actinv",
+        "expected_sha256": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426",
+        "actual_sha256": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "actinv-activation-library",
+        "evidence_ids": [
+          "input:actinv-activation-library"
+        ],
+        "source_root": "actinv-data",
+        "path": "activation/tendl-2025-neutron-709g.npz",
+        "expected_sha256": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44",
+        "actual_sha256": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "actinv-library-index",
+        "evidence_ids": [
+          "input:actinv-library-index"
+        ],
+        "source_root": "actinv-data",
+        "path": "activation/tendl-2025-neutron-709g_index.json",
+        "expected_sha256": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb",
+        "actual_sha256": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "actinv-decay-primary",
+        "evidence_ids": [
+          "input:actinv-decay-primary"
+        ],
+        "source_root": "actinv-data",
+        "path": "decay/endf-b-viii-0_decay.dat",
+        "expected_sha256": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb",
+        "actual_sha256": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "actinv-decay-fallback",
+        "evidence_ids": [
+          "input:actinv-decay-fallback"
+        ],
+        "source_root": "actinv-data",
+        "path": "decay/jeff-3-3_decay.dat",
+        "expected_sha256": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123",
+        "actual_sha256": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "reference-screen-result",
+        "evidence_ids": [
+          "screen-dose-rate",
+          "screen-mass",
+          "screen-thickness",
+          "screen-result"
+        ],
+        "source_root": "case",
+        "path": "expected/screen-result.json",
+        "expected_sha256": "sha256:90ce23892005a9125dc113fc1da02375ce28e10e30c1f776317a53d268d5b256",
+        "actual_sha256": "sha256:90ce23892005a9125dc113fc1da02375ce28e10e30c1f776317a53d268d5b256",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "reference-transport-result",
+        "evidence_ids": [
+          "transport-neutron-dose-rate",
+          "transport-photon-dose-rate",
+          "transport-result"
+        ],
+        "source_root": "case",
+        "path": "expected/transport-result.json",
+        "expected_sha256": "sha256:6f0f9c7f509f8e0af250aaa02e6152d2816b79b8eb4de7819dda2854cc43a927",
+        "actual_sha256": "sha256:6f0f9c7f509f8e0af250aaa02e6152d2816b79b8eb4de7819dda2854cc43a927",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "reference-layer-spectra",
+        "evidence_ids": [
+          "transport-layer-spectra"
+        ],
+        "source_root": "case",
+        "path": "expected/layer-spectra.json",
+        "expected_sha256": "sha256:567999c7d7c6bc4b02aa310603078314125e20cfa9c14eb5a3c08646dfbf66d6",
+        "actual_sha256": "sha256:567999c7d7c6bc4b02aa310603078314125e20cfa9c14eb5a3c08646dfbf66d6",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "reference-activation-result",
+        "evidence_ids": [
+          "activation-specific-activity",
+          "activation-decay-heat",
+          "activation-result"
+        ],
+        "source_root": "case",
+        "path": "expected/activation-result.json",
+        "expected_sha256": "sha256:b7f95e8f42e240f74a833a2398c4efd3c3167cf963f4953f4dee64314e4a18bc",
+        "actual_sha256": "sha256:b7f95e8f42e240f74a833a2398c4efd3c3167cf963f4953f4dee64314e4a18bc",
+        "state": "verified"
+      }
+    ],
+    "limitations": [
+      "CASE-002 is a research-only design-search specimen over a synthetic plane source; no facility, generator, or occupancy is represented.",
+      "The screening capability is unqualified and evaluated on a nominal basis; the coupled transport capability produces bounded claims whose intervals cover statistical error only; the activation capability produces nominal inventories with no bound and satisfies only a nominal-basis requirement.",
+      "Executables are bound by digest: a system Python interpreter for the screen and activation drivers, the OpenMC environment's interpreter for transport, and the ACTINV 1.0.1 executable as a hash-bound input; none is a qualified package.",
+      "The nuclear data library is identified by the digest of its index; the nuclide files it names are not re-hashed by this case. The ACTINV activation library and decay data are re-hashed.",
+      "The 10 uSv/h design point is allocated between neutrons and shield-produced photons by the case author; Core evaluates each allocation and does not sum them.",
+      "An optional connected-agent practicality gate is compiled with exact instructions and a hash-bound implementation; it never changes Core's technical verdict and Core does not require the stage when a contract omits it."
+    ],
+    "notice": "Package integrity checks byte identity only. It does not verify schemas, media semantics, execution receipts, signatures, qualification, practical suitability, or scientific correctness."
+  },
+  "compile": {
+    "schema_version": "avila.core/compile-report/v0.2-draft",
+    "semantic_profile": "avila.core/semantic/0.2-draft",
+    "status": "rejected",
+    "source_identities": [
+      {
+        "document": "contract",
+        "sha256": "sha256:3183dcf22eea17ffce13289b1b6698b14b551ba96ad7c2df095b571eb4017cb6"
+      },
+      {
+        "document": "registry",
+        "sha256": "sha256:5ea6880ca1bab90fd2e96a2b695f8c06b9fb598b9bb736c01f9166ab0ae9fd07"
+      }
+    ],
+    "findings": [
+      {
+        "code": "CORE-T2402",
+        "class": "invalid",
+        "owner": "requester",
+        "primary": {
+          "document": "contract",
+          "pointer": "/workflow/1/parameters/particles"
+        },
+        "message": "parameter `particles` integer value is outside its declared domain"
+      }
+    ],
+    "notice": "Compilation establishes structural and semantic consistency under the named draft profile only. It performs no execution, optional presentation-gate run, agent-identity or trust evaluation, evidence admission, scientific qualification, or requirement verdict."
+  },
+  "rendered_findings": "invalid[CORE-T2402]: parameter `particles` integer value is outside its declared domain\n  --> contract:277:22  /workflow/1/parameters/particles\n    |\n277 |         \"particles\": 100,\n    |                      ^^^\n   = owner: requester\n   = next: Choose a value inside the domain; for text, one of the candidates in the `constrained_choice` repair.\n\nrejected: 1 blocking finding\n",
+  "supplied_inputs": [
+    {
+      "input_id": "candidate",
+      "evidence_id": "input:candidate",
+      "path": "/home/connoravila/Documents/north-star-worktrees/adversarial/workspaces/adversarial/candidates/adv-cheat-light.json",
+      "sha256": "sha256:dab9011b106b6ed716f39aa7e6822fb961d4883eaf97d052c92cf95491eb327c"
+    }
+  ],
+  "replay_applicable": false,
+  "notice": "This workflow separates byte-integrity checks, semantic compilation, controlled execution with receipts, claim generation, identity binding, campaign evaluation, and replay. Re-hashing bytes proves identity only; a verified receipt proves that a named executable ran over named bytes and produced named bytes; structural admission and a Core verdict do not establish scientific correctness, qualification, certification, or regulatory approval."
+}

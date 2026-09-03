@@ -1,0 +1,147 @@
+{
+  "schema_version": "avila.core/qualification/v0.1-draft",
+  "qualification_id": "avila-labs.thermal/spreader-fe-skfem",
+  "revision": 1,
+  "owner": "avila-labs.thermal",
+  "adapter": "avila-labs.thermal/spreader-fe@1",
+  "capability": {
+    "capability_id": "thermal-python",
+    "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+  },
+  "statement": "Two-dimensional steady conduction by P2 finite elements with a Robin cooled face, as run by this exact interpreter and script, is claimed applicable to plates of at most three layers of the listed materials under a strip heat flux of at most 100 kW/m2 and a convection coefficient between 5 and 5000 W/m2/K, with the hotspot reported as a two-level discretisation bracket. The method is validated against the NAFEMS T4 benchmark bound below; the materials, the perfect-interface assumption, and the bracket's conservatism are not validated.",
+  "scope": {
+    "all": [
+      {
+        "fact": {
+          "name": "plate.layer_count",
+          "op": "le",
+          "value": 3,
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.thermal/spreader-fe@1"
+          }
+        }
+      },
+      {
+        "fact": {
+          "name": "source.heat_flux",
+          "op": "le",
+          "value": {
+            "value": "100000",
+            "unit": "W/m2"
+          },
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.thermal/spreader-fe@1"
+          }
+        }
+      },
+      {
+        "fact": {
+          "name": "source.convection",
+          "op": "ge",
+          "value": {
+            "value": "5",
+            "unit": "W/m2/K"
+          },
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.thermal/spreader-fe@1"
+          }
+        }
+      },
+      {
+        "fact": {
+          "name": "source.convection",
+          "op": "le",
+          "value": {
+            "value": "5000",
+            "unit": "W/m2/K"
+          },
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.thermal/spreader-fe@1"
+          }
+        }
+      },
+      {
+        "fact": {
+          "name": "source.strip_width",
+          "op": "le",
+          "value": {
+            "value": "100",
+            "unit": "mm"
+          },
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.thermal/spreader-fe@1"
+          }
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "candidate",
+          "attribute": "layer.1.material",
+          "values": [
+            "aluminium",
+            "copper",
+            "stainless_steel",
+            "titanium",
+            "graphite",
+            "aluminium_nitride",
+            "epoxy",
+            "none"
+          ]
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "candidate",
+          "attribute": "layer.2.material",
+          "values": [
+            "aluminium",
+            "copper",
+            "stainless_steel",
+            "titanium",
+            "graphite",
+            "aluminium_nitride",
+            "epoxy",
+            "none"
+          ]
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "candidate",
+          "attribute": "layer.3.material",
+          "values": [
+            "aluminium",
+            "copper",
+            "stainless_steel",
+            "titanium",
+            "graphite",
+            "aluminium_nitride",
+            "epoxy",
+            "none"
+          ]
+        }
+      }
+    ]
+  },
+  "fact_kinds": {
+    "source.heat_flux": "thermal.heat-flux",
+    "source.convection": "thermal.heat-transfer-coefficient",
+    "source.strip_width": "core.length"
+  },
+  "validation_evidence": [
+    {
+      "description": "NAFEMS T4, two-dimensional heat transfer with convection: reference temperature 18.25 C at (0.6, 0.2) m, reproduced on three mesh levels by the same solver code path; see validation/nafems-t4.json.",
+      "sha256": "sha256:a77b1d3cb3c348ea63f3dcf8d350ba08f9c981990911abca9be7a599c1f58c46"
+    }
+  ],
+  "limitations": [
+    "The validation evidence covers the solver's treatment of conduction with a convective boundary on one benchmark geometry; it does not validate the material data, the perfect-interface assumption, or the strip-source geometry.",
+    "The interval is a discretisation bracket built from two mesh levels; it is conservative in practice on the benchmark but is not a proof.",
+    "The interpreter's digest identifies the Python binary, which is the system interpreter; the finite-element package installed beside it is identified only by the version the result document records."
+  ]
+}

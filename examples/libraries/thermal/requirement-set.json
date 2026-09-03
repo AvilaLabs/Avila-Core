@@ -1,0 +1,52 @@
+{
+  "schema_version": "avila.core/requirement-set/v0.1-draft",
+  "set_id": "avila-labs.thermal/spreader",
+  "revision": 1,
+  "owner": "avila-labs.thermal",
+  "title": "What any heat-spreader design search must address",
+  "requirements": [
+    {
+      "set_requirement_id": "hotspot-temperature",
+      "statement": "Steady-state hotspot temperature on the heated face is at or below the design limit.",
+      "kind": "core.temperature",
+      "comparison": "less_than_or_equal",
+      "minimum_basis": "enclosure",
+      "omission": "must_state",
+      "rationale": "The quantity the spreader exists to control. A one-dimensional resistance estimate may guide a search; it cannot establish the limit because it ignores lateral spreading."
+    },
+    {
+      "set_requirement_id": "areal-mass",
+      "statement": "Areal mass of the plate is at or below the structural limit.",
+      "kind": "core.mass",
+      "comparison": "less_than_or_equal",
+      "minimum_basis": "bounded",
+      "omission": "must_state"
+    },
+    {
+      "set_requirement_id": "total-thickness",
+      "statement": "Total plate thickness is at or below the space available.",
+      "kind": "core.length",
+      "comparison": "less_than_or_equal",
+      "minimum_basis": "bounded",
+      "omission": "must_state"
+    },
+    {
+      "set_requirement_id": "interface-temperature",
+      "statement": "Temperature at every material interface is at or below that interface's limit.",
+      "kind": "core.temperature",
+      "comparison": "less_than_or_equal",
+      "minimum_basis": "enclosure",
+      "omission": "must_state",
+      "rationale": "Adhesives, solders, and polymers fail well below the hotspot limit of the metals around them."
+    },
+    {
+      "set_requirement_id": "transient-overshoot",
+      "statement": "Peak temperature during the declared transient is at or below the design limit.",
+      "kind": "core.temperature",
+      "comparison": "less_than_or_equal",
+      "minimum_basis": "enclosure",
+      "omission": "must_state",
+      "rationale": "A steady-state search cannot see a start-up or fault overshoot."
+    }
+  ]
+}

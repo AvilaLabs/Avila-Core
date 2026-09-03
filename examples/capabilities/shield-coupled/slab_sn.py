@@ -507,6 +507,17 @@ def solve(
     if np.any(thermal_mask):
         thermal_indices = np.nonzero(thermal_mask)[0]
         thermal_groups = thermal_indices if adjoint else thermal_indices[::-1]
+        # Plain (unaccelerated) source iteration over a thick, strongly-scattering
+        # thermal cluster converges slowly -- a known property of source iteration
+        # for diffusive problems, not a bug (confirmed empirically: cutting the
+        # per-group self-scatter residual by running more inner_iterations shrinks
+        # thermal_iterations but costs more total work than it saves, and a vector
+        # Aitken/Delta^2 extrapolation tried here made the adjoint case slower and
+        # occasionally non-convergent rather than faster, so it was removed rather
+        # than shipped half-working; see the case report's runtime findings). A
+        # real fix is a proper synthetic-acceleration scheme (e.g. diffusion
+        # synthetic acceleration), out of scope here -- see the report's open
+        # issues.
         for it in range(max_thermal_iterations):
             phi0_before = phi[:, thermal_mask, 0].copy()
             for g in thermal_groups:

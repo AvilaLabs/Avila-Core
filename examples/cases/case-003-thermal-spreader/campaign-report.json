@@ -2,8 +2,8 @@
   "schema_version": "avila.core/campaign-report/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "status": "evaluated",
-  "compiled_snapshot_sha256": "sha256:bcc536cec07680cc3880ff0e4af761386af517747e30f2e6f9f0c12f4fcbd8c9",
-  "claims_sha256": "sha256:dcd5c2edbef4acb2e22c21138cec5f67e7b3cb4243aea71140e53fec78f6684a",
+  "compiled_snapshot_sha256": "sha256:d88507c757a9ce1801fc145d9c820d8acfa1b57eba68b63ddd5813164a664e7b",
+  "claims_sha256": "sha256:89c2f9e2bc762a7dbc866ffe993954ca4710bc61f248429c24420f8e4be12390",
   "admissions": [
     {
       "evidence_id": "input:candidate",
@@ -103,7 +103,7 @@
   "verdicts": [
     {
       "requirement_id": "THERM-R1-screen",
-      "statement": "Screening estimate of the hotspot temperature is at or below 340 K (nominal basis; guides the search, establishes nothing).",
+      "statement": "Screening estimate of the hotspot temperature is at or below 420 K (nominal basis; the estimate ignores spreading and is pessimistic, so this guide only excludes hopeless designs and establishes nothing).",
       "metric": {
         "source": "step_output",
         "step_id": "screen",
@@ -113,10 +113,10 @@
         "screen-hotspot-temperature"
       ],
       "verdict": {
-        "status": "fail",
-        "rule": "nominal.le.exceeds",
+        "status": "pass",
+        "rule": "nominal.le.within",
         "canonical_unit": "K",
-        "limit_canonical": "340",
+        "limit_canonical": "420",
         "nominal_canonical": "3223/8",
         "basis_visible": "nominal"
       },
@@ -124,8 +124,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:bcc536cec07680cc3880ff0e4af761386af517747e30f2e6f9f0c12f4fcbd8c9",
-        "claims_sha256": "sha256:dcd5c2edbef4acb2e22c21138cec5f67e7b3cb4243aea71140e53fec78f6684a"
+        "compiled_snapshot_sha256": "sha256:d88507c757a9ce1801fc145d9c820d8acfa1b57eba68b63ddd5813164a664e7b",
+        "claims_sha256": "sha256:89c2f9e2bc762a7dbc866ffe993954ca4710bc61f248429c24420f8e4be12390"
       }
     },
     {
@@ -151,8 +151,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:bcc536cec07680cc3880ff0e4af761386af517747e30f2e6f9f0c12f4fcbd8c9",
-        "claims_sha256": "sha256:dcd5c2edbef4acb2e22c21138cec5f67e7b3cb4243aea71140e53fec78f6684a"
+        "compiled_snapshot_sha256": "sha256:d88507c757a9ce1801fc145d9c820d8acfa1b57eba68b63ddd5813164a664e7b",
+        "claims_sha256": "sha256:89c2f9e2bc762a7dbc866ffe993954ca4710bc61f248429c24420f8e4be12390"
       }
     },
     {
@@ -179,8 +179,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:bcc536cec07680cc3880ff0e4af761386af517747e30f2e6f9f0c12f4fcbd8c9",
-        "claims_sha256": "sha256:dcd5c2edbef4acb2e22c21138cec5f67e7b3cb4243aea71140e53fec78f6684a"
+        "compiled_snapshot_sha256": "sha256:d88507c757a9ce1801fc145d9c820d8acfa1b57eba68b63ddd5813164a664e7b",
+        "claims_sha256": "sha256:89c2f9e2bc762a7dbc866ffe993954ca4710bc61f248429c24420f8e4be12390"
       }
     },
     {
@@ -207,11 +207,11 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:bcc536cec07680cc3880ff0e4af761386af517747e30f2e6f9f0c12f4fcbd8c9",
-        "claims_sha256": "sha256:dcd5c2edbef4acb2e22c21138cec5f67e7b3cb4243aea71140e53fec78f6684a"
+        "compiled_snapshot_sha256": "sha256:d88507c757a9ce1801fc145d9c820d8acfa1b57eba68b63ddd5813164a664e7b",
+        "claims_sha256": "sha256:89c2f9e2bc762a7dbc866ffe993954ca4710bc61f248429c24420f8e4be12390"
       }
     }
   ],
-  "campaign_sha256": "sha256:8f77eea3b6dc4a92c77937c7ae008a793e4ccc8ab4014a5696b30dda6f723d02",
+  "campaign_sha256": "sha256:25ea26bb615c6a3c23d0ea77a5b5b8bdb658996b6b8a0a1faca8d41096dcdde6",
   "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
 }

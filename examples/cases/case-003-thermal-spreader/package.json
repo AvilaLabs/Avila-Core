@@ -7,7 +7,7 @@
       "document_id": "case-003-contract",
       "role": "contract",
       "path": "contract.json",
-      "sha256": "sha256:eacb8a774a9c781142390d68b18966612ecd447c9956b642e03b86690ab14911"
+      "sha256": "sha256:43d69ebd38a9649bfdde9a9a8927ab39c5f81e515d330f1d561a7e5b26880a67"
     },
     {
       "document_id": "case-003-registry",
@@ -19,7 +19,7 @@
       "document_id": "case-003-claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:0324f594b850aceaa476e61a3df1367d6de0564d4a18a291cff057a302dc384e"
+      "sha256": "sha256:194438903219c9b328362e423b7de0bf3f85f805a61dbc7561047cfc0036decc"
     },
     {
       "document_id": "case-003-requirement-set",
@@ -37,20 +37,20 @@
       "role": "expected_campaign_report",
       "document_id": "case-003-expected-campaign",
       "path": "campaign-report.json",
-      "sha256": "sha256:58eb14f6649249b5180c5712c69ae0c70d074c7bf1e968cbca01437e13d236c1"
+      "sha256": "sha256:c4f24a26f60fd58bd7e3317f54de493985485ce0af13d77232180f3ec4bd4e39"
     },
     {
       "role": "execution_receipt",
       "document_id": "case-003-screen-receipt",
       "path": "receipts/screen.json",
-      "sha256": "sha256:dc9d2dcdc1cce67da52e4308d721ed5dcbdd244b50c2f3dfc29d7c7abac85239",
+      "sha256": "sha256:962939298639eb44065619691acb1b49ff8cb7ac589c54a4f0e7694696b4bfa0",
       "step_id": "screen"
     },
     {
       "role": "execution_receipt",
       "document_id": "case-003-fe-receipt",
       "path": "receipts/fe.json",
-      "sha256": "sha256:712d446c002124f98c96d031d5ac29ff50ad331142dce157296093e04ed8915d",
+      "sha256": "sha256:678cdde5c64b0f14aced2f0673c8e116d4071b08a817bb8e451246d86c09451f",
       "step_id": "fe"
     }
   ],
@@ -89,7 +89,7 @@
       ],
       "source_root": "thermal",
       "path": "thermal_screen.py",
-      "sha256": "sha256:98fc4c68cbdf2eefb1857e8d3cce31770ce59788d736fce395f69db8e2da5a75"
+      "sha256": "sha256:0c3259481b6e6ccf0ade84705d0def70a34bad4a2de27061713ece99af4834f7"
     },
     {
       "artifact_id": "fe-script",

@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/execution-receipt/v0.1-draft",
   "case_id": "CASE-003",
-  "compiled_snapshot_sha256": "sha256:bcc536cec07680cc3880ff0e4af761386af517747e30f2e6f9f0c12f4fcbd8c9",
+  "compiled_snapshot_sha256": "sha256:d88507c757a9ce1801fc145d9c820d8acfa1b57eba68b63ddd5813164a664e7b",
   "step_id": "fe",
   "capability_type": {
     "id": "thermal.spreader-fe",
@@ -67,9 +67,9 @@
   },
   "invocation_sha256": "sha256:cd50dc5d8610dbd33d6924dd9e4352e6db2b84d5c8e630eb23b6fa598c7bd7b0",
   "process": {
-    "started_at": "2026-09-03T16:58:45.035Z",
-    "finished_at": "2026-09-03T16:58:45.479Z",
-    "duration_ms": 443,
+    "started_at": "2026-09-03T17:08:19.415Z",
+    "finished_at": "2026-09-03T17:08:19.839Z",
+    "duration_ms": 424,
     "exit_status": 0,
     "timed_out": false
   },

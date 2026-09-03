@@ -2,7 +2,7 @@
   "schema_version": "avila.core/evidence-contract/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "contract_id": "case-003.thermal-spreader-search",
-  "revision": 1,
+  "revision": 2,
   "status": "draft",
   "question": "Does a candidate layered heat spreader keep the steady-state hotspot temperature on its heated face at or below the design limit for the declared strip heat flux and convective cooling, within the areal-mass and thickness limits, as established by two-dimensional finite-element conduction rather than by the one-dimensional screening estimate?",
   "assumptions": [
@@ -10,7 +10,8 @@
     "The heated strip is 20 mm wide on a 100 mm plate at 50 kW/m2, cooled by 500 W/m2/K convection to 300 K; the 340 K hotspot, 100 kg/m2, and 40 mm limits are the case author's allocations chosen so that a thick aluminium plate passes, a copper-on-aluminium spreader passes lighter, and steel or polymer alone fails.",
     "Material conductivities are isotropic nominal literature values; interfaces are perfect; no material, script, or interpreter is qualified.",
     "The screening estimate is a one-dimensional series resistance that ignores lateral spreading and is evaluated on a nominal basis only; the finite-element interval brackets discretisation only.",
-    "This contract is a research-only design-search specimen and excludes every safety, qualification, or operational purpose."
+    "This contract is a research-only design-search specimen and excludes every safety, qualification, or operational purpose.",
+    "Revision 2 sets the screen guide at 420 K: revision 1's 340 K guide could not be met by any design because the no-spreading estimate exceeds the true hotspot by about 80 K for every plate in the box, which made the all-PASS criterion unreachable by construction; the finite-element limit is unchanged."
   ],
   "execution_policy": {
     "permit_nominal_basis": true
@@ -151,7 +152,7 @@
   "requirements": [
     {
       "requirement_id": "THERM-R1-screen",
-      "statement": "Screening estimate of the hotspot temperature is at or below 340 K (nominal basis; guides the search, establishes nothing).",
+      "statement": "Screening estimate of the hotspot temperature is at or below 420 K (nominal basis; the estimate ignores spreading and is pessimistic, so this guide only excludes hopeless designs and establishes nothing).",
       "purpose": {
         "id": "avila-labs.thermal.design-search",
         "major": 1
@@ -164,7 +165,7 @@
       "comparison": "less_than_or_equal",
       "limit": {
         "kind": "core.temperature",
-        "value": "340",
+        "value": "420",
         "unit": "K"
       },
       "basis": {

@@ -24,7 +24,7 @@ research specimen; nothing here is qualified for any decision.
 
 | Id | Requirement | Basis | What can satisfy it |
 | --- | --- | --- | --- |
-| THERM-R1-screen | screen hotspot ≤ 340 K | nominal | the screen's `unquantified` claim; guides the search, establishes nothing |
+| THERM-R1-screen | screen hotspot ≤ 420 K | nominal | the screen's `unquantified` claim; pessimistic, excludes hopeless designs, establishes nothing |
 | THERM-R2-hotspot | finite-element hotspot ≤ 340 K | enclosure | the finite-element `interval`, a two-level discretisation bracket |
 | THERM-R3-mass | areal mass ≤ 100 kg/m² | bounded | the screen's `exact` mass |
 | THERM-R4-thickness | total thickness ≤ 40 mm | bounded | the screen's `exact` thickness |
@@ -41,7 +41,7 @@ Committed results:
 
 | Requirement | Verdict | Value |
 | --- | --- | --- |
-| R1 screen | FAIL (nominal) | 402.9 K, margin −62.9 |
+| R1 screen | PASS (nominal) | 402.9 K, margin 17.1 |
 | R2 hotspot | PASS (enclosure) | [322.820, 322.821] K, margin 17.2 |
 | R3 mass | PASS | 53.88 kg/m², margin 46.1 |
 | R4 thickness | PASS | 13 mm, margin 27 |

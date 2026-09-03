@@ -23,7 +23,7 @@ material table.
 
 import argparse
 import json
-from decimal import Decimal, getcontext
+from decimal import Context, ROUND_HALF_EVEN, Decimal, getcontext
 
 getcontext().prec = 40
 
@@ -31,6 +31,7 @@ SCHEMA = "avila.thermal/screen-result/v1"
 
 
 def canonical(value: Decimal) -> str:
+    value = Context(prec=12, rounding=ROUND_HALF_EVEN).plus(Decimal(value))  # a claim value must fit the kernel's exact work budget
     text = format(value.normalize(), "f")
     if "." in text:
         text = text.rstrip("0").rstrip(".")

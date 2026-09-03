@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/execution-receipt/v0.1-draft",
   "case_id": "CASE-003",
-  "compiled_snapshot_sha256": "sha256:bcc536cec07680cc3880ff0e4af761386af517747e30f2e6f9f0c12f4fcbd8c9",
+  "compiled_snapshot_sha256": "sha256:d88507c757a9ce1801fc145d9c820d8acfa1b57eba68b63ddd5813164a664e7b",
   "step_id": "screen",
   "capability_type": {
     "id": "thermal.spreader-screen",
@@ -36,8 +36,8 @@
       "evidence_id": "input:screen-script",
       "workspace_path": "tools/thermal_screen.py",
       "media_type": "text/x-python",
-      "sha256": "sha256:98fc4c68cbdf2eefb1857e8d3cce31770ce59788d736fce395f69db8e2da5a75",
-      "bytes": 6290
+      "sha256": "sha256:0c3259481b6e6ccf0ade84705d0def70a34bad4a2de27061713ece99af4834f7",
+      "bytes": 6449
     },
     {
       "input_slot": "source",
@@ -65,11 +65,11 @@
     "environment": {},
     "timeout_ms": 120000
   },
-  "invocation_sha256": "sha256:7647cb4506ae6513905860c3b97c333bbd4eb176025727b44368a7ba1d8acee7",
+  "invocation_sha256": "sha256:feb94838acdb20e68c84ab049a04caa0bd9ba5e7c3d78b2537fbe0da1885f9c3",
   "process": {
-    "started_at": "2026-09-03T16:58:45.494Z",
-    "finished_at": "2026-09-03T16:58:45.555Z",
-    "duration_ms": 61,
+    "started_at": "2026-09-03T17:08:19.845Z",
+    "finished_at": "2026-09-03T17:08:19.906Z",
+    "duration_ms": 60,
     "exit_status": 0,
     "timed_out": false
   },

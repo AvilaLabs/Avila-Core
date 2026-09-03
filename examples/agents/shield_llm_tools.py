@@ -177,7 +177,7 @@ def run(config, candidate_path, transport, out):
     environment = None
     if transport:
         capabilities.update(config["transport_capabilities"])
-        environment = config["environment"]
+        environment = config["environment"] or None
     extra = ["--expect-manifest", config["manifest_sha256"]] if config.get("manifest_sha256") else None
     return core.run_core(
         config["core"], config["case"], candidate_path,
@@ -195,11 +195,23 @@ def cmd_init(args):
         source_roots[name] = path
     manifest = Path(args.case) / "package.json"
     manifest_sha256 = "sha256:" + __import__("hashlib").sha256(manifest.read_bytes()).hexdigest()
+    transport_capabilities = {}
+    if args.openmc_python:
+        transport_capabilities["openmc-python"] = args.openmc_python
+    for spec in args.capability:
+        name, _, path = spec.partition("=")
+        transport_capabilities[name] = path
+    environment = {}
+    if args.cross_sections and args.cross_sections != "none":
+        environment["OPENMC_CROSS_SECTIONS"] = args.cross_sections
+    for spec in args.env:
+        key, _, value = spec.partition("=")
+        environment[key] = value
     config = {
         "core": args.core, "case": args.case, "source_roots": source_roots, "manifest_sha256": manifest_sha256,
         "screen_capabilities": {"python3": args.python3},
-        "transport_capabilities": {"openmc-python": args.openmc_python},
-        "environment": {"OPENMC_CROSS_SECTIONS": args.cross_sections},
+        "transport_capabilities": transport_capabilities,
+        "environment": environment,
         "prior_logs": args.prior_log, "materials": args.materials,
         "screen_budget": args.screen_budget, "transport_budget": args.transport_budget,
         "candidate_schema": args.candidate_schema, "thickness_key": args.thickness_key, "probe_thickness": args.probe_thickness,
@@ -375,8 +387,10 @@ def main():
     p.add_argument("--materials", default="examples/capabilities/shield-coupled")
     p.add_argument("--source-root", action="append", default=[], metavar="NAME=PATH")
     p.add_argument("--python3", default="/usr/bin/python3")
-    p.add_argument("--openmc-python", required=True)
-    p.add_argument("--cross-sections", required=True)
+    p.add_argument("--openmc-python", default=None, help="shielding shortcut: the OpenMC interpreter as capability `openmc-python`")
+    p.add_argument("--cross-sections", default=None, help="shielding shortcut: value for OPENMC_CROSS_SECTIONS")
+    p.add_argument("--capability", action="append", default=[], metavar="NAME=PATH", help="a capability the full evaluation needs beyond python3 (repeatable)")
+    p.add_argument("--env", action="append", default=[], metavar="KEY=VALUE", help="an environment value an execution declares (repeatable)")
     p.add_argument("--prior-log", action="append", default=[])
     p.add_argument("--screen-budget", type=int, default=400)
     p.add_argument("--transport-budget", type=int, default=40)

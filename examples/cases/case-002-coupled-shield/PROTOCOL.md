@@ -141,3 +141,23 @@ outcome occurred and cites the log lines that establish it.
   driver now runs under a suspend inhibitor. The control sweep for the next
   campaign must be declared on a grid that can express the lead thickness
   the box admits.
+- **A5, 2026-09-03, before the revision 3 campaign.** Contract unchanged
+  (revision 2). The bar is explicit: an all-`PASS` design lighter than the
+  lightest all-`PASS` point of the control sweep, reached in fewer
+  transports than the sweep's size. Arms, seed 1, at most 40 transports each:
+  1. **Control sweep** on a grid that can express thin lead: polyethylene
+     first, then lead, 5 cm steps, total 100 to 120 cm, at most 2000 kg.
+  2. **Recovery run**: the surrogate designer confined to that space.
+  3. **Surrogate designer** over the full space, seeded with revision 1's and
+     revision 2's campaign logs, with patience counted in transports, three
+     finalists per round, and ordering-aware features.
+  4. **Language-model designer** over the full space: a connected agent that
+     reads the same requirements, material table, and constellation through
+     `examples/agents/shield_llm_tools.py`, proposes candidates with a
+     recorded rationale, chooses its own finalists, and cannot edit anything
+     or construct a verdict. Its prompt is recorded with the arm.
+  5. **Random search**: revision 2's arm is reused as the lower bound; same
+     contract, same seed, so it is not rerun.
+  Outcomes as pre-declared plus A4's "search failure". The comparison of
+  interest is arm 4 against arm 3 on transports to first all-`PASS` and on
+  the mass of the best all-`PASS` design.

@@ -238,8 +238,9 @@ The bar on record is the control sweep's lightest all-`PASS` point, 105 cm
 polyethylene followed by 5 cm lead at 1554.5 kg, found in 11 transports.
 
 - **Language-model designer.** 17 screens, 10 transports, 6 all-`PASS`
-  designs. Its second transport, 105 cm borated polyethylene followed by 2 cm
-  lead, passes every requirement at 1277.0 kg: 277 kg lighter than the bar,
+  designs. Its first transport, 105 cm borated polyethylene followed by 3 cm
+  lead, already passed every requirement at 1390.5 kg; its second, the same
+  moderator behind 2 cm lead, passes at 1277.0 kg: 277 kg lighter than the bar,
   reached in 2 transports against the sweep's 11, in a family no arm or
   person had evaluated. It then bracketed the boundary (104 cm inconclusive on
   photon, hybrids with thin borated backing layers fail, lead below 2 cm

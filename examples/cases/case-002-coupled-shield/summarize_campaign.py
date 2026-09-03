@@ -36,6 +36,8 @@ def candidate_of(row, arm_dir):
                 file = Path(path)
                 if not file.is_absolute():
                     file = Path.cwd() / file
+                if not file.is_file() and arm_dir is not None:
+                    file = Path(arm_dir) / "candidates" / file.name
                 if file.is_file():
                     try:
                         layers = [(l["material"], l["thickness_cm"]) for l in json.loads(file.read_text())["layers"]]

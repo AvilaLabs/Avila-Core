@@ -40,9 +40,10 @@ budget, and schedule. Nothing is compared across models.
 | Arm | What proposes candidates | Purpose |
 | --- | --- | --- |
 | Practice baselines | `examples/agents/practice_baseline.py`: (i) polyethylene by the removal method with factor 2; (ii) the same plus 5 cm lead; (iii) 10 cm iron, polyethylene, 5 cm lead | What a textbook rule produces without a search |
-| Random search | `examples/agents/shield_search.py` (CASE-001's designer) | The existing lower bound on search quality |
+| Random search | `examples/agents/shield_search2.py --random`: uniform proposals, no mutation of the best-so-far, finalists by observed screen margin (amendment A1) | The lower bound on search quality |
 | Learning designer | `examples/agents/shield_search2.py` | The arm under test |
-| Control sweep | `examples/agents/control_sweep.py` over a declared sub-grid | Ground truth for the recovery check |
+| Control sweep | `examples/agents/control_sweep.py` over the declared sub-grid: one or two layers of polyethylene and lead on a 10 cm grid within the limits | Ground truth for the recovery check |
+| Recovery run | `examples/agents/shield_search2.py --materials polyethylene lead --grid-cm 10 --max-layers 2`, at most 15 transports | The learning designer confined to the sweep's space |
 
 ## Measurements
 
@@ -107,3 +108,16 @@ Results are recorded in `RESULTS.md` beside this file with the campaign log,
 the constellation summary, the baseline runs, and the sweep table, each
 identified by digest. The decision on the outcome names which pre-declared
 outcome occurred and cites the log lines that establish it.
+
+## Amendments
+
+- **A1, 2026-09-02, before the campaign.** The random arm is implemented as
+  `shield_search2.py --random` rather than CASE-001's `shield_search.py`,
+  because the latter cannot address the coupled case's additional source
+  roots. Behaviour is the same: uniform random layer stacks, no mutation of
+  the best-so-far, no surrogate, finalists chosen by observed screen margin.
+  The sub-grid and the recovery run are declared in the arms table at the
+  same time. Budgets, measurements, and outcomes are unchanged.
+- **A2, 2026-09-02, before the campaign.** The whole campaign is run by
+  `run_campaign.sh`, in the order baselines, sweep, recovery, learning,
+  random, with the seed fixed at 1 for every arm.

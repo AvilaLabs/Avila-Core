@@ -207,6 +207,8 @@ def main():
     parser.add_argument("--openmc-python", default=None)
     parser.add_argument("--cross-sections", default=None, help="value for OPENMC_CROSS_SECTIONS")
     parser.add_argument("--run", action="store_true", help="run each baseline through Core (screen, and transport if --openmc-python/--cross-sections are given)")
+    parser.add_argument("--source-root", action="append", default=[], metavar="NAME=PATH",
+                         help="additional or overriding source root passed to Core (repeatable)")
     args = parser.parse_args()
 
     out = Path(args.out)
@@ -215,6 +217,11 @@ def main():
     source_roots = {"case": args.case, "shielding": args.shielding, "agents": args.agents}
     if args.nuclear_data:
         source_roots["nuclear-data"] = args.nuclear_data
+    for spec in args.source_root:
+        name, sep, path = spec.partition("=")
+        if not sep or not name or not path:
+            raise SystemExit(f"--source-root expects NAME=PATH, got {spec!r}")
+        source_roots[name] = path
 
     materials_table = core.load_materials(Path(args.shielding) / "materials.json")
     source = core.load_source(Path(args.shielding) / "source.json")

@@ -117,6 +117,11 @@ def run_sweep(args):
     log = out / "campaign-log.jsonl"
     source_roots = {"case": args.case, "shielding": args.shielding, "agents": args.agents,
                      "nuclear-data": args.nuclear_data}
+    for spec in args.source_root:
+        name, sep, path = spec.partition("=")
+        if not sep or not name or not path:
+            raise SystemExit(f"--source-root expects NAME=PATH, got {spec!r}")
+        source_roots[name] = path
     materials_table = core.load_materials(Path(args.shielding) / "materials.json")
     source = core.load_source(Path(args.shielding) / "source.json")
     area_cm2 = float(source["area_cm2"]) if "area_cm2" in source else None
@@ -295,6 +300,8 @@ def main():
     sweep_parser.add_argument("--max-layers", type=int, default=2)
     sweep_parser.add_argument("--max-total-cm", type=float, default=None, help="override; else discovered from Core")
     sweep_parser.add_argument("--mass-limit-kg", type=float, default=None, help="override; else discovered from Core")
+    sweep_parser.add_argument("--source-root", action="append", default=[], metavar="NAME=PATH",
+                              help="additional or overriding source root passed to Core (repeatable)")
     sweep_parser.add_argument("--limit", type=int, default=None,
                                help="run only the first LIMIT grid points (the full default grid is not meant to "
                                     "run until transport is fast; see the module docstring)")

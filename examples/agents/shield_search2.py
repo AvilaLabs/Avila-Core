@@ -951,6 +951,12 @@ def main():
     parser.add_argument("--bootstrap", type=int, default=16, help="bootstrap ensemble size")
     parser.add_argument("--min-samples", type=int, default=5, help="observations before a requirement gets its own model")
     parser.add_argument("--beta", type=float, default=1.0, help="exploration-bonus weight on bootstrap spread")
+    parser.add_argument("--source-root", action="append", default=[], metavar="NAME=PATH",
+                         help="additional or overriding source root passed to Core (repeatable), for cases that bind more roots than CASE-001")
+    parser.add_argument("--materials", nargs="*", default=None,
+                         help="restrict the search to these materials from the table (default: every material)")
+    parser.add_argument("--random", action="store_true",
+                         help="random-search arm: propose uniformly at random, never mutate the best-so-far, and pick finalists by observed screen margin instead of the surrogate")
     args = parser.parse_args()
 
     out = Path(args.out)
@@ -959,9 +965,14 @@ def main():
 
     materials_table = core.load_materials(Path(args.shielding) / "materials.json")
     material_names = sorted(materials_table)
+    if args.materials:
+        unknown = sorted(set(args.materials) - set(material_names))
+        if unknown:
+            raise SystemExit(f"unknown material(s) {unknown}; choose from {material_names}")
+        material_names = sorted(set(args.materials))
     source = core.load_source(Path(args.shielding) / "source.json")
     area_cm2 = float(source["area_cm2"]) if "area_cm2" in source else None
-    layout = FeatureLayout(material_names)
+    layout = FeatureLayout(sorted(materials_table))
     rng = np.random.default_rng(args.seed)
 
     screen_capabilities = {"python3": args.python3}
@@ -971,6 +982,11 @@ def main():
         "case": args.case, "shielding": args.shielding, "agents": args.agents,
         "nuclear-data": args.nuclear_data,
     }
+    for spec in args.source_root:
+        name, sep, path = spec.partition("=")
+        if not sep or not name or not path:
+            raise SystemExit(f"--source-root expects NAME=PATH, got {spec!r}")
+        source_roots[name] = path
 
     def run(candidate, transport):
         return core.run_core(
@@ -1025,7 +1041,8 @@ def main():
         pool = propose_pool(
             rng, batch_size * args.pool_multiplier, material_names, args.grid_cm,
             args.max_layers, thickness_limit_cm, materials_table, area_cm2, mass_limit_kg,
-            history_ranked,
+            [] if args.random else history_ranked,
+            exploit_fraction=0.0 if args.random else 0.5,
         )
         known_signatures = {layer_signature(layers) for layers in history}
         pool = [layers for layers in pool if layer_signature(layers) not in known_signatures]
@@ -1046,9 +1063,10 @@ def main():
 
         features = np.stack([layout.vector(layers, materials_table) for layers in pool])
         requirement_ids = sorted(dataset.requirement_ids()) or ["__cold_start__"]
-        scored = score_pool(bank, requirement_ids, features, args.beta)
+        scored = None if args.random else score_pool(bank, requirement_ids, features, args.beta)
         if scored is None:
-            # Cold start: no surrogate exists yet. Screen in proposal order.
+            # Cold start (no surrogate exists yet) or the random arm: screen in
+            # proposal order, which for the random arm is uniform sampling.
             chosen = list(range(min(batch_size, len(pool))))
         else:
             score, _worst_mean, _binding, _used = scored
@@ -1091,7 +1109,7 @@ def main():
         if candidates_for_transport and transport_calls < args.transport_budget:
             requirement_ids = sorted(dataset.requirement_ids())
             candidate_ids = [s["id"] for s in candidates_for_transport]
-            scored = score_screened_candidates(bank, dataset, requirement_ids, candidate_ids, args.beta)
+            scored = None if args.random else score_screened_candidates(bank, dataset, requirement_ids, candidate_ids, args.beta)
             if scored is not None:
                 score, _worst_mean, _binding = scored
                 order = list(np.argsort(-score))

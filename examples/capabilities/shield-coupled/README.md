@@ -180,8 +180,12 @@ lists are deliberately not repeated per layer).
 
 Four new files form the speed tier's first attempt. `mgxs_build.py` builds a
 VITAMIN-J-175 multigroup neutron library (P3 scattering, four depth zones per
-material) from continuous-energy OpenMC runs; the built library is
-`mgxs-vitamin-j-175.h5` with its index, byte-stable under its seed.
+material) from continuous-energy OpenMC runs. The generated library defaults
+to `mgxs-vitamin-j-175.h5` and is byte-stable under its seed, but the binary is
+local-only and intentionally untracked; its committed index preserves the
+reference build parameters and provenance. See the repository's
+[third-party notices](../../../THIRD_PARTY_NOTICES.md).
+
 `slab_sn.py` is a one-dimensional multigroup discrete-ordinates solver (S16,
 P3, diamond difference with a step fixup, 0.5 cm cells) with an adjoint mode,
 verified against the analytic pure absorber, OpenMC's own multigroup Monte

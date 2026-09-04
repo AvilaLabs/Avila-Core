@@ -13,14 +13,14 @@ boundary-condition algebra this produces). `openmc.mgxs.Library` tallies
 flux-weighted total, absorption, and P3 Legendre scattering-matrix cross
 sections in the VITAMIN-J-175 group structure.
 
-Whole-slab-averaged constants are not what gets shipped: a 100+ cm
+Whole-slab-averaged constants are not what gets written: a 100+ cm
 hydrogenous shield hardens (thermalizes) enormously with depth -- the flux
 entering a layer 90 cm into polyethylene is nothing like the flux entering
 the front face -- so this script tallies four 30 cm depth zones per material
 and `slab_sn.py` selects the zone that covers a given cell's depth from the
 candidate's front face. `--zones 1` reproduces the whole-slab-averaged
 alternative (single 0-120 cm domain) for the comparison this choice owes;
-the default and the shipped `mgxs-vitamin-j-175.h5` use 4.
+the default reference build uses 4.
 
 Output: an HDF5 file (default `mgxs-vitamin-j-175.h5`) with, per material,
 the group structure, a group-wise ICRP-116 AP neutron dose-response
@@ -32,6 +32,9 @@ rounded to 8 significant digits before it is written, exactly as
 reduction-order noise, not information, and rounding them away is what
 makes the file byte-identical across two runs at the same seed (see
 `test_slab_sn.py`'s `test_library_byte_stability`).
+
+The generated HDF5 artifact is local-only and intentionally not tracked by
+this repository. Review the upstream data terms before redistributing one.
 """
 
 import argparse

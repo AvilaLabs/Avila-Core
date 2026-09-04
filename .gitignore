@@ -8,3 +8,7 @@
 /exports/
 
 __pycache__/
+
+# Generated scientific data is local-only; its upstream redistribution terms
+# are separate from Avila Core's license.
+/examples/capabilities/shield-coupled/mgxs-vitamin-j-175.h5

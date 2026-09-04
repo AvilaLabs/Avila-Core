@@ -2,8 +2,8 @@
 
 - Audit date: 2026-09-03
 - Scope: every ref reachable from the GitHub remote plus the current worktree
-- Current recommendation: hold visibility change pending the two decisions
-  below
+- Current recommendation: hold visibility change pending the history-boundary
+  decision below
 
 ## Checks completed
 
@@ -22,48 +22,56 @@
   or reports. Current executable examples contain no personal workstation
   paths; published campaign configs mark and use environment references for
   their machine-local values.
+- The generated multigroup HDF5 artifact is absent from and ignored by the
+  current tree. Its builder and reference provenance sidecar remain.
 - The GitHub description, topics, default branch, CI workflow, security policy,
   contribution guide, logo reservation, and license detection are present.
 
-## Decisions required before publication
+## Decision required before publication
 
-### 1. History boundary
+### History boundary
 
 The current tree is publication-clean, but the existing Git history is not a
 clean public boundary:
 
 - 15 remote-reachable commits contain the retired internal codename;
 - 16 contain personal workstation paths; and
-- 91 expose a personal email address in author or committer metadata.
+- 91 expose a personal email address in author or committer metadata;
+- the generated multigroup HDF5 artifact remains reachable from historical
+  commits; and
+- pull request 1 retains head and merge refs whose trees contain that artifact.
 
-A history rewrite would also invalidate commit references already recorded by
-downstream use-case logs, and closed pull-request refs can retain old objects on
-GitHub. The clean option is a new public baseline repository (or a deleted and
-recreated remote) from the reviewed tree while retaining this repository as a
-private archive. Preserving the existing remote is acceptable only if those
-historical disclosures are intentionally accepted.
+A same-repository history rewrite can remove the artifact from branches and
+tags while retaining the repository's settings and identity. It changes every
+commit hash after the artifact's introduction, invalidates commit references
+already recorded by downstream use-case logs, and breaks affected historical
+pull-request diffs. GitHub's retained pull-request refs and cached views are not
+removed by a force-push, so complete server-side expungement may also require
+GitHub Support.
 
-### 2. Generated neutron library
+Publishing the existing history without that purge intentionally accepts the
+historical naming, path, and email disclosures, but it would also publish the
+generated artifact whose redistribution basis is unresolved. That artifact
+must not remain reachable when visibility changes.
 
-`examples/capabilities/shield-coupled/mgxs-vitamin-j-175.h5` is 23,640,864
-bytes and dominates the repository. It contains an Avila-generated multigroup
-library built with OpenMC and dose-response coefficients derived from ICRP
-Publication 116. OpenMC is MIT-licensed and publishes the source ENDF/B data,
-but ICRP's permissions page says reproduction of report material requires
-permission. No permission or independent redistribution basis is recorded.
+## Current-tree resolution: generated neutron library
 
-Before publication, either:
+The deleted `examples/capabilities/shield-coupled/mgxs-vitamin-j-175.h5` was
+23,640,864 bytes and dominated the repository. It contained an Avila-generated
+multigroup library built with OpenMC and dose-response coefficients derived
+from ICRP Publication 116. OpenMC is MIT-licensed and publishes the source
+ENDF/B data, but ICRP's permissions page says reproduction of report material
+requires permission. No permission or independent redistribution basis is
+recorded.
 
-1. remove the HDF5 object from every public ref and publish only the builder and
-   sidecar provenance;
-2. replace the coefficient source with data whose redistribution terms are
-   documented; or
-3. obtain and record permission or a reviewed legal basis for distribution.
+The current tree therefore retains only the builder and reference sidecar. The
+canonical generated filename is ignored to prevent accidental recommit. Its
+remaining historical reachability is part of the boundary decision above.
 
 ## Repository operations after the boundary is chosen
 
-- Delete the stale remote experiment branch after preserving any desired tag
-  or archive; its six changes already exist on `main` in consolidated form.
+- Delete or rewrite the stale remote experiment branch; its six changes already
+  exist on `main` in consolidated form.
 - Enable dependency alerts, secret scanning, push protection, and private
   vulnerability reporting once the repository plan and visibility expose
   those controls.

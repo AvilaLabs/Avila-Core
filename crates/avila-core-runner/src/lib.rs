@@ -17,7 +17,10 @@ mod diagnostic;
 mod execute;
 
 pub use attempt::{
-    ATTEMPT_LINEAGE_SCHEMA_VERSION, AttemptChange, AttemptLineageRequest, AttemptRecord,
+    ATTEMPT_COMPARISON_SCHEMA_VERSION, ATTEMPT_LINEAGE_SCHEMA_VERSION, AttemptChange,
+    AttemptComparison, AttemptLineageRequest, AttemptMarginComparison, AttemptMarginUnavailable,
+    AttemptMarginUnavailableReason, AttemptRecord, AttemptVerdictTransition,
+    AttemptVerdictUnavailable, AttemptVerdictUnavailableReason,
 };
 pub use case_run::{
     BindingReport, BindingStatus, CapabilityCheck, CapabilityCheckState, CaseRunOptions,

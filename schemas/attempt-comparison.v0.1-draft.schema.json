@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/attempt-comparison/v0.1-draft.schema.json",
+  "title": "Avila Core Attempt Comparison v0.1 draft",
+  "description": "A Core-derived comparison of one child result with the exact parent JSONL record bound by its identity-validated attempt lineage.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "parent_attempt_id",
+    "parent_record_sha256",
+    "verdicts_compared",
+    "unchanged_verdicts"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/attempt-comparison/v0.1-draft"
+    },
+    "parent_attempt_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "parent_record_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "verdicts_compared": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "unchanged_verdicts": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "verdict_transitions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/verdictTransition"
+      }
+    },
+    "verdict_comparison_unavailable": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/verdictUnavailable"
+      }
+    },
+    "exact_margin_comparisons": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/marginComparison"
+      }
+    },
+    "margin_comparison_unavailable": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/marginUnavailable"
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "nonemptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "exactNumber": {
+      "type": "string",
+      "description": "Canonical plain decimal or reduced rational. Reduction is enforced by the semantic kernel.",
+      "pattern": "^(?:(?:0|-?[1-9][0-9]*)(?:\\.[0-9]*[1-9])?|-?[1-9][0-9]*/[1-9][0-9]*)$"
+    },
+    "verdictStatus": {
+      "enum": [
+        "pass",
+        "fail",
+        "inconclusive",
+        "not_evaluated"
+      ]
+    },
+    "verdictTransition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement_id",
+        "parent_status",
+        "child_status"
+      ],
+      "properties": {
+        "requirement_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "parent_status": {
+          "$ref": "#/$defs/verdictStatus"
+        },
+        "child_status": {
+          "$ref": "#/$defs/verdictStatus"
+        }
+      }
+    },
+    "verdictUnavailable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement_id",
+        "reason"
+      ],
+      "properties": {
+        "requirement_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "reason": {
+          "enum": [
+            "parent_missing",
+            "child_missing"
+          ]
+        }
+      }
+    },
+    "marginComparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement_id",
+        "parent_margin",
+        "child_margin",
+        "delta"
+      ],
+      "properties": {
+        "requirement_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "unit": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "parent_margin": {
+          "$ref": "#/$defs/exactNumber"
+        },
+        "child_margin": {
+          "$ref": "#/$defs/exactNumber"
+        },
+        "delta": {
+          "$ref": "#/$defs/exactNumber"
+        }
+      }
+    },
+    "marginUnavailable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement_id",
+        "reason"
+      ],
+      "properties": {
+        "requirement_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "reason": {
+          "enum": [
+            "parent_missing",
+            "child_missing",
+            "both_missing",
+            "not_numeric",
+            "unit_mismatch",
+            "limit_mismatch",
+            "invalid_number"
+          ]
+        }
+      }
+    }
+  }
+}

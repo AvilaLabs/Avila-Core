@@ -41,9 +41,21 @@ memory.
 6. A manifest or compiled-snapshot change cannot enter an existing lineage.
    Core emits `CORE-X1201` and stops before capability execution. A deliberate
    question change starts a new root.
-7. The attempt record is included in case-run report v0.4 and run-attempt log
-   v0.2. The surrounding record remains authoritative for that candidate's
-   findings, verdicts, receipts, and output artifacts.
+7. The unchanged v0.1 attempt record is included in case-run report v0.5 and
+   run-attempt log v0.3. The surrounding record remains authoritative for that
+   candidate's findings, verdicts, receipts, and output artifacts. History
+   validation continues to accept parent rows written under the earlier log
+   envelope because parentage binds the exact row bytes and required fields,
+   not an arbitrary minimum envelope version.
+8. A child report and log row include an
+   `avila.core/attempt-comparison/v0.1-draft` record. Core reads verdicts only
+   from the exact parent row already bound by the lineage, records every
+   changed verdict state, and subtracts the parent margin from the child margin
+   with the kernel's exact arithmetic when unit and limit agree. Missing,
+   nonnumeric, incompatible, or invalid margins receive an explicit
+   unavailability reason rather than an invented delta. Human output shows
+   changed verdicts and nonzero margin deltas; the JSON retains all exact
+   margin comparisons, including zero.
 
 ## Boundary
 
@@ -69,5 +81,9 @@ ordinary run record without embedding their contents.
   misses two fixed gates, one identity-bound child changes a single physical
   parameter and passes all ten, and the unchanged manifest and compiled
   snapshot are recorded on both lines.
+- A child no longer requires external log analysis to expose what changed in
+  the result: the report carries exact, parent-bound verdict transitions and
+  margin comparisons. This comparison remains descriptive and has no authority
+  to rank or select a candidate.
 - A future constellation view or optimizer can read this record without
   acquiring authority over compilation, evidence admission, or verdicts.

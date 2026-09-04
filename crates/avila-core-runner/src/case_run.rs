@@ -34,12 +34,16 @@ use avila_core_evidence::{
     verify_case_package, verify_receipt,
 };
 use avila_core_kernel::{ExactNumber, KindRegistry, TruthValue, VerdictStatus};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 use crate::attempt::{
-    AttemptChange, AttemptLineageRequest, AttemptRecord, prepare_attempt, revalidate_before_append,
+    ATTEMPT_COMPARISON_SCHEMA_VERSION, AttemptChange, AttemptComparison, AttemptLineageRequest,
+    AttemptMarginComparison, AttemptMarginUnavailable, AttemptMarginUnavailableReason,
+    AttemptRecord, AttemptVerdictTransition, AttemptVerdictUnavailable,
+    AttemptVerdictUnavailableReason, parent_verdict_values, prepare_attempt,
+    revalidate_before_append,
 };
 use crate::diagnostic::{
     CORE_X1001, CORE_X1002, CORE_X1101, CORE_X1201, CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301,
@@ -55,8 +59,8 @@ use crate::execute::{
     execute_step, plan_invocation, rfc3339_now,
 };
 
-const CASE_RUN_REPORT_SCHEMA_VERSION: &str = "avila.core/case-run-report/v0.4-draft";
-const RUN_ATTEMPT_LOG_SCHEMA_VERSION: &str = "avila.core/run-attempt/v0.2-draft";
+const CASE_RUN_REPORT_SCHEMA_VERSION: &str = "avila.core/case-run-report/v0.5-draft";
+const RUN_ATTEMPT_LOG_SCHEMA_VERSION: &str = "avila.core/run-attempt/v0.3-draft";
 const CASE_RUN_NOTICE: &str = "This workflow separates byte-integrity checks, semantic compilation, controlled execution with receipts, claim generation, identity binding, campaign evaluation, and replay. Re-hashing bytes proves identity only; a verified receipt proves that a named executable ran over named bytes and produced named bytes; structural admission and a Core verdict do not establish scientific correctness, qualification, certification, or regulatory approval.";
 const DIAGNOSTIC_STDERR_READ_BYTES: u64 = 16 * 1024;
 const DIAGNOSTIC_STDERR_MAX_LINES: usize = 8;
@@ -134,7 +138,7 @@ pub struct SuppliedInput {
 /// One requirement's outcome with the numeric or categorical values that
 /// decided it, for search and for people. Read from the kernel's verdict
 /// output; nothing here is re-derived.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct VerdictMargin {
     pub requirement_id: String,
@@ -477,6 +481,10 @@ pub struct CaseRunReport {
     /// This run's identity-bound place in a candidate search, when requested.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attempt: Option<AttemptRecord>,
+    /// Core's comparison of this child with the exact parent log record its
+    /// attempt binds. Roots and refused attempt requests have no comparison.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attempt_comparison: Option<AttemptComparison>,
     /// A stage-ordered, actionable view of every finding that prevented or
     /// qualified progress. Nested reports remain available as the detailed
     /// evidence; agents need only this collection to drive the next attempt.
@@ -598,6 +606,7 @@ pub fn execute_case(
     match execute_case_inner(case_or_manifest, options) {
         Ok(mut report) => {
             collect_run_findings(&mut report);
+            report.attempt_comparison = compare_attempt_to_parent(options, &report)?;
             let workspace = report
                 .execution
                 .as_ref()
@@ -651,6 +660,7 @@ fn execute_case_inner(
         title: package.manifest.title.clone(),
         status: CaseRunStatus::Rejected,
         attempt: None,
+        attempt_comparison: None,
         findings: Vec::new(),
         integrity: package.integrity.clone(),
         compile: None,
@@ -1175,6 +1185,178 @@ fn margins(compiled: &CompiledContract, campaign: &CampaignReport) -> Vec<Verdic
         .collect()
 }
 
+fn compare_attempt_to_parent(
+    options: &CaseRunOptions,
+    report: &CaseRunReport,
+) -> Result<Option<AttemptComparison>, Box<dyn Error>> {
+    let Some(attempt) = &report.attempt else {
+        return Ok(None);
+    };
+    if attempt.parent_attempt_id.is_none() {
+        return Ok(None);
+    }
+    let log_path = options
+        .log
+        .as_deref()
+        .ok_or("a prepared child attempt no longer has a lineage log")?;
+    let parent_values = parent_verdict_values(log_path, attempt)?
+        .ok_or("a child attempt did not resolve a parent verdict collection")?;
+    let parent_margins: Vec<VerdictMargin> = parent_values
+        .into_iter()
+        .enumerate()
+        .map(|(index, value)| {
+            serde_json::from_value(value).map_err(|error| {
+                format!(
+                    "parent attempt `{}` verdict {} is not a supported Core margin record: {error}",
+                    attempt.parent_attempt_id.as_deref().unwrap_or("?"),
+                    index + 1
+                )
+            })
+        })
+        .collect::<Result<_, _>>()?;
+    Ok(Some(compare_attempt_results(
+        attempt,
+        &parent_margins,
+        &report.margins,
+    )?))
+}
+
+fn compare_attempt_results(
+    attempt: &AttemptRecord,
+    parent: &[VerdictMargin],
+    child: &[VerdictMargin],
+) -> Result<AttemptComparison, String> {
+    let parent_attempt_id = attempt
+        .parent_attempt_id
+        .clone()
+        .ok_or("a root attempt has no parent result to compare")?;
+    let parent_record_sha256 = attempt
+        .parent_record_sha256
+        .clone()
+        .ok_or("a child attempt is missing its parent record identity")?;
+    let parent = index_verdict_margins("parent", parent)?;
+    let child = index_verdict_margins("child", child)?;
+    let requirement_ids: BTreeSet<&str> = parent
+        .keys()
+        .copied()
+        .chain(child.keys().copied())
+        .collect();
+    let mut verdicts_compared = 0;
+    let mut unchanged_verdicts = 0;
+    let mut verdict_transitions = Vec::new();
+    let mut verdict_comparison_unavailable = Vec::new();
+    let mut exact_margin_comparisons = Vec::new();
+    let mut margin_comparison_unavailable = Vec::new();
+
+    for requirement_id in requirement_ids {
+        let (Some(parent_verdict), Some(child_verdict)) =
+            (parent.get(requirement_id), child.get(requirement_id))
+        else {
+            let reason = if parent.contains_key(requirement_id) {
+                AttemptVerdictUnavailableReason::ChildMissing
+            } else {
+                AttemptVerdictUnavailableReason::ParentMissing
+            };
+            verdict_comparison_unavailable.push(AttemptVerdictUnavailable {
+                requirement_id: requirement_id.into(),
+                reason,
+            });
+            margin_comparison_unavailable.push(AttemptMarginUnavailable {
+                requirement_id: requirement_id.into(),
+                reason: if parent.contains_key(requirement_id) {
+                    AttemptMarginUnavailableReason::ChildMissing
+                } else {
+                    AttemptMarginUnavailableReason::ParentMissing
+                },
+            });
+            continue;
+        };
+
+        verdicts_compared += 1;
+        if parent_verdict.status == child_verdict.status {
+            unchanged_verdicts += 1;
+        } else {
+            verdict_transitions.push(AttemptVerdictTransition {
+                requirement_id: requirement_id.into(),
+                parent_status: parent_verdict.status,
+                child_status: child_verdict.status,
+            });
+        }
+
+        let unavailable = match (&parent_verdict.margin, &child_verdict.margin) {
+            (None, None)
+                if parent_verdict.observed_category.is_some()
+                    || parent_verdict.accepted_categories.is_some()
+                    || child_verdict.observed_category.is_some()
+                    || child_verdict.accepted_categories.is_some() =>
+            {
+                Some(AttemptMarginUnavailableReason::NotNumeric)
+            }
+            (None, None) => Some(AttemptMarginUnavailableReason::BothMissing),
+            (None, Some(_)) => Some(AttemptMarginUnavailableReason::ParentMissing),
+            (Some(_), None) => Some(AttemptMarginUnavailableReason::ChildMissing),
+            (Some(_), Some(_)) if parent_verdict.unit != child_verdict.unit => {
+                Some(AttemptMarginUnavailableReason::UnitMismatch)
+            }
+            (Some(_), Some(_)) if parent_verdict.limit != child_verdict.limit => {
+                Some(AttemptMarginUnavailableReason::LimitMismatch)
+            }
+            (Some(parent_margin), Some(child_margin)) => {
+                match exact_difference(child_margin, parent_margin) {
+                    Some(delta) => {
+                        exact_margin_comparisons.push(AttemptMarginComparison {
+                            requirement_id: requirement_id.into(),
+                            unit: child_verdict.unit.clone(),
+                            parent_margin: parent_margin.clone(),
+                            child_margin: child_margin.clone(),
+                            delta,
+                        });
+                        None
+                    }
+                    None => Some(AttemptMarginUnavailableReason::InvalidNumber),
+                }
+            }
+        };
+        if let Some(reason) = unavailable {
+            margin_comparison_unavailable.push(AttemptMarginUnavailable {
+                requirement_id: requirement_id.into(),
+                reason,
+            });
+        }
+    }
+
+    Ok(AttemptComparison {
+        schema_version: ATTEMPT_COMPARISON_SCHEMA_VERSION.into(),
+        parent_attempt_id,
+        parent_record_sha256,
+        verdicts_compared,
+        unchanged_verdicts,
+        verdict_transitions,
+        verdict_comparison_unavailable,
+        exact_margin_comparisons,
+        margin_comparison_unavailable,
+    })
+}
+
+fn index_verdict_margins<'a>(
+    side: &str,
+    margins: &'a [VerdictMargin],
+) -> Result<BTreeMap<&'a str, &'a VerdictMargin>, String> {
+    let mut indexed = BTreeMap::new();
+    for margin in margins {
+        if indexed
+            .insert(margin.requirement_id.as_str(), margin)
+            .is_some()
+        {
+            return Err(format!(
+                "{side} result repeats requirement `{}`",
+                margin.requirement_id
+            ));
+        }
+    }
+    Ok(indexed)
+}
+
 /// Renders an exact canonical value for people: the terminating decimal when
 /// it is short, otherwise a value rounded to four decimal places and marked
 /// approximate. The report keeps the exact value; only the summary rounds.
@@ -1196,6 +1378,36 @@ pub fn display_number(text: &str) -> String {
     let sign = if scaled < 0 { "-" } else { "" };
     let magnitude = scaled.unsigned_abs();
     format!("~{sign}{}.{:04}", magnitude / 10_000, magnitude % 10_000)
+}
+
+fn display_signed_number(text: &str) -> String {
+    let rendered = display_comparison_number(text);
+    let Ok(value) = ExactNumber::from_canonical(text) else {
+        return rendered;
+    };
+    if !value.is_positive() {
+        return rendered;
+    }
+    rendered
+        .strip_prefix('~')
+        .map_or_else(|| format!("+{rendered}"), |value| format!("~+{value}"))
+}
+
+fn display_comparison_number(text: &str) -> String {
+    let rendered = display_number(text);
+    let Ok(value) = ExactNumber::from_canonical(text) else {
+        return rendered;
+    };
+    if !value.is_zero() && matches!(rendered.as_str(), "~0.0000" | "~-0.0000") {
+        text.to_string()
+    } else {
+        rendered
+    }
+}
+
+fn display_unit(unit: Option<&str>) -> String {
+    unit.filter(|unit| !unit.is_empty())
+        .map_or_else(String::new, |unit| format!(" {unit}"))
 }
 
 fn exact_difference(left: &str, right: &str) -> Option<String> {
@@ -1610,6 +1822,8 @@ fn append_log(
         attempt_request: Option<&'a AttemptLineageRequest>,
         #[serde(skip_serializing_if = "Option::is_none")]
         attempt: Option<&'a AttemptRecord>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        attempt_comparison: Option<&'a AttemptComparison>,
         integrity_status: PackageIntegrityStatus,
         #[serde(skip_serializing_if = "Option::is_none")]
         compilation_status: Option<CompilationStatus>,
@@ -1684,6 +1898,7 @@ fn append_log(
             None
         },
         attempt: report.attempt.as_ref(),
+        attempt_comparison: report.attempt_comparison.as_ref(),
         integrity_status: report.integrity.status,
         compilation_status: report.compile.as_ref().map(|compile| compile.status),
         execution_status: report.execution.as_ref().map(|execution| execution.status),
@@ -3534,6 +3749,96 @@ fn replay_expected(
     }))
 }
 
+fn write_attempt_comparison(out: &mut String, comparison: &AttemptComparison) {
+    let _ = writeln!(
+        out,
+        "   comparison with exact parent: {} verdict(s), {} transition(s); {} exact numeric margin(s)",
+        comparison.verdicts_compared,
+        comparison.verdict_transitions.len(),
+        comparison.exact_margin_comparisons.len()
+    );
+    let changed_margins: BTreeMap<&str, &AttemptMarginComparison> = comparison
+        .exact_margin_comparisons
+        .iter()
+        .filter(|margin| {
+            ExactNumber::from_canonical(&margin.delta).is_ok_and(|delta| !delta.is_zero())
+        })
+        .map(|margin| (margin.requirement_id.as_str(), margin))
+        .collect();
+    let meaningful: BTreeSet<&str> = comparison
+        .verdict_transitions
+        .iter()
+        .map(|transition| transition.requirement_id.as_str())
+        .chain(changed_margins.keys().copied())
+        .collect();
+    for requirement_id in meaningful.iter().take(12) {
+        let transition = comparison
+            .verdict_transitions
+            .iter()
+            .find(|transition| transition.requirement_id == *requirement_id);
+        let margin = changed_margins.get(requirement_id).copied();
+        match (transition, margin) {
+            (Some(transition), Some(margin)) => {
+                let _ = writeln!(
+                    out,
+                    "   result {requirement_id}: {} -> {}; margin {} -> {}{} (delta {})",
+                    verdict_label(transition.parent_status),
+                    verdict_label(transition.child_status),
+                    display_comparison_number(&margin.parent_margin),
+                    display_comparison_number(&margin.child_margin),
+                    display_unit(margin.unit.as_deref()),
+                    display_signed_number(&margin.delta)
+                );
+            }
+            (Some(transition), None) => {
+                let _ = writeln!(
+                    out,
+                    "   result {requirement_id}: {} -> {}",
+                    verdict_label(transition.parent_status),
+                    verdict_label(transition.child_status)
+                );
+            }
+            (None, Some(margin)) => {
+                let _ = writeln!(
+                    out,
+                    "   margin {requirement_id}: {} -> {}{} (delta {})",
+                    display_comparison_number(&margin.parent_margin),
+                    display_comparison_number(&margin.child_margin),
+                    display_unit(margin.unit.as_deref()),
+                    display_signed_number(&margin.delta)
+                );
+            }
+            (None, None) => {}
+        }
+    }
+    if meaningful.len() > 12 {
+        let _ = writeln!(
+            out,
+            "   … {} more result change(s) in the JSON report",
+            meaningful.len() - 12
+        );
+    }
+    let nonnumeric = comparison
+        .margin_comparison_unavailable
+        .iter()
+        .filter(|unavailable| unavailable.reason == AttemptMarginUnavailableReason::NotNumeric)
+        .count();
+    if nonnumeric > 0 {
+        let _ = writeln!(
+            out,
+            "   no numeric margin: {nonnumeric} categorical requirement(s)"
+        );
+    }
+    let other_unavailable = comparison.margin_comparison_unavailable.len() - nonnumeric;
+    if !comparison.verdict_comparison_unavailable.is_empty() || other_unavailable > 0 {
+        let _ = writeln!(
+            out,
+            "   unavailable: {} verdict comparison(s), {other_unavailable} margin comparison(s)",
+            comparison.verdict_comparison_unavailable.len(),
+        );
+    }
+}
+
 pub fn human_summary(report: &CaseRunReport) -> String {
     let mut out = String::new();
     let _ = writeln!(out, "Avila Core case workflow");
@@ -3571,6 +3876,9 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                 "   … {} more change(s) in the JSON report",
                 attempt.changes.len() - 12
             );
+        }
+        if let Some(comparison) = &report.attempt_comparison {
+            write_attempt_comparison(&mut out, comparison);
         }
     }
 
@@ -4274,6 +4582,45 @@ fn run_stage_label(stage: RunStage) -> &'static str {
 mod tests {
     use super::*;
 
+    fn comparison_attempt() -> AttemptRecord {
+        AttemptRecord {
+            schema_version: crate::ATTEMPT_LINEAGE_SCHEMA_VERSION.into(),
+            attempt_id: "child".into(),
+            generation: 1,
+            parent_attempt_id: Some("parent".into()),
+            parent_record_sha256: Some(format!("sha256:{}", "a".repeat(64))),
+            fixed_manifest_sha256: format!("sha256:{}", "b".repeat(64)),
+            fixed_compiled_snapshot_sha256: format!("sha256:{}", "c".repeat(64)),
+            candidate_input: "candidate".into(),
+            candidate_artifact_sha256: format!("sha256:{}", "d".repeat(64)),
+            candidate_state_sha256: format!("sha256:{}", "e".repeat(64)),
+            candidate_state: Value::Null,
+            changes: Vec::new(),
+        }
+    }
+
+    fn comparison_margin(
+        requirement_id: &str,
+        status: VerdictStatus,
+        unit: Option<&str>,
+        limit: Option<&str>,
+        margin: Option<&str>,
+    ) -> VerdictMargin {
+        VerdictMargin {
+            requirement_id: requirement_id.into(),
+            status,
+            rule: "test.rule".into(),
+            unit: unit.map(str::to_owned),
+            limit: limit.map(str::to_owned),
+            lower: None,
+            upper: None,
+            nominal: None,
+            observed_category: None,
+            accepted_categories: None,
+            margin: margin.map(str::to_owned),
+        }
+    }
+
     fn case_000() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../examples/cases/case-000-actinv-aftermatter")
@@ -4281,6 +4628,89 @@ mod tests {
 
     fn case_001() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/cases/case-001-shield-search")
+    }
+
+    #[test]
+    fn attempt_comparison_derives_exact_deltas_and_renders_only_meaningful_changes() {
+        let parent = vec![
+            comparison_margin(
+                "R1",
+                VerdictStatus::Fail,
+                Some("1"),
+                Some("1"),
+                Some("-1/4"),
+            ),
+            comparison_margin("R2", VerdictStatus::Pass, Some("1"), Some("1"), Some("1/2")),
+            VerdictMargin {
+                observed_category: Some("valid".into()),
+                accepted_categories: Some(vec!["valid".into()]),
+                ..comparison_margin("R3", VerdictStatus::Pass, None, None, None)
+            },
+            comparison_margin("R4", VerdictStatus::Pass, Some("m"), Some("1"), Some("1")),
+            comparison_margin(
+                "R-parent-only",
+                VerdictStatus::Pass,
+                Some("1"),
+                Some("1"),
+                Some("1"),
+            ),
+        ];
+        let child = vec![
+            comparison_margin("R1", VerdictStatus::Pass, Some("1"), Some("1"), Some("1/8")),
+            comparison_margin("R2", VerdictStatus::Pass, Some("1"), Some("1"), Some("1/4")),
+            VerdictMargin {
+                observed_category: Some("valid".into()),
+                accepted_categories: Some(vec!["valid".into()]),
+                ..comparison_margin("R3", VerdictStatus::Pass, None, None, None)
+            },
+            comparison_margin("R4", VerdictStatus::Pass, Some("s"), Some("1"), Some("2")),
+            comparison_margin(
+                "R-child-only",
+                VerdictStatus::Pass,
+                Some("1"),
+                Some("1"),
+                Some("1"),
+            ),
+        ];
+
+        let comparison = compare_attempt_results(&comparison_attempt(), &parent, &child).unwrap();
+        assert_eq!(comparison.schema_version, ATTEMPT_COMPARISON_SCHEMA_VERSION);
+        assert_eq!(comparison.verdicts_compared, 4);
+        assert_eq!(comparison.unchanged_verdicts, 3);
+        assert_eq!(
+            comparison.verdict_transitions,
+            vec![AttemptVerdictTransition {
+                requirement_id: "R1".into(),
+                parent_status: VerdictStatus::Fail,
+                child_status: VerdictStatus::Pass,
+            }]
+        );
+        assert_eq!(comparison.verdict_comparison_unavailable.len(), 2);
+        assert_eq!(comparison.exact_margin_comparisons.len(), 2);
+        assert_eq!(comparison.exact_margin_comparisons[0].delta, "0.375");
+        assert_eq!(comparison.exact_margin_comparisons[1].delta, "-0.25");
+        assert_eq!(comparison.margin_comparison_unavailable.len(), 4);
+        assert_eq!(
+            comparison
+                .margin_comparison_unavailable
+                .iter()
+                .find(|unavailable| unavailable.requirement_id == "R3")
+                .unwrap()
+                .reason,
+            AttemptMarginUnavailableReason::NotNumeric
+        );
+
+        let mut rendered = String::new();
+        write_attempt_comparison(&mut rendered, &comparison);
+        assert!(rendered.contains("4 verdict(s), 1 transition(s); 2 exact numeric margin(s)"));
+        assert!(
+            rendered.contains("result R1: FAIL -> PASS; margin -0.25 -> 0.125 1 (delta +0.375)")
+        );
+        assert!(rendered.contains("margin R2: 0.5 -> 0.25 1 (delta -0.25)"));
+        assert!(rendered.contains("no numeric margin: 1 categorical requirement(s)"));
+        assert!(rendered.contains("unavailable: 2 verdict comparison(s), 3 margin comparison(s)"));
+        assert_eq!(display_signed_number("0.000000000069"), "+0.000000000069");
+        assert_eq!(display_signed_number("-0.000006849895"), "-0.000006849895");
     }
 
     #[test]

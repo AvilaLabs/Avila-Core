@@ -245,7 +245,7 @@ proposal, exact repair, fixed question, execution identities, and absence of
 gate movement one inspectable chain. It did not invent the topology, judge the
 quench model, or turn normalized proxies into engineering safety. The I²t
 margin is especially narrow, and a conductor-resolved model is now the proper
-scientific falsification step. The most visible product gap after this exercise
-is comparison ergonomics: the log contains parent and child verdicts and exact
-claims, but Core does not yet render a parent-to-child verdict/margin delta or
-a constellation view without external analysis.
+scientific falsification step. Core now derives a parent-bound comparison for
+each child: changed verdict states and exact child-minus-parent margin deltas
+are present in both JSON and concise human output. A constellation view and
+proposal strategy remain outside Core.

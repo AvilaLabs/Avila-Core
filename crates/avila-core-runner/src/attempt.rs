@@ -10,11 +10,12 @@ use std::fs;
 use std::path::Path;
 
 use avila_core_evidence::{sha256_file, sha256_hex};
-use avila_core_kernel::canonicalize_json;
+use avila_core_kernel::{VerdictStatus, canonicalize_json};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub const ATTEMPT_LINEAGE_SCHEMA_VERSION: &str = "avila.core/attempt-lineage/v0.1-draft";
+pub const ATTEMPT_COMPARISON_SCHEMA_VERSION: &str = "avila.core/attempt-comparison/v0.1-draft";
 const MAX_CANDIDATE_BYTES: u64 = 1024 * 1024;
 
 /// The caller's request to place one run in an attempt lineage.
@@ -81,6 +82,85 @@ pub struct AttemptRecord {
     pub changes: Vec<AttemptChange>,
 }
 
+/// A child run's Core-derived comparison with the exact parent JSONL record
+/// its lineage already binds. This is an observation over two Core results,
+/// not an optimizer-authored assessment.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AttemptComparison {
+    pub schema_version: String,
+    pub parent_attempt_id: String,
+    pub parent_record_sha256: String,
+    pub verdicts_compared: usize,
+    pub unchanged_verdicts: usize,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub verdict_transitions: Vec<AttemptVerdictTransition>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub verdict_comparison_unavailable: Vec<AttemptVerdictUnavailable>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub exact_margin_comparisons: Vec<AttemptMarginComparison>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub margin_comparison_unavailable: Vec<AttemptMarginUnavailable>,
+}
+
+/// One requirement whose Core verdict state changed from parent to child.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AttemptVerdictTransition {
+    pub requirement_id: String,
+    pub parent_status: VerdictStatus,
+    pub child_status: VerdictStatus,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AttemptVerdictUnavailableReason {
+    ParentMissing,
+    ChildMissing,
+}
+
+/// A requirement that appeared in only one of the two result surfaces.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AttemptVerdictUnavailable {
+    pub requirement_id: String,
+    pub reason: AttemptVerdictUnavailableReason,
+}
+
+/// An exact arithmetic comparison of two safety margins. Since every Core
+/// numeric margin is positive inside its bound and negative outside, a
+/// positive delta means the child has more margin than its parent.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AttemptMarginComparison {
+    pub requirement_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit: Option<String>,
+    pub parent_margin: String,
+    pub child_margin: String,
+    pub delta: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AttemptMarginUnavailableReason {
+    ParentMissing,
+    ChildMissing,
+    BothMissing,
+    NotNumeric,
+    UnitMismatch,
+    LimitMismatch,
+    InvalidNumber,
+}
+
+/// Why Core did not claim an exact numeric margin delta for a requirement.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AttemptMarginUnavailable {
+    pub requirement_id: String,
+    pub reason: AttemptMarginUnavailableReason,
+}
+
 #[derive(Debug)]
 struct PriorAttempt {
     record: AttemptRecord,
@@ -88,6 +168,7 @@ struct PriorAttempt {
     line: usize,
     top_level_manifest_sha256: Option<String>,
     top_level_compiled_snapshot_sha256: Option<String>,
+    verdicts: Option<Value>,
 }
 
 pub(crate) fn prepare_attempt(
@@ -255,6 +336,49 @@ pub(crate) fn revalidate_before_append(
     Ok(())
 }
 
+/// Return the verdict-margin surface from the exact parent line already bound
+/// by `attempt`. Old run-log envelope versions remain readable because lineage
+/// validation intentionally depends on fields, not the envelope's version.
+pub(crate) fn parent_verdict_values(
+    log_path: &Path,
+    attempt: &AttemptRecord,
+) -> Result<Option<Vec<Value>>, String> {
+    let Some(parent_id) = &attempt.parent_attempt_id else {
+        return Ok(None);
+    };
+    let expected_sha256 = attempt
+        .parent_record_sha256
+        .as_deref()
+        .ok_or("a child attempt is missing its parent record identity")?;
+    let attempts = read_attempts(log_path)?;
+    validate_history(&attempts)?;
+    let parent = attempts.get(parent_id).ok_or_else(|| {
+        format!(
+            "parent attempt `{parent_id}` disappeared from `{}` before comparison",
+            log_path.display()
+        )
+    })?;
+    if parent.record_sha256 != expected_sha256 {
+        return Err(format!(
+            "parent attempt `{parent_id}` changed before comparison: expected {expected_sha256}, observed {}",
+            parent.record_sha256
+        ));
+    }
+    let verdicts = parent.verdicts.as_ref().ok_or_else(|| {
+        format!(
+            "parent attempt `{parent_id}` on line {} has no verdict collection",
+            parent.line
+        )
+    })?;
+    let verdicts = verdicts.as_array().ok_or_else(|| {
+        format!(
+            "parent attempt `{parent_id}` on line {} has a non-array verdict collection",
+            parent.line
+        )
+    })?;
+    Ok(Some(verdicts.clone()))
+}
+
 fn read_attempts(path: &Path) -> Result<BTreeMap<String, PriorAttempt>, String> {
     let content = match fs::read_to_string(path) {
         Ok(content) => content,
@@ -301,6 +425,7 @@ fn read_attempts(path: &Path) -> Result<BTreeMap<String, PriorAttempt>, String> 
                 .get("compiled_snapshot_sha256")
                 .and_then(Value::as_str)
                 .map(str::to_owned),
+            verdicts: entry.get("verdicts").cloned(),
         };
         if let Some(first) = attempts.insert(attempt_id.clone(), prior) {
             return Err(format!(
@@ -526,6 +651,18 @@ mod tests {
         assert_eq!(
             schema["properties"]["schema_version"]["const"],
             ATTEMPT_LINEAGE_SCHEMA_VERSION
+        );
+    }
+
+    #[test]
+    fn published_schema_names_the_runtime_comparison_version() {
+        let schema: Value = serde_json::from_str(include_str!(
+            "../../../schemas/attempt-comparison.v0.1-draft.schema.json"
+        ))
+        .unwrap();
+        assert_eq!(
+            schema["properties"]["schema_version"]["const"],
+            ATTEMPT_COMPARISON_SCHEMA_VERSION
         );
     }
 

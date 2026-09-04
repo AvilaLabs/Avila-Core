@@ -51,7 +51,11 @@ primary source location, related locations, bounded repairs, `message`, and
 and campaign reports remain the evidence behind that index.
 
 When `--log PATH` is supplied, every returned report is appended to PATH as an
-`avila.core/run-attempt/v0.2-draft` JSON line. Failures that occur before a case
+`avila.core/run-attempt/v0.3-draft` JSON line. A derived attempt also carries a
+parent-bound `attempt_comparison`: changed verdict states, exact
+child-minus-parent margin deltas wherever both margins share a unit and limit,
+and explicit reasons wherever comparison is unavailable. Existing v0.2 parent
+rows remain valid lineage inputs. Failures that occur before a case
 report can be constructed are also appended with status `error` and
 `CORE-X9001`. A log-write failure is returned to the caller; Core does not
 silently claim an attempt was recorded.

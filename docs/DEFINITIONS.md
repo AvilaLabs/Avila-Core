@@ -81,9 +81,11 @@ package manifest and compiled snapshot. Each attempt names at most one earlier
 parent, stores the nominated candidate's canonical JSON state and artifact
 identity, derives typed changes from its parent, and binds the exact parent
 JSONL record by digest. The surrounding run record supplies the findings,
-verdicts, receipts, and artifacts. A branch is allowed; silently changing the
-question within a lineage is not. This records iteration but does not choose
-which candidate to try.
+verdicts, receipts, and artifacts. For a child, Core also derives verdict
+transitions and exact child-minus-parent margin deltas from that bound parent
+record, explicitly marking requirements whose margins cannot be compared. A
+branch is allowed; silently changing the question within a lineage is not.
+This records and compares iteration but does not choose which candidate to try.
 
 ## The contract language
 

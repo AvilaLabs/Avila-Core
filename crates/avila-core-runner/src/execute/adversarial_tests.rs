@@ -652,7 +652,7 @@ fn early_rejections_and_infrastructure_errors_are_both_logged() {
     assert_eq!(lines.len(), 2);
     assert_eq!(
         lines[0]["schema_version"],
-        "avila.core/run-attempt/v0.2-draft"
+        "avila.core/run-attempt/v0.3-draft"
     );
     assert_eq!(lines[0]["status"], "rejected");
     assert!(
@@ -699,6 +699,18 @@ fn attempt_lineage_derives_typed_changes_and_binds_the_exact_parent_record() {
     assert_eq!(root_attempt.generation, 0);
     assert!(root_attempt.changes.is_empty());
 
+    // A current child remains comparable with a parent written under the
+    // preceding run-log envelope. The identity link binds fields and bytes,
+    // not an arbitrary minimum envelope version.
+    let mut legacy_root: Value =
+        serde_json::from_str(fs::read_to_string(&log).unwrap().trim()).unwrap();
+    legacy_root["schema_version"] = json!("avila.core/run-attempt/v0.2-draft");
+    fs::write(
+        &log,
+        format!("{}\n", serde_json::to_string(&legacy_root).unwrap()),
+    )
+    .unwrap();
+
     let child = execute_case(
         &synthetic.case_dir,
         &lineage_options(
@@ -740,8 +752,34 @@ fn attempt_lineage_derives_typed_changes_and_binds_the_exact_parent_record() {
         .map(|line| serde_json::from_str(line).unwrap())
         .collect();
     assert_eq!(
-        entries[1]["schema_version"],
+        entries[0]["schema_version"],
         "avila.core/run-attempt/v0.2-draft"
+    );
+    assert_eq!(
+        entries[1]["schema_version"],
+        "avila.core/run-attempt/v0.3-draft"
+    );
+    assert_eq!(
+        child.schema_version,
+        "avila.core/case-run-report/v0.5-draft"
+    );
+    let comparison = child.attempt_comparison.as_ref().unwrap();
+    assert_eq!(comparison.parent_attempt_id, "try-001");
+    assert_eq!(comparison.verdicts_compared, child.margins.len());
+    assert_eq!(comparison.unchanged_verdicts, child.margins.len());
+    assert!(comparison.verdict_transitions.is_empty());
+    let report_json = serde_json::to_value(&child).unwrap();
+    assert_eq!(
+        report_json["attempt_comparison"]["parent_attempt_id"],
+        "try-001"
+    );
+    assert_eq!(
+        entries[1]["attempt_comparison"]["schema_version"],
+        "avila.core/attempt-comparison/v0.1-draft"
+    );
+    assert_eq!(
+        entries[1]["attempt_comparison"]["parent_record_sha256"],
+        entries[1]["attempt"]["parent_record_sha256"]
     );
     assert_eq!(
         entries[1]["attempt"]["parent_record_sha256"],

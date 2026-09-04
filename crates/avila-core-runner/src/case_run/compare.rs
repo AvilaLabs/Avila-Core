@@ -10,10 +10,10 @@ use avila_core_compiler::{CampaignReport, Comparison, CompiledContract};
 use avila_core_kernel::{ExactNumber, VerdictStatus};
 use serde::{Deserialize, Serialize};
 
-use super::{
-    CaseRunOptions, CaseRunReport, display_comparison_number, display_signed_number, display_unit,
-    verdict_label,
+use super::report::{
+    display_comparison_number, display_signed_number, display_unit, verdict_label,
 };
+use super::{CaseRunOptions, CaseRunReport};
 use crate::attempt::{
     ATTEMPT_COMPARISON_SCHEMA_VERSION, AttemptComparison, AttemptMarginComparison,
     AttemptMarginUnavailable, AttemptMarginUnavailableReason, AttemptRecord,

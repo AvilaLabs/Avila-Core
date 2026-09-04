@@ -12,16 +12,17 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use avila_core_evidence::{
-    IntegrityCheckState, PackageIntegrityStatus, ReceiptCheckState, sha256_file,
+    IntegrityCheckState, PackageIntegrityStatus, ReceiptCheckState, sha256_file, sha256_hex,
 };
 use avila_core_kernel::VerdictStatus;
 use serde_json::{Value, json};
 
+use crate::AttemptLineageRequest;
 use crate::case_run::{
     BindingStatus, CapabilityCheckState, CaseRunOptions, CaseRunReport, CaseRunStatus, ChangeClass,
     ExecutionStatus, StepExecutionState, execute_case, human_summary,
 };
-use crate::diagnostic::{CORE_X1001, CORE_X2501, CORE_X2601, CORE_X9001};
+use crate::diagnostic::{CORE_X1001, CORE_X1201, CORE_X2501, CORE_X2601, CORE_X9001};
 
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
 
@@ -358,7 +359,49 @@ fn run_options(synthetic: &Synthetic, workspace: PathBuf) -> CaseRunOptions {
         environment: BTreeMap::new(),
         log: None,
         expected_manifest_sha256: None,
+        attempt: None,
     }
+}
+
+fn enable_free_input(synthetic: &Synthetic, input_id: &str) {
+    let path = synthetic.case_dir.join("package.json");
+    let mut package: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    package["free_inputs"] = json!([input_id]);
+    fs::write(path, serde_json::to_vec_pretty(&package).unwrap()).unwrap();
+}
+
+fn lineage_options(
+    synthetic: &Synthetic,
+    workspace: PathBuf,
+    log: PathBuf,
+    candidate: PathBuf,
+    attempt_id: &str,
+    parent_attempt_id: Option<&str>,
+) -> CaseRunOptions {
+    let mut options = run_options(synthetic, workspace);
+    options.inputs.insert("aftermatter-case".into(), candidate);
+    options.log = Some(log);
+    options.attempt = Some(AttemptLineageRequest {
+        attempt_id: attempt_id.into(),
+        parent_attempt_id: parent_attempt_id.map(str::to_owned),
+        candidate_input: "aftermatter-case".into(),
+    });
+    options
+}
+
+fn write_lineage_candidate(path: &Path, candidate_id: &str, thickness: &str, note: bool) {
+    let mut candidate = json!({
+        "schema": "test/design-candidate/v1",
+        "candidate_id": candidate_id,
+        "design": {
+            "material": "steel",
+            "thickness": thickness
+        }
+    });
+    if note {
+        candidate["note"] = json!("force-balanced repair");
+    }
+    fs::write(path, serde_json::to_vec_pretty(&candidate).unwrap()).unwrap();
 }
 
 fn run(synthetic: &Synthetic, workspace: PathBuf) -> CaseRunReport {
@@ -609,7 +652,7 @@ fn early_rejections_and_infrastructure_errors_are_both_logged() {
     assert_eq!(lines.len(), 2);
     assert_eq!(
         lines[0]["schema_version"],
-        "avila.core/run-attempt/v0.1-draft"
+        "avila.core/run-attempt/v0.2-draft"
     );
     assert_eq!(lines[0]["status"], "rejected");
     assert!(
@@ -621,6 +664,303 @@ fn early_rejections_and_infrastructure_errors_are_both_logged() {
     );
     assert_eq!(lines[1]["status"], "error");
     assert_eq!(lines[1]["findings"][0]["code"], CORE_X9001);
+}
+
+#[test]
+fn attempt_lineage_derives_typed_changes_and_binds_the_exact_parent_record() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    enable_free_input(&synthetic, "aftermatter-case");
+    let root_candidate = dir.0.join("root-candidate.json");
+    let child_candidate = dir.0.join("child-candidate.json");
+    write_lineage_candidate(&root_candidate, "root-design", "4", false);
+    write_lineage_candidate(&child_candidate, "child-design", "6", true);
+    let log = dir.0.join("lineage.jsonl");
+
+    let root = execute_case(
+        &synthetic.case_dir,
+        &lineage_options(
+            &synthetic,
+            dir.workspace(),
+            log.clone(),
+            root_candidate,
+            "try-001",
+            None,
+        ),
+    )
+    .unwrap();
+    assert_eq!(
+        root.status,
+        CaseRunStatus::Evaluated,
+        "{}",
+        human_summary(&root)
+    );
+    let root_attempt = root.attempt.as_ref().unwrap();
+    assert_eq!(root_attempt.generation, 0);
+    assert!(root_attempt.changes.is_empty());
+
+    let child = execute_case(
+        &synthetic.case_dir,
+        &lineage_options(
+            &synthetic,
+            dir.workspace(),
+            log.clone(),
+            child_candidate,
+            "try-002",
+            Some("try-001"),
+        ),
+    )
+    .unwrap();
+    assert_eq!(
+        child.status,
+        CaseRunStatus::Evaluated,
+        "{}",
+        human_summary(&child)
+    );
+    let child_attempt = child.attempt.as_ref().unwrap();
+    assert_eq!(child_attempt.generation, 1);
+    assert_eq!(child_attempt.parent_attempt_id.as_deref(), Some("try-001"));
+    assert_eq!(
+        child_attempt
+            .changes
+            .iter()
+            .map(|change| change.pointer())
+            .collect::<Vec<_>>(),
+        vec!["/candidate_id", "/design/thickness", "/note"]
+    );
+    let summary = human_summary(&child);
+    assert!(summary.contains("Attempt `try-002` — generation 1, parent `try-001`"));
+    assert!(summary.contains("change /design/thickness: \"4\" -> \"6\""));
+
+    let raw = fs::read_to_string(&log).unwrap();
+    let lines: Vec<&str> = raw.lines().collect();
+    assert_eq!(lines.len(), 2);
+    let entries: Vec<Value> = lines
+        .iter()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(
+        entries[1]["schema_version"],
+        "avila.core/run-attempt/v0.2-draft"
+    );
+    assert_eq!(
+        entries[1]["attempt"]["parent_record_sha256"],
+        format!("sha256:{}", sha256_hex(lines[0].as_bytes()))
+    );
+    assert_eq!(entries[1]["attempt"]["changes"][1]["kind"], "replaced");
+    assert_eq!(entries[1]["attempt"]["changes"][1]["before"], "4");
+    assert_eq!(entries[1]["attempt"]["changes"][1]["after"], "6");
+    assert_eq!(
+        entries[1]["attempt"]["fixed_manifest_sha256"],
+        entries[1]["manifest_sha256"]
+    );
+    assert_eq!(
+        entries[1]["attempt"]["fixed_compiled_snapshot_sha256"],
+        entries[1]["compiled_snapshot_sha256"]
+    );
+}
+
+#[test]
+fn attempt_lineage_refuses_changed_goalposts_before_execution() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    enable_free_input(&synthetic, "aftermatter-case");
+    let root_candidate = dir.0.join("root-candidate.json");
+    let child_candidate = dir.0.join("child-candidate.json");
+    write_lineage_candidate(&root_candidate, "root-design", "4", false);
+    write_lineage_candidate(&child_candidate, "child-design", "6", false);
+    let log = dir.0.join("lineage.jsonl");
+    execute_case(
+        &synthetic.case_dir,
+        &lineage_options(
+            &synthetic,
+            dir.workspace(),
+            log.clone(),
+            root_candidate,
+            "try-001",
+            None,
+        ),
+    )
+    .unwrap();
+
+    let package_path = synthetic.case_dir.join("package.json");
+    let mut package: Value = serde_json::from_slice(&fs::read(&package_path).unwrap()).unwrap();
+    package["title"] = json!("rewritten goalposts");
+    fs::write(&package_path, serde_json::to_vec_pretty(&package).unwrap()).unwrap();
+
+    let child = execute_case(
+        &synthetic.case_dir,
+        &lineage_options(
+            &synthetic,
+            dir.workspace(),
+            log.clone(),
+            child_candidate,
+            "try-002",
+            Some("try-001"),
+        ),
+    )
+    .unwrap();
+    assert_eq!(child.status, CaseRunStatus::Rejected);
+    assert!(child.attempt.is_none());
+    assert!(
+        child.execution.is_none(),
+        "lineage fails before any capability runs"
+    );
+    assert!(child.findings.iter().any(|finding| {
+        finding.code == CORE_X1201 && finding.message.contains("changed goalposts")
+    }));
+    let entries: Vec<Value> = fs::read_to_string(log)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(entries.len(), 2);
+    assert_eq!(entries[1]["attempt_request"]["attempt_id"], "try-002");
+    assert!(entries[1].get("attempt").is_none());
+}
+
+#[test]
+fn attempt_lineage_refuses_a_tampered_candidate_history() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    enable_free_input(&synthetic, "aftermatter-case");
+    let root_candidate = dir.0.join("root-candidate.json");
+    let child_candidate = dir.0.join("child-candidate.json");
+    write_lineage_candidate(&root_candidate, "root-design", "4", false);
+    write_lineage_candidate(&child_candidate, "child-design", "6", false);
+    let log = dir.0.join("lineage.jsonl");
+    execute_case(
+        &synthetic.case_dir,
+        &lineage_options(
+            &synthetic,
+            dir.workspace(),
+            log.clone(),
+            root_candidate,
+            "try-001",
+            None,
+        ),
+    )
+    .unwrap();
+
+    let mut root_entry: Value =
+        serde_json::from_str(fs::read_to_string(&log).unwrap().trim()).unwrap();
+    root_entry["attempt"]["candidate_state"]["design"]["thickness"] = json!("999");
+    fs::write(
+        &log,
+        format!("{}\n", serde_json::to_string(&root_entry).unwrap()),
+    )
+    .unwrap();
+
+    let child = execute_case(
+        &synthetic.case_dir,
+        &lineage_options(
+            &synthetic,
+            dir.workspace(),
+            log,
+            child_candidate,
+            "try-002",
+            Some("try-001"),
+        ),
+    )
+    .unwrap();
+    assert_eq!(child.status, CaseRunStatus::Rejected);
+    assert!(child.execution.is_none());
+    assert!(child.findings.iter().any(|finding| {
+        finding.code == CORE_X1201 && finding.message.contains("candidate state hashes to")
+    }));
+}
+
+#[test]
+fn attempt_lineage_detects_changes_to_a_parent_result_record() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    enable_free_input(&synthetic, "aftermatter-case");
+    let root_candidate = dir.0.join("root-candidate.json");
+    let child_candidate = dir.0.join("child-candidate.json");
+    let grandchild_candidate = dir.0.join("grandchild-candidate.json");
+    write_lineage_candidate(&root_candidate, "root-design", "4", false);
+    write_lineage_candidate(&child_candidate, "child-design", "6", false);
+    write_lineage_candidate(&grandchild_candidate, "grandchild-design", "8", false);
+    let log = dir.0.join("lineage.jsonl");
+    execute_case(
+        &synthetic.case_dir,
+        &lineage_options(
+            &synthetic,
+            dir.workspace(),
+            log.clone(),
+            root_candidate,
+            "try-001",
+            None,
+        ),
+    )
+    .unwrap();
+    execute_case(
+        &synthetic.case_dir,
+        &lineage_options(
+            &synthetic,
+            dir.workspace(),
+            log.clone(),
+            child_candidate,
+            "try-002",
+            Some("try-001"),
+        ),
+    )
+    .unwrap();
+
+    let raw = fs::read_to_string(&log).unwrap();
+    let mut lines = raw.lines();
+    let mut root_entry: Value = serde_json::from_str(lines.next().unwrap()).unwrap();
+    let child_line = lines.next().unwrap();
+    root_entry["status"] = json!("rejected");
+    fs::write(
+        &log,
+        format!(
+            "{}\n{child_line}\n",
+            serde_json::to_string(&root_entry).unwrap()
+        ),
+    )
+    .unwrap();
+
+    let grandchild = execute_case(
+        &synthetic.case_dir,
+        &lineage_options(
+            &synthetic,
+            dir.workspace(),
+            log,
+            grandchild_candidate,
+            "try-003",
+            Some("try-002"),
+        ),
+    )
+    .unwrap();
+    assert_eq!(grandchild.status, CaseRunStatus::Rejected);
+    assert!(grandchild.execution.is_none());
+    assert!(grandchild.findings.iter().any(|finding| {
+        finding.code == CORE_X1201 && finding.message.contains("log record hashes to")
+    }));
+}
+
+#[test]
+fn attempt_lineage_requires_a_log_before_execution() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    enable_free_input(&synthetic, "aftermatter-case");
+    let candidate = dir.0.join("candidate.json");
+    write_lineage_candidate(&candidate, "root-design", "4", false);
+    let mut options = run_options(&synthetic, dir.workspace());
+    options.inputs.insert("aftermatter-case".into(), candidate);
+    options.attempt = Some(AttemptLineageRequest {
+        attempt_id: "try-001".into(),
+        parent_attempt_id: None,
+        candidate_input: "aftermatter-case".into(),
+    });
+
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(report.status, CaseRunStatus::Rejected);
+    assert!(report.execution.is_none());
+    assert!(report.findings.iter().any(|finding| {
+        finding.code == CORE_X1201 && finding.message.contains("requires `--log FILE`")
+    }));
 }
 
 #[test]

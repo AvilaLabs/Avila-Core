@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 pub const CORE_X1001: &str = "CORE-X1001";
 pub const CORE_X1002: &str = "CORE-X1002";
 pub const CORE_X1101: &str = "CORE-X1101";
+pub const CORE_X1201: &str = "CORE-X1201";
 pub const CORE_X2001: &str = "CORE-X2001";
 pub const CORE_X2101: &str = "CORE-X2101";
 pub const CORE_X2201: &str = "CORE-X2201";
@@ -30,9 +31,9 @@ pub const CORE_X3301: &str = "CORE-X3301";
 pub const CORE_X9001: &str = "CORE-X9001";
 
 pub const RUNTIME_FINDING_CODES: &[&str] = &[
-    CORE_X1001, CORE_X1002, CORE_X1101, CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301, CORE_X2401,
-    CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101, CORE_X3201,
-    CORE_X3301, CORE_X9001,
+    CORE_X1001, CORE_X1002, CORE_X1101, CORE_X1201, CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301,
+    CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101,
+    CORE_X3201, CORE_X3301, CORE_X9001,
 ];
 
 /// Explanations are served by `avila-core explain` alongside compiler codes.
@@ -57,6 +58,13 @@ pub const RUNTIME_DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         rule: "declared requirement coverage",
         meaning: "The contract omits a required topic, covers it on a weaker basis, or does not provide the required omission record.",
         next_action: "Add adequate contract requirements or record an allowed omission with its reason and accepting owner before executing capabilities.",
+    },
+    DiagnosticExplanation {
+        code: CORE_X1201,
+        title: "Attempt lineage not admitted",
+        rule: "identity-bound candidate iteration",
+        meaning: "A requested search attempt cannot be joined to its campaign history because its identifier, candidate, parent record, manifest, compiled snapshot, or derived changes are missing, malformed, duplicated, or inconsistent. No capability runs under an ambiguous lineage.",
+        next_action: "Use a unique attempt id, supply the nominated canonical-profile JSON candidate and log, restore the exact parent history and fixed question identities, or start a new root attempt when the contract or package deliberately changed.",
     },
     DiagnosticExplanation {
         code: CORE_X2001,
@@ -171,6 +179,7 @@ pub enum RunStage {
     PackageIntegrity,
     Compilation,
     Coverage,
+    AttemptPlanning,
     ExecutionPlanning,
     Execution,
     ReceiptVerification,

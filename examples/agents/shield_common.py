@@ -92,7 +92,8 @@ class CoreRunError(SystemExit):
 
 
 def run_core(core, case, candidate_path, *, source_roots, capabilities, environment=None,
-             log=None, extra_args=None, workspace=None):
+             log=None, extra_args=None, workspace=None, attempt_id=None,
+             parent_attempt_id=None, candidate_input="candidate"):
     """Run `avila-core run --json` over `case` with `candidate_path` as the
     free `candidate` input. `source_roots` and `capabilities` are
     `{name: path}` dicts; `environment` is `{KEY: VALUE}`. Returns the parsed
@@ -112,6 +113,13 @@ def run_core(core, case, candidate_path, *, source_roots, capabilities, environm
         command += ["--workspace", str(workspace)]
     if log is not None:
         command += ["--log", str(log)]
+    if attempt_id is not None:
+        command += ["--attempt", str(attempt_id),
+                    "--candidate-input", str(candidate_input)]
+        if parent_attempt_id is not None:
+            command += ["--parent-attempt", str(parent_attempt_id)]
+    elif parent_attempt_id is not None:
+        raise ValueError("parent_attempt_id requires attempt_id")
     command += list(extra_args or [])
     completed = subprocess.run(command, capture_output=True, text=True)
     if not completed.stdout.strip():

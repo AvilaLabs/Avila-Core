@@ -210,11 +210,14 @@ Runtime failures now produce a bounded, redacted `CORE-X2501` stderr finding
 with the exact captured-log path, so a person or agent can act on the failure
 without discovering Core's workspace layout first.
 
-Core still did not generate the CASE-007 repair or preserve the failed first
-candidate and the repaired candidate as one first-class search lineage. The
-agent performed that reasoning outside Core and the final checker output
-described it after the fact. The next generative-loop weakness is therefore
-not another domain adapter: it is a native attempt record that relates a
-candidate to its parent, changed variables, Core findings, verdict margins,
-and resulting artifacts without allowing the designer to rewrite the fixed
-contract or gates.
+Core still did not generate the CASE-007 repair; the agent performed that
+reasoning outside Core. The missing record layer has since landed. A caller can
+name an attempt and optional parent while nominating one supplied JSON input as
+the candidate. Core stores its canonical state, derives typed JSON-Pointer
+changes, binds a child to the exact parent log record, and refuses execution if
+the lineage crosses a manifest or compiled-snapshot identity. Findings,
+verdict margins, receipts, and artifacts from the run remain in the same log
+entry. Core still has no built-in optimizer or constellation view: proposal
+strategy remains outside the oracle, and the next real campaign must determine
+whether the new lineage actually improves iteration rather than merely making
+it tidier.

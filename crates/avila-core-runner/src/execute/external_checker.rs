@@ -826,6 +826,7 @@ mod tests {
                 environment: BTreeMap::new(),
                 log: Some(log.clone()),
                 expected_manifest_sha256: None,
+                attempt: None,
             },
         )
         .unwrap();

@@ -7,6 +7,22 @@ log back. Requirement ids, limits, units, and verdicts are always read from
 Core, never hard-coded, so every script here runs unchanged on CASE-001
 today and on the composed coupled case later.
 
+For a search that should retain native lineage, give the first run
+`--attempt root` and each derived run both its unique id and parent:
+
+```text
+avila-core run CASE --input candidate=c-0002.json --log campaign.jsonl \
+  --attempt c-0002 --parent-attempt c-0001
+```
+
+Core snapshots the nominated canonical-profile JSON input (named `candidate`
+by default), derives typed JSON-Pointer changes, and binds the child to the
+exact parent log line, manifest, and compiled snapshot. A changed question or
+tampered history is `CORE-X1201` and stops before capability execution. The
+shared `run_core` helper exposes `attempt_id` and `parent_attempt_id` for agent
+scripts; choosing the scientifically meaningful parent remains the designer's
+job.
+
 - **`shield_search.py`** (frozen) — the original scripted designer: proposes
   uniformly random layered slabs, screens all of them, and sends the
   feasible candidates with the most screen margin to transport.

@@ -51,7 +51,7 @@ primary source location, related locations, bounded repairs, `message`, and
 and campaign reports remain the evidence behind that index.
 
 When `--log PATH` is supplied, every returned report is appended to PATH as an
-`avila.core/run-attempt/v0.1-draft` JSON line. Failures that occur before a case
+`avila.core/run-attempt/v0.2-draft` JSON line. Failures that occur before a case
 report can be constructed are also appended with status `error` and
 `CORE-X9001`. A log-write failure is returned to the caller; Core does not
 silently claim an attempt was recorded.
@@ -71,6 +71,7 @@ receipt; the excerpt is feedback, not evidence or instructions.
 | `CORE-X1001` | Package byte identity failed | package integrity |
 | `CORE-X1002` | Package manifest pin differs | package integrity |
 | `CORE-X1101` | Requirement-set coverage incomplete | coverage |
+| `CORE-X1201` | Attempt lineage not admitted | attempt planning |
 | `CORE-X2001` | Execution declaration invalid | execution planning |
 | `CORE-X2101` | Execution input unavailable or unchecked | execution planning |
 | `CORE-X2201` | Invocation could not be planned | execution planning |

@@ -105,6 +105,17 @@ enum Command {
         /// Append one JSON line describing this run to FILE.
         #[arg(long, value_name = "FILE")]
         log: Option<PathBuf>,
+        /// Place this run in an identity-bound candidate lineage. Requires
+        /// --log and a supplied canonical-profile JSON candidate input.
+        #[arg(long = "attempt", value_name = "ID")]
+        attempt_id: Option<String>,
+        /// Name an earlier attempt in the same log as this attempt's parent.
+        #[arg(long = "parent-attempt", value_name = "ID")]
+        parent_attempt_id: Option<String>,
+        /// The supplied input Core should snapshot and diff for lineage.
+        /// Defaults to `candidate` when --attempt is present.
+        #[arg(long = "candidate-input", value_name = "NAME")]
+        candidate_input: Option<String>,
         /// Emit the complete machine-readable run report instead of the concise view.
         #[arg(long)]
         json: bool,
@@ -207,8 +218,12 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             inputs,
             environment,
             log,
+            attempt_id,
+            parent_attempt_id,
+            candidate_input,
             json,
         } => {
+            let attempt = attempt_request(attempt_id, parent_attempt_id, candidate_input)?;
             let options = avila_core_runner::CaseRunOptions {
                 source_roots: avila_core_runner::parse_source_roots(&source_roots)?,
                 capabilities: avila_core_runner::parse_capabilities(&capabilities)?,
@@ -219,6 +234,7 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 environment: avila_core_runner::parse_environment(&environment)?,
                 log,
                 expected_manifest_sha256: expect_manifest,
+                attempt,
             };
             let report = avila_core_runner::execute_case(&case, &options)?;
             if json {
@@ -403,6 +419,24 @@ fn required_string<'a>(
         .ok_or_else(|| format!("embedded vector set is missing `{field}`").into())
 }
 
+fn attempt_request(
+    attempt_id: Option<String>,
+    parent_attempt_id: Option<String>,
+    candidate_input: Option<String>,
+) -> Result<Option<avila_core_runner::AttemptLineageRequest>, Box<dyn Error>> {
+    match attempt_id {
+        Some(attempt_id) => Ok(Some(avila_core_runner::AttemptLineageRequest {
+            attempt_id,
+            parent_attempt_id,
+            candidate_input: candidate_input.unwrap_or_else(|| "candidate".into()),
+        })),
+        None if parent_attempt_id.is_some() || candidate_input.is_some() => {
+            Err("`--parent-attempt` and `--candidate-input` require `--attempt ID`".into())
+        }
+        None => Ok(None),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -454,5 +488,17 @@ mod tests {
             br#"{"a":2,"z":1}"#
         );
         assert!(canonicalize_json(br#"{"value":25.0}"#).is_err());
+    }
+
+    #[test]
+    fn attempt_flags_form_one_explicit_lineage_request() {
+        let request = attempt_request(Some("try-002".into()), Some("try-001".into()), None)
+            .unwrap()
+            .unwrap();
+        assert_eq!(request.attempt_id, "try-002");
+        assert_eq!(request.parent_attempt_id.as_deref(), Some("try-001"));
+        assert_eq!(request.candidate_input, "candidate");
+        assert!(attempt_request(None, Some("try-001".into()), None).is_err());
+        assert!(attempt_request(None, None, Some("design".into())).is_err());
     }
 }

@@ -76,6 +76,15 @@ claims, reviews, verdicts, and the boundary statements, arranged so an
 independent verifier can replay every check it is able to. A package is valid
 for what it verifies, never as a single all-clear.
 
+**Attempt lineage.** A directed history of candidate runs under one fixed
+package manifest and compiled snapshot. Each attempt names at most one earlier
+parent, stores the nominated candidate's canonical JSON state and artifact
+identity, derives typed changes from its parent, and binds the exact parent
+JSONL record by digest. The surrounding run record supplies the findings,
+verdicts, receipts, and artifacts. A branch is allowed; silently changing the
+question within a lineage is not. This records iteration but does not choose
+which candidate to try.
+
 ## The contract language
 
 **Evidence contract (contract).** The unit of work: a bounded question, the

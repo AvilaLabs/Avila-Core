@@ -38,10 +38,13 @@ use serde::Serialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
+use crate::attempt::{
+    AttemptChange, AttemptLineageRequest, AttemptRecord, prepare_attempt, revalidate_before_append,
+};
 use crate::diagnostic::{
-    CORE_X1001, CORE_X1002, CORE_X1101, CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301, CORE_X2401,
-    CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101, CORE_X3201,
-    CORE_X3301, CORE_X9001, RunFinding, RunStage,
+    CORE_X1001, CORE_X1002, CORE_X1101, CORE_X1201, CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301,
+    CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101,
+    CORE_X3201, CORE_X3301, CORE_X9001, RunFinding, RunStage,
 };
 use crate::execute::claims::{
     GeneratedClaim, canonical_decimal, canonical_identity, generate_claims,
@@ -52,8 +55,8 @@ use crate::execute::{
     execute_step, plan_invocation, rfc3339_now,
 };
 
-const CASE_RUN_REPORT_SCHEMA_VERSION: &str = "avila.core/case-run-report/v0.3-draft";
-const RUN_ATTEMPT_LOG_SCHEMA_VERSION: &str = "avila.core/run-attempt/v0.1-draft";
+const CASE_RUN_REPORT_SCHEMA_VERSION: &str = "avila.core/case-run-report/v0.4-draft";
+const RUN_ATTEMPT_LOG_SCHEMA_VERSION: &str = "avila.core/run-attempt/v0.2-draft";
 const CASE_RUN_NOTICE: &str = "This workflow separates byte-integrity checks, semantic compilation, controlled execution with receipts, claim generation, identity binding, campaign evaluation, and replay. Re-hashing bytes proves identity only; a verified receipt proves that a named executable ran over named bytes and produced named bytes; structural admission and a Core verdict do not establish scientific correctness, qualification, certification, or regulatory approval.";
 const DIAGNOSTIC_STDERR_READ_BYTES: u64 = 16 * 1024;
 const DIAGNOSTIC_STDERR_MAX_LINES: usize = 8;
@@ -97,6 +100,8 @@ pub struct CaseRunOptions {
     /// package manifest's digest equals this value: the requester's pin on
     /// the exact package a campaign is allowed to evaluate.
     pub expected_manifest_sha256: Option<String>,
+    /// Optional identity-bound placement of this run in a candidate lineage.
+    pub attempt: Option<AttemptLineageRequest>,
 }
 
 impl Default for CaseRunOptions {
@@ -111,6 +116,7 @@ impl Default for CaseRunOptions {
             environment: BTreeMap::new(),
             log: None,
             expected_manifest_sha256: None,
+            attempt: None,
         }
     }
 }
@@ -468,6 +474,9 @@ pub struct CaseRunReport {
     pub case_id: String,
     pub title: String,
     pub status: CaseRunStatus,
+    /// This run's identity-bound place in a candidate search, when requested.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attempt: Option<AttemptRecord>,
     /// A stage-ordered, actionable view of every finding that prevented or
     /// qualified progress. Nested reports remain available as the detailed
     /// evidence; agents need only this collection to drive the next attempt.
@@ -641,6 +650,7 @@ fn execute_case_inner(
         case_id: package.manifest.case_id.clone(),
         title: package.manifest.title.clone(),
         status: CaseRunStatus::Rejected,
+        attempt: None,
         findings: Vec::new(),
         integrity: package.integrity.clone(),
         compile: None,
@@ -735,6 +745,45 @@ fn execute_case_inner(
         if incomplete {
             report.compile = Some(compile.clone());
             return Ok(report);
+        }
+    }
+
+    report.compile = Some(compile.clone());
+    if let Some(request) = &options.attempt {
+        let candidate_path = options
+            .inputs
+            .get(&request.candidate_input)
+            .map(PathBuf::as_path);
+        let supplied_candidate_sha256 = supplied_inputs
+            .iter()
+            .find(|input| input.input_id == request.candidate_input)
+            .map(|input| input.sha256.as_str());
+        match prepare_attempt(
+            request,
+            options.log.as_deref(),
+            candidate_path,
+            supplied_candidate_sha256,
+            &report.integrity.manifest_sha256,
+            &compiled.snapshot_sha256,
+        ) {
+            Ok(attempt) => report.attempt = Some(attempt),
+            Err(issue) => {
+                report.notice =
+                    format!("attempt lineage was refused before capability execution: {issue}");
+                let lineage_document = options
+                    .log
+                    .as_ref()
+                    .map_or_else(|| "campaign-log".into(), |path| path.display().to_string());
+                report.findings.push(RunFinding::runtime(
+                    CORE_X1201,
+                    FindingClass::Inadmissible,
+                    RunStage::AttemptPlanning,
+                    "designer_or_log_custodian",
+                    SourceLocation::new(lineage_document, "/attempt"),
+                    issue,
+                ));
+                return Ok(report);
+            }
         }
     }
 
@@ -1528,6 +1577,28 @@ fn append_log(
     let Some(path) = &options.log else {
         return Ok(());
     };
+    if let Some(attempt) = &report.attempt {
+        let candidate_path = options
+            .inputs
+            .get(&attempt.candidate_input)
+            .ok_or_else(|| {
+                format!(
+                    "attempt candidate input `{}` disappeared before append",
+                    attempt.candidate_input
+                )
+            })?;
+        let (candidate_sha256, _) = sha256_file(candidate_path)?;
+        if candidate_sha256 != attempt.candidate_artifact_sha256 {
+            return Err(format!(
+                "attempt candidate `{}` changed before append: expected {}, observed {candidate_sha256}",
+                candidate_path.display(),
+                attempt.candidate_artifact_sha256
+            )
+            .into());
+        }
+        revalidate_before_append(path, attempt)
+            .map_err(|issue| format!("attempt lineage changed before append: {issue}"))?;
+    }
     #[derive(Serialize)]
     struct LogEntry<'a> {
         schema_version: &'static str,
@@ -1535,6 +1606,10 @@ fn append_log(
         case_path: String,
         case_id: &'a str,
         status: CaseRunStatus,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        attempt_request: Option<&'a AttemptLineageRequest>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        attempt: Option<&'a AttemptRecord>,
         integrity_status: PackageIntegrityStatus,
         #[serde(skip_serializing_if = "Option::is_none")]
         compilation_status: Option<CompilationStatus>,
@@ -1603,6 +1678,12 @@ fn append_log(
         case_path: case_or_manifest.display().to_string(),
         case_id: &report.case_id,
         status: report.status,
+        attempt_request: if report.attempt.is_none() {
+            options.attempt.as_ref()
+        } else {
+            None
+        },
+        attempt: report.attempt.as_ref(),
         integrity_status: report.integrity.status,
         compilation_status: report.compile.as_ref().map(|compile| compile.status),
         execution_status: report.execution.as_ref().map(|execution| execution.status),
@@ -1710,6 +1791,8 @@ fn append_error_log(
         recorded_at: String,
         case_path: String,
         status: &'static str,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        attempt_request: Option<&'a AttemptLineageRequest>,
         findings: [&'a RunFinding; 1],
     }
     let entry = ErrorLogEntry {
@@ -1717,6 +1800,7 @@ fn append_error_log(
         recorded_at: rfc3339_now(),
         case_path: case_or_manifest.display().to_string(),
         status: "error",
+        attempt_request: options.attempt.as_ref(),
         findings: [finding],
     };
     append_log_line(path, &serde_json::to_string(&entry)?)
@@ -3454,6 +3538,41 @@ pub fn human_summary(report: &CaseRunReport) -> String {
     let mut out = String::new();
     let _ = writeln!(out, "Avila Core case workflow");
     let _ = writeln!(out, "{} — {}", report.case_id, report.title);
+    if let Some(attempt) = &report.attempt {
+        let relation = attempt.parent_attempt_id.as_ref().map_or_else(
+            || "root baseline".to_string(),
+            |parent| format!("parent `{parent}`"),
+        );
+        let _ = writeln!(
+            out,
+            "Attempt `{}` — generation {}, {relation}; candidate `{}` {}",
+            attempt.attempt_id,
+            attempt.generation,
+            attempt.candidate_input,
+            attempt.candidate_artifact_sha256
+        );
+        for change in attempt.changes.iter().take(12) {
+            let detail = match change {
+                AttemptChange::Added { value, .. } => {
+                    format!("added {}", compact_json(value))
+                }
+                AttemptChange::Removed { value, .. } => {
+                    format!("removed {}", compact_json(value))
+                }
+                AttemptChange::Replaced { before, after, .. } => {
+                    format!("{} -> {}", compact_json(before), compact_json(after))
+                }
+            };
+            let _ = writeln!(out, "   change {}: {detail}", change.pointer());
+        }
+        if attempt.changes.len() > 12 {
+            let _ = writeln!(
+                out,
+                "   … {} more change(s) in the JSON report",
+                attempt.changes.len() - 12
+            );
+        }
+    }
 
     let verified_documents = report
         .integrity
@@ -4099,6 +4218,17 @@ pub fn human_summary(report: &CaseRunReport) -> String {
     out
 }
 
+fn compact_json(value: &Value) -> String {
+    const MAX_CHARS: usize = 160;
+    let rendered = serde_json::to_string(value).unwrap_or_else(|_| "<unavailable>".into());
+    let count = rendered.chars().count();
+    if count <= MAX_CHARS {
+        rendered
+    } else {
+        format!("{}…", rendered.chars().take(MAX_CHARS).collect::<String>())
+    }
+}
+
 fn integrity_label(status: PackageIntegrityStatus) -> &'static str {
     match status {
         PackageIntegrityStatus::Complete => "COMPLETE",
@@ -4128,6 +4258,7 @@ fn run_stage_label(stage: RunStage) -> &'static str {
         RunStage::PackageIntegrity => "package_integrity",
         RunStage::Compilation => "compilation",
         RunStage::Coverage => "coverage",
+        RunStage::AttemptPlanning => "attempt_planning",
         RunStage::ExecutionPlanning => "execution_planning",
         RunStage::Execution => "execution",
         RunStage::ReceiptVerification => "receipt_verification",
@@ -4366,6 +4497,7 @@ mod tests {
             environment: BTreeMap::new(),
             log: None,
             expected_manifest_sha256: None,
+            attempt: None,
         };
         let report = execute_case(&case_000(), &options).unwrap();
         let summary = human_summary(&report);

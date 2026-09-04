@@ -73,8 +73,13 @@ cargo run -p avila-core-cli -- run examples/cases/case-001-shield-search \
   --source-root agents=examples/agents \
   --source-root nuclear-data=/path/to/endfb-vii.1-hdf5 \
   --capability python3=/usr/bin/python3 \
-  --input candidate=my-candidate.json --log campaign-log.jsonl
+  --input candidate=my-candidate.json --log campaign-log.jsonl \
+  --attempt candidate-001
 ```
+
+For a derived candidate, choose a new attempt id and add
+`--parent-attempt candidate-001`; Core derives the candidate changes and
+refuses the child if the parent record or fixed question changed.
 
 Run transport on it as well (about a minute at 1e6 particles on 8 threads):
 

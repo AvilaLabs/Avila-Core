@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/attempt-lineage/v0.1-draft.schema.json",
+  "title": "Avila Core Attempt Lineage v0.1 draft",
+  "description": "An identity-bound candidate state and its Core-derived changes from one exact parent run-attempt record. The surrounding case report or JSONL row carries the findings, verdicts, receipts, and artifacts for this candidate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "attempt_id",
+    "generation",
+    "fixed_manifest_sha256",
+    "fixed_compiled_snapshot_sha256",
+    "candidate_input",
+    "candidate_artifact_sha256",
+    "candidate_state_sha256",
+    "candidate_state"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/attempt-lineage/v0.1-draft"
+    },
+    "attempt_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "parent_attempt_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "parent_record_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "fixed_manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "fixed_compiled_snapshot_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "candidate_input": {
+      "$ref": "#/$defs/identifier"
+    },
+    "candidate_artifact_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "candidate_state_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "candidate_state": {},
+    "changes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/change"
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "generation": {
+          "const": 0
+        },
+        "changes": {
+          "maxItems": 0
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": ["parent_attempt_id"]
+          },
+          {
+            "required": ["parent_record_sha256"]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "parent_attempt_id",
+        "parent_record_sha256"
+      ],
+      "properties": {
+        "generation": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "pointer": {
+      "type": "string",
+      "pattern": "^(?:/(?:[^~/]|~[01])*)*$"
+    },
+    "change": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "pointer", "value"],
+          "properties": {
+            "kind": {
+              "const": "added"
+            },
+            "pointer": {
+              "$ref": "#/$defs/pointer"
+            },
+            "value": {}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "pointer", "value"],
+          "properties": {
+            "kind": {
+              "const": "removed"
+            },
+            "pointer": {
+              "$ref": "#/$defs/pointer"
+            },
+            "value": {}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "pointer", "before", "after"],
+          "properties": {
+            "kind": {
+              "const": "replaced"
+            },
+            "pointer": {
+              "$ref": "#/$defs/pointer"
+            },
+            "before": {},
+            "after": {}
+          }
+        }
+      ]
+    }
+  }
+}

@@ -59,8 +59,8 @@ regulatory review. It makes their boundaries explicit and inspectable.
   categorical claim extraction.
 - End-to-end case reports for integrity, compilation, execution, evidence
   binding, coverage, and verdicts.
-- Scripted agent campaigns and several unqualified engineering specimens used
-  to test the feedback loop and refusal boundary.
+- Identity-bound attempt lineage with automatic typed candidate diffs, plus
+  scripted agent campaigns and engineering specimens used to test the loop.
 - A headless CLI and a thin native workbench over the same Rust implementation.
 
 ## Quick start

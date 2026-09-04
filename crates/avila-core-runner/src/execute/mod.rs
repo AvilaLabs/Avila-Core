@@ -723,8 +723,11 @@ fn wait_with_timeout(
 #[cfg(unix)]
 fn kill_timed_out(child: &mut std::process::Child) -> io::Result<()> {
     let pgid = child.id();
+    // `-s KILL -- -PGID` is the one spelling both procps and util-linux
+    // accept: procps reads a bare `-4321` after the signal as a second
+    // signal specification and does nothing.
     let _ = Command::new("kill")
-        .arg("-KILL")
+        .args(["-s", "KILL", "--"])
         .arg(format!("-{pgid}"))
         .stdin(Stdio::null())
         .stdout(Stdio::null())

@@ -19,11 +19,11 @@ use avila_core_compiler::{
     AdmissionState, BasisKind, CampaignReport, CampaignStatus, ClaimQualification, ClaimsDocument,
     CompilationStatus, CompileReport, CompiledContract, CompiledStep, CoverageDeclaration,
     CoverageReport, CoverageState, CoverageStatus, DeclaredOmission, EnvelopeAssessment,
-    EnvelopeState, FindingClass, ImmutablePolicyRef, PresentationGateState, QualificationRecord,
-    RegistrySnapshot, ResolvedBinding, ReviewDisposition, ReviewIndependence, ReviewerRole,
-    SourceLocation, SourceRef, assess_coverage, compile_documents, evaluate_campaign,
-    evaluate_envelope, locate, parse_qualification, parse_requirement_set, registry_kinds,
-    render_campaign_report, render_compile_report, validate_against_schema,
+    EnvelopeState, FindingClass, ImmutablePolicyRef, PresentationGateState, RegistrySnapshot,
+    ResolvedBinding, ReviewDisposition, ReviewIndependence, ReviewerRole, SourceLocation,
+    SourceRef, assess_coverage, compile_documents, evaluate_campaign, evaluate_envelope, locate,
+    parse_requirement_set, registry_kinds, render_campaign_report, render_compile_report,
+    validate_against_schema,
 };
 use avila_core_evidence::PackageArtifact;
 use avila_core_evidence::{
@@ -35,8 +35,7 @@ use avila_core_evidence::{
     verify_receipt,
 };
 use avila_core_kernel::{
-    ExactNumber, KindRegistry, TruthValue, VerdictStatus, diagnose_authoritative_json,
-    read_authoritative_json,
+    ExactNumber, TruthValue, VerdictStatus, diagnose_authoritative_json, read_authoritative_json,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -66,6 +65,10 @@ mod log;
 #[cfg(test)]
 use log::append_log_line;
 use log::{append_error_log, append_log};
+mod qualification;
+#[allow(unused_imports)]
+use qualification::BoundQualification;
+use qualification::{Envelopes, load_qualifications};
 
 const CASE_RUN_REPORT_SCHEMA_VERSION: &str = "avila.core/case-run-report/v0.5-draft";
 const RUN_ATTEMPT_LOG_SCHEMA_VERSION: &str = "avila.core/run-attempt/v0.3-draft";
@@ -2018,81 +2021,6 @@ struct Runner<'a> {
     /// `promote` so a claim on an uncovered output slot never carries
     /// `current_qualification`, even though the step's other outputs do.
     current_qualification_covered_slots: Option<Vec<String>>,
-}
-
-/// A qualification record the package binds, already checked against the
-/// capability it names.
-pub struct BoundQualification {
-    pub sha256: String,
-    pub record: QualificationRecord,
-}
-
-/// What envelope evaluation needs: the bound records and the registry's
-/// quantity kinds.
-pub struct Envelopes {
-    pub records: Vec<BoundQualification>,
-    pub kinds: KindRegistry,
-}
-
-/// Load the package's `qualification` documents and refuse any whose bound
-/// executable is not the one the package binds under that capability id.
-fn load_qualifications(
-    package: &VerifiedCasePackage,
-) -> Result<Vec<BoundQualification>, Box<dyn Error>> {
-    let mut bound = Vec::new();
-    for document in package
-        .manifest
-        .documents
-        .iter()
-        .filter(|document| document.role == "qualification")
-    {
-        let bytes = package
-            .document_by_id(&document.document_id)
-            .ok_or_else(|| {
-                format!(
-                    "qualification document `{}` has no bytes",
-                    document.document_id
-                )
-            })?;
-        let record = parse_qualification(bytes)
-            .map_err(|error| format!("document `{}`: {error}", document.document_id))?;
-        let capability = package
-            .manifest
-            .capabilities
-            .iter()
-            .find(|capability| capability.capability_id == record.capability.capability_id)
-            .ok_or_else(|| {
-                format!(
-                    "qualification `{}` names capability `{}`, which the package does not bind",
-                    record.qualification_id, record.capability.capability_id
-                )
-            })?;
-        if capability.executable_sha256 != record.capability.executable_sha256 {
-            return Err(format!(
-                "qualification `{}` covers executable {} but the package binds {} as `{}`",
-                record.qualification_id,
-                record.capability.executable_sha256,
-                capability.executable_sha256,
-                capability.capability_id
-            )
-            .into());
-        }
-        if !package.manifest.executions.iter().any(|execution| {
-            execution.adapter == record.adapter
-                && execution.capability_id == record.capability.capability_id
-        }) {
-            return Err(format!(
-                "qualification `{}` covers adapter `{}` under `{}`, but no execution uses that pair",
-                record.qualification_id, record.adapter, record.capability.capability_id
-            )
-            .into());
-        }
-        bound.push(BoundQualification {
-            sha256: document.sha256.clone(),
-            record,
-        });
-    }
-    Ok(bound)
 }
 
 impl<'a> Runner<'a> {

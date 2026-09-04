@@ -65,13 +65,14 @@ plausible value.
 ## Naming and legal
 
 - Trademark clearance for “Avila Core” has not been documented.
-- The source, schema, SDK, and brand licenses have not been selected.
+- Repository source, schema drafts, and documentation are licensed under
+  `AGPL-3.0-only`; the provisional brand asset is separately reserved.
+- Whether future standalone SDKs, interchange specifications, or exported
+  evidence packages need additional permissive terms remains undecided.
 - Terms governing scientific claims, provider responsibility, evidence
   ownership, and limitation of liability do not exist yet.
-- No outside patent assessment exists for the semantic compiler, admission
-  kernel, signed reuse, or selective-recomputation mechanisms. That fact does
-  not gate private development or technical verdicts.
-- The date and exact content of every public disclosure relevant to a possible
-  invention must be preserved. New enabling technical disclosures should not
-  be published until Avila has consciously chosen patent, defensive
-  publication, trade-secret, or open-standard treatment.
+- Core mechanisms published in this repository are not being held for patent
+  protection; public release under `AGPL-3.0-only` is intentional.
+- Patentable inventions developed with Core remain separate work. Confidential
+  or enabling details from those projects must stay out of public Core issues,
+  fixtures, and documentation until their owner chooses an IP strategy.

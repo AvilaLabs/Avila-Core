@@ -15,9 +15,9 @@ decision records (ADRs). “Proposed” items are intentionally reversible.
 | S-008 | Accepted | Scientific adapters may wrap existing tools in any suitable language; Rust is the authority and orchestration boundary, not a mandate to rewrite solvers. |
 | S-009 | Accepted | The initial application is local-first and compatible with private or air-gapped deployment. |
 | S-010 | Accepted | Specimen and unavailable capabilities must fail closed and never create cosmetic success states. |
-| S-011 | Proposed | A free/open local runtime and verifier become the adoption surface; enterprise policy and provider routing are commercial layers. Final licensing remains unresolved. |
+| S-011 | Accepted | The repository is `AGPL-3.0-only` except for separately reserved branding assets. The local runtime and verifier remain open adoption surfaces, and a modified network-interactive Core must offer its corresponding source to its users. See [ADR-0012](docs/adr/0012-agpl-license-and-work-product-boundary.md). |
 | S-012 | Proposed | The first vertical proof composes transport, activation, shutdown dose, uncertainty treatment, and requirement evaluation. The choice must be justified by representative problem evidence before it becomes a supported product claim. |
-| S-013 | Proposed | The semantic profiles, conformance vectors, package format, and verifier interface should be independently auditable and reimplementable; licensing and publication follow an IP review so public disclosure does not accidentally waive protection options. |
+| S-013 | Accepted | Publish Core's semantic profiles, conformance vectors, package format, and verifier interface under the repository license so the judgment layer is independently auditable. Core mechanisms are not withheld for patent protection; additional permissive interoperability terms remain an explicit future decision. See [ADR-0012](docs/adr/0012-agpl-license-and-work-product-boundary.md). |
 | S-014 | Proposed | JSON remains the canonical interchange. A textual `.acore` front end is built only after semantic fixtures stabilize and measured authoring evidence justifies it. |
 | S-015 | Accepted | A Core verdict is a conditional derivation from admitted records under named rules and authorities. It is not, by itself, scientific truth, certification, or regulatory approval. |
 | S-016 | Accepted | The `v0.1` contract model, capability manifests, and planner are retired. The `v0.2-draft` contract, which carries its bounded question, and the registry snapshot compiled by `avila-core-compiler` are the only authoritative document forms; package selection returns as an SC-5 and SC-8 binding pass over compiled snapshots. |
@@ -49,3 +49,5 @@ Architecture records:
 - [ADR-0008: Qualification envelopes](docs/adr/0008-qualification-envelopes.md)
 - [ADR-0009: Staged agent review](docs/adr/0009-staged-agent-review.md)
 - [ADR-0010: Technical verdicts and optional presentation gates](docs/adr/0010-technical-verdicts-and-optional-presentation-gates.md)
+- [ADR-0011: Package-declared checkers and categorical evidence](docs/adr/0011-package-declared-checkers-and-categorical-evidence.md)
+- [ADR-0012: AGPL license and work-product boundary](docs/adr/0012-agpl-license-and-work-product-boundary.md)

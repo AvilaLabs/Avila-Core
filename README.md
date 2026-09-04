@@ -12,7 +12,7 @@
   <a href="https://github.com/AvilaLabs/Avila-Core/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/AvilaLabs/Avila-Core/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Status: pre-alpha" src="https://img.shields.io/badge/status-pre--alpha-f59e0b">
   <img alt="Rust 1.95+" src="https://img.shields.io/badge/rust-1.95%2B-000000?logo=rust">
-  <img alt="License pending" src="https://img.shields.io/badge/license-pending-6b7280">
+  <a href="LICENSE"><img alt="License: AGPL-3.0-only" src="https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg"></a>
 </p>
 
 Avila Core turns a bounded technical question into a reproducible chain of
@@ -113,7 +113,10 @@ The CLI also provides `evaluate`, `run`, and `canonicalize`; use
 
 ## License and mark
 
-An open-source license has not yet been selected. Until one is added, access to
-this repository does not grant permission to copy, modify, or redistribute its
-contents. The Avila Core logo is separately reserved; see
+Except for separately identified branding assets, this repository is licensed
+under the [GNU Affero General Public License v3.0
+only](LICENSE) (`AGPL-3.0-only`). The license applies to Core, not automatically
+to ordinary inputs or outputs created or evaluated with Core.
+
+The Avila Core name and logo are separately reserved; see
 [`assets/branding/README.md`](assets/branding/README.md).

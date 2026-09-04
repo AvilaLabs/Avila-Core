@@ -1,6 +1,6 @@
 # ADR-0005: Portable evidence boundary
 
-- Status: accepted in principle; format and license remain proposed
+- Status: accepted in principle; format and evidence-package license remain proposed
 - Date: 2026-08-31
 
 ## Context
@@ -22,8 +22,8 @@ standards where they fit.
 - Evidence lock-in cannot be a commercial strategy.
 - Canonicalization, signatures, redaction, and archival identity are first-class.
 - An independent verifier must describe checks and omissions separately.
-- Final schema, package, SDK, and source licenses require legal and strategic
-  decision before external reliance.
+- Repository source and schema drafts are `AGPL-3.0-only`; final package,
+  standalone SDK, and interoperability licensing still require legal and
+  strategic decisions before external reliance.
 - Enterprise revenue must come from governance, collaboration, routing, support,
   and ongoing use—not hostage access to old evidence.
-

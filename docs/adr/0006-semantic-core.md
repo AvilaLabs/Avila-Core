@@ -562,9 +562,9 @@ This ADR remains proposed until:
 - Domain governance, qualification networks, adapters, templates, accumulated
   evidence history, and enterprise operation are the compounding assets.
 
-## Proposed decision-index entries
+## Decision-index entries proposed by this record
 
 | ID | Status | Decision |
 | --- | --- | --- |
-| S-013 | Proposed | Publish the semantic profiles, vectors, package format, and verifier interface so evidence consumers can independently audit and reimplement the judgment layer; preserve patent and other IP options before first publication. |
+| S-013 | Proposed here; later accepted by [ADR-0012](0012-agpl-license-and-work-product-boundary.md) | Publish the semantic profiles, vectors, package format, and verifier interface so evidence consumers can independently audit and reimplement the judgment layer; the later licensing decision does not withhold Core mechanisms for patent protection. |
 | S-014 | Proposed | Keep `.acore` exploratory until semantic fixtures stabilize and measured authoring evidence justifies a textual language; JSON remains canonical. |

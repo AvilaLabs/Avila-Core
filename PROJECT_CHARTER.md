@@ -80,8 +80,8 @@ Core may not, by itself:
 - The customer owns the evidence generated from its work.
 - `INCONCLUSIVE` is a legitimate and billable resolution state.
 - Core is solver-, provider-, language-, and infrastructure-neutral.
-- The local runtime and independent verifier must remain viable product
-  boundaries even if their final license is not yet decided.
+- The local runtime and independent verifier must remain viable open-source
+  product boundaries under the repository license.
 - Method boundaries stay with named owners and validation records—not with the
   graphical interface, generative agent, or semantic compiler.
 - Every Core verdict remains conditional on the exact records, trust policy,

@@ -24,8 +24,8 @@ security, and test boundaries without widening the claimed scope.
   promoted by a runner signature.
 - Do not call a finite vector corpus the complete specification; update written
   semantics, schemas, and fixtures together.
-- Flag a new enabling technical mechanism for IP review before placing it in a
-  public issue, pull request, release, or design document.
+- Do not place confidential or patent-sensitive details from a downstream
+  project in a public Core issue, pull request, fixture, or design document.
 
 Before submitting a change:
 
@@ -38,3 +38,10 @@ cargo test --workspace --all-targets
 Changes to schemas or core semantics require an ADR. Changes that could be
 interpreted as a scientific, safety, or regulatory claim also require review by
 the appropriate domain professional.
+
+## Contribution license
+
+Unless a separate written agreement says otherwise, contributions are
+submitted under `AGPL-3.0-only`, the same license that covers the repository.
+Do not submit third-party code, data, or assets unless their provenance is
+documented and their terms are compatible with that license.

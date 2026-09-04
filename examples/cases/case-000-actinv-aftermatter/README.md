@@ -19,7 +19,8 @@ component, facility decision, or operational use is represented.
 
 At the synthetic 50-year checkpoint, are both recorded Class A mixture
 fractions strictly below 1 under the bounded Aftermatter R0 rule
-implementation?
+implementation, and does the Clive route reach Aftermatter's `feasible`
+state?
 
 The Aftermatter result reports:
 
@@ -36,16 +37,19 @@ during the run, as `[fraction − error_bound, fraction + error_bound]` in exact
 decimal arithmetic.
 
 All three modeled facility/storage routes remain `unresolved` at 50 years.
-The current Core language cannot evaluate categorical route states, so the
-route result is admitted as an unquantified artifact and is never translated
-into an invented numeric score.
+Core now extracts the contract-selected Clive state from the same route-result
+artifact as closed-vocabulary categorical evidence. It compares
+`unresolved` directly with the required `feasible` value; it does not
+translate route state into an invented numeric score. The artifact identifies
+the missing Clive facts as profile approval, dose-rate characterization,
+package selection, and surface-contamination characterization.
 
 ## What is executed and what is attested
 
 | Step | Capability type | Status in CASE-000 |
 | --- | --- | --- |
 | `activation` | `aftermatter.r0-inventory-build@1` | Executed. Core stages Aftermatter's frozen R0 builder, the ACTINV 1.0.1 `actinv` and `dump` release builds, the frozen FNS spectrum, and the five data-release files, all verified by digest, and runs the builder under a digest-pinned Python interpreter. The builder generates the ACTINV problem, validates and runs ACTINV, and writes the normalized inventory and decay metadata. |
-| `classification` | `aftermatter.activated-metal-disposition@1` | Executed. Core stages the fresh inventory and decay metadata with the five verified Aftermatter inputs, runs the bound Aftermatter executable with a cleared environment, verifies the receipt, and extracts the three output claims. |
+| `classification` | `aftermatter.activated-metal-disposition@1` | Executed. Core stages the fresh inventory and decay metadata with the five verified Aftermatter inputs, runs the bound Aftermatter executable with a cleared environment, verifies the receipt, and extracts two numeric interval claims plus the selected route-state claim. |
 
 Two capabilities are bound in `package.json` by executable digest and must
 match before anything runs: `python3` (CPython 3.14.4, the interpreter that
@@ -64,21 +68,27 @@ verdict.
 
 Every declared input and output claim is structurally admitted under the
 current type-level rules. Both source intervals have upper bounds below their
-frozen limits, so both requirement verdicts are:
+frozen limits, while the Clive route is `unresolved` rather than `feasible`:
 
 ```text
-PASS — bounded.lt.within
+PASS — CASE-000-R1 — bounded.lt.within
+PASS — CASE-000-R2 — bounded.lt.within
+FAIL — CASE-000-R3 — categorical.equals.mismatch
+       observed: unresolved
+       accepted: feasible
 ```
 
-That technical result needs no human, professional, or agent review. It means
-only that the admitted bounded intervals satisfy these two exact internal
-requirements. It does not qualify ACTINV, Aftermatter, the nuclear data, or the
-case for regulatory or operational use.
+Those technical results need no human, professional, or agent review. The FAIL
+is useful feedback, not an execution error: the numerical classification
+screen clears while the chosen route is not yet resolved. None of the verdicts
+qualifies ACTINV, Aftermatter, the nuclear data, or the case for regulatory or
+operational use, and Aftermatter's `feasible` state would still not mean
+facility acceptance.
 
 ## Files
 
-- `contract.json` — the bounded question, ACTINV → Aftermatter dataflow, and two
-  numeric requirements.
+- `contract.json` — the bounded question, ACTINV → Aftermatter dataflow, two
+  numeric requirements, and one categorical route-state requirement.
 - `registry.json` — the research-only roles and capability types used by this
   case.
 - `package.json` — raw-byte identities for the case documents, bindings from
@@ -170,8 +180,9 @@ cargo test -p avila-core-cli
 ```
 
 The compiler integration test requires semantic equality with the committed
-campaign report and separately asserts that every evidence record is admitted
-while both technical verdicts remain `PASS`. The CLI tests run the workflow
+campaign report and separately asserts that every evidence record is admitted,
+the two numeric verdicts remain `PASS`, and the route-state verdict remains the
+expected categorical `FAIL`. The CLI tests run the workflow
 without external roots, run adversarial executions over a stub capability, and
 execute the real chain when `AVILA_CORE_CASE_000_AFTERMATTER`,
 `AVILA_CORE_CASE_000_PYTHON3`, `AVILA_CORE_CASE_000_AFTERMATTER_ROOT`,

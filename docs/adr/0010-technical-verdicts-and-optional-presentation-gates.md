@@ -78,7 +78,9 @@ user.
   verdict fields are removed from the executable profile.
 - The only compiled reviewer role in this slice is `agent`; compiled output
   calls the result a `presentation_gate`, not a review obligation.
-- CASE-000 now produces two technical `PASS` verdicts with no review stage.
+- At adoption, CASE-000 produced two technical `PASS` verdicts with no review
+  stage. Revision 3 later added an independently evaluated categorical route
+  requirement; its `FAIL` likewise needs no review stage to exist.
 - CASE-001 demonstrates the optional path: Core evaluates first, then a
   hash-bound instructed agent returns the failing reference candidate to the
   designer. A clean candidate in the agent tests is routed to the user.

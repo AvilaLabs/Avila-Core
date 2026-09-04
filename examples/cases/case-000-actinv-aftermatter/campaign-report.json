@@ -2,8 +2,8 @@
   "schema_version": "avila.core/campaign-report/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "status": "evaluated",
-  "compiled_snapshot_sha256": "sha256:47419231333d165e9f89698c7d43343cd99e72eaa448ede0c44dbabd19ce1df8",
-  "claims_sha256": "sha256:63d3d22796cac4a6187dbebc9a2fdaae63cfa0eb62f45ea2668d50eb54c3df9c",
+  "compiled_snapshot_sha256": "sha256:d5c778e04d4402cbcf290a94a6849f840b53698ff52d8f4a7e4f2e864827aa9c",
+  "claims_sha256": "sha256:b9784092ac0dd034eee692b6ea72863830193fa4c74c7e0fbbc01ac443691d8c",
   "admissions": [
     {
       "evidence_id": "input:actinv-activation-library",
@@ -163,11 +163,11 @@
       "state": "admitted"
     },
     {
-      "evidence_id": "aftermatter-r0-route-result",
+      "evidence_id": "aftermatter-r0-clive-route-state",
       "source": {
         "source": "step_output",
         "step_id": "classification",
-        "output_slot": "route-result"
+        "output_slot": "route-state"
       },
       "state": "admitted"
     }
@@ -197,8 +197,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:47419231333d165e9f89698c7d43343cd99e72eaa448ede0c44dbabd19ce1df8",
-        "claims_sha256": "sha256:63d3d22796cac4a6187dbebc9a2fdaae63cfa0eb62f45ea2668d50eb54c3df9c"
+        "compiled_snapshot_sha256": "sha256:d5c778e04d4402cbcf290a94a6849f840b53698ff52d8f4a7e4f2e864827aa9c",
+        "claims_sha256": "sha256:b9784092ac0dd034eee692b6ea72863830193fa4c74c7e0fbbc01ac443691d8c"
       }
     },
     {
@@ -225,11 +225,39 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:47419231333d165e9f89698c7d43343cd99e72eaa448ede0c44dbabd19ce1df8",
-        "claims_sha256": "sha256:63d3d22796cac4a6187dbebc9a2fdaae63cfa0eb62f45ea2668d50eb54c3df9c"
+        "compiled_snapshot_sha256": "sha256:d5c778e04d4402cbcf290a94a6849f840b53698ff52d8f4a7e4f2e864827aa9c",
+        "claims_sha256": "sha256:b9784092ac0dd034eee692b6ea72863830193fa4c74c7e0fbbc01ac443691d8c"
+      }
+    },
+    {
+      "requirement_id": "CASE-000-R3",
+      "statement": "At the frozen 50-year checkpoint, the Clive route reaches Aftermatter's feasible state under the bounded research screen.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "classification",
+        "output_slot": "route-state"
+      },
+      "evidence_ids": [
+        "aftermatter-r0-clive-route-state"
+      ],
+      "verdict": {
+        "status": "fail",
+        "rule": "categorical.equals.mismatch",
+        "numbers_present": false,
+        "observed_category": "unresolved",
+        "accepted_categories": [
+          "feasible"
+        ]
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:d5c778e04d4402cbcf290a94a6849f840b53698ff52d8f4a7e4f2e864827aa9c",
+        "claims_sha256": "sha256:b9784092ac0dd034eee692b6ea72863830193fa4c74c7e0fbbc01ac443691d8c"
       }
     }
   ],
-  "campaign_sha256": "sha256:051df9af6d5d408470080243b36d71828aed03b928fd9725d9b920a10e8dd19f",
+  "campaign_sha256": "sha256:e4e77105b91b9df8774917e226b119bcd49c3765b094d7bbaf967d5782abf43e",
   "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
 }

@@ -4084,7 +4084,7 @@ mod tests {
         assert_eq!(bindings.status, BindingStatus::Verified);
         assert_eq!(bindings.bound_evidence_records, 20);
         assert_eq!(bindings.bound_presentation_policies, 0);
-        assert_eq!(report.campaign.as_ref().unwrap().verdicts.len(), 2);
+        assert_eq!(report.campaign.as_ref().unwrap().verdicts.len(), 3);
         assert!(report.replay.as_ref().unwrap().matches);
 
         let summary = human_summary(&report);
@@ -4092,6 +4092,9 @@ mod tests {
         assert!(summary.contains("[NOT RUN] activation"));
         assert!(summary.contains("[NOT RUN] classification"));
         assert!(summary.contains("CASE-000-R1 — bounded.lt.within"));
+        assert!(summary.contains(
+            "CASE-000-R3 — categorical.equals.mismatch (observed unresolved; accepted feasible)"
+        ));
         assert!(summary.contains("source root(s) actinv-data, actinv-release, aftermatter"));
     }
 

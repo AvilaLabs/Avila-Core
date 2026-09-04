@@ -148,7 +148,7 @@
   },
   "expected_core_result": {
     "campaign_status": "evaluated",
-    "technical_comparison": "both interval upper bounds are strictly below 1",
+    "technical_comparison": "both interval upper bounds are strictly below 1; the selected Clive route remains unresolved rather than feasible",
     "requirement_verdicts": [
       {
         "requirement_id": "CASE-000-R1",
@@ -159,6 +159,13 @@
         "requirement_id": "CASE-000-R2",
         "status": "pass",
         "rule": "bounded.lt.within"
+      },
+      {
+        "requirement_id": "CASE-000-R3",
+        "status": "fail",
+        "rule": "categorical.equals.mismatch",
+        "observed_category": "unresolved",
+        "accepted_categories": ["feasible"]
       }
     ]
   },
@@ -167,13 +174,13 @@
     "A matching artifact digest establishes byte identity only. A verified execution receipt establishes that the bound executable ran over the bound bytes and produced the recorded bytes; it does not verify signatures, qualification, practical suitability, or invalidation.",
     "The activation capability is a digest-pinned Python interpreter running Aftermatter's frozen R0 builder, which drives the digest-pinned ACTINV 1.0.1 executables; none of them is qualified by Core.",
     "Producer identities in the generated claims are the executable digests the runner verified, not signed capability packages.",
-    "The current requirement language does not evaluate the categorical waste-class or route-state vocabulary.",
-    "CASE-000 is not discovery evidence, participant evidence, pilot evidence, or a qualification record. Its technical PASS means only that the admitted bounded intervals satisfy these exact internal requirements."
+    "Core evaluates only the contract-selected Clive route state at the selected checkpoint. It does not collapse the multi-route artifact into a score or infer facility acceptance.",
+    "CASE-000 is not discovery evidence, participant evidence, pilot evidence, or a qualification record. Its two PASS verdicts and one FAIL verdict mean only that the admitted evidence satisfies or misses these exact internal requirements."
   ],
-  "execution_recorded_on": "2026-09-02",
+  "execution_recorded_on": "2026-09-03",
   "execution": {
-    "milestone": "CASE-000E",
-    "contract_revision": 2,
+    "milestone": "CASE-000F",
+    "contract_revision": 3,
     "runner": "avila.core/cli-rust@0.1.0",
     "executed_steps": [
       {
@@ -226,7 +233,7 @@
           "executable_sha256": "7f5067fead9fb1a25ec3937877a24a54533769515996ce0f4038bce2d8b05943"
         },
         "receipt": "receipts/classification.json",
-        "invocation_sha256": "e74b4164a8548a3f6b7cc97bb2e44f48e01869f96227828b7d309041f8d11095",
+        "invocation_sha256": "c412965286638afad3e20cea2206e09384c76669d33e6f0fba20aaa3fc4dc522",
         "fresh_outputs": {
           "route-result": "3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718"
         },
@@ -234,7 +241,7 @@
         "claims_extracted": [
           "aftermatter-r0-table-1-class-a-fraction",
           "aftermatter-r0-table-2-class-a-fraction",
-          "aftermatter-r0-route-result"
+          "aftermatter-r0-clive-route-state"
         ]
       }
     ],

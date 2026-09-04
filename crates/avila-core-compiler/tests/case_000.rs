@@ -40,11 +40,21 @@ fn case_000_is_reproducible_and_technically_evaluated() {
     );
 
     let verdicts = actual["verdicts"].as_array().unwrap();
-    assert_eq!(verdicts.len(), 2);
-    assert!(verdicts.iter().all(|record| {
+    assert_eq!(verdicts.len(), 3);
+    assert!(verdicts[..2].iter().all(|record| {
         record["verdict"]["status"] == json!("pass")
             && record["verdict"]["rule"] == json!("bounded.lt.within")
     }));
+    assert_eq!(verdicts[2]["requirement_id"], json!("CASE-000-R3"));
+    assert_eq!(verdicts[2]["verdict"]["status"], json!("fail"));
+    assert_eq!(
+        verdicts[2]["verdict"]["rule"],
+        json!("categorical.equals.mismatch")
+    );
+    assert_eq!(
+        verdicts[2]["verdict"]["observed_category"],
+        json!("unresolved")
+    );
 
     let provenance: Value =
         serde_json::from_slice(&fs::read(root.join("provenance.json")).unwrap()).unwrap();

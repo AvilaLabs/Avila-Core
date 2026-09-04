@@ -2,15 +2,15 @@
   "schema_version": "avila.core/evidence-contract/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "contract_id": "case-000.actinv-aftermatter-r0",
-  "revision": 2,
+  "revision": 3,
   "status": "draft",
-  "question": "Under the frozen synthetic Aftermatter R0 basis, do the 50-year Table 1 and Table 2 Class A mixture fractions remain strictly below 1?",
+  "question": "Under the frozen synthetic Aftermatter R0 basis, do the 50-year Table 1 and Table 2 Class A mixture fractions remain strictly below 1, and does the Clive route reach Aftermatter's feasible state?",
   "assumptions": [
     "The specimen is the synthetic 100 kg activated-316L case frozen by Aftermatter R0.",
     "The activation inventory is produced by executing ACTINV 1.0.1 through Aftermatter's frozen R0 builder over the hash-bound data release; Core verifies the interpreter, builder, executables, and inputs by digest and does not qualify them.",
     "The Aftermatter result is produced by executing the aftermatter-cli built at commit 70a1c341d478bc37bf1ed0206dad4ee507cf743d over the fresh inventory and decay metadata; Core verifies the executable by digest and does not qualify it.",
     "The intervals bound only Aftermatter's recorded decimal-floor and rounding error. Nuclear-data, activation-model, regulatory-model, and scenario uncertainty are not evaluated.",
-    "All facility routes remain unresolved at 50 years. Their categorical states are retained in the route-result artifact and are not converted into numeric requirement claims.",
+    "All modeled routes remain unresolved at 50 years. Core evaluates the selected Clive route as categorical evidence without converting its state into a numeric score.",
     "This contract is an internal integration specimen, not a regulatory classification, facility-acceptance, packaging, transportation, shipment, safety, or operational decision."
   ],
   "execution_policy": {},
@@ -177,7 +177,8 @@
         }
       ],
       "parameters": {
-        "checkpoint_id": "cool-50y"
+        "checkpoint_id": "cool-50y",
+        "route_id": "clive-bwf"
       }
     }
   ],
@@ -207,6 +208,22 @@
       "comparison": "less_than",
       "limit": { "kind": "core.dimensionless-ratio", "value": "1", "unit": "1" },
       "basis": { "kind": "bounded" }
+    }
+  ],
+  "categorical_requirements": [
+    {
+      "requirement_id": "CASE-000-R3",
+      "statement": "At the frozen 50-year checkpoint, the Clive route reaches Aftermatter's feasible state under the bounded research screen.",
+      "purpose": { "id": "avila-labs.core.internal-integration", "major": 1 },
+      "metric": {
+        "source": "step_output",
+        "step_id": "classification",
+        "output_slot": "route-state"
+      },
+      "predicate": {
+        "operator": "equals",
+        "value": "feasible"
+      }
     }
   ]
 }

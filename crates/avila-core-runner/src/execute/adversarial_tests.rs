@@ -87,7 +87,10 @@ fn canned_route_result(fraction_1: &str) -> Vec<u8> {
                 "table_2": { "boundaries": [
                     { "class_if_qualifies": "A", "fraction": "0.25", "error_bound": "0.00001" }
                 ] }
-            }
+            },
+            "routes": [
+                { "route_id": "clive-bwf", "state": "unresolved" }
+            ]
         }]
     })
     .to_string();
@@ -209,7 +212,7 @@ fn build_package_with(dir: &Path, stub: &Path, activation_stub: Option<&Path>) -
         "evidence_ids": [
             "aftermatter-r0-table-1-class-a-fraction",
             "aftermatter-r0-table-2-class-a-fraction",
-            "aftermatter-r0-route-result"
+            "aftermatter-r0-clive-route-state"
         ],
         "source_root": "stub",
         "path": "route-result.json",
@@ -317,7 +320,7 @@ fn build_package_with(dir: &Path, stub: &Path, activation_stub: Option<&Path>) -
             "outputs": [
                 { "output_slot": "table-1-class-a-fraction", "claim_id": "aftermatter-r0-table-1-class-a-fraction" },
                 { "output_slot": "table-2-class-a-fraction", "claim_id": "aftermatter-r0-table-2-class-a-fraction" },
-                { "output_slot": "route-result", "claim_id": "aftermatter-r0-route-result" }
+                { "output_slot": "route-state", "claim_id": "aftermatter-r0-clive-route-state" }
             ]
         }],
         "limitations": ["synthetic test package"]
@@ -489,7 +492,16 @@ fn honest_execution_generates_claims_and_replays() {
         campaign
             .verdicts
             .iter()
+            .take(2)
             .all(|verdict| { verdict.verdict.rule == "bounded.lt.within" })
+    );
+    assert_eq!(
+        campaign.verdicts[2].verdict.rule,
+        "categorical.equals.mismatch"
+    );
+    assert_eq!(
+        campaign.verdicts[2].verdict.observed_category.as_deref(),
+        Some("unresolved")
     );
     assert!(report.replay.as_ref().unwrap().matches);
     assert!(summary.contains("[EXECUTED] classification via stub"));
@@ -508,6 +520,13 @@ fn honest_execution_generates_claims_and_replays() {
     assert_eq!(table_1["claim"]["lower"]["value"], json!("0.4999"));
     assert_eq!(table_1["claim"]["upper"]["value"], json!("0.5001"));
     assert_eq!(table_1["producer"]["package_id"], json!("test/stub@1"));
+    let route_state = committed["claims"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|claim| claim["claim_id"] == "aftermatter-r0-clive-route-state")
+        .unwrap();
+    assert_eq!(route_state["claim"]["value"], json!("unresolved"));
 }
 
 #[test]

@@ -179,8 +179,8 @@ const VERIFY_STEPS: [TourStep; 7] = [
     TourStep {
         target: TourTarget::ReportPanel,
         view: Some(HelpView::Case(HelpTab::Verdicts)),
-        title: "A technical PASS has a boundary",
-        instruction: "CASE-000 returns PASS because both admitted bounded intervals satisfy the two exact requirements. That verdict needs no professional review, and it does not claim qualification, practical suitability, certification, or regulatory approval.",
+        title: "Technical verdicts have boundaries",
+        instruction: "CASE-000 returns two numeric PASS verdicts and one categorical FAIL: the fractions clear their limits while the Clive route remains unresolved rather than feasible. None needs professional review to exist, and none claims qualification, practical suitability, certification, or regulatory approval.",
     },
     TourStep {
         target: TourTarget::HelpButton,

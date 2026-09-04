@@ -16,8 +16,8 @@ integrations, safety analyses, or evidence of compliance.
   Aftermatter R0 evidence chain, carries the draft case-package manifest with
   its bound executables and execution declarations, executes the ACTINV build
   and the Aftermatter classification under verified receipts, generates every
-  output claim from the fresh results, and returns technical `PASS` for both
-  bounded requirements without any review stage.
+  output claim from the fresh results, and returns two numeric `PASS` verdicts
+  beside one categorical route-state `FAIL`, without any review stage.
 
 The dose limit, unit factors, parameter domains, and every capability
 description are hypothetical. They must never be used for engineering or

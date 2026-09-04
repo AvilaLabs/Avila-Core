@@ -7,31 +7,31 @@
       "document_id": "case-000-contract",
       "role": "contract",
       "path": "contract.json",
-      "sha256": "sha256:6c8718cdd32ae93bd0b9861921aeca37614ffa5a953ad34eaea5cddfe9b2fe93"
+      "sha256": "sha256:c3eed0517a7f629b8453637234589c9c71988d35adc6b96f04d0744ce39ebdd1"
     },
     {
       "document_id": "case-000-registry",
       "role": "registry",
       "path": "registry.json",
-      "sha256": "sha256:95db065a2354be8f05cb7746beb9f790833c97fb8fbf323c1519e7cf9303e3ab"
+      "sha256": "sha256:5940a25788464e975297c16be459bab7c325e4e2dee54e2976e6a52a204022ef"
     },
     {
       "document_id": "case-000-claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:3238e99473190be2065bdee9a3e09a38c7f03f274c571732df68fe73b6d4e9be"
+      "sha256": "sha256:c8df47e29d345cb266b4405b9b16f975f02347cb333fdc9c0b30a3d0a8b35644"
     },
     {
       "document_id": "case-000-expected-campaign",
       "role": "expected_campaign_report",
       "path": "campaign-report.json",
-      "sha256": "sha256:2ecb5245fc57107fe07e4e26feada08eac8bd1200d29ab44e88650bed64896e5"
+      "sha256": "sha256:9b8520d3dd05ae6e008cf40347af4cb550cf9707dc32ad01736c6fbdc77a1c2a"
     },
     {
       "document_id": "case-000-provenance",
       "role": "provenance",
       "path": "provenance.json",
-      "sha256": "sha256:b82549b6936ca17a23265ef692670020582ff1869f3766c52be25f3970f7e8e3"
+      "sha256": "sha256:f6b88c9799fc9d56adddd8efdb797d218edd36fd9041d778c9424886ea45c51b"
     },
     {
       "document_id": "case-000-activation-receipt",
@@ -44,7 +44,7 @@
       "document_id": "case-000-classification-receipt",
       "role": "execution_receipt",
       "path": "receipts/classification.json",
-      "sha256": "sha256:87fc3a64fc354848977b38b668ab32fe94108a39e8e5a79f8952faaf2e2ce2dd",
+      "sha256": "sha256:75069adc110c74669a8d9e06ec89bd8031c0d6ddcfdb7a36a7a7640fd277690b",
       "step_id": "classification"
     }
   ],
@@ -207,7 +207,7 @@
       "evidence_ids": [
         "aftermatter-r0-table-1-class-a-fraction",
         "aftermatter-r0-table-2-class-a-fraction",
-        "aftermatter-r0-route-result"
+        "aftermatter-r0-clive-route-state"
       ],
       "source_root": "aftermatter",
       "path": "cases/r0/engine/route-result.json",
@@ -330,8 +330,8 @@
           "claim_id": "aftermatter-r0-table-2-class-a-fraction"
         },
         {
-          "output_slot": "route-result",
-          "claim_id": "aftermatter-r0-route-result"
+          "output_slot": "route-state",
+          "claim_id": "aftermatter-r0-clive-route-state"
         }
       ]
     }

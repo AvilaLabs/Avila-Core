@@ -2,7 +2,7 @@
   "schema_version": "avila.core/registry-snapshot/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "registry_id": "case-000.actinv-aftermatter.registry",
-  "revision": 2,
+  "revision": 3,
   "kinds": [
     {
       "kind_id": "core.dimensionless-ratio",
@@ -155,13 +155,14 @@
       ]
     },
     {
-      "role": { "id": "aftermatter.route-result", "major": 1 },
+      "role": { "id": "aftermatter.route-state", "major": 1 },
       "owner": "avila-labs.aftermatter",
-      "validator": "aftermatter.validate.route-result@1",
+      "validator": "aftermatter.validate.route-state@1",
       "accepted_media_types": ["application/vnd.aftermatter.route-result+json"],
       "permitted_claim_models": [{ "model": "unquantified" }],
+      "categorical_values": ["feasible", "infeasible", "unresolved"],
       "non_claims": [
-        "Feasible is not acceptance, unresolved is not rejection, and this role carries no operational authorization."
+        "The state is extracted for one contract-selected route and checkpoint. Feasible is not acceptance, unresolved is not rejection, and this role carries no operational authorization."
       ]
     }
   ],
@@ -311,8 +312,8 @@
           ]
         },
         {
-          "slot_id": "route-result",
-          "role": { "id": "aftermatter.route-result", "major": 1 },
+          "slot_id": "route-state",
+          "role": { "id": "aftermatter.route-state", "major": 1 },
           "media_type": "application/vnd.aftermatter.route-result+json",
           "permitted_claim_models": [{ "model": "unquantified" }],
           "excluded_purposes": [
@@ -327,6 +328,14 @@
           "value_type": {
             "type": "text",
             "allowed_values": ["cool-50y"]
+          }
+        },
+        {
+          "parameter_id": "route_id",
+          "required": true,
+          "value_type": {
+            "type": "text",
+            "allowed_values": ["clive-bwf"]
           }
         }
       ],

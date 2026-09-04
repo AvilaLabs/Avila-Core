@@ -110,10 +110,11 @@
         "sha256": "sha256:3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718"
       },
       "claim": {
-        "model": "unquantified"
+        "model": "unquantified",
+        "value": "unresolved"
       },
-      "claim_id": "aftermatter-r0-route-result",
-      "output_slot": "route-result",
+      "claim_id": "aftermatter-r0-clive-route-state",
+      "output_slot": "route-state",
       "producer": {
         "package_id": "avila-labs.aftermatter/aftermatter-cli@0.1.0",
         "sha256": "sha256:7f5067fead9fb1a25ec3937877a24a54533769515996ce0f4038bce2d8b05943"
@@ -121,7 +122,7 @@
       "step_id": "classification"
     }
   ],
-  "compiled_snapshot_sha256": "sha256:47419231333d165e9f89698c7d43343cd99e72eaa448ede0c44dbabd19ce1df8",
+  "compiled_snapshot_sha256": "sha256:d5c778e04d4402cbcf290a94a6849f840b53698ff52d8f4a7e4f2e864827aa9c",
   "inputs": [
     {
       "artifact": {

@@ -39,11 +39,13 @@ pub const OUTPUTS: &[AdapterOutput] = &[AdapterOutput {
 pub const OUTPUT_SLOTS: &[&str] = &[
     "table-1-class-a-fraction",
     "table-2-class-a-fraction",
-    "route-result",
+    "route-state",
 ];
 pub const TIMEOUT: Duration = Duration::from_secs(600);
 pub const CHECKPOINT_PARAMETER: &str = "checkpoint_id";
+pub const ROUTE_PARAMETER: &str = "route_id";
 pub const ROUTE_RESULT_SCHEMA: &str = "aftermatter-route-result-2";
+const ROUTE_STATES: &[&str] = &["feasible", "infeasible", "unresolved"];
 const FRACTION_UNIT: &str = "1";
 
 /// The portable argument list. Rulepacks are passed in the order Aftermatter's
@@ -89,18 +91,13 @@ pub fn arguments(staged: &BTreeMap<String, String>) -> Result<Vec<String>, Strin
 /// Extract the three output claims from the produced route result: two
 /// bounded Class A mixture fractions at the compiled checkpoint, each an
 /// interval `[fraction - error_bound, fraction + error_bound]` with the
-/// fraction as nominal, and the whole document as an unquantified artifact.
+/// fraction as nominal, and the selected route's closed-vocabulary state.
 pub fn extract_claims(
     outputs: &BTreeMap<String, Vec<u8>>,
     parameters: &BTreeMap<String, Value>,
 ) -> Result<Vec<ExtractedClaim>, String> {
-    let checkpoint_id = parameters
-        .get(CHECKPOINT_PARAMETER)
-        .and_then(|value| value.get("value"))
-        .and_then(Value::as_str)
-        .ok_or_else(|| {
-            format!("compiled step carries no text parameter `{CHECKPOINT_PARAMETER}`")
-        })?;
+    let checkpoint_id = text_parameter(parameters, CHECKPOINT_PARAMETER)?;
+    let route_id = text_parameter(parameters, ROUTE_PARAMETER)?;
     let bytes = outputs
         .get(OUTPUT_ID)
         .ok_or_else(|| format!("output `{OUTPUT_ID}` was not collected"))?;
@@ -164,12 +161,46 @@ pub fn extract_claims(
             }),
         });
     }
+    let routes = checkpoint
+        .get("routes")
+        .and_then(Value::as_array)
+        .ok_or_else(|| format!("checkpoint `{checkpoint_id}` has no route array"))?;
+    let matching_routes: Vec<&Value> = routes
+        .iter()
+        .filter(|route| route.get("route_id").and_then(Value::as_str) == Some(route_id))
+        .collect();
+    let [route] = matching_routes.as_slice() else {
+        return Err(format!(
+            "checkpoint `{checkpoint_id}` has {} routes named `{route_id}`; exactly one is required",
+            matching_routes.len()
+        ));
+    };
+    let state = route
+        .get("state")
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("route `{route_id}` has no text `state`"))?;
+    if !ROUTE_STATES.contains(&state) {
+        return Err(format!(
+            "route `{route_id}` state `{state}` is outside Aftermatter's closed vocabulary {ROUTE_STATES:?}"
+        ));
+    }
     claims.push(ExtractedClaim {
-        output_slot: "route-result".into(),
+        output_slot: "route-state".into(),
         output_id: OUTPUT_ID.into(),
-        claim: json!({ "model": "unquantified" }),
+        claim: json!({ "model": "unquantified", "value": state }),
     });
     Ok(claims)
+}
+
+fn text_parameter<'a>(
+    parameters: &'a BTreeMap<String, Value>,
+    parameter: &str,
+) -> Result<&'a str, String> {
+    parameters
+        .get(parameter)
+        .and_then(|value| value.get("value"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("compiled step carries no text parameter `{parameter}`"))
 }
 
 fn decimal_field(boundary: &Value, field: &str, table: &str) -> Result<ExactNumber, String> {
@@ -192,10 +223,16 @@ mod tests {
     use super::*;
 
     fn parameters() -> BTreeMap<String, Value> {
-        BTreeMap::from([(
-            CHECKPOINT_PARAMETER.to_string(),
-            json!({ "type": "text", "value": "cool-50y" }),
-        )])
+        BTreeMap::from([
+            (
+                CHECKPOINT_PARAMETER.to_string(),
+                json!({ "type": "text", "value": "cool-50y" }),
+            ),
+            (
+                ROUTE_PARAMETER.to_string(),
+                json!({ "type": "text", "value": "clive-bwf" }),
+            ),
+        ])
     }
 
     fn document(fraction_1: &str, bound_1: &str) -> Vec<u8> {
@@ -213,7 +250,11 @@ mod tests {
                         "table_2": { "boundaries": [
                             { "class_if_qualifies": "A", "fraction": "0.25", "error_bound": "0.00001" }
                         ] }
-                    }
+                    },
+                    "routes": [
+                        { "route_id": "clive-bwf", "state": "unresolved" },
+                        { "route_id": "wcs-cwf", "state": "infeasible" }
+                    ]
                 }
             ]
         })
@@ -273,7 +314,11 @@ mod tests {
         );
         assert_eq!(claims[1].claim["lower"]["value"], json!("0.24999"));
         assert_eq!(claims[1].claim["upper"]["value"], json!("0.25001"));
-        assert_eq!(claims[2].claim, json!({ "model": "unquantified" }));
+        assert_eq!(claims[2].output_slot, "route-state");
+        assert_eq!(
+            claims[2].claim,
+            json!({ "model": "unquantified", "value": "unresolved" })
+        );
     }
 
     #[test]
@@ -290,6 +335,29 @@ mod tests {
         let negative = BTreeMap::from([(OUTPUT_ID.to_string(), document("0.5", "-0.1"))]);
         let error = extract_claims(&negative, &self::parameters()).unwrap_err();
         assert!(error.contains("negative"), "{error}");
+
+        let mut missing_route_parameters = self::parameters();
+        missing_route_parameters.insert(
+            ROUTE_PARAMETER.into(),
+            json!({ "type": "text", "value": "managed-storage" }),
+        );
+        let error = extract_claims(&missing, &missing_route_parameters).unwrap_err();
+        assert!(
+            error.contains("0 routes named `managed-storage`"),
+            "{error}"
+        );
+
+        let mut invalid_state: Value = serde_json::from_slice(&document("0.5", "0")).unwrap();
+        invalid_state["checkpoints"][1]["routes"][0]["state"] = json!("accepted");
+        let outputs = BTreeMap::from([(
+            OUTPUT_ID.to_string(),
+            serde_json::to_vec(&invalid_state).unwrap(),
+        )]);
+        let error = extract_claims(&outputs, &self::parameters()).unwrap_err();
+        assert!(
+            error.contains("outside Aftermatter's closed vocabulary"),
+            "{error}"
+        );
 
         let error = extract_claims(&BTreeMap::new(), &self::parameters()).unwrap_err();
         assert!(error.contains("was not collected"), "{error}");

@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/execution-receipt/v0.1-draft",
   "case_id": "CASE-000",
-  "compiled_snapshot_sha256": "sha256:fb62afe280e9356730f5624f50f35245d3ed66fc8a2b4fb026dc301e03a1f209",
+  "compiled_snapshot_sha256": "sha256:d5c778e04d4402cbcf290a94a6849f840b53698ff52d8f4a7e4f2e864827aa9c",
   "step_id": "classification",
   "capability_type": {
     "id": "aftermatter.activated-metal-disposition",
@@ -19,6 +19,10 @@
     "checkpoint_id": {
       "type": "text",
       "value": "cool-50y"
+    },
+    "route_id": {
+      "type": "text",
+      "value": "clive-bwf"
     }
   },
   "inputs": [
@@ -106,11 +110,11 @@
     "environment": {},
     "timeout_ms": 600000
   },
-  "invocation_sha256": "sha256:73825f1b2901a5fea361a9b41f0b8f4c8c2c63a548f8a7508f58f564b8077d85",
+  "invocation_sha256": "sha256:c412965286638afad3e20cea2206e09384c76669d33e6f0fba20aaa3fc4dc522",
   "process": {
-    "started_at": "2026-09-02T14:21:21.205Z",
-    "finished_at": "2026-09-02T14:21:21.226Z",
-    "duration_ms": 20,
+    "started_at": "2026-09-04T03:09:52.225Z",
+    "finished_at": "2026-09-04T03:09:52.266Z",
+    "duration_ms": 41,
     "exit_status": 0,
     "timed_out": false
   },

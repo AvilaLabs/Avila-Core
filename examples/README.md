@@ -18,6 +18,11 @@ integrations, safety analyses, or evidence of compliance.
   and the Aftermatter classification under verified receipts, generates every
   output claim from the fresh results, and returns two numeric `PASS` verdicts
   beside one categorical route-state `FAIL`, without any review stage.
+- `cases/case-004-magnetic-compliance/` is a pre-registered, reduced-order
+  stellarator-support feasibility gate. Its stable negative result is the
+  intended outcome of a cheap test: four numerical and compliance checks pass,
+  but positive nearest-neighbor coupling fails the reduction, nominal-load,
+  and meaningful-coupling criteria, so the protocol says not to advance it.
 
 The dose limit, unit factors, parameter domains, and every capability
 description are hypothetical. They must never be used for engineering or

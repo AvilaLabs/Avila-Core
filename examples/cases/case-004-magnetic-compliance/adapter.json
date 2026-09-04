@@ -1,0 +1,32 @@
+{
+  "schema_version": "avila.core/external-checker-adapter/v0.1-draft",
+  "adapter_id": "avila-labs.magnetic-compliance/reduced-feasibility@1",
+  "capability_type": { "id": "magnetic-compliance.reduced-feasibility", "major": 1 },
+  "input_slots": ["script", "model"],
+  "arguments": [
+    { "kind": "input_path", "input_slot": "script" },
+    { "kind": "input_path", "input_slot": "model" },
+    { "kind": "output_path", "output_id": "result" }
+  ],
+  "outputs": [
+    {
+      "output_id": "result",
+      "workspace_path": "outputs/magnetic-compliance-result.json",
+      "media_type": "application/vnd.avila.magnetic-compliance-result+json"
+    }
+  ],
+  "claims": [
+    { "model": "exact", "output_slot": "exact-error-reduction", "output_id": "result", "pointer": "/metrics/exact_error_reduction_factor", "unit": "1" },
+    { "model": "exact", "output_slot": "nominal-load-error-ratio", "output_id": "result", "pointer": "/metrics/nominal_load_error_ratio", "unit": "1" },
+    { "model": "exact", "output_slot": "worst-compliance-ratio", "output_id": "result", "pointer": "/metrics/worst_compliance_ratio", "unit": "1" },
+    { "model": "exact", "output_slot": "linearization-error", "output_id": "result", "pointer": "/metrics/linearization_relative_error", "unit": "1" },
+    { "model": "exact", "output_slot": "resolution-difference", "output_id": "result", "pointer": "/metrics/resolution_relative_difference", "unit": "1" },
+    { "model": "exact", "output_slot": "derivative-difference", "output_id": "result", "pointer": "/metrics/derivative_relative_difference", "unit": "1" },
+    { "model": "exact", "output_slot": "coupling-share", "output_id": "result", "pointer": "/metrics/neighbor_coupling_stiffness_share", "unit": "1" },
+    { "model": "categorical", "output_slot": "interpretation", "output_id": "result", "pointer": "/interpretation", "allowed_values": ["proceed", "stop"] }
+  ],
+  "timeout_ms": 30000,
+  "limitations": [
+    "The checker owns the reduced-order mathematics and model validation; Core validates the declared process, content identities, extraction, evidence binding, and requirement arithmetic only."
+  ]
+}

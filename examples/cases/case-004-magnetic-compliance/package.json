@@ -1,0 +1,147 @@
+{
+  "schema_version": "avila.core/case-package/v0.1-draft",
+  "case_id": "CASE-004",
+  "title": "Reduced field-orthogonal stellarator support feasibility gate",
+  "documents": [
+    {
+      "document_id": "case-004-contract",
+      "role": "contract",
+      "path": "contract.json",
+      "sha256": "sha256:3f40f3f42fe35c2a6e4152fe44b9ae42641d2b122c19ee15660dc738b319dd9e"
+    },
+    {
+      "document_id": "case-004-registry",
+      "role": "registry",
+      "path": "registry.json",
+      "sha256": "sha256:44521f8d5d1a75e5371427be56231412d20c2c66ac0d013e81df87d2189971db"
+    },
+    {
+      "document_id": "case-004-claims",
+      "role": "claims",
+      "path": "claims.json",
+      "sha256": "sha256:0ab309e9a7849d41eb035fb4d9aa4de1c2f174e9e18d97ae65debb254f1a09b6"
+    },
+    {
+      "document_id": "avila-labs.magnetic-compliance/reduced-feasibility@1",
+      "role": "external_checker_adapter",
+      "path": "adapter.json",
+      "sha256": "sha256:55dce056292b33210e23ba4d79ce2ee7d23f6b43bffa30fdbcef424dbe031d64"
+    },
+    {
+      "document_id": "case-004-expected-campaign",
+      "role": "expected_campaign_report",
+      "path": "campaign-report.json",
+      "sha256": "sha256:915077a42454aa23d9cbc6798f256f4338bf74413246fd71b3e274fbf5f3774a"
+    },
+    {
+      "document_id": "case-004-feasibility-receipt",
+      "role": "execution_receipt",
+      "path": "receipts/feasibility.json",
+      "sha256": "sha256:6a7ea225e2fa91837ad87d5f278482fa600191077f713c8ad247033f325f5dfd",
+      "step_id": "feasibility"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "checker-script",
+      "evidence_ids": [
+        "input:script"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "magnetic_compliance.py",
+      "sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3"
+    },
+    {
+      "artifact_id": "reference-model",
+      "evidence_ids": [
+        "input:model"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "model.json",
+      "sha256": "sha256:da64e4f4194c458818cf3ca7b4a173f3c32511943eae601ccf817480decb3784"
+    },
+    {
+      "artifact_id": "reference-result",
+      "evidence_ids": [
+        "mc-exact-error-reduction",
+        "mc-nominal-load-error-ratio",
+        "mc-worst-compliance-ratio",
+        "mc-linearization-error",
+        "mc-resolution-difference",
+        "mc-derivative-difference",
+        "mc-coupling-share",
+        "mc-interpretation"
+      ],
+      "source_root": "case",
+      "path": "expected/magnetic-compliance-result.json",
+      "sha256": "sha256:ff98d6aede8bd3651218eec344475c59a24c07b2f80ae9993633f4d62a4cd73f"
+    }
+  ],
+  "capabilities": [
+    {
+      "capability_id": "python3-numpy",
+      "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+      "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+    }
+  ],
+  "executions": [
+    {
+      "step_id": "feasibility",
+      "adapter": "avila-labs.magnetic-compliance/reduced-feasibility@1",
+      "capability_id": "python3-numpy",
+      "inputs": [
+        {
+          "input_slot": "script",
+          "workspace_path": "tools/magnetic_compliance.py"
+        },
+        {
+          "input_slot": "model",
+          "workspace_path": "inputs/model.json"
+        }
+      ],
+      "outputs": [
+        {
+          "output_slot": "exact-error-reduction",
+          "claim_id": "mc-exact-error-reduction"
+        },
+        {
+          "output_slot": "nominal-load-error-ratio",
+          "claim_id": "mc-nominal-load-error-ratio"
+        },
+        {
+          "output_slot": "worst-compliance-ratio",
+          "claim_id": "mc-worst-compliance-ratio"
+        },
+        {
+          "output_slot": "linearization-error",
+          "claim_id": "mc-linearization-error"
+        },
+        {
+          "output_slot": "resolution-difference",
+          "claim_id": "mc-resolution-difference"
+        },
+        {
+          "output_slot": "derivative-difference",
+          "claim_id": "mc-derivative-difference"
+        },
+        {
+          "output_slot": "coupling-share",
+          "claim_id": "mc-coupling-share"
+        },
+        {
+          "output_slot": "interpretation",
+          "claim_id": "mc-interpretation"
+        }
+      ]
+    }
+  ],
+  "free_inputs": [
+    "script",
+    "model"
+  ],
+  "limitations": [
+    "CASE-004 is an unqualified analytic mechanism probe, not a stellarator equilibrium, structural design, safety analysis, or patentability determination.",
+    "Python executable bytes are bound, while the adjacent NumPy installation is identified by the result and package annotation rather than by a complete environment lock.",
+    "Equal stiffness trace is only a mathematical resource proxy and the support search covers only positive local ground and nearest-neighbor springs."
+  ]
+}

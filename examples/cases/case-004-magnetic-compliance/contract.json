@@ -1,0 +1,107 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "case-004.magnetic-compliance-gate-0",
+  "revision": 1,
+  "status": "draft",
+  "question": "Does positive nearest-neighbor support coupling reduce rigid-translation normal-field error by at least 1.5 times relative to the best uncoupled directional support in the declared analytic non-planar coil surrogate, at equal stiffness trace and within the declared load-conflict, compliance, linearization, and resolution limits?",
+  "assumptions": [
+    "The eight identical non-planar filamentary coils and toroidal sampling surface are an analytic mechanism probe, not an optimized stellarator equilibrium or a representation of a named device.",
+    "Each coil has only three rigid local translation degrees of freedom; bending, casing and conductor strain, preload, joints, buckling, fatigue, and the surrounding support structure are excluded.",
+    "The complete orthogonal unit-load basis is a direction-neutral probe, not a probability distribution or reactor load spectrum; the calculated symmetric mutual-coil force is checked separately.",
+    "The trace of the dimensionless stiffness matrix is a deliberately weak equal-resource proxy and does not establish equal mass, stress, cost, access, or manufacturability.",
+    "Every requirement is a nominal research gate over the exact checker output. Passing would justify only a second gate on published geometry; it would not establish a practical support, physical validation, novelty, patentability, safety, or operational fitness."
+  ],
+  "execution_policy": {
+    "permit_nominal_basis": true
+  },
+  "inputs": [
+    {
+      "input_id": "script",
+      "role": { "id": "magnetic-compliance.checker-script", "major": 1 },
+      "media_type": "text/x-python",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "model",
+      "role": { "id": "magnetic-compliance.feasibility-model", "major": 1 },
+      "media_type": "application/vnd.avila.magnetic-compliance-model+json",
+      "claim_model": { "model": "unquantified" }
+    }
+  ],
+  "workflow": [
+    {
+      "step_id": "feasibility",
+      "capability_type": { "id": "magnetic-compliance.reduced-feasibility", "major": 1 },
+      "bindings": [
+        { "input_slot": "script", "source": { "source": "contract_input", "input_id": "script" } },
+        { "input_slot": "model", "source": { "source": "contract_input", "input_id": "model" } }
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "MC-R1-REDUCTION",
+      "statement": "Exact displaced-geometry RMS normal-field-error reduction is at least 1.5 times the best uncoupled directional support.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.gate-0", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "feasibility", "output_slot": "exact-error-reduction" },
+      "comparison": "greater_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1.5", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "MC-R2-NOMINAL-LOAD",
+      "statement": "Exact normal-field error under the calculated nominal mutual-coil load is no more than 1.25 times the uncoupled control.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.gate-0", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "feasibility", "output_slot": "nominal-load-error-ratio" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1.25", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "MC-R3-COMPLIANCE",
+      "statement": "Worst compliance is no more than twice the unit isotropic support.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.gate-0", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "feasibility", "output_slot": "worst-compliance-ratio" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "2", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "MC-R4-LINEARIZATION",
+      "statement": "Worst retained linear-sensitivity error relative to exact displaced-geometry Biot-Savart recalculation is no more than 10 percent.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.gate-0", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "feasibility", "output_slot": "linearization-error" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.1", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "MC-R5-RESOLUTION",
+      "statement": "The coupled-versus-uncoupled reduction changes by no more than 15 percent between the declared coarse and fine discretizations.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.gate-0", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "feasibility", "output_slot": "resolution-difference" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.15", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "MC-R6-DERIVATIVE",
+      "statement": "The magnetic sensitivity matrix changes by no more than 2 percent when the central-difference step is halved.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.gate-0", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "feasibility", "output_slot": "derivative-difference" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.02", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "MC-R7-COUPLING",
+      "statement": "At least 10 percent of the selected stiffness trace is expressed through nearest-neighbor coupling.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.gate-0", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "feasibility", "output_slot": "coupling-share" },
+      "comparison": "greater_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.1", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    }
+  ]
+}

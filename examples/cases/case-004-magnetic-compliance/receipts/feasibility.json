@@ -1,0 +1,92 @@
+{
+  "schema_version": "avila.core/execution-receipt/v0.1-draft",
+  "case_id": "CASE-004",
+  "compiled_snapshot_sha256": "sha256:b206121a5c23ba2b34fb96f6eaa17c6f02121df25276b514a1b6064eaf1d55cb",
+  "step_id": "feasibility",
+  "capability_type": {
+    "id": "magnetic-compliance.reduced-feasibility",
+    "major": 1
+  },
+  "adapter": "avila-labs.magnetic-compliance/reduced-feasibility@1",
+  "capability": {
+    "capability_id": "python3-numpy",
+    "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+    "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+  },
+  "parameters": {},
+  "inputs": [
+    {
+      "input_slot": "model",
+      "evidence_id": "input:model",
+      "workspace_path": "inputs/model.json",
+      "media_type": "application/vnd.avila.magnetic-compliance-model+json",
+      "sha256": "sha256:da64e4f4194c458818cf3ca7b4a173f3c32511943eae601ccf817480decb3784",
+      "bytes": 1088
+    },
+    {
+      "input_slot": "script",
+      "evidence_id": "input:script",
+      "workspace_path": "tools/magnetic_compliance.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3",
+      "bytes": 31472
+    }
+  ],
+  "invocation": {
+    "program": "python3.14",
+    "arguments": [
+      "tools/magnetic_compliance.py",
+      "inputs/model.json",
+      "outputs/magnetic-compliance-result.json"
+    ],
+    "working_directory": ".",
+    "adapter_sha256": "sha256:55dce056292b33210e23ba4d79ce2ee7d23f6b43bffa30fdbcef424dbe031d64",
+    "environment": {},
+    "timeout_ms": 30000
+  },
+  "invocation_sha256": "sha256:89716db0da7a443151228afa3c174c222fcabb52e8474953c7c11e9dcdfa2264",
+  "process": {
+    "started_at": "2026-09-04T15:19:10.178Z",
+    "finished_at": "2026-09-04T15:19:15.264Z",
+    "duration_ms": 5085,
+    "exit_status": 0,
+    "timed_out": false
+  },
+  "logs": [
+    {
+      "stream": "stdout",
+      "workspace_path": "logs/stdout.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "stream": "stderr",
+      "workspace_path": "logs/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "outputs": [
+    {
+      "output_id": "result",
+      "workspace_path": "outputs/magnetic-compliance-result.json",
+      "media_type": "application/vnd.avila.magnetic-compliance-result+json",
+      "state": "collected",
+      "sha256": "sha256:ff98d6aede8bd3651218eec344475c59a24c07b2f80ae9993633f4d62a4cd73f",
+      "bytes": 2157
+    }
+  ],
+  "runner": {
+    "runner": "avila.core/cli-rust@0.1.0",
+    "os": "linux",
+    "arch": "x86_64"
+  },
+  "status": "completed",
+  "limitations": [
+    "Exit status and output digests are process evidence, not scientific success.",
+    "The executable digest identifies the bytes that ran; it does not qualify the method.",
+    "No sandbox, resource accounting, or signature was applied; the environment was cleared and the working directory confined to the workspace.",
+    "The checker owns the reduced-order mathematics and model validation; Core validates the declared process, content identities, extraction, evidence binding, and requirement arithmetic only."
+  ],
+  "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, practical suitability, or regulatory suitability."
+}

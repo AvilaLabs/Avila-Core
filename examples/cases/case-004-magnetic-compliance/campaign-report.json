@@ -1,0 +1,290 @@
+{
+  "schema_version": "avila.core/campaign-report/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "status": "evaluated",
+  "compiled_snapshot_sha256": "sha256:b206121a5c23ba2b34fb96f6eaa17c6f02121df25276b514a1b6064eaf1d55cb",
+  "claims_sha256": "sha256:cf478b8d87a48a27562f75bd08d71cb618df51fe4166eecf3642816e7a61b80b",
+  "admissions": [
+    {
+      "evidence_id": "input:model",
+      "source": {
+        "source": "contract_input",
+        "input_id": "model"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "mc-exact-error-reduction",
+      "source": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "exact-error-reduction"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "mc-nominal-load-error-ratio",
+      "source": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "nominal-load-error-ratio"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "mc-worst-compliance-ratio",
+      "source": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "worst-compliance-ratio"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "mc-linearization-error",
+      "source": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "linearization-error"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "mc-resolution-difference",
+      "source": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "resolution-difference"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "mc-derivative-difference",
+      "source": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "derivative-difference"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "mc-coupling-share",
+      "source": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "coupling-share"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "mc-interpretation",
+      "source": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "interpretation"
+      },
+      "state": "admitted"
+    }
+  ],
+  "verdicts": [
+    {
+      "requirement_id": "MC-R1-REDUCTION",
+      "statement": "Exact displaced-geometry RMS normal-field-error reduction is at least 1.5 times the best uncoupled directional support.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "exact-error-reduction"
+      },
+      "evidence_ids": [
+        "mc-exact-error-reduction"
+      ],
+      "verdict": {
+        "status": "fail",
+        "rule": "nominal.ge.below",
+        "canonical_unit": "1",
+        "limit_canonical": "3/2",
+        "nominal_canonical": "49638371663/50000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:b206121a5c23ba2b34fb96f6eaa17c6f02121df25276b514a1b6064eaf1d55cb",
+        "claims_sha256": "sha256:cf478b8d87a48a27562f75bd08d71cb618df51fe4166eecf3642816e7a61b80b"
+      }
+    },
+    {
+      "requirement_id": "MC-R2-NOMINAL-LOAD",
+      "statement": "Exact normal-field error under the calculated nominal mutual-coil load is no more than 1.25 times the uncoupled control.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "nominal-load-error-ratio"
+      },
+      "evidence_ids": [
+        "mc-nominal-load-error-ratio"
+      ],
+      "verdict": {
+        "status": "fail",
+        "rule": "nominal.le.exceeds",
+        "canonical_unit": "1",
+        "limit_canonical": "5/4",
+        "nominal_canonical": "166666322721/125000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:b206121a5c23ba2b34fb96f6eaa17c6f02121df25276b514a1b6064eaf1d55cb",
+        "claims_sha256": "sha256:cf478b8d87a48a27562f75bd08d71cb618df51fe4166eecf3642816e7a61b80b"
+      }
+    },
+    {
+      "requirement_id": "MC-R3-COMPLIANCE",
+      "statement": "Worst compliance is no more than twice the unit isotropic support.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "worst-compliance-ratio"
+      },
+      "evidence_ids": [
+        "mc-worst-compliance-ratio"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "2",
+        "nominal_canonical": "1333333333333/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:b206121a5c23ba2b34fb96f6eaa17c6f02121df25276b514a1b6064eaf1d55cb",
+        "claims_sha256": "sha256:cf478b8d87a48a27562f75bd08d71cb618df51fe4166eecf3642816e7a61b80b"
+      }
+    },
+    {
+      "requirement_id": "MC-R4-LINEARIZATION",
+      "statement": "Worst retained linear-sensitivity error relative to exact displaced-geometry Biot-Savart recalculation is no more than 10 percent.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "linearization-error"
+      },
+      "evidence_ids": [
+        "mc-linearization-error"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/10",
+        "nominal_canonical": "14405421/100000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:b206121a5c23ba2b34fb96f6eaa17c6f02121df25276b514a1b6064eaf1d55cb",
+        "claims_sha256": "sha256:cf478b8d87a48a27562f75bd08d71cb618df51fe4166eecf3642816e7a61b80b"
+      }
+    },
+    {
+      "requirement_id": "MC-R5-RESOLUTION",
+      "statement": "The coupled-versus-uncoupled reduction changes by no more than 15 percent between the declared coarse and fine discretizations.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "resolution-difference"
+      },
+      "evidence_ids": [
+        "mc-resolution-difference"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "3/20",
+        "nominal_canonical": "101008259/500000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:b206121a5c23ba2b34fb96f6eaa17c6f02121df25276b514a1b6064eaf1d55cb",
+        "claims_sha256": "sha256:cf478b8d87a48a27562f75bd08d71cb618df51fe4166eecf3642816e7a61b80b"
+      }
+    },
+    {
+      "requirement_id": "MC-R6-DERIVATIVE",
+      "statement": "The magnetic sensitivity matrix changes by no more than 2 percent when the central-difference step is halved.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "derivative-difference"
+      },
+      "evidence_ids": [
+        "mc-derivative-difference"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/50",
+        "nominal_canonical": "11033/125000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:b206121a5c23ba2b34fb96f6eaa17c6f02121df25276b514a1b6064eaf1d55cb",
+        "claims_sha256": "sha256:cf478b8d87a48a27562f75bd08d71cb618df51fe4166eecf3642816e7a61b80b"
+      }
+    },
+    {
+      "requirement_id": "MC-R7-COUPLING",
+      "statement": "At least 10 percent of the selected stiffness trace is expressed through nearest-neighbor coupling.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "feasibility",
+        "output_slot": "coupling-share"
+      },
+      "evidence_ids": [
+        "mc-coupling-share"
+      ],
+      "verdict": {
+        "status": "fail",
+        "rule": "nominal.ge.below",
+        "canonical_unit": "1",
+        "limit_canonical": "1/10",
+        "nominal_canonical": "83333333333/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:b206121a5c23ba2b34fb96f6eaa17c6f02121df25276b514a1b6064eaf1d55cb",
+        "claims_sha256": "sha256:cf478b8d87a48a27562f75bd08d71cb618df51fe4166eecf3642816e7a61b80b"
+      }
+    }
+  ],
+  "campaign_sha256": "sha256:be5bc3e50cccdb42b57e9453507ee5e30b1be889b3253d839a9eb637224f1e26",
+  "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
+}

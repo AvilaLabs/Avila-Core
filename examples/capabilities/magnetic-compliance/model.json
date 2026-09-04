@@ -1,0 +1,33 @@
+{
+  "schema": "avila.magnetic-compliance/feasibility-model/v1",
+  "model_id": "analytic-nonplanar-ring-r0",
+  "geometry": {
+    "coil_count": 8,
+    "major_radius_m": "3",
+    "coil_minor_radius_m": "1.15",
+    "plasma_minor_radius_m": "0.65",
+    "nonplanar_amplitude_m": "0.18",
+    "nonplanar_harmonic": 2,
+    "current_a": "1000000",
+    "fine_coil_segments": 128,
+    "fine_surface_toroidal": 24,
+    "fine_surface_poloidal": 16
+  },
+  "derivative_step_m": "0.0002",
+  "operating_displacement_m": "0.005",
+  "support_search": {
+    "allocation_levels": ["0.25", "0.5", "0.75", "1", "1.25", "1.5", "1.75", "2", "2.25", "2.5"],
+    "coupling_levels": ["0", "0.25", "0.5", "0.625", "0.75"],
+    "maximum_compliance_ratio": "2",
+    "maximum_condition_number": "10"
+  },
+  "feasibility_gate": {
+    "minimum_exact_reduction": "1.5",
+    "maximum_nominal_error_ratio": "1.25",
+    "maximum_compliance_ratio": "2",
+    "maximum_linearization_error": "0.1",
+    "maximum_resolution_difference": "0.15",
+    "maximum_derivative_difference": "0.02",
+    "minimum_coupling_share": "0.1"
+  }
+}

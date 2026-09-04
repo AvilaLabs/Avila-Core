@@ -1,0 +1,180 @@
+{
+  "claims": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.magnetic-compliance-result+json",
+        "sha256": "sha256:ff98d6aede8bd3651218eec344475c59a24c07b2f80ae9993633f4d62a4cd73f"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.99276743326"
+        }
+      },
+      "claim_id": "mc-exact-error-reduction",
+      "output_slot": "exact-error-reduction",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "feasibility"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.magnetic-compliance-result+json",
+        "sha256": "sha256:ff98d6aede8bd3651218eec344475c59a24c07b2f80ae9993633f4d62a4cd73f"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "1.333330581768"
+        }
+      },
+      "claim_id": "mc-nominal-load-error-ratio",
+      "output_slot": "nominal-load-error-ratio",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "feasibility"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.magnetic-compliance-result+json",
+        "sha256": "sha256:ff98d6aede8bd3651218eec344475c59a24c07b2f80ae9993633f4d62a4cd73f"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "1.333333333333"
+        }
+      },
+      "claim_id": "mc-worst-compliance-ratio",
+      "output_slot": "worst-compliance-ratio",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "feasibility"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.magnetic-compliance-result+json",
+        "sha256": "sha256:ff98d6aede8bd3651218eec344475c59a24c07b2f80ae9993633f4d62a4cd73f"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.00014405421"
+        }
+      },
+      "claim_id": "mc-linearization-error",
+      "output_slot": "linearization-error",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "feasibility"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.magnetic-compliance-result+json",
+        "sha256": "sha256:ff98d6aede8bd3651218eec344475c59a24c07b2f80ae9993633f4d62a4cd73f"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.000202016518"
+        }
+      },
+      "claim_id": "mc-resolution-difference",
+      "output_slot": "resolution-difference",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "feasibility"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.magnetic-compliance-result+json",
+        "sha256": "sha256:ff98d6aede8bd3651218eec344475c59a24c07b2f80ae9993633f4d62a4cd73f"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.000000088264"
+        }
+      },
+      "claim_id": "mc-derivative-difference",
+      "output_slot": "derivative-difference",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "feasibility"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.magnetic-compliance-result+json",
+        "sha256": "sha256:ff98d6aede8bd3651218eec344475c59a24c07b2f80ae9993633f4d62a4cd73f"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.083333333333"
+        }
+      },
+      "claim_id": "mc-coupling-share",
+      "output_slot": "coupling-share",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "feasibility"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.magnetic-compliance-result+json",
+        "sha256": "sha256:ff98d6aede8bd3651218eec344475c59a24c07b2f80ae9993633f4d62a4cd73f"
+      },
+      "claim": {
+        "model": "unquantified",
+        "value": "stop"
+      },
+      "claim_id": "mc-interpretation",
+      "output_slot": "interpretation",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "feasibility"
+    }
+  ],
+  "compiled_snapshot_sha256": "sha256:b206121a5c23ba2b34fb96f6eaa17c6f02121df25276b514a1b6064eaf1d55cb",
+  "inputs": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.magnetic-compliance-model+json",
+        "sha256": "sha256:da64e4f4194c458818cf3ca7b4a173f3c32511943eae601ccf817480decb3784"
+      },
+      "input_id": "model"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3"
+      },
+      "input_id": "script"
+    }
+  ],
+  "schema_version": "avila.core/evidence-claims/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft"
+}

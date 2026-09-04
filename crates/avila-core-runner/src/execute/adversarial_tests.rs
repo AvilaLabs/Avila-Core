@@ -2337,3 +2337,384 @@ fn a_pinned_manifest_refuses_a_rewritten_package_and_the_log_names_identities() 
         human_summary(&pinned)
     );
 }
+
+// --- SC-12 reuse does not mask a registry, presentation, or qualification edit ---
+//
+// These three tests share one question: when a step is reused under SC-12
+// (its committed receipt still matches the planned invocation, so nothing
+// runs), is the reused evidence re-evaluated against whatever the registry,
+// contract, and qualification documents say *now*, or does reuse silently
+// carry forward the verdict a stale registry or qualification would have
+// produced? Reuse only skips re-execution; compilation and campaign
+// evaluation always run fresh over the current documents.
+
+/// Narrow the registry so the classification step's two fraction outputs no
+/// longer permit the `interval` model its already-admitted claims use.
+/// Applied to both the role definition and the two capability-type output
+/// slots that reference it, since the compiler requires an output's
+/// permitted models to be a subset of its role's.
+fn narrow_classification_fraction_to_exact(synthetic: &Synthetic) {
+    let registry_path = synthetic.case_dir.join("registry.json");
+    let mut registry: Value = serde_json::from_slice(&fs::read(&registry_path).unwrap()).unwrap();
+    let exact_only = json!([{ "model": "exact" }]);
+    for role in registry["roles"].as_array_mut().unwrap() {
+        if role["role"]["id"] == "aftermatter.classification-fraction" {
+            role["permitted_claim_models"] = exact_only.clone();
+        }
+    }
+    for capability_type in registry["capability_types"].as_array_mut().unwrap() {
+        if let Some(outputs) = capability_type["outputs"].as_array_mut() {
+            for output in outputs {
+                if output["role"]["id"] == "aftermatter.classification-fraction" {
+                    output["permitted_claim_models"] = exact_only.clone();
+                }
+            }
+        }
+    }
+    fs::write(
+        &registry_path,
+        serde_json::to_vec_pretty(&registry).unwrap(),
+    )
+    .unwrap();
+    rehash_document(&synthetic.case_dir, "registry", "registry.json");
+}
+
+#[test]
+fn a_registry_edit_narrowing_a_claim_model_is_not_masked_by_reuse() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    narrow_classification_fraction_to_exact(&synthetic);
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    // The step itself is reused: a registry edit does not touch invocation
+    // identity (capability digest, parameters, staged inputs), so the
+    // committed receipt still matches the plan and nothing runs.
+    assert_eq!(step(&report).state, StepExecutionState::Reused, "{summary}");
+    assert!(summary.contains("[REUSED] classification"), "{summary}");
+
+    // But compilation and campaign evaluation are always fresh: the
+    // `interval` claims the reused receipt still carries are no longer
+    // permitted by the edited output, so admission quarantines them
+    // (CORE-E7201) and both bounded requirements retreat to NOT_EVALUATED.
+    let campaign = report.campaign.as_ref().expect("campaign evaluated");
+    let bounded: Vec<_> = campaign
+        .verdicts
+        .iter()
+        .filter(|verdict| {
+            verdict.requirement_id == "CASE-000-R1" || verdict.requirement_id == "CASE-000-R2"
+        })
+        .collect();
+    assert_eq!(bounded.len(), 2, "{summary}");
+    for verdict in bounded {
+        assert_eq!(
+            verdict.verdict.status,
+            VerdictStatus::NotEvaluated,
+            "{summary}"
+        );
+        assert_eq!(
+            verdict.verdict.rule, "not_evaluated.quarantined",
+            "{summary}"
+        );
+    }
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == "CORE-E7201"
+                && finding.message.contains("is not permitted by output")),
+        "{:?}",
+        report.findings
+    );
+}
+
+/// Add an optional agent-review step to the synthetic contract and registry,
+/// wired the way CASE-001's `practical-review` step is: it presents an
+/// upstream output to a connected agent after Core's technical evaluation,
+/// is never itself executed, and cannot bind to any requirement. The
+/// package also needs a matching `review_policy` document, since the
+/// runner's evidence binding refuses a compiled presentation gate whose
+/// declared policy digest the package does not contain.
+fn add_practical_review_step(synthetic: &Synthetic, instructions: &[&str]) {
+    let registry_path = synthetic.case_dir.join("registry.json");
+    let mut registry: Value = serde_json::from_slice(&fs::read(&registry_path).unwrap()).unwrap();
+    registry["roles"].as_array_mut().unwrap().push(json!({
+        "role": { "id": "test.review-decision", "major": 1 },
+        "owner": "test",
+        "validator": "test.validate.review-decision@1",
+        "accepted_media_types": ["application/vnd.test.review-decision+json"],
+        "permitted_claim_models": [{ "model": "unquantified" }]
+    }));
+    registry["capability_types"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({
+            "capability_type": { "id": "test.review", "major": 1 },
+            "owner": "test",
+            "reproducibility": { "determinism": "deterministic" },
+            "inputs": [{
+                "slot_id": "result",
+                "role": { "id": "aftermatter.classification-fraction", "major": 1 },
+                "accepted_media_types": ["application/vnd.aftermatter.route-result+json"]
+            }],
+            "outputs": [{
+                "slot_id": "decision",
+                "role": { "id": "test.review-decision", "major": 1 },
+                "media_type": "application/vnd.test.review-decision+json",
+                "permitted_claim_models": [{ "model": "unquantified" }]
+            }],
+            "review": {
+                "reviewer_role": "agent",
+                "presented_input_slots": ["result"],
+                "decision_output_slot": "decision",
+                "allowed_dispositions": ["present_to_user", "request_changes", "abstain"]
+            }
+        }));
+    fs::write(
+        &registry_path,
+        serde_json::to_vec_pretty(&registry).unwrap(),
+    )
+    .unwrap();
+    rehash_document(&synthetic.case_dir, "registry", "registry.json");
+
+    let policy_path = synthetic.case_dir.join("review-policy.json");
+    fs::write(&policy_path, b"{\"policy\":\"presentation only\"}\n").unwrap();
+    let policy_sha256 = digest(&policy_path);
+
+    let contract_path = synthetic.case_dir.join("contract.json");
+    let mut contract: Value = serde_json::from_slice(&fs::read(&contract_path).unwrap()).unwrap();
+    let workflow = contract["workflow"].as_array_mut().unwrap();
+    workflow.retain(|step| step["step_id"] != "review");
+    workflow.push(json!({
+        "step_id": "review",
+        "capability_type": { "id": "test.review", "major": 1 },
+        "bindings": [{
+            "input_slot": "result",
+            "source": {
+                "source": "step_output",
+                "step_id": "classification",
+                "output_slot": "table-1-class-a-fraction"
+            }
+        }],
+        "review": {
+            "reviewer_eligibility_policy": {
+                "policy_id": "test.org/reviewer-eligibility",
+                "revision": 1,
+                "sha256": policy_sha256
+            },
+            "independence": { "mode": "none" },
+            "instructions": instructions
+        }
+    }));
+    fs::write(
+        &contract_path,
+        serde_json::to_vec_pretty(&contract).unwrap(),
+    )
+    .unwrap();
+    rehash_document(&synthetic.case_dir, "contract", "contract.json");
+
+    let mut package: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    let documents = package["documents"].as_array_mut().unwrap();
+    documents.retain(|document| document["document_id"] != "review-policy");
+    documents.push(json!({
+        "document_id": "review-policy",
+        "role": "review_policy",
+        "path": "review-policy.json",
+        "sha256": digest(&policy_path)
+    }));
+    fs::write(
+        synthetic.case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+}
+
+/// Change only the practical instructions shown to the connected agent, the
+/// way a case author edits practicality guidance after the fact.
+fn edit_review_instructions(synthetic: &Synthetic, instructions: &[&str]) {
+    let contract_path = synthetic.case_dir.join("contract.json");
+    let mut contract: Value = serde_json::from_slice(&fs::read(&contract_path).unwrap()).unwrap();
+    for step in contract["workflow"].as_array_mut().unwrap() {
+        if step["step_id"] == "review" {
+            step["review"]["instructions"] = json!(instructions);
+        }
+    }
+    fs::write(
+        &contract_path,
+        serde_json::to_vec_pretty(&contract).unwrap(),
+    )
+    .unwrap();
+    rehash_document(&synthetic.case_dir, "contract", "contract.json");
+}
+
+#[test]
+fn an_optional_review_edit_changes_nothing_in_technical_verdicts() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    add_practical_review_step(&synthetic, &["baseline: request changes unless every PASS"]);
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    assert_eq!(step(&report).state, StepExecutionState::Reused, "{summary}");
+    let [gate] = report.presentation_gates.as_slice() else {
+        panic!("exactly one presentation gate expected: {summary}");
+    };
+    assert_eq!(
+        gate.instructions,
+        vec!["baseline: request changes unless every PASS".to_string()]
+    );
+    let baseline_verdicts: Vec<(String, VerdictStatus)> = report
+        .campaign
+        .as_ref()
+        .unwrap()
+        .verdicts
+        .iter()
+        .map(|verdict| (verdict.requirement_id.clone(), verdict.verdict.status))
+        .collect();
+    assert!(
+        baseline_verdicts
+            .iter()
+            .any(|(id, status)| id == "CASE-000-R1" && *status == VerdictStatus::Pass),
+        "{summary}"
+    );
+
+    // Edit only the practical instructions text: a presentation/optional-
+    // review concern with no technical content.
+    edit_review_instructions(
+        &synthetic,
+        &["revised: also flag adjacent identical layers"],
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    // The classification step is still reused: the edit lives entirely in
+    // the review step's presentation policy, never touching an execution's
+    // invocation identity.
+    assert_eq!(step(&report).state, StepExecutionState::Reused, "{summary}");
+    let [gate] = report.presentation_gates.as_slice() else {
+        panic!("exactly one presentation gate expected: {summary}");
+    };
+    // The edit is visible exactly where it belongs...
+    assert_eq!(
+        gate.instructions,
+        vec!["revised: also flag adjacent identical layers".to_string()]
+    );
+    // ...and nowhere else: every technical verdict is byte-for-byte the
+    // same as before the edit.
+    let edited_verdicts: Vec<(String, VerdictStatus)> = report
+        .campaign
+        .as_ref()
+        .unwrap()
+        .verdicts
+        .iter()
+        .map(|verdict| (verdict.requirement_id.clone(), verdict.verdict.status))
+        .collect();
+    assert_eq!(baseline_verdicts, edited_verdicts, "{summary}");
+}
+
+#[test]
+fn a_qualification_edit_narrowing_the_envelope_leaves_a_reused_step_not_evaluated() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let contract: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("contract.json")).unwrap())
+            .unwrap();
+    let media_type = contract["inputs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|input| input["input_id"] == "aftermatter-case")
+        .map(|input| input["media_type"].as_str().unwrap().to_string())
+        .unwrap();
+
+    // Bind a qualification whose scope admits the case's actual media type:
+    // the reused step's evidence sits inside the envelope, and both bounded
+    // requirements pass.
+    declare_qualification(&synthetic, &[media_type.as_str()], None);
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    assert_eq!(
+        report.execution.as_ref().unwrap().status,
+        ExecutionStatus::Reused,
+        "{summary}"
+    );
+    assert_eq!(
+        step(&report).qualification.as_ref().unwrap().state,
+        avila_core_compiler::EnvelopeState::Inside,
+        "{summary}"
+    );
+    let bounded_before: Vec<_> = report
+        .campaign
+        .as_ref()
+        .unwrap()
+        .verdicts
+        .iter()
+        .filter(|verdict| {
+            verdict.requirement_id == "CASE-000-R1" || verdict.requirement_id == "CASE-000-R2"
+        })
+        .cloned()
+        .collect();
+    assert_eq!(bounded_before.len(), 2, "{summary}");
+    for verdict in &bounded_before {
+        assert_eq!(verdict.verdict.status, VerdictStatus::Pass, "{summary}");
+    }
+
+    // The method owner narrows the scope so this case's evidence no longer
+    // qualifies. The same committed receipt is still reused -- nothing
+    // about a qualification record touches invocation identity -- but the
+    // envelope now excludes it and both bounded requirements retreat to
+    // NOT_EVALUATED.
+    declare_qualification(&synthetic, &["text/plain"], None);
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    assert_eq!(
+        report.execution.as_ref().unwrap().status,
+        ExecutionStatus::Reused,
+        "{summary}"
+    );
+    assert_eq!(
+        step(&report).qualification.as_ref().unwrap().state,
+        avila_core_compiler::EnvelopeState::Outside,
+        "{summary}"
+    );
+    let campaign = report.campaign.as_ref().unwrap();
+    let bounded_after: Vec<_> = campaign
+        .verdicts
+        .iter()
+        .filter(|verdict| {
+            verdict.requirement_id == "CASE-000-R1" || verdict.requirement_id == "CASE-000-R2"
+        })
+        .collect();
+    assert_eq!(bounded_after.len(), 2, "{summary}");
+    for verdict in bounded_after {
+        assert_eq!(
+            verdict.verdict.status,
+            VerdictStatus::NotEvaluated,
+            "{summary}"
+        );
+        let reasons = serde_json::to_string(&verdict.verdict.reasons).unwrap();
+        assert!(reasons.contains("CORE-A4401"), "{reasons}");
+        assert!(reasons.contains("outside_qualification"), "{reasons}");
+    }
+}

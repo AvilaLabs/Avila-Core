@@ -16,7 +16,8 @@
     "Revision 2 widens the box from 1500 kg and 100 cm to 2000 kg and 120 cm after revision 1's campaign found no feasible design within the original limits, and raises the transport particle budget from 200000 to 500000 so that a candidate within about twenty percent of a dose allocation can be decided rather than left INCONCLUSIVE; the transport envelope's 120 cm bound is unchanged, so the box now reaches it."
   ],
   "execution_policy": {
-    "permit_nominal_basis": true
+    "permit_nominal_basis": true,
+    "require_qualification": true
   },
   "inputs": [
     {

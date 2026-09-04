@@ -1,0 +1,95 @@
+{
+  "schema_version": "avila.core/qualification/v0.1-draft",
+  "qualification_id": "avila-labs.shielding/screen-arithmetic",
+  "revision": 1,
+  "owner": "avila-labs.shielding",
+  "adapter": "avila-labs.shielding/screen@1",
+  "capability": {
+    "capability_id": "python3",
+    "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+  },
+  "statement": "The screen's areal mass and total thickness are exact arithmetic over the candidate's layer thicknesses and the bound material-density table: mass is the sum of each layer's density times thickness, and thickness is the sum of layer thicknesses. That identity holds for any thickness of a listed material; the envelope below states the geometry this case's search explores, not a numerical limit of the arithmetic, so Core refuses a candidate the search was never meant to reach rather than reporting a bounded mass or thickness for it. The screen's dose-rate estimate is a separate, unqualified claim; this record does not cover it.",
+  "scope": {
+    "all": [
+      {
+        "fact": {
+          "name": "slab.total_thickness",
+          "op": "le",
+          "value": {
+            "value": "120",
+            "unit": "cm"
+          },
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.shielding/screen@1"
+          }
+        }
+      },
+      {
+        "fact": {
+          "name": "slab.layer_count",
+          "op": "le",
+          "value": 3,
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.shielding/screen@1"
+          }
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "candidate",
+          "attribute": "layer.1.material",
+          "values": [
+            "polyethylene",
+            "borated_polyethylene",
+            "water",
+            "concrete",
+            "iron",
+            "lead",
+            "none"
+          ]
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "candidate",
+          "attribute": "layer.2.material",
+          "values": [
+            "polyethylene",
+            "borated_polyethylene",
+            "water",
+            "concrete",
+            "iron",
+            "lead",
+            "none"
+          ]
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "candidate",
+          "attribute": "layer.3.material",
+          "values": [
+            "polyethylene",
+            "borated_polyethylene",
+            "water",
+            "concrete",
+            "iron",
+            "lead",
+            "none"
+          ]
+        }
+      }
+    ]
+  },
+  "covered_output_slots": ["mass", "thickness"],
+  "fact_kinds": {
+    "slab.total_thickness": "core.length"
+  },
+  "validation_evidence": [],
+  "limitations": [
+    "No validation evidence is bound: this envelope is the case author's statement of the geometry this search explores, not a method owner's independent qualification. It exists so Core can refuse a candidate outside that geometry and so a real qualification has a place to go.",
+    "Covers only the mass and thickness output slots. The screen's dose-rate estimate carries no qualification from this record and can still satisfy only a nominal-basis requirement, exactly as before this record existed."
+  ]
+}

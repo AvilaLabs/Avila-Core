@@ -158,6 +158,34 @@
         "package_id": "org.python/cpython@3.14.4",
         "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
       },
+      "qualification": {
+        "qualification_id": "avila-labs.thermal/screen-arithmetic",
+        "revision": 1,
+        "sha256": "sha256:2ce64c7049d319c0b9d9772dbde71cf9cc51240bcebccffa56f61faca024cd91",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"plate.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/screen@1\"},\"value\":{\"unit\":\"mm\",\"value\":\"50\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"plate.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/screen@1\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
       "step_id": "screen"
     },
     {
@@ -178,6 +206,34 @@
         "package_id": "org.python/cpython@3.14.4",
         "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
       },
+      "qualification": {
+        "qualification_id": "avila-labs.thermal/screen-arithmetic",
+        "revision": 1,
+        "sha256": "sha256:2ce64c7049d319c0b9d9772dbde71cf9cc51240bcebccffa56f61faca024cd91",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"plate.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/screen@1\"},\"value\":{\"unit\":\"mm\",\"value\":\"50\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"plate.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/screen@1\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
       "step_id": "screen"
     },
     {
@@ -197,7 +253,7 @@
       "step_id": "screen"
     }
   ],
-  "compiled_snapshot_sha256": "sha256:46283b24bf2b7221300018a134aa6f4a5f1e21210ab5e81a2db30804184b932d",
+  "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
   "inputs": [
     {
       "artifact": {

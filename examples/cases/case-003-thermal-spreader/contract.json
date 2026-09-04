@@ -14,7 +14,8 @@
     "Revision 2 sets the screen guide at 420 K: revision 1's 340 K guide could not be met by any design because the no-spreading estimate exceeds the true hotspot by about 80 K for every plate in the box, which made the all-PASS criterion unreachable by construction; the finite-element limit is unchanged."
   ],
   "execution_policy": {
-    "permit_nominal_basis": true
+    "permit_nominal_basis": true,
+    "require_qualification": true
   },
   "inputs": [
     {

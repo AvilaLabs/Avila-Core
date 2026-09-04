@@ -38,6 +38,34 @@
         "package_id": "org.python/cpython@3.14.4",
         "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
       },
+      "qualification": {
+        "qualification_id": "avila-labs.shielding/screen-arithmetic",
+        "revision": 1,
+        "sha256": "sha256:0e6c1b1715cebef5edae923c02b32ee1efa48d5bf29dc9ab5e83220dc4eee4fd",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/screen@1\"},\"value\":{\"unit\":\"cm\",\"value\":\"120\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/screen@1\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
       "step_id": "screen"
     },
     {
@@ -57,6 +85,34 @@
       "producer": {
         "package_id": "org.python/cpython@3.14.4",
         "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "qualification": {
+        "qualification_id": "avila-labs.shielding/screen-arithmetic",
+        "revision": 1,
+        "sha256": "sha256:0e6c1b1715cebef5edae923c02b32ee1efa48d5bf29dc9ab5e83220dc4eee4fd",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/screen@1\"},\"value\":{\"unit\":\"cm\",\"value\":\"120\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"slab.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.shielding/screen@1\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"polyethylene\",\"borated_polyethylene\",\"water\",\"concrete\",\"iron\",\"lead\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
       },
       "step_id": "screen"
     },
@@ -202,7 +258,7 @@
       "step_id": "transport"
     }
   ],
-  "compiled_snapshot_sha256": "sha256:af80cb044767ca077cbac17c5d2f8f763e363faac73f3603abb73ca87f9a099c",
+  "compiled_snapshot_sha256": "sha256:32eae5a993a2028df9909dc70caabce469b05da98da1e8b18d3d6962bd8a1fc8",
   "inputs": [
     {
       "artifact": {

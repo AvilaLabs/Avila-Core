@@ -13,7 +13,8 @@
     "This contract is a research-only design-search specimen and excludes every regulatory, safety, or operational purpose."
   ],
   "execution_policy": {
-    "permit_nominal_basis": true
+    "permit_nominal_basis": true,
+    "require_qualification": true
   },
   "inputs": [
     { "input_id": "candidate", "role": { "id": "shielding.candidate", "major": 1 }, "media_type": "application/vnd.avila.shield-candidate+json", "claim_model": { "model": "unquantified" } },

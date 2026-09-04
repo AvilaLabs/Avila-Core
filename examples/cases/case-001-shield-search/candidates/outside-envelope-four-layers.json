@@ -1,0 +1,11 @@
+{
+  "schema": "avila.shielding/candidate/v1",
+  "candidate_id": "outside-envelope-four-layers",
+  "description": "Four 20 cm polyethylene layers: 80 cm total, inside the 120 cm the screen and transport qualifications cover, but four layers rather than the at-most-three the geometry envelope states. The screen still computes mass and thickness; Core refuses to let either establish its bounded requirement.",
+  "layers": [
+    { "material": "polyethylene", "thickness_cm": "20" },
+    { "material": "polyethylene", "thickness_cm": "20" },
+    { "material": "polyethylene", "thickness_cm": "20" },
+    { "material": "polyethylene", "thickness_cm": "20" }
+  ]
+}

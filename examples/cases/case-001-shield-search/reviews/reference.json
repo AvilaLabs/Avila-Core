@@ -1,9 +1,9 @@
 {
   "schema_version": "avila.core/staged-review-record/v0.1-draft",
   "review_request": {
-    "request_sha256": "sha256:f5c42c12e270bcf683656bf19cf7ff71b640d63322c5fc61ad8ab10b610887aa",
-    "compiled_snapshot_sha256": "sha256:af80cb044767ca077cbac17c5d2f8f763e363faac73f3603abb73ca87f9a099c",
-    "campaign_sha256": "sha256:c4edd490bcdd94d42cf704f0611b7c463c6ba7b05e26f12438d6a5f7ac36d662",
+    "request_sha256": "sha256:d21d5702aa3f7431d6ccea7d7b5f529687b1143547db1fc07bc89db2ef78449e",
+    "compiled_snapshot_sha256": "sha256:32eae5a993a2028df9909dc70caabce469b05da98da1e8b18d3d6962bd8a1fc8",
+    "campaign_sha256": "sha256:600a04ab846405415bd21e930a4a016ab858c0465997264de5552a4c450914e5",
     "step_id": "practical-review",
     "gate_state": "awaiting_agent",
     "reviewer_role": "agent",
@@ -93,5 +93,5 @@
     "The agent reads Core's verdicts and applies the bound practical instructions; it does not construct, alter, or validate a technical verdict.",
     "The present_to_user disposition means the candidate passed these authored practical instructions; it is not certification or a change to Core's verdict."
   ],
-  "record_sha256": "sha256:362beea4a06a4d4ea1d4043f01c10c441e479dcb74776c099942655ac9a6fb1e"
+  "record_sha256": "sha256:38f89e1d8b963d4d84b368d7a3b58defd7825d6ffcec81c948bbdbbe5163c56c"
 }

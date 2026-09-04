@@ -7,7 +7,7 @@
       "document_id": "case-003-contract",
       "role": "contract",
       "path": "contract.json",
-      "sha256": "sha256:43d69ebd38a9649bfdde9a9a8927ab39c5f81e515d330f1d561a7e5b26880a67"
+      "sha256": "sha256:327b8e35d198144dffc452d3da51bbecd4ee772810842a3401c929fb47cfa992"
     },
     {
       "document_id": "case-003-registry",
@@ -19,7 +19,7 @@
       "document_id": "case-003-claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:45b10bef2bae78c2793cd3446f8d6a2269fc7cdf19d320c68fdd12701f51c375"
+      "sha256": "sha256:17aaf9132a06f10e5106fdede1dbcdda00fd24a11e3edd929f8b8d94d33b7d2e"
     },
     {
       "document_id": "case-003-requirement-set",
@@ -34,10 +34,16 @@
       "sha256": "sha256:04b4298ba669a90624fff3e738aa039a502b824b7d74eb95712ad15ba580b623"
     },
     {
+      "document_id": "case-003-screen-qualification",
+      "role": "qualification",
+      "path": "qualification-screen.json",
+      "sha256": "sha256:2ce64c7049d319c0b9d9772dbde71cf9cc51240bcebccffa56f61faca024cd91"
+    },
+    {
       "role": "expected_campaign_report",
       "document_id": "case-003-expected-campaign",
       "path": "campaign-report.json",
-      "sha256": "sha256:a21204d85fec170338a4058210f64f78bf0c2beeb0c305b074d9b51527fe30a2"
+      "sha256": "sha256:45b7070e73f1a48d6db8d73355e4deb3f72c9c75b3e117eb750edde8db509633"
     },
     {
       "role": "execution_receipt",

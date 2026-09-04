@@ -1,0 +1,98 @@
+{
+  "schema_version": "avila.core/qualification/v0.1-draft",
+  "qualification_id": "avila-labs.thermal/screen-arithmetic",
+  "revision": 1,
+  "owner": "avila-labs.thermal",
+  "adapter": "avila-labs.thermal/screen@1",
+  "capability": {
+    "capability_id": "python3",
+    "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+  },
+  "statement": "The screen's areal mass and total thickness are exact arithmetic over the candidate's layer thicknesses and the bound material-density table: mass is the sum of each layer's density times thickness, and thickness is the sum of layer thicknesses. That identity holds for any thickness of a listed material; the envelope below states the geometry this case's search explores, not a numerical limit of the arithmetic. The screen's hotspot-temperature estimate is a separate, unqualified claim; this record does not cover it.",
+  "scope": {
+    "all": [
+      {
+        "fact": {
+          "name": "plate.total_thickness",
+          "op": "le",
+          "value": {
+            "value": "50",
+            "unit": "mm"
+          },
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.thermal/screen@1"
+          }
+        }
+      },
+      {
+        "fact": {
+          "name": "plate.layer_count",
+          "op": "le",
+          "value": 3,
+          "source_requirement": {
+            "class": "validated_input",
+            "validator": "avila-labs.thermal/screen@1"
+          }
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "candidate",
+          "attribute": "layer.1.material",
+          "values": [
+            "aluminium",
+            "copper",
+            "stainless_steel",
+            "titanium",
+            "graphite",
+            "aluminium_nitride",
+            "epoxy",
+            "none"
+          ]
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "candidate",
+          "attribute": "layer.2.material",
+          "values": [
+            "aluminium",
+            "copper",
+            "stainless_steel",
+            "titanium",
+            "graphite",
+            "aluminium_nitride",
+            "epoxy",
+            "none"
+          ]
+        }
+      },
+      {
+        "input_attribute_in": {
+          "slot": "candidate",
+          "attribute": "layer.3.material",
+          "values": [
+            "aluminium",
+            "copper",
+            "stainless_steel",
+            "titanium",
+            "graphite",
+            "aluminium_nitride",
+            "epoxy",
+            "none"
+          ]
+        }
+      }
+    ]
+  },
+  "covered_output_slots": ["areal-mass", "thickness"],
+  "fact_kinds": {
+    "plate.total_thickness": "core.length"
+  },
+  "validation_evidence": [],
+  "limitations": [
+    "No validation evidence is bound: this envelope is the case author's statement of the geometry this search explores, not a method owner's independent qualification. It exists so Core can refuse a candidate outside that geometry and so a real qualification has a place to go.",
+    "Covers only the areal-mass and thickness output slots. The screen's hotspot-temperature estimate carries no qualification from this record and can still satisfy only a nominal-basis requirement, exactly as before this record existed."
+  ]
+}

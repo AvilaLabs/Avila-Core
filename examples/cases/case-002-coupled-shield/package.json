@@ -7,7 +7,7 @@
       "document_id": "case-002-contract",
       "role": "contract",
       "path": "contract.json",
-      "sha256": "sha256:06901653f896bd87735dad774056f87ea55708b7cda491e59249da38b4673d8c"
+      "sha256": "sha256:deb7cbff7b803293f3218ba420444fd84ffc1958f3e13a6369717beb40c0720d"
     },
     {
       "document_id": "case-002-registry",
@@ -19,7 +19,7 @@
       "document_id": "case-002-claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:17dd360658b0b755e7f3fded1772b0883199075a80177c937ac113d6a951b878"
+      "sha256": "sha256:e6251feec73f23ca04d6af565338e0c214064c294f50d8553207d56cd007c32f"
     },
     {
       "document_id": "case-002-requirement-set",
@@ -40,6 +40,12 @@
       "sha256": "sha256:e0cce97d7b93b88289550df0ea83750af1e6c94cd9f4250e3fa5efa186b62c64"
     },
     {
+      "document_id": "case-002-screen-qualification",
+      "role": "qualification",
+      "path": "qualification-screen.json",
+      "sha256": "sha256:add3f5ff6a00f1cdb3ef95835cfaed4a74ea2f09646a535d13d936df831170d5"
+    },
+    {
       "document_id": "case-002-agent-review-policy",
       "role": "review_policy",
       "path": "agent-review-policy.json",
@@ -49,7 +55,7 @@
       "role": "expected_campaign_report",
       "document_id": "case-002-expected-campaign",
       "path": "campaign-report.json",
-      "sha256": "sha256:54a339274befa0b11940dfe717c96db0cb2425a8263fb79c32d223c6d24772a5"
+      "sha256": "sha256:181082243f73ff1ea495e11d07e70a19f7cef256dcaf5177fa9b59e1c0f43969"
     },
     {
       "role": "execution_receipt",

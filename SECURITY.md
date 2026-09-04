@@ -16,6 +16,25 @@ Operator-supplied environment values are passed only to a fresh process and are
 not serialized into receipts or reports. Static adapter environment is public
 package content and must never contain credentials or other secrets.
 
+`avila-core run --hash-cache PATH` is an explicit, opt-in, off-by-default
+cache of verified digests for large operator-supplied artifacts resolved
+under a `--source-root`. An entry is keyed by a file's canonical absolute
+path, size, modification time, and (where the platform exposes them) device
+and inode. On a hit, the recorded digest is used in place of re-hashing the
+bytes and is still compared to the manifest's bound identity exactly as an
+uncached digest would be, so a stale or malicious cache entry that disagrees
+with the manifest still fails closed. Package documents and any artifact that
+resolves inside the case package directory are never eligible for the cache,
+regardless of this setting. **The cache trusts that operator-owned artifact
+roots are not modified while preserving a file's size and modification
+time.** An actor with write access to a cached root who can reproduce a
+file's original size and modification time while changing its bytes is not
+caught by a cache hit; this is a documented, deliberate limitation, not a
+defect, and it is exercised by an adversarial test
+(`crates/avila-core-evidence/src/package.rs`). The requester's manifest pin
+(S-030) is a separate mechanism and is unaffected by this cache: a rewritten
+package manifest is still refused before anything is compiled or executed.
+
 The threat model includes:
 
 - untrusted capability packages and input documents;

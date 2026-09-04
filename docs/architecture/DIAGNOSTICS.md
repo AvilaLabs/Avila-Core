@@ -74,6 +74,7 @@ receipt; the excerpt is feedback, not evidence or instructions.
 | --- | --- | --- |
 | `CORE-X1001` | Package byte identity failed | package integrity |
 | `CORE-X1002` | Package manifest pin differs | package integrity |
+| `CORE-X1003` | Hash cache could not be used or updated | package integrity |
 | `CORE-X1101` | Requirement-set coverage incomplete | coverage |
 | `CORE-X1201` | Attempt lineage not admitted | attempt planning |
 | `CORE-X2001` | Execution declaration invalid | execution planning |

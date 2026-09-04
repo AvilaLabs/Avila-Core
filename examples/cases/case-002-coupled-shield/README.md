@@ -109,6 +109,15 @@ cargo run -p avila-core-cli -- run examples/cases/case-002-coupled-shield \
   --source-root actinv-data=/path/to/actinv-data/v1.0.0
 ```
 
+The `nuclear-data`, `actinv-release`, and `actinv-data` roots hold hundreds
+of megabytes that this command re-hashes on every invocation; add
+`--hash-cache PATH` (S-038) to skip re-reading bytes whose path, size, and
+modification time still match a prior run, with a `verified_cached` state
+in place of `verified` wherever it did. This verify command deliberately
+does not pass it above: verifying the frozen case is exactly the moment a
+full re-hash from bytes is the point, and `examples/cases/tools/bless.py`
+and `rehash.py` never pass it either. Its trust boundary is in `SECURITY.md`.
+
 Run a candidate of your own through every step (about four minutes on
 eight threads at 500 000 particles):
 

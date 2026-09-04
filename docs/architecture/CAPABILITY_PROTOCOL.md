@@ -132,6 +132,26 @@ without a shell, accepts only authoritative JSON for extraction, and never
 interprets the checker-specific category. The executable remains the domain
 validator; the descriptor is only a transport boundary.
 
+Package-integrity re-hashing of large operator-supplied artifacts (bulk
+nuclear-data libraries, vendored release binaries) is the dominant cost of a
+verify-only invocation and repeats on every run. `avila-core run --hash-cache
+PATH` (S-038) lets the operator name a JSON file where a verified digest is
+recorded against a file's canonical absolute path, size, modification time,
+and, where available, device and inode. A subsequent run whose artifact
+still matches that exact stamp reuses the recorded digest instead of
+re-reading the bytes, and the per-artifact integrity state says so
+(`verified_cached`, distinct from `verified`) rather than silently claiming
+the stronger state. The cached digest is still compared against the
+manifest's bound identity exactly as a freshly computed one would be, so a
+disagreement still fails closed. This is convenience over an
+already-established boundary, not a new one: it trusts that operator-owned
+artifact roots are not modified while preserving size and modification
+time, which is weaker than reading bytes and is documented as such in
+`SECURITY.md`. Package documents and any artifact resolved from inside the
+case package directory are never eligible, cache or no cache. The cache is
+off unless supplied and is never used by the case bless or verify tooling
+under `examples/cases/tools/`.
+
 Resolve beyond these local declarations, package verification beyond content
 digests, preflight, approval, resource isolation, signatures, network policy,
 and generic validators are not implemented.

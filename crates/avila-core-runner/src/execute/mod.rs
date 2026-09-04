@@ -1001,30 +1001,51 @@ mod tests {
             .parse()
             .expect("the stub script should have recorded the backgrounded sleep's pid");
 
-        // `kill -0` delivers no signal; a nonzero exit means the pid is
-        // gone. Bounded retry absorbs the reap taking a moment.
-        let alive = |pid: u32| {
-            Command::new("kill")
-                .arg("-0")
-                .arg(pid.to_string())
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .status()
-                .map(|status| status.success())
-                .unwrap_or(false)
+        // A killed grandchild whose parent died first is reparented and may
+        // linger as a zombie until its new parent reaps it; `kill -0` still
+        // succeeds on a zombie, so read the state from /proc where it
+        // exists and fall back to `kill -0` elsewhere. Bounded retry absorbs
+        // the reap taking a moment.
+        let state = |pid: u32| -> Option<String> {
+            match fs::read_to_string(format!("/proc/{pid}/stat")) {
+                Ok(stat) => {
+                    // "<pid> (<comm>) <state> <ppid> ..."; comm may contain
+                    // spaces or parentheses, so split after the last ')'.
+                    let after_comm = stat.rsplit(')').next().unwrap_or("");
+                    let mut fields = after_comm.split_whitespace();
+                    let state = fields.next().unwrap_or("?").to_string();
+                    let ppid = fields.next().unwrap_or("?").to_string();
+                    Some(format!("state {state} ppid {ppid}"))
+                }
+                Err(_) if cfg!(target_os = "linux") => None,
+                Err(_) => Command::new("kill")
+                    .arg("-0")
+                    .arg(pid.to_string())
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status()
+                    .map(|status| status.success())
+                    .unwrap_or(false)
+                    .then(|| "state ? (kill -0 succeeded)".to_string()),
+            }
         };
-        let mut still_alive = alive(grandchild_pid);
+        let is_dead = |observed: &Option<String>| match observed {
+            None => true,
+            Some(text) => text.starts_with("state Z") || text.starts_with("state X"),
+        };
+        let mut observed = state(grandchild_pid);
         for _ in 0..50 {
-            if !still_alive {
+            if is_dead(&observed) {
                 break;
             }
             std::thread::sleep(Duration::from_millis(50));
-            still_alive = alive(grandchild_pid);
+            observed = state(grandchild_pid);
         }
         assert!(
-            !still_alive,
-            "the grandchild `sleep 300` (pid {grandchild_pid}) should have been killed with the timed-out process group, not left running"
+            is_dead(&observed),
+            "the grandchild `sleep 300` (pid {grandchild_pid}, {}) should have been killed with the timed-out process group, not left running",
+            observed.as_deref().unwrap_or("gone")
         );
 
         let _ = fs::remove_dir_all(&root);

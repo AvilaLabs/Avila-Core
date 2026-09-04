@@ -1,6 +1,7 @@
 {
   "core": "target/debug/avila-core",
   "case": "examples/cases/case-003-thermal-spreader",
+  "publication_note": "The machine-local interpreter path was replaced with an environment reference before publication; scored reports and evidence artifacts are unchanged.",
   "source_roots": {
     "case": "examples/cases/case-003-thermal-spreader",
     "thermal": "examples/capabilities/thermal"
@@ -10,7 +11,7 @@
     "python3": "/usr/bin/python3"
   },
   "transport_capabilities": {
-    "thermal-python": "/home/connoravila/.venvs/thermal/bin/python"
+    "thermal-python": "${AVILA_THERMAL_PYTHON}"
   },
   "environment": {},
   "prior_logs": [

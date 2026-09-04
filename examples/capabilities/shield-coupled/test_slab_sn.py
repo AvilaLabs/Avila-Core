@@ -16,7 +16,7 @@ skipped automatically when openmc is not importable, so a full run needs the
 venv python:
 
     ulimit -v 12000000
-    /home/connoravila/.venvs/w003env/bin/python3.12 -m unittest test_slab_sn -v
+    "$OPENMC_PYTHON" -m unittest test_slab_sn -v
 """
 
 import math

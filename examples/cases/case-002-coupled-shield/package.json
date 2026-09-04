@@ -62,7 +62,7 @@
       "role": "execution_receipt",
       "document_id": "case-002-transport-receipt",
       "path": "receipts/transport.json",
-      "sha256": "sha256:7f317ed46c4c5047e72a1edfa41536c48a0b2ac8897d41fdac297f363b4b3a81",
+      "sha256": "sha256:73328252c0d959fc88b72c103be9c4a5977cbcce6f140121357979ed547e23f1",
       "step_id": "transport"
     },
     {

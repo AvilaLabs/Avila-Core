@@ -220,7 +220,8 @@ impl Adapter {
     }
 
     /// Environment keys the package must supply values for. They are named
-    /// by the adapter, valued by the operator, and recorded in the receipt.
+    /// by the adapter and valued by the operator; only the names are recorded
+    /// in the receipt.
     pub fn required_environment(&self) -> &'static [&'static str] {
         match self {
             Self::AftermatterEvaluate
@@ -395,6 +396,9 @@ pub struct PlannedInvocation {
     pub inputs: Vec<ReceiptInput>,
     pub invocation: Invocation,
     pub invocation_sha256: String,
+    /// Operator-supplied values needed only to launch the process. They are
+    /// deliberately kept out of the portable invocation and receipt.
+    pub runtime_environment: BTreeMap<String, String>,
 }
 
 pub fn plan_invocation(
@@ -423,7 +427,7 @@ pub fn plan_invocation(
     // The plan needs the required key names, not their values: identity is
     // the names, and a value is only needed when the program actually runs.
     let environment = adapter.environment();
-    let mut supplied = BTreeMap::new();
+    let mut runtime_environment = BTreeMap::new();
     for key in required_environment {
         if environment.contains_key(key) {
             return Err(format!(
@@ -432,7 +436,7 @@ pub fn plan_invocation(
             .into());
         }
         if let Some(value) = supplied_environment.get(key) {
-            supplied.insert(key.clone(), value.clone());
+            runtime_environment.insert(key.clone(), value.clone());
         }
     }
     let invocation = Invocation {
@@ -442,7 +446,6 @@ pub fn plan_invocation(
         adapter_sha256: adapter.descriptor_sha256().map(str::to_owned),
         environment,
         required_environment: required_environment.to_vec(),
-        supplied_environment: supplied,
         timeout_ms: u64::try_from(adapter.timeout().as_millis()).unwrap_or(u64::MAX),
     };
     let invocation_sha256 =
@@ -451,6 +454,7 @@ pub fn plan_invocation(
         inputs,
         invocation,
         invocation_sha256,
+        runtime_environment,
     })
 }
 
@@ -521,7 +525,7 @@ pub fn execute_step(
     let invocation_sha256 = plan.invocation_sha256;
     let arguments = invocation.arguments.clone();
     let mut environment = invocation.environment.clone();
-    environment.extend(invocation.supplied_environment.clone());
+    environment.extend(plan.runtime_environment);
     let timeout = request.adapter.timeout();
 
     // Execute with a cleared environment inside the workspace.
@@ -733,6 +737,45 @@ fn civil_from_days(days: i64) -> (i64, u32, u32) {
 mod tests {
     use super::*;
 
+    fn planned_with_runtime_value(value: &str) -> PlannedInvocation {
+        let source_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib.rs");
+        let staged = [
+            ("script", "tools/screen.py"),
+            ("candidate", "inputs/candidate.json"),
+            ("materials", "inputs/materials.json"),
+            ("source", "inputs/source.json"),
+        ]
+        .into_iter()
+        .map(|(input_slot, workspace_path)| StagedInput {
+            input_slot: input_slot.into(),
+            evidence_id: format!("input:{input_slot}"),
+            source_path: source_path.clone(),
+            workspace_path: workspace_path.into(),
+            media_type: "application/json".into(),
+            expected_sha256:
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000".into(),
+        })
+        .collect::<Vec<_>>();
+        let capability = CapabilityIdentity {
+            capability_id: "python3".into(),
+            package_id: "test/python@1".into(),
+            source_repository: None,
+            source_commit: None,
+            executable_sha256:
+                "sha256:1111111111111111111111111111111111111111111111111111111111111111".into(),
+        };
+        plan_invocation(
+            &Adapter::ShieldingScreen,
+            &capability,
+            "python3",
+            &StepContext::default(),
+            &["PRIVATE_LOCATOR".into()],
+            &BTreeMap::from([("PRIVATE_LOCATOR".into(), value.into())]),
+            &staged,
+        )
+        .unwrap()
+    }
+
     #[test]
     fn rfc3339_rendering_is_civil() {
         assert_eq!(rfc3339_from_unix_millis(0), "1970-01-01T00:00:00.000Z");
@@ -741,5 +784,28 @@ mod tests {
             "2026-09-01T20:00:00.123Z"
         );
         assert_eq!(civil_from_days(19_782), (2024, 2, 29));
+    }
+
+    #[test]
+    fn runtime_environment_is_retained_outside_the_portable_invocation() {
+        let first = planned_with_runtime_value("operator-secret-one");
+        let second = planned_with_runtime_value("operator-secret-two");
+
+        assert_eq!(
+            first
+                .runtime_environment
+                .get("PRIVATE_LOCATOR")
+                .map(String::as_str),
+            Some("operator-secret-one")
+        );
+        assert_eq!(
+            first.invocation.required_environment,
+            vec!["PRIVATE_LOCATOR"]
+        );
+        assert_eq!(first.invocation_sha256, second.invocation_sha256);
+
+        let serialized = serde_json::to_string(&first.invocation).unwrap();
+        assert!(!serialized.contains("operator-secret-one"));
+        assert!(!serialized.contains("supplied_environment"));
     }
 }

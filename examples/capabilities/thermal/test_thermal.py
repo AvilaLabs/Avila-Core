@@ -10,9 +10,9 @@ partly in `validation/nafems_t4.py` itself, which imports `thermal_fe.py`'s
 functions directly -- see that script for the "reuse, don't duplicate"
 solver path).
 
-If the thermal virtual environment is not present at the declared path (a
-different machine), every finite-element test in this module is skipped
-rather than failed; the screen tests need only the system interpreter and
+Finite-element tests use the interpreter running this module, or the one named
+by `AVILA_THERMAL_PYTHON`. If that interpreter lacks NumPy, SciPy, or scikit-fem,
+those tests are skipped; the screen tests need only the standard library and
 always run.
 
 Run with:
@@ -21,7 +21,9 @@ or equivalently under the thermal venv -- this file itself imports nothing
 beyond the standard library, so either interpreter runs it the same way.
 """
 import json
+import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from decimal import Decimal
@@ -35,7 +37,7 @@ NAFEMS_OUTPUT = HERE / "validation" / "nafems-t4.json"
 MATERIALS = HERE / "materials.json"
 
 SYSTEM_PYTHON3 = Path("/usr/bin/python3")
-THERMAL_PYTHON = Path("/home/connoravila/.venvs/thermal/bin/python")
+THERMAL_PYTHON = Path(os.environ.get("AVILA_THERMAL_PYTHON", sys.executable))
 
 # Memory ceiling for each subprocess, matching the operational limit used
 # throughout this repository's development on a machine shared with other
@@ -44,8 +46,18 @@ THERMAL_PYTHON = Path("/home/connoravila/.venvs/thermal/bin/python")
 ULIMIT_V_KB = 4_000_000
 
 
-def missing_thermal_venv():
-    return [] if THERMAL_PYTHON.exists() else [str(THERMAL_PYTHON)]
+def missing_thermal_runtime():
+    if not THERMAL_PYTHON.is_file():
+        return [f"interpreter {THERMAL_PYTHON}"]
+    probe = subprocess.run(
+        [str(THERMAL_PYTHON), "-c", "import numpy, scipy, skfem"],
+        capture_output=True,
+        text=True,
+    )
+    return [] if probe.returncode == 0 else ["numpy, scipy, and scikit-fem"]
+
+
+MISSING_THERMAL_RUNTIME = missing_thermal_runtime()
 
 
 def run(interpreter: Path, script: Path, args: list) -> subprocess.CompletedProcess:
@@ -149,7 +161,7 @@ class ScreenArithmeticTest(unittest.TestCase):
         )
 
 
-@unittest.skipIf(missing_thermal_venv(), f"thermal virtual environment not present: {missing_thermal_venv()}")
+@unittest.skipIf(MISSING_THERMAL_RUNTIME, f"thermal runtime unavailable: {MISSING_THERMAL_RUNTIME}")
 class FiniteElementAnalyticReductionTest(unittest.TestCase):
     """When the strip covers the entire face, there is nothing left for the
     layers to spread heat into sideways: every quantity is uniform in x, the
@@ -202,7 +214,7 @@ class FiniteElementAnalyticReductionTest(unittest.TestCase):
         self.assertAlmostEqual(float(lower), float(analytic), places=2)
 
 
-@unittest.skipIf(missing_thermal_venv(), f"thermal virtual environment not present: {missing_thermal_venv()}")
+@unittest.skipIf(MISSING_THERMAL_RUNTIME, f"thermal runtime unavailable: {MISSING_THERMAL_RUNTIME}")
 class ByteStabilityTest(unittest.TestCase):
     """Two runs over identical inputs must produce identical bytes -- no
     randomness, and the significant-digit rounding absorbs any last-bit
@@ -263,7 +275,7 @@ class ByteStabilityTest(unittest.TestCase):
             self.assertEqual(outputs[0], outputs[1])
 
 
-@unittest.skipIf(missing_thermal_venv(), f"thermal virtual environment not present: {missing_thermal_venv()}")
+@unittest.skipIf(MISSING_THERMAL_RUNTIME, f"thermal runtime unavailable: {MISSING_THERMAL_RUNTIME}")
 class NafemsReproductionTest(unittest.TestCase):
     """`validation/nafems_t4.py` reproduces NAFEMS T4 on the same solver
     code path `thermal_fe.py` uses for candidates; the finest of its three

@@ -8,14 +8,15 @@ invoke it. There is no mock ACTINV here: the point of this suite is to prove
 the script's contract (schema, key order, exact-decimal formatting, byte
 stability) against the real tool, not against a stand-in.
 
-If the local ACTINV executable or data release is not present at the
-declared paths (a different machine), every test in this module is skipped
+Set `ACTINV_BIN` and `ACTINV_DATA_ROOT` to exercise a local ACTINV build and
+data release. If either is unavailable, every test in this module is skipped
 rather than failed, since none of that is this script's own responsibility.
 
 Run with:
     /usr/bin/python3 -m unittest examples/capabilities/shield-coupled/test_activate.py -v
 """
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -31,10 +32,8 @@ SPECTRA = HERE / "fixtures" / "layer-spectra.synthetic.json"
 SCHEDULE = HERE / "fixtures" / "schedule.json"
 MATERIALS = HERE.parent / "shielding" / "materials.json"
 
-ACTINV = Path("/home/connoravila/Documents/actinv/target/release/actinv")
-DATA_ROOT = Path(
-    "/home/connoravila/Documents/Avila-Labs/project-aftermatter/.data/actinv/v1.0.0"
-)
+ACTINV = Path(os.environ.get("ACTINV_BIN") or shutil.which("actinv") or ".missing/actinv")
+DATA_ROOT = Path(os.environ.get("ACTINV_DATA_ROOT", ".missing/actinv-data"))
 ACTIVATION_LIBRARY = DATA_ROOT / "activation" / "tendl-2025-neutron-709g.npz"
 ACTIVATION_INDEX = DATA_ROOT / "activation" / "tendl-2025-neutron-709g_index.json"
 DECAY_PRIMARY = DATA_ROOT / "decay" / "endf-b-viii-0_decay.dat"

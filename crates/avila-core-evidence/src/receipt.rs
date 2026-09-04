@@ -102,10 +102,6 @@ pub struct Invocation {
     /// path does not change what was asked of the program.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required_environment: Vec<String>,
-    /// The values the operator supplied for `required_environment` when the
-    /// step ran, recorded for provenance only.
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub supplied_environment: BTreeMap<String, String>,
     pub timeout_ms: u64,
 }
 
@@ -626,7 +622,6 @@ mod tests {
             adapter_sha256: None,
             environment: BTreeMap::new(),
             required_environment: Vec::new(),
-            supplied_environment: BTreeMap::new(),
             timeout_ms: 1_000,
         };
         let parameters = BTreeMap::new();
@@ -718,6 +713,18 @@ mod tests {
 
         let bytes = serde_json::to_vec(&receipt).unwrap();
         assert_eq!(parse_receipt(&bytes).unwrap(), receipt);
+    }
+
+    #[test]
+    fn operator_environment_values_are_not_receipt_fields() {
+        let root = TestDir::new();
+        let (receipt, _) = fixture(&root.0);
+        let mut document = serde_json::to_value(receipt).unwrap();
+        assert!(document["invocation"].get("supplied_environment").is_none());
+
+        document["invocation"]["supplied_environment"] =
+            serde_json::json!({"TOKEN": "must-not-be-persisted"});
+        assert!(serde_json::from_value::<ExecutionReceipt>(document).is_err());
     }
 
     #[test]

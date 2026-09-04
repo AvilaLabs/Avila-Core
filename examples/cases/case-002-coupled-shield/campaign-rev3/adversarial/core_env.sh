@@ -1,18 +1,24 @@
 # Shared plumbing for direct `avila-core run` invocations in the adversarial
 # arm. Source this, then run e.g.:
 #   "${CORE[@]}" run examples/cases/case-002-coupled-shield --json "${ROOTS[@]}" "${CAPS[@]}" --env OPENMC_CROSS_SECTIONS="$XS" --input candidate=PATH [--plan]
-CORE=(/workspace/avila-core/target/debug/avila-core)
+: "${OPENMC_DATA_ROOT:?Set OPENMC_DATA_ROOT to the OpenMC data-library directory}"
+: "${ACTINV_RELEASE_ROOT:?Set ACTINV_RELEASE_ROOT to the directory containing actinv}"
+: "${ACTINV_DATA_ROOT:?Set ACTINV_DATA_ROOT to the ACTINV data-release directory}"
+: "${OPENMC_PYTHON:?Set OPENMC_PYTHON to the OpenMC-enabled interpreter}"
+: "${OPENMC_CROSS_SECTIONS:=$OPENMC_DATA_ROOT/cross_sections.xml}"
+
+CORE=("${AVILA_CORE_BIN:-target/debug/avila-core}")
 ROOTS=(
   --source-root case=examples/cases/case-002-coupled-shield
   --source-root shielding=examples/capabilities/shielding
   --source-root coupled=examples/capabilities/shield-coupled
   --source-root agents=examples/agents
-  --source-root nuclear-data=/home/connoravila/nuclear-data/endfb-vii.1-hdf5
-  --source-root actinv-release=/home/connoravila/Documents/actinv/target/release
-  --source-root actinv-data=/home/connoravila/Documents/Avila-Labs/project-aftermatter/.data/actinv/v1.0.0
+  --source-root "nuclear-data=$OPENMC_DATA_ROOT"
+  --source-root "actinv-release=$ACTINV_RELEASE_ROOT"
+  --source-root "actinv-data=$ACTINV_DATA_ROOT"
 )
 CAPS=(
   --capability python3=/usr/bin/python3
-  --capability openmc-python=/home/connoravila/.venvs/w003env/bin/python3.12
+  --capability "openmc-python=$OPENMC_PYTHON"
 )
-XS=/home/connoravila/nuclear-data/endfb-vii.1-hdf5/cross_sections.xml
+XS="$OPENMC_CROSS_SECTIONS"

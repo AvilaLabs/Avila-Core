@@ -20,6 +20,8 @@ All numbers printed here are copied from Core's --json reports or --log lines.
 
 import argparse
 import json
+import os
+import re
 import sys
 from decimal import Decimal
 from fractions import Fraction
@@ -30,6 +32,7 @@ import shield_common as core  # noqa: E402
 
 HEAVY_DENSITY = Decimal("2.0")
 THICKNESS_KEY = "thickness_cm"
+ENV_REFERENCE = re.compile(r"\$\{([A-Z][A-Z0-9_]*)\}")
 
 
 def use_config(config):
@@ -38,8 +41,27 @@ def use_config(config):
     THICKNESS_KEY = config.get("thickness_key") or "thickness_cm"
 
 
+def expand_environment_references(value):
+    """Resolve explicit ${NAME} references without expanding shell syntax."""
+    if isinstance(value, dict):
+        return {key: expand_environment_references(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [expand_environment_references(item) for item in value]
+    if not isinstance(value, str):
+        return value
+
+    def replacement(match):
+        name = match.group(1)
+        if name not in os.environ:
+            raise SystemExit(f"config requires environment variable {name}")
+        return os.environ[name]
+
+    return ENV_REFERENCE.sub(replacement, value)
+
+
 def load_config(out):
-    return json.loads((Path(out) / "config.json").read_text())
+    document = json.loads((Path(out) / "config.json").read_text())
+    return expand_environment_references(document)
 
 
 def save_state(out, state):

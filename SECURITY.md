@@ -12,6 +12,10 @@ cleared environment and staged inputs. This is an evidence boundary, not a
 sandbox or containment boundary. Run only capabilities you trust on a machine
 appropriate for their risk.
 
+Operator-supplied environment values are passed only to a fresh process and are
+not serialized into receipts or reports. Static adapter environment is public
+package content and must never contain credentials or other secrets.
+
 The threat model includes:
 
 - untrusted capability packages and input documents;

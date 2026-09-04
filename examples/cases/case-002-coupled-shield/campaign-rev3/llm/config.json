@@ -1,23 +1,24 @@
 {
   "core": "target/debug/avila-core",
   "case": "examples/cases/case-002-coupled-shield",
+  "publication_note": "Machine-local paths were replaced with environment references before publication; scored reports and evidence artifacts are unchanged.",
   "source_roots": {
     "case": "examples/cases/case-002-coupled-shield",
     "shielding": "examples/capabilities/shielding",
     "coupled": "examples/capabilities/shield-coupled",
     "agents": "examples/agents",
-    "nuclear-data": "/home/connoravila/nuclear-data/endfb-vii.1-hdf5",
-    "actinv-release": "/home/connoravila/Documents/actinv/target/release",
-    "actinv-data": "/home/connoravila/Documents/Avila-Labs/project-aftermatter/.data/actinv/v1.0.0"
+    "nuclear-data": "${OPENMC_DATA_ROOT}",
+    "actinv-release": "${ACTINV_RELEASE_ROOT}",
+    "actinv-data": "${ACTINV_DATA_ROOT}"
   },
   "screen_capabilities": {
     "python3": "/usr/bin/python3"
   },
   "transport_capabilities": {
-    "openmc-python": "/home/connoravila/.venvs/w003env/bin/python3.12"
+    "openmc-python": "${OPENMC_PYTHON}"
   },
   "environment": {
-    "OPENMC_CROSS_SECTIONS": "/home/connoravila/nuclear-data/endfb-vii.1-hdf5/cross_sections.xml"
+    "OPENMC_CROSS_SECTIONS": "${OPENMC_CROSS_SECTIONS}"
   },
   "prior_logs": [
     "examples/cases/case-002-coupled-shield/campaign-rev1/baselines/campaign-log.jsonl",

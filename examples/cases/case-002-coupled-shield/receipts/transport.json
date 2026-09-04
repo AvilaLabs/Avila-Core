@@ -106,9 +106,6 @@
     "required_environment": [
       "OPENMC_CROSS_SECTIONS"
     ],
-    "supplied_environment": {
-      "OPENMC_CROSS_SECTIONS": "/home/connoravila/nuclear-data/endfb-vii.1-hdf5/cross_sections.xml"
-    },
     "timeout_ms": 3600000
   },
   "invocation_sha256": "sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",

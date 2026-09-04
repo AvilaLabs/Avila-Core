@@ -52,8 +52,7 @@ def strip_program(cap):
 
 def build_receipt(step_id, capability_type_id, adapter, capability, parameters,
                    fixed_inputs, invocation_arguments, invocation_env,
-                   invocation_required_env, invocation_supplied_env,
-                   invocation_timeout_ms, outputs):
+                   invocation_required_env, invocation_timeout_ms, outputs):
     inputs = []
     cand_evidence, cand_sha, cand_bytes, cand_wp, cand_mt = candidate_input()
     inputs.append({"input_slot": "candidate", "evidence_id": cand_evidence,
@@ -80,7 +79,6 @@ def build_receipt(step_id, capability_type_id, adapter, capability, parameters,
             "working_directory": ".",
             "environment": invocation_env,
             **({"required_environment": invocation_required_env} if invocation_required_env else {}),
-            **({"supplied_environment": invocation_supplied_env} if invocation_supplied_env else {}),
             "timeout_ms": invocation_timeout_ms,
         },
         "invocation_sha256": "sha256:" + "0" * 64,
@@ -126,7 +124,7 @@ def main():
         invocation_arguments=["tools/screen.py", "--candidate", "inputs/candidate.json",
                               "--materials", "inputs/materials.json", "--source", "inputs/source.json",
                               "--output", "outputs/screen-result.json"],
-        invocation_env={}, invocation_required_env=None, invocation_supplied_env=None,
+        invocation_env={}, invocation_required_env=None,
         invocation_timeout_ms=120000,
         outputs=[{"output_id": "screen-result", "workspace_path": "outputs/screen-result.json",
                   "media_type": "application/vnd.avila.shield-screen+json", "state": "collected",
@@ -156,7 +154,6 @@ def main():
         ],
         invocation_env={"HOME": ".", "OMP_NUM_THREADS": "8"},
         invocation_required_env=["OPENMC_CROSS_SECTIONS"],
-        invocation_supplied_env={"OPENMC_CROSS_SECTIONS": "/home/connoravila/nuclear-data/endfb-vii.1-hdf5/cross_sections.xml"},
         invocation_timeout_ms=3600000,
         outputs=[
             {"output_id": "transport-result", "workspace_path": "outputs/transport-result.json",

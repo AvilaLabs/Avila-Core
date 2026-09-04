@@ -1,0 +1,20 @@
+[
+  {
+    "layers": [
+      {"material": "graphite", "thickness_mm": 6}
+    ],
+    "rationale": "Single-layer graphite, thinned from the prior record's 10mm to 6mm. Areal mass = 0.006 m * 1800 kg/m3 = 10.8 kg/m2, well under the R3 100 kg/m2 cap and a 40% mass cut versus the lightest prior all-pass design (10mm graphite at 18 kg/m2). Thickness 6mm << R4's 40mm cap. Using the prior's implied screening relation T_screen = 399 + 60*(t/k), 6mm graphite gives T_screen = 399 + 60*(6/150) = 401.4K, comfortably under the 420K R1 cap (and the prior data shows R1 rises, not falls, with thickness, so thinning only helps this margin). For R2-hotspot, the prior constellation shows graphite's FE hotspot is essentially flat at 325K across 10/20/30mm thickness -- i.e., spreading resistance is already saturated well below 10mm, so the plate's own thickness contributes negligibly to the hotspot once above some modest floor. Reducing to 6mm is a moderate (40%) extrapolation below the tested floor, not an extreme one, so I expect the hotspot to remain close to 325K and thus comfortably clear the 340K limit with a plausible ~10-15K of margin. This is my primary bet for the lightest design I believe still meets every requirement."
+  },
+  {
+    "layers": [
+      {"material": "graphite", "thickness_mm": 9}
+    ],
+    "rationale": "Single-layer graphite at 9mm, only a 10% reduction from the prior's directly-tested 10mm graphite point (18 kg/m2, all PASS, worst margin 3). Areal mass = 0.009*1800 = 16.2 kg/m2, a modest but low-risk improvement over the prior record. Thickness 9mm is far under the 40mm R4 cap. Screening: T_screen = 399 + 60*(9/150) = 402.6K, safely under 420K (and below the directly-tested 10mm graphite value of 403K, consistent with the observed trend that R1 rises with added thickness). Because this thickness is minimally extrapolated from a directly-scored, all-PASS prior point (10mm graphite, hotspot 325K, worst margin 3), I have high confidence the FE hotspot stays essentially at ~325K, deep inside the 340K R2 limit. This candidate serves as the conservative, near-certain-pass member of the set, trading a smaller mass saving for much lower extrapolation risk than the 6mm option."
+  },
+  {
+    "layers": [
+      {"material": "aluminium", "thickness_mm": 5}
+    ],
+    "rationale": "Single-layer aluminium at 5mm, offering a differently-grounded bet: aluminium's higher conductivity (200 vs graphite's 150 W/mK) should give it more headroom against any thickness-driven rise in spreading resistance below the tested 10mm floor, even though its density (2700) is higher than graphite's (1800). Areal mass = 0.005*2700 = 13.5 kg/m2, still a 25% cut versus the prior record (10mm graphite, 18 kg/m2) and well under the 100 kg/m2 cap; thickness is far under the 40mm cap. Screening: T_screen = 399 + 60*(5/200) = 400.5K, comfortably under 420K. The prior constellation shows aluminium's FE hotspot flat at 324K across 10/20/30mm, only 16K below the 340K limit, and its higher conductivity should better resist any uptick from going thinner than any tested point. This candidate diversifies the portfolio's underlying assumption -- betting on conductivity margin rather than pure mass minimization -- as a hedge in case graphite's lower conductivity makes it more sensitive to the untested sub-10mm regime than aluminium."
+  }
+]

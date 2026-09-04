@@ -1,0 +1,123 @@
+{
+  "generated_at": "2026-09-04T23:10:37Z",
+  "trials": [
+    {
+      "arm": "A",
+      "trial": 0,
+      "status": "complete",
+      "candidates_evaluated": 3,
+      "success": true,
+      "evaluations_to_first_all_pass": 1,
+      "lightest_all_pass_mass_kg_m2": 3.6,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.1807448,
+      "num_turns": 10,
+      "input_tokens": 20,
+      "output_tokens": 9361,
+      "cache_read_input_tokens": 181654,
+      "cache_creation_input_tokens": 12119,
+      "session_wall_s": 109.65702154499013,
+      "attempts": 1,
+      "tool_calls": 7,
+      "tool_calls_wall_s": 3.0549999999999997,
+      "leak_clean": false,
+      "leak_hits": 3,
+      "leak_hit_detail": [
+        {
+          "tool_use_id": "toolu_01Wrnfq9zAEhxS6JqBmYHCRt",
+          "command": "python3 <repo>/examples/agents/shield_llm_tools.py propose --out /tmp/claude-1000/-home-connoravila-Documents-Avila-Labs/72b6d293-88ec-4302-8a04-fbc289050ef9/scratchpad/exp002-dryruns/run1/A/trial-00/designer --proposals /tmp/claude-1000/-home-connoravila-Documents-Avila-Labs/72b6d293-88ec-4302-8a04-fbc289050ef9/scratchpad/exp002-dryruns/run1/A/trial-00/designer/proposals/round1.json",
+          "words": [
+            "margin",
+            "pass",
+            "not_evaluated"
+          ],
+          "excerpt": "id | design | status | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness\nl-0000 | 7 mm graphite | evaluated | pass 402 (margin 17.7) | not_evaluated | pass 12.6 (margin 87.4) | pass 0.7 (margin 3.3)\nl-0001 | 5 mm graphite | evaluated | pass 402 (margin 18.3) | not_evaluated | pass 9 (margin 91) | pass 0.5 (margin 3.5)\nl-0002 | 3 mm graphite | evaluated | pass 401 (margin 19) "
+        },
+        {
+          "tool_use_id": "toolu_016BUqPYH1F5m2RhsXrsyebP",
+          "command": "python3 <repo>/examples/agents/shield_llm_tools.py propose --out /tmp/claude-1000/-home-connoravila-Documents-Avila-Labs/72b6d293-88ec-4302-8a04-fbc289050ef9/scratchpad/exp002-dryruns/run1/A/trial-00/designer --proposals /tmp/claude-1000/-home-connoravila-Documents-Avila-Labs/72b6d293-88ec-4302-8a04-fbc289050ef9/scratchpad/exp002-dryruns/run1/A/trial-00/designer/proposals/round2.json",
+          "words": [
+            "margin",
+            "pass",
+            "not_evaluated"
+          ],
+          "excerpt": "id | design | status | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness\nl-0004 | 2 mm graphite | evaluated | pass 401 (margin 19.3) | not_evaluated | pass 3.6 (margin 96.4) | pass 0.2 (margin 3.8)\nscreens used 5/6"
+        },
+        {
+          "tool_use_id": "toolu_018XeLiw3tH8djPhKgHbiXGC",
+          "command": "python3 <repo>/examples/agents/shield_llm_tools.py status --out /tmp/claude-1000/-home-connoravila-Documents-Avila-Labs/72b6d293-88ec-4302-8a04-fbc289050ef9/scratchpad/exp002-dryruns/run1/A/trial-00/designer",
+          "words": [
+            "margin",
+            "pass"
+          ],
+          "excerpt": "transports used 3/3; screens used 5/6\nall-PASS designs this arm: 0\ntransported this arm, best worst-case margin first:\n(none)"
+        }
+      ],
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "B",
+      "trial": 0,
+      "status": "complete",
+      "candidates_evaluated": 3,
+      "success": true,
+      "evaluations_to_first_all_pass": 2,
+      "lightest_all_pass_mass_kg_m2": 5.4,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.1792602,
+      "num_turns": 8,
+      "input_tokens": 16,
+      "output_tokens": 8949,
+      "cache_read_input_tokens": 132906,
+      "cache_creation_input_tokens": 15214,
+      "session_wall_s": 104.20635608094744,
+      "attempts": 1,
+      "tool_calls": 6,
+      "tool_calls_wall_s": 2.653,
+      "leak_clean": true,
+      "leak_hits": 0,
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "arm_b_live_solver_s": 1.8593513921368867,
+      "post_hoc_core_wall_s": 1.6038136940915138,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "C",
+      "trial": 0,
+      "status": "complete",
+      "candidates_evaluated": 3,
+      "success": true,
+      "evaluations_to_first_all_pass": 1,
+      "lightest_all_pass_mass_kg_m2": 10.8,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.24499759999999998,
+      "num_turns": 5,
+      "input_tokens": 10,
+      "output_tokens": 14544,
+      "cache_read_input_tokens": 84298,
+      "cache_creation_input_tokens": 20172,
+      "session_wall_s": 160.93036712892354,
+      "attempts": 1,
+      "tool_calls": 3,
+      "tool_calls_wall_s": 0.497,
+      "leak_clean": true,
+      "leak_hits": 0,
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "post_hoc_core_wall_s": 1.5844569850014523,
+      "shortcut_out_of_envelope_candidates": 0
+    }
+  ]
+}

@@ -76,8 +76,22 @@ in any string a designer session can read.
   arm's designer session, recorded so every arm is reviewable the way
   `examples/cases/case-002-coupled-shield/llm-designer-prompt.md` is.
 - `test_ablation.py` — `python3 -m unittest test_ablation -v`.
-- `dry-runs/<arm>/` — `config.json`, `transcript.jsonl`, and `scores.json`
-  copied from one reduced-budget dry run per arm (workspaces excluded).
+- `dry-runs/{A,B,C}/` — `config.json`, `transcript.jsonl`, and `scores.json`
+  (the same combined scores file, copied into each arm's directory) from
+  one reduced-budget dry run per arm, plus the designer's own proposal
+  files (`proposals/round*.json` for A and B, `candidates.json` for C's
+  one-shot submission) — no workspaces, no Core run logs with absolute
+  local paths (`campaign-log.jsonl`, `evaluation-log.jsonl`,
+  `post-hoc-core-timing.jsonl`, receipts). The ephemeral worktree checkout
+  path is redacted to `<repo>` in the three copied JSON/JSONL files; the
+  canonical `avila-core` binary and thermal-venv paths are left as-is since
+  they already appear verbatim in this file's committed source
+  (`harness.py`'s `DEFAULT_CORE`/`DEFAULT_THERMAL_PYTHON`).
+- `dry-runs/B-blocked-attempt/` — kept as the negative record described
+  above: `config.json`, `DONE.json`, `result.json`, `retries.jsonl`, and
+  `transcript.jsonl` from the `manual`-permission-mode attempt that
+  correctly reported itself blocked rather than fabricating a result,
+  before `acceptEdits` was found to be the fix.
 
 ## Running it
 
@@ -155,8 +169,12 @@ harness:
 - **`--output-format stream-json` requires `--verbose`** in print mode, or
   the CLI refuses to start.
 - The exact model id the transcript reports is `claude-sonnet-5` (both the
-  `system/init` event's `model` field and each `result` event's
-  `modelUsage` key), matching what the slice's launch instructions named.
+  `system/init` event's `model` field and, as the designer's own usage, a
+  `modelUsage` key on each `result` event), matching what the slice's
+  launch instructions named. Every dry-run transcript's `modelUsage` also
+  carries a small ancillary `claude-haiku-4-5-20251001` key alongside it —
+  see "Dry-run results" below for what that is and why it doesn't change
+  this.
 - `--no-session-persistence` means a trial's session cannot later be
   resumed by session id; a failed trial's retry is always a fresh session
   (see below), never `--resume`.
@@ -241,24 +259,142 @@ file is treated as incomplete and is re-run (not resumed mid-session) by
 
 `scoring.leak_scan` scans only the tool_result content that followed a
 Bash call matching the arm's own tool script, for the words *verdict,
-margin, pass, fail, coverage, envelope, refus(ed/al)* — never the model's
-own prose (a sentence like "I expect this design to pass the limit" in the
-model's reasoning is not a tool leak and is not flagged). `harness.score`
-records `leak_clean` and `leak_hits` per trial, with the exact hit excerpt
-when one occurs. See the dry-run results below for what the one dry run per
-arm found.
+margin, pass, fail, coverage, envelope, refus(ed/al), not_evaluated,
+inconclusive* (`scoring.FORBIDDEN_WORDS`) — never the model's own prose (a
+sentence like "I expect this design to pass the limit" in the model's
+reasoning is not a tool leak and is not flagged). `harness.score` records
+`leak_clean` and `leak_hits` per trial, with the exact hit excerpt when one
+occurs. This check applies to arms B and C, whose entire point is that
+their tool never speaks in Core's vocabulary; `harness.score` computes the
+same field for arm A too, but a hit there is not meaningful and is expected
+-- arm A's tool legitimately prints Core's real verdicts throughout, so
+`leak_clean: false` for arm A is not a leak, and is not reported as one
+below. See the dry-run results below for what the one dry run per arm
+found, and note that the shared prior constellation shown in every arm's
+`brief` legitimately carries these words too (a fixed factor, not live
+per-candidate feedback) — see `leak_scan`'s docstring for why `brief` and
+`finish` are excluded from the scan by construction, not by omission.
 
 ## Dry-run results (screens 6, evaluations 3 / N_eval 3)
 
-One reduced-budget, unscored dry run per arm, run from this worktree against
-the prebuilt `avila-core` at commit `3be5902`. Full detail is in
-`dry-runs/<arm>/config.json` and `.../scores.json`; this table is copied
-from those files, not re-derived.
+One reduced-budget, unscored dry run per arm, run from this worktree
+(`work/exp002`, commit `2ccb969` plus this slice's commits) against
+`avila-core` built fresh from that same worktree
+(`cargo-serial.sh build -p avila-core-cli`, since no prebuilt binary existed
+at `target/debug/avila-core` when this slice started; a prior session's
+copies under `dry-runs/` were lost before being committed, so all three
+arms were run again cleanly here). Binary sha256
+`sha256:6a9c46568001e63ba76e57d2357791104a54a3efde5b175ac350cd416f590d87`,
+recorded per trial in `dry-runs/<arm>/config.json`'s `core_binary_sha256`.
+Full detail is in `dry-runs/<arm>/config.json` and the combined
+`dry-runs/<arm>/scores.json` (identical across all three arms; one combined
+`harness.py score` run over all three trial directories); this table is
+copied from those files, not re-derived.
 
-<!-- FILLED_AFTER_DRY_RUNS -->
+| Arm | Tool calls | Screens used | Evaluations used | First all-PASS eval # | Lightest all-PASS mass (kg/m²) | Tokens in (direct / cache-read / cache-creation) | Tokens out | Wall time | Cost | Model id | Leak scan |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| A — Core | 7 | 5 / 6 | 3 / 3 | 1 | 3.6 | 20 / 181,654 / 12,119 | 9,361 | 109.7 s | $0.181 | `claude-sonnet-5` | not applicable — see note below |
+| B — Raw solver | 6 | 6 / 6 | 3 / 3 | 2 | 5.4 | 16 / 132,906 / 15,214 | 8,949 | 104.2 s | $0.179 | `claude-sonnet-5` | clean (0 hits) |
+| C — No iterative feedback | 3 | n/a (one-shot) | 3 / 3 (`N_eval`) | 1 | 10.8 | 10 / 84,298 / 20,172 | 14,544 | 160.9 s | $0.245 | `claude-sonnet-5` | clean (0 hits) |
+
+All three trials succeeded (a candidate that passed every requirement was
+found within budget); none hit the qualification-envelope shortcut, none
+were invalid, refused, or inconclusive. "Model id" is exactly what
+`system/init`'s `model` field and every `result` event's `modelUsage` key
+report; see "Exact model and prompt identities" in
+`experiments/EXP-002-core-feedback-ablation.md` for the small ancillary
+`claude-haiku-4-5-20251001` entry every transcript's `modelUsage` also
+carries (not designer reasoning; not included in the token/cost columns
+above, which are the `claude-sonnet-5` entry only).
+
+Arm A's leak scan is not a meaningful check and is reported as such, not as
+a pass or fail: `harness.score` computes `leak_clean`/`leak_hits` for every
+arm mechanically, and arm A's live tool output legitimately contains
+`margin`/`pass`/`not_evaluated` throughout (Core's real, intended feedback
+to arm A) — `dry-runs/A/scores.json` shows `leak_clean: false` with three
+hits, and every hit's excerpt is exactly that: a `propose`/`status` table
+of Core's own verdicts. This was checked by hand against
+`dry-runs/A/transcript.jsonl`, not only trusted from the scanner. Arms B
+and C were checked the same way: `scoring.leak_scan` (which scans only
+`propose`/`evaluate`/`submit`/`status` tool_result content, per its
+docstring) reports zero hits for both, and a broader, unscoped grep of
+their full transcripts for every forbidden word turns up matches only in
+three places, none of them a real leak — the tool's own `brief`/`finish`
+disclaimer sentences (both excluded from the scan by design, see "Leak
+check" above), the designer's own prose building its own pass/fail
+judgement (arm B is explicitly instructed to do this arithmetic itself),
+and the stream-json SDK's own `result.subagent_stats.refused` field (an
+unrelated structural field, not candidate feedback). No hit in either arm
+came from the tool's live per-candidate output itself.
+
+A real bug was found and fixed while producing arm A's numbers above, not
+introduced by this slice's dry run: `harness.final_core_scoring`'s arm-A
+branch used to filter arm A's `campaign-log.jsonl` with
+`shield_llm_tools.transported(row)`, which assumes the pre-v0.3 `steps`
+shape (`[name, state]` two-element pairs, still what the frozen
+`campaign-1` prior log uses) and does `list(s)[1] in ("executed",
+"reused")`; Core's current `--log` schema
+(`avila.core/run-attempt/v0.3-draft`) instead writes each step as a full
+object (`{"step_id": ..., "state": ..., ...}`), and `list()` of a dict
+gives its *keys*, so `list(s)[1]` is always the literal string `"adapter"`
+and the shared helper always returns `False` against a freshly-produced
+log. This was caught because arm A's first dry-run attempt scored
+`candidates_scored: 0` even though the designer's own `transport` call had
+just reported a genuine all-PASS candidate (confirmed in
+`designer-notes.jsonl`); `shield_llm_tools.py`'s own `cmd_status`/
+`cmd_finish` share the same bug (`constellation_rows` calls the same
+`transported()`), which is why arm A's `designer/summary.md` in this dry
+run still reads "0 passed every requirement Core evaluated" even after the
+fix below — that file is written by the unmodified tool, not by the
+harness. `shield_llm_tools.py` itself is untouched by this slice (arm A's
+tool is reused exactly as campaign-1 ran it, per this experiment's design);
+instead, `harness.py` now uses its own `scoring.row_transported`, a
+schema-correct equivalent check, documented and unit-tested in
+`test_ablation.py` (`RowTransportedTests`). The numbers in the table above
+are from the corrected re-run. **This likely affects every other live use
+of `shield_llm_tools.py` itself against a freshly-built Core binary** —
+concretely, CASE-002's own live LLM-designer sessions that invoke it
+directly (`run_campaign_rev3.sh`, `llm-designer-prompt.md`,
+`adversarial-designer-prompt.md`) — and is worth a dedicated fix in that
+shared file. This is not the same tool as `shield_search2.py`, which has
+its own independent `row_was_transported()` over `verdicts` (checked in
+this slice: it does not call `shield_llm_tools` at all and is not affected
+by this bug). See "Known open problems" below.
 
 ## Known open problems
 
+- **`shield_llm_tools.transported()` is broken against Core's current log
+  schema and needs a fix in that shared file, not just the workaround
+  here.** Confirmed in this slice (see "Dry-run results" above for the
+  exact failure): it assumes each `steps` entry is a two-element `[name,
+  state]` pair, a shape only the frozen pre-CASE-003-revision-2 logs (the
+  `campaign-1` prior) still use; Core's current `--log` output
+  (`avila.core/run-attempt/v0.3-draft`) writes each step as a full object,
+  making `list(s)[1]` always the literal key name `"adapter"`, never a
+  state. This harness works around it locally (`scoring.row_transported`,
+  used only for arm A's own `campaign-log.jsonl`), but `shield_llm_tools.py`
+  itself — and therefore its own `cmd_status`/`cmd_finish`/
+  `constellation_rows`, and any other live LLM-designer session that
+  invokes it directly against a freshly-built Core binary, concretely
+  CASE-002's `run_campaign_rev3.sh`/`llm-designer-prompt.md`/
+  `adversarial-designer-prompt.md` — is unmodified and still wrong.
+  `shield_search2.py` is a different tool with its own independent
+  `row_was_transported()` over `verdicts`, not affected by this. This
+  slice did not fix it there: that file is shared across cases, arm
+  A's tool is specified as reused unmodified, and a fix belongs in its own
+  reviewed change, not folded into an EXP-002 dry-run slice.
+- **The CASE-003 package manifest sha256 recorded in this experiment's
+  pre-registration was stale/wrong in an earlier draft**, corrected in
+  this slice: `experiments/EXP-002-core-feedback-ablation.md` said
+  `sha256:9634fcc1...` and called it "unchanged from campaign-1"; the
+  current `package.json` (after CASE-003 revision 2 and the A1/A2 slices)
+  hashes to `sha256:af9667f6...`, which is what every trial in this slice
+  actually recorded and what `--expect-manifest` actually enforced. No
+  trial's `--expect-manifest` used the wrong value (`harness.py` always
+  recomputes it fresh), so this only mattered for a human reading the
+  document, but it would have misled the lead into pinning the wrong
+  manifest for the scored block. See that document's "Immutable harness
+  and case commit" item for the corrected value and the full explanation.
 - **Arm A's Core-vs-solver time split is trial-level, not per-call**, for
   the reason above (this slice does not modify `shield_llm_tools.py`). A
   per-call split would need either a timestamp-window match between each

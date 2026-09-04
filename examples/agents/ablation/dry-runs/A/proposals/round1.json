@@ -1,0 +1,6 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 7}], "rationale": "Constellation shows 10/20/30mm graphite all give FE hotspot ~325K (thickness-insensitive plateau) with mass 18/36/54 kg/m2 respectively, so thickness beyond ~10mm is wasted mass. Testing below the plateau to see where hotspot starts rising, trading some margin (currently 15K at 10mm) for mass reduction (18 -> 12.6 kg/m2)."},
+  {"layers": [{"material": "graphite", "thickness_mm": 5}], "rationale": "Same plateau evidence as above; graphite has the best conductivity/density ratio (150 W/mK, 1800 kg/m3) of all listed materials, so it is the best candidate for minimizing mass. 5mm gives mass 9 kg/m2 if hotspot stays under 340K."},
+  {"layers": [{"material": "graphite", "thickness_mm": 3}], "rationale": "Aggressive thinning to probe how quickly hotspot rises once spreading is no longer saturated, using the same 10/20/30mm graphite plateau evidence (325K flat) as the baseline for comparison."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 5}], "rationale": "Aluminium also plateaus at ~324K from 10-30mm (constellation). As a fallback in case thin graphite underperforms, aluminium's higher conductivity (200 vs 150 W/mK) may spread heat better per mm despite higher density (2700 vs 1800 kg/m3), worth comparing at the same thin gauge."}
+]

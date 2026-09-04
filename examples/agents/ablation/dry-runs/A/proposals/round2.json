@@ -1,0 +1,3 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 2}], "rationale": "3mm graphite transported all-PASS with hotspot 331K (8.63K margin) and 5mm gave 328K (12.2K margin), implying roughly 1.5K/mm rise as thickness drops. Extrapolating, 2mm graphite should land near 332-334K, still under the 340K limit, while cutting mass to 3.6 kg/m2 from 5.4."}
+]

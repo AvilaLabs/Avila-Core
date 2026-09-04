@@ -1,0 +1,8 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 1}], "rationale": "Test minimal-thickness graphite for screen behavior; graphite has best conductivity/density ratio of available materials."},
+  {"layers": [{"material": "graphite", "thickness_mm": 2}], "rationale": "Step up from 1mm to see screen trend."},
+  {"layers": [{"material": "graphite", "thickness_mm": 3}], "rationale": "Step up from 2mm to see screen trend."},
+  {"layers": [{"material": "graphite", "thickness_mm": 4}], "rationale": "Step up from 3mm to see screen trend."},
+  {"layers": [{"material": "graphite", "thickness_mm": 5}], "rationale": "Step up from 4mm to see screen trend."},
+  {"layers": [{"material": "graphite", "thickness_mm": 6}], "rationale": "Step up from 5mm, approaching half of prior 10mm baseline which had large FE margin."}
+]

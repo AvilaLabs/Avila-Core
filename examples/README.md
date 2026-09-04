@@ -23,6 +23,11 @@ integrations, safety analyses, or evidence of compliance.
   intended outcome of a cheap test: four numerical and compliance checks pass,
   but positive nearest-neighbor coupling fails the reduction, nominal-load,
   and meaningful-coupling criteria, so the protocol says not to advance it.
+- `cases/case-005-passive-compliance-ceiling/` tests whether CASE-004 stopped
+  too early. It uses public SIMSOPT NCSX geometry and the closed-form global
+  optimum over every equal-trace positive-definite stiffness matrix. The
+  mathematical ceiling still misses the inherited target, so no iterative
+  passive linear topology campaign is started.
 
 The dose limit, unit factors, parameter domains, and every capability
 description are hypothetical. They must never be used for engineering or

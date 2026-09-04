@@ -1,0 +1,179 @@
+{
+  "schema_version": "avila.core/case-package/v0.1-draft",
+  "case_id": "CASE-005",
+  "title": "NCSX full-matrix passive magnetic-compliance ceiling",
+  "documents": [
+    {
+      "document_id": "case-005-contract",
+      "role": "contract",
+      "path": "contract.json",
+      "sha256": "sha256:8ff2d3e798f7eb2b4be5a71a256b2ef600722563c2d9166f3dd6570c5f1dd685"
+    },
+    {
+      "document_id": "case-005-registry",
+      "role": "registry",
+      "path": "registry.json",
+      "sha256": "sha256:072a4a0046d86ad508a810bc157b825de8a19bdb260d830f0e8dbe859bd74a2c"
+    },
+    {
+      "document_id": "case-005-claims",
+      "role": "claims",
+      "path": "claims.json",
+      "sha256": "sha256:b388e362213d233dbbb4cdc949aed1aa159acdee8511971e8f49c35e03ca1619"
+    },
+    {
+      "document_id": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+      "role": "external_checker_adapter",
+      "path": "adapter.json",
+      "sha256": "sha256:35e0c58eeb517ad17bd73769e72bdfbdea1fb8999c985b2e55142feab2cda513"
+    },
+    {
+      "document_id": "case-005-expected-campaign",
+      "role": "expected_campaign_report",
+      "path": "campaign-report.json",
+      "sha256": "sha256:e0d1f1b1dafcd43e60961298ccae97751a9424d2e67ceded3559066a50684272"
+    },
+    {
+      "document_id": "case-005-ceiling-receipt",
+      "role": "execution_receipt",
+      "path": "receipts/ceiling.json",
+      "sha256": "sha256:dd62fa87ea09371612de8e32af31f5b92a81dccd7109109e02b729e59540be97",
+      "step_id": "ceiling"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "ceiling-script",
+      "evidence_ids": [
+        "input:ceiling-script"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx_passive_ceiling.py",
+      "sha256": "sha256:5e804c32b031aa2f31761cadbd8a65dc6ecbedd7d7109c9b7e07a182624e4d21"
+    },
+    {
+      "artifact_id": "field-kernel",
+      "evidence_ids": [
+        "input:field-kernel"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "magnetic_compliance.py",
+      "sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3"
+    },
+    {
+      "artifact_id": "ncsx-coils",
+      "evidence_ids": [
+        "input:coil-data"
+      ],
+      "source_root": "simsopt",
+      "path": "src/simsopt/configs/NCSX.dat",
+      "sha256": "sha256:2b857ca137184d0f4b5e7fa271c6cf946cf7fdfa127a19ec302d4f9731db57a7"
+    },
+    {
+      "artifact_id": "ncsx-boundary",
+      "evidence_ids": [
+        "input:boundary-data"
+      ],
+      "source_root": "simsopt",
+      "path": "tests/test_files/input.NCSX_c09r00_halfTeslaTF",
+      "sha256": "sha256:32b5609d02643d05b30c353ba5ab0a9b3ef6c486a8122f141a3c14e01748c956"
+    },
+    {
+      "artifact_id": "ceiling-model",
+      "evidence_ids": [
+        "input:model"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx-ceiling-model.json",
+      "sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62"
+    },
+    {
+      "artifact_id": "reference-result",
+      "evidence_ids": [
+        "ceiling-linear-reduction",
+        "ceiling-compliance-ratio",
+        "ceiling-condition-number",
+        "ceiling-linearization-error",
+        "ceiling-resolution-difference",
+        "ceiling-derivative-difference",
+        "ceiling-interpretation"
+      ],
+      "source_root": "case",
+      "path": "expected/ncsx-passive-ceiling-result.json",
+      "sha256": "sha256:294653bd7463b30ae414c06d6d2a158f8e0660635aefda49ee99316deba690d5"
+    }
+  ],
+  "capabilities": [
+    {
+      "capability_id": "python3-numpy",
+      "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+      "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+    }
+  ],
+  "executions": [
+    {
+      "step_id": "ceiling",
+      "adapter": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+      "capability_id": "python3-numpy",
+      "inputs": [
+        {
+          "input_slot": "ceiling-script",
+          "workspace_path": "tools/ncsx_passive_ceiling.py"
+        },
+        {
+          "input_slot": "field-kernel",
+          "workspace_path": "tools/magnetic_compliance.py"
+        },
+        {
+          "input_slot": "coil-data",
+          "workspace_path": "inputs/NCSX.dat"
+        },
+        {
+          "input_slot": "boundary-data",
+          "workspace_path": "inputs/ncsx-boundary.focus"
+        },
+        {
+          "input_slot": "model",
+          "workspace_path": "inputs/model.json"
+        }
+      ],
+      "outputs": [
+        {
+          "output_slot": "linear-ceiling",
+          "claim_id": "ceiling-linear-reduction"
+        },
+        {
+          "output_slot": "compliance-ratio",
+          "claim_id": "ceiling-compliance-ratio"
+        },
+        {
+          "output_slot": "condition-number",
+          "claim_id": "ceiling-condition-number"
+        },
+        {
+          "output_slot": "linearization-error",
+          "claim_id": "ceiling-linearization-error"
+        },
+        {
+          "output_slot": "resolution-difference",
+          "claim_id": "ceiling-resolution-difference"
+        },
+        {
+          "output_slot": "derivative-difference",
+          "claim_id": "ceiling-derivative-difference"
+        },
+        {
+          "output_slot": "interpretation",
+          "claim_id": "ceiling-interpretation"
+        }
+      ]
+    }
+  ],
+  "free_inputs": [],
+  "limitations": [
+    "CASE-005 is an unqualified mathematical ceiling on a discretized public reference geometry, not a structural design, equilibrium analysis, safety case, or patentability determination.",
+    "The external SIMSOPT artifacts are bound by content digest but are not distributed in this repository; operators must supply the exact upstream source tree.",
+    "The interpreter bytes are bound, while the adjacent NumPy installation is named by package annotation and result rather than by a complete environment lock.",
+    "Equal stiffness trace is only a mathematical resource proxy."
+  ]
+}

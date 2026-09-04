@@ -1,0 +1,278 @@
+{
+  "schema_version": "avila.core/campaign-report/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "status": "evaluated",
+  "compiled_snapshot_sha256": "sha256:d96108327efe08783749330a843f431e00d83e89ef224c45a1998c969968833f",
+  "claims_sha256": "sha256:05f1703eff6b7559c3c212fab9f5f919ebe96b44bfcd3037fce6668d4e82f1c6",
+  "admissions": [
+    {
+      "evidence_id": "input:boundary-data",
+      "source": {
+        "source": "contract_input",
+        "input_id": "boundary-data"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:ceiling-script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "ceiling-script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:coil-data",
+      "source": {
+        "source": "contract_input",
+        "input_id": "coil-data"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:field-kernel",
+      "source": {
+        "source": "contract_input",
+        "input_id": "field-kernel"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:model",
+      "source": {
+        "source": "contract_input",
+        "input_id": "model"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "ceiling-linear-reduction",
+      "source": {
+        "source": "step_output",
+        "step_id": "ceiling",
+        "output_slot": "linear-ceiling"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "ceiling-compliance-ratio",
+      "source": {
+        "source": "step_output",
+        "step_id": "ceiling",
+        "output_slot": "compliance-ratio"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "ceiling-condition-number",
+      "source": {
+        "source": "step_output",
+        "step_id": "ceiling",
+        "output_slot": "condition-number"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "ceiling-linearization-error",
+      "source": {
+        "source": "step_output",
+        "step_id": "ceiling",
+        "output_slot": "linearization-error"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "ceiling-resolution-difference",
+      "source": {
+        "source": "step_output",
+        "step_id": "ceiling",
+        "output_slot": "resolution-difference"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "ceiling-derivative-difference",
+      "source": {
+        "source": "step_output",
+        "step_id": "ceiling",
+        "output_slot": "derivative-difference"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "ceiling-interpretation",
+      "source": {
+        "source": "step_output",
+        "step_id": "ceiling",
+        "output_slot": "interpretation"
+      },
+      "state": "admitted"
+    }
+  ],
+  "verdicts": [
+    {
+      "requirement_id": "CEILING-R1-REDUCTION",
+      "statement": "The fine-grid global passive linear ceiling is at least 1.5 times the declared uncoupled directional control.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "ceiling",
+        "output_slot": "linear-ceiling"
+      },
+      "evidence_ids": [
+        "ceiling-linear-reduction"
+      ],
+      "verdict": {
+        "status": "fail",
+        "rule": "nominal.ge.below",
+        "canonical_unit": "1",
+        "limit_canonical": "3/2",
+        "nominal_canonical": "1134668070987/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:d96108327efe08783749330a843f431e00d83e89ef224c45a1998c969968833f",
+        "claims_sha256": "sha256:05f1703eff6b7559c3c212fab9f5f919ebe96b44bfcd3037fce6668d4e82f1c6"
+      }
+    },
+    {
+      "requirement_id": "CEILING-R2-COMPLIANCE",
+      "statement": "The ideal full-matrix realization has worst compliance no more than twice the unit isotropic support.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "ceiling",
+        "output_slot": "compliance-ratio"
+      },
+      "evidence_ids": [
+        "ceiling-compliance-ratio"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "2",
+        "nominal_canonical": "923273355253/500000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:d96108327efe08783749330a843f431e00d83e89ef224c45a1998c969968833f",
+        "claims_sha256": "sha256:05f1703eff6b7559c3c212fab9f5f919ebe96b44bfcd3037fce6668d4e82f1c6"
+      }
+    },
+    {
+      "requirement_id": "CEILING-R3-CONDITION",
+      "statement": "The ideal full-matrix realization has stiffness condition number no greater than 10.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "ceiling",
+        "output_slot": "condition-number"
+      },
+      "evidence_ids": [
+        "ceiling-condition-number"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "10",
+        "nominal_canonical": "1490474600019/500000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:d96108327efe08783749330a843f431e00d83e89ef224c45a1998c969968833f",
+        "claims_sha256": "sha256:05f1703eff6b7559c3c212fab9f5f919ebe96b44bfcd3037fce6668d4e82f1c6"
+      }
+    },
+    {
+      "requirement_id": "CEILING-R4-LINEARIZATION",
+      "statement": "The worst reference-grid linear-versus-exact displaced-geometry error is no more than 10 percent.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "ceiling",
+        "output_slot": "linearization-error"
+      },
+      "evidence_ids": [
+        "ceiling-linearization-error"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/10",
+        "nominal_canonical": "13255701321/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:d96108327efe08783749330a843f431e00d83e89ef224c45a1998c969968833f",
+        "claims_sha256": "sha256:05f1703eff6b7559c3c212fab9f5f919ebe96b44bfcd3037fce6668d4e82f1c6"
+      }
+    },
+    {
+      "requirement_id": "CEILING-R5-RESOLUTION",
+      "statement": "The ceiling changes by no more than 15 percent from the reference to fine discretization.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "ceiling",
+        "output_slot": "resolution-difference"
+      },
+      "evidence_ids": [
+        "ceiling-resolution-difference"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "3/20",
+        "nominal_canonical": "3202146267/200000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:d96108327efe08783749330a843f431e00d83e89ef224c45a1998c969968833f",
+        "claims_sha256": "sha256:05f1703eff6b7559c3c212fab9f5f919ebe96b44bfcd3037fce6668d4e82f1c6"
+      }
+    },
+    {
+      "requirement_id": "CEILING-R6-DERIVATIVE",
+      "statement": "The fine-grid magnetic sensitivity changes by no more than 2 percent when the central-difference step is halved.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "ceiling",
+        "output_slot": "derivative-difference"
+      },
+      "evidence_ids": [
+        "ceiling-derivative-difference"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/50",
+        "nominal_canonical": "5993/20000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:d96108327efe08783749330a843f431e00d83e89ef224c45a1998c969968833f",
+        "claims_sha256": "sha256:05f1703eff6b7559c3c212fab9f5f919ebe96b44bfcd3037fce6668d4e82f1c6"
+      }
+    }
+  ],
+  "campaign_sha256": "sha256:3fcbff709dd300aaf0b2071691ef02d71f5cec04a3e39716a9d487267b5512d4",
+  "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
+}

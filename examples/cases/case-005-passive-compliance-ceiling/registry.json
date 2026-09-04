@@ -1,0 +1,205 @@
+{
+  "schema_version": "avila.core/registry-snapshot/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "registry_id": "case-005.passive-compliance-ceiling.registry",
+  "revision": 1,
+  "kinds": [
+    {
+      "kind_id": "core.ratio",
+      "canonical_unit": "1",
+      "unit_class": "core.ratio.units@1",
+      "owner": "avila-labs.core",
+      "units": [{ "symbol": "1", "factor": "1" }]
+    }
+  ],
+  "purposes": [
+    {
+      "purpose": { "id": "avila-labs.magnetic-compliance.passive-ceiling", "major": 1 },
+      "owner": "avila-labs.magnetic-compliance",
+      "description": "A research-only ceiling gate deciding whether a realizable passive linear support search can reach the inherited magnetic-error target."
+    }
+  ],
+  "roles": [
+    {
+      "role": { "id": "passive-ceiling.checker-script", "major": 1 },
+      "owner": "avila-labs.magnetic-compliance",
+      "validator": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+      "accepted_media_types": ["text/x-python"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "passive-ceiling.field-kernel", "major": 1 },
+      "owner": "avila-labs.magnetic-compliance",
+      "validator": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+      "accepted_media_types": ["text/x-python"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "passive-ceiling.ncsx-coils", "major": 1 },
+      "owner": "simsopt-contributors",
+      "validator": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+      "accepted_media_types": ["text/csv"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "passive-ceiling.ncsx-boundary", "major": 1 },
+      "owner": "simsopt-contributors",
+      "validator": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+      "accepted_media_types": ["text/plain"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "passive-ceiling.model", "major": 1 },
+      "owner": "avila-labs.magnetic-compliance",
+      "validator": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+      "accepted_media_types": ["application/vnd.avila.passive-ceiling-model+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "passive-ceiling.linear-ceiling", "major": 1 },
+      "owner": "avila-labs.magnetic-compliance",
+      "validator": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+      "quantity_kind": "core.ratio",
+      "unit_class": "core.ratio.units@1",
+      "accepted_media_types": ["application/vnd.avila.passive-ceiling-result+json"],
+      "permitted_claim_models": [{ "model": "exact" }]
+    },
+    {
+      "role": { "id": "passive-ceiling.compliance-ratio", "major": 1 },
+      "owner": "avila-labs.magnetic-compliance",
+      "validator": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+      "quantity_kind": "core.ratio",
+      "unit_class": "core.ratio.units@1",
+      "accepted_media_types": ["application/vnd.avila.passive-ceiling-result+json"],
+      "permitted_claim_models": [{ "model": "exact" }]
+    },
+    {
+      "role": { "id": "passive-ceiling.condition-number", "major": 1 },
+      "owner": "avila-labs.magnetic-compliance",
+      "validator": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+      "quantity_kind": "core.ratio",
+      "unit_class": "core.ratio.units@1",
+      "accepted_media_types": ["application/vnd.avila.passive-ceiling-result+json"],
+      "permitted_claim_models": [{ "model": "exact" }]
+    },
+    {
+      "role": { "id": "passive-ceiling.linearization-error", "major": 1 },
+      "owner": "avila-labs.magnetic-compliance",
+      "validator": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+      "quantity_kind": "core.ratio",
+      "unit_class": "core.ratio.units@1",
+      "accepted_media_types": ["application/vnd.avila.passive-ceiling-result+json"],
+      "permitted_claim_models": [{ "model": "exact" }]
+    },
+    {
+      "role": { "id": "passive-ceiling.resolution-difference", "major": 1 },
+      "owner": "avila-labs.magnetic-compliance",
+      "validator": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+      "quantity_kind": "core.ratio",
+      "unit_class": "core.ratio.units@1",
+      "accepted_media_types": ["application/vnd.avila.passive-ceiling-result+json"],
+      "permitted_claim_models": [{ "model": "exact" }]
+    },
+    {
+      "role": { "id": "passive-ceiling.derivative-difference", "major": 1 },
+      "owner": "avila-labs.magnetic-compliance",
+      "validator": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+      "quantity_kind": "core.ratio",
+      "unit_class": "core.ratio.units@1",
+      "accepted_media_types": ["application/vnd.avila.passive-ceiling-result+json"],
+      "permitted_claim_models": [{ "model": "exact" }]
+    },
+    {
+      "role": { "id": "passive-ceiling.interpretation", "major": 1 },
+      "owner": "avila-labs.magnetic-compliance",
+      "validator": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+      "accepted_media_types": ["application/vnd.avila.passive-ceiling-result+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }],
+      "categorical_values": ["search-justified", "stop"],
+      "non_claims": [
+        "This category mirrors the checker's arithmetic; Core's independently evaluated requirement verdicts remain authoritative."
+      ]
+    }
+  ],
+  "capability_types": [
+    {
+      "capability_type": { "id": "passive-ceiling.ncsx-full-matrix", "major": 1 },
+      "owner": "avila-labs.magnetic-compliance",
+      "reproducibility": { "determinism": "deterministic" },
+      "inputs": [
+        {
+          "slot_id": "ceiling-script",
+          "role": { "id": "passive-ceiling.checker-script", "major": 1 },
+          "accepted_media_types": ["text/x-python"]
+        },
+        {
+          "slot_id": "field-kernel",
+          "role": { "id": "passive-ceiling.field-kernel", "major": 1 },
+          "accepted_media_types": ["text/x-python"]
+        },
+        {
+          "slot_id": "coil-data",
+          "role": { "id": "passive-ceiling.ncsx-coils", "major": 1 },
+          "accepted_media_types": ["text/csv"]
+        },
+        {
+          "slot_id": "boundary-data",
+          "role": { "id": "passive-ceiling.ncsx-boundary", "major": 1 },
+          "accepted_media_types": ["text/plain"]
+        },
+        {
+          "slot_id": "model",
+          "role": { "id": "passive-ceiling.model", "major": 1 },
+          "accepted_media_types": ["application/vnd.avila.passive-ceiling-model+json"]
+        }
+      ],
+      "outputs": [
+        {
+          "slot_id": "linear-ceiling",
+          "role": { "id": "passive-ceiling.linear-ceiling", "major": 1 },
+          "media_type": "application/vnd.avila.passive-ceiling-result+json",
+          "permitted_claim_models": [{ "model": "exact" }]
+        },
+        {
+          "slot_id": "compliance-ratio",
+          "role": { "id": "passive-ceiling.compliance-ratio", "major": 1 },
+          "media_type": "application/vnd.avila.passive-ceiling-result+json",
+          "permitted_claim_models": [{ "model": "exact" }]
+        },
+        {
+          "slot_id": "condition-number",
+          "role": { "id": "passive-ceiling.condition-number", "major": 1 },
+          "media_type": "application/vnd.avila.passive-ceiling-result+json",
+          "permitted_claim_models": [{ "model": "exact" }]
+        },
+        {
+          "slot_id": "linearization-error",
+          "role": { "id": "passive-ceiling.linearization-error", "major": 1 },
+          "media_type": "application/vnd.avila.passive-ceiling-result+json",
+          "permitted_claim_models": [{ "model": "exact" }]
+        },
+        {
+          "slot_id": "resolution-difference",
+          "role": { "id": "passive-ceiling.resolution-difference", "major": 1 },
+          "media_type": "application/vnd.avila.passive-ceiling-result+json",
+          "permitted_claim_models": [{ "model": "exact" }]
+        },
+        {
+          "slot_id": "derivative-difference",
+          "role": { "id": "passive-ceiling.derivative-difference", "major": 1 },
+          "media_type": "application/vnd.avila.passive-ceiling-result+json",
+          "permitted_claim_models": [{ "model": "exact" }]
+        },
+        {
+          "slot_id": "interpretation",
+          "role": { "id": "passive-ceiling.interpretation", "major": 1 },
+          "media_type": "application/vnd.avila.passive-ceiling-result+json",
+          "permitted_claim_models": [{ "model": "unquantified" }]
+        }
+      ],
+      "non_claims": [
+        "This capability does not establish structural realizability, safety, manufacturability, novelty, patentability, or performance outside the declared discretized model."
+      ]
+    }
+  ]
+}

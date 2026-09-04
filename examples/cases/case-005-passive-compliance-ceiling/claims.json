@@ -1,0 +1,181 @@
+{
+  "claims": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.passive-ceiling-result+json",
+        "sha256": "sha256:294653bd7463b30ae414c06d6d2a158f8e0660635aefda49ee99316deba690d5"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "1.134668070987"
+        }
+      },
+      "claim_id": "ceiling-linear-reduction",
+      "output_slot": "linear-ceiling",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "ceiling"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.passive-ceiling-result+json",
+        "sha256": "sha256:294653bd7463b30ae414c06d6d2a158f8e0660635aefda49ee99316deba690d5"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "1.846546710506"
+        }
+      },
+      "claim_id": "ceiling-compliance-ratio",
+      "output_slot": "compliance-ratio",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "ceiling"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.passive-ceiling-result+json",
+        "sha256": "sha256:294653bd7463b30ae414c06d6d2a158f8e0660635aefda49ee99316deba690d5"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "2.980949200038"
+        }
+      },
+      "claim_id": "ceiling-condition-number",
+      "output_slot": "condition-number",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "ceiling"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.passive-ceiling-result+json",
+        "sha256": "sha256:294653bd7463b30ae414c06d6d2a158f8e0660635aefda49ee99316deba690d5"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.013255701321"
+        }
+      },
+      "claim_id": "ceiling-linearization-error",
+      "output_slot": "linearization-error",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "ceiling"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.passive-ceiling-result+json",
+        "sha256": "sha256:294653bd7463b30ae414c06d6d2a158f8e0660635aefda49ee99316deba690d5"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.016010731335"
+        }
+      },
+      "claim_id": "ceiling-resolution-difference",
+      "output_slot": "resolution-difference",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "ceiling"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.passive-ceiling-result+json",
+        "sha256": "sha256:294653bd7463b30ae414c06d6d2a158f8e0660635aefda49ee99316deba690d5"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.00000029965"
+        }
+      },
+      "claim_id": "ceiling-derivative-difference",
+      "output_slot": "derivative-difference",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "ceiling"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.passive-ceiling-result+json",
+        "sha256": "sha256:294653bd7463b30ae414c06d6d2a158f8e0660635aefda49ee99316deba690d5"
+      },
+      "claim": {
+        "model": "unquantified",
+        "value": "stop"
+      },
+      "claim_id": "ceiling-interpretation",
+      "output_slot": "interpretation",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "ceiling"
+    }
+  ],
+  "compiled_snapshot_sha256": "sha256:d96108327efe08783749330a843f431e00d83e89ef224c45a1998c969968833f",
+  "inputs": [
+    {
+      "artifact": {
+        "media_type": "text/plain",
+        "sha256": "sha256:32b5609d02643d05b30c353ba5ab0a9b3ef6c486a8122f141a3c14e01748c956"
+      },
+      "input_id": "boundary-data"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:5e804c32b031aa2f31761cadbd8a65dc6ecbedd7d7109c9b7e07a182624e4d21"
+      },
+      "input_id": "ceiling-script"
+    },
+    {
+      "artifact": {
+        "media_type": "text/csv",
+        "sha256": "sha256:2b857ca137184d0f4b5e7fa271c6cf946cf7fdfa127a19ec302d4f9731db57a7"
+      },
+      "input_id": "coil-data"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3"
+      },
+      "input_id": "field-kernel"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.passive-ceiling-model+json",
+        "sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62"
+      },
+      "input_id": "model"
+    }
+  ],
+  "schema_version": "avila.core/evidence-claims/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft"
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": "avila.core/external-checker-adapter/v0.1-draft",
+  "adapter_id": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+  "capability_type": { "id": "passive-ceiling.ncsx-full-matrix", "major": 1 },
+  "input_slots": ["ceiling-script", "field-kernel", "coil-data", "boundary-data", "model"],
+  "arguments": [
+    { "kind": "input_path", "input_slot": "ceiling-script" },
+    { "kind": "input_path", "input_slot": "field-kernel" },
+    { "kind": "input_path", "input_slot": "coil-data" },
+    { "kind": "input_path", "input_slot": "boundary-data" },
+    { "kind": "input_path", "input_slot": "model" },
+    { "kind": "output_path", "output_id": "result" }
+  ],
+  "outputs": [
+    {
+      "output_id": "result",
+      "workspace_path": "outputs/ncsx-passive-ceiling-result.json",
+      "media_type": "application/vnd.avila.passive-ceiling-result+json"
+    }
+  ],
+  "claims": [
+    { "model": "exact", "output_slot": "linear-ceiling", "output_id": "result", "pointer": "/metrics/fine_linear_ceiling_factor", "unit": "1" },
+    { "model": "exact", "output_slot": "compliance-ratio", "output_id": "result", "pointer": "/metrics/ideal_worst_compliance_ratio", "unit": "1" },
+    { "model": "exact", "output_slot": "condition-number", "output_id": "result", "pointer": "/metrics/ideal_condition_number", "unit": "1" },
+    { "model": "exact", "output_slot": "linearization-error", "output_id": "result", "pointer": "/metrics/linearization_relative_error", "unit": "1" },
+    { "model": "exact", "output_slot": "resolution-difference", "output_id": "result", "pointer": "/metrics/resolution_relative_difference", "unit": "1" },
+    { "model": "exact", "output_slot": "derivative-difference", "output_id": "result", "pointer": "/metrics/derivative_relative_difference", "unit": "1" },
+    { "model": "categorical", "output_slot": "interpretation", "output_id": "result", "pointer": "/interpretation", "allowed_values": ["search-justified", "stop"] }
+  ],
+  "timeout_ms": 60000,
+  "limitations": [
+    "The checker owns the scientific calculation and mathematical derivation; Core validates the declared process, identities, extraction, evidence binding, and requirement arithmetic only."
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "case-005.passive-compliance-ceiling",
+  "revision": 1,
+  "status": "draft",
+  "question": "Can any symmetric positive-definite passive linear stiffness matrix with the same stiffness trace achieve at least 1.5 times the direction-neutral rigid-translation magnetic-error performance of the declared uncoupled directional control on the published SIMSOPT NCSX modular-coil geometry?",
+  "assumptions": [
+    "The NCSX coil coefficients, currents, symmetry expansion, and plasma-boundary coefficients follow the declared public SIMSOPT files at the bound upstream commit.",
+    "Each of the 18 physical modular coils has three rigid local translation degrees of freedom; bending, rotation, casing strain, joints, preload, fatigue, and the surrounding structure are excluded.",
+    "For H = S^T S, minimizing tr(H K^-2) over every symmetric positive-definite K with fixed trace has the global closed-form solution in which K shares H's eigenvectors and its eigenvalues are proportional to the cube roots of H's eigenvalues.",
+    "The full 54 by 54 stiffness matrix is an intentionally generous mathematical relaxation containing nonlocal and cross-direction coupling; it is not claimed to be mechanically realizable.",
+    "The complete orthogonal translation-load basis is direction-neutral and is not a probability distribution or reactor load spectrum.",
+    "The 1.5 reduction target and numerical limits are inherited from CASE-004. Passing would justify only a realizable-topology search; failure means that no candidate inside this relaxed passive linear model can reach that target on the discretized reference geometry."
+  ],
+  "execution_policy": {
+    "permit_nominal_basis": true
+  },
+  "inputs": [
+    {
+      "input_id": "ceiling-script",
+      "role": { "id": "passive-ceiling.checker-script", "major": 1 },
+      "media_type": "text/x-python",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "field-kernel",
+      "role": { "id": "passive-ceiling.field-kernel", "major": 1 },
+      "media_type": "text/x-python",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "coil-data",
+      "role": { "id": "passive-ceiling.ncsx-coils", "major": 1 },
+      "media_type": "text/csv",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "boundary-data",
+      "role": { "id": "passive-ceiling.ncsx-boundary", "major": 1 },
+      "media_type": "text/plain",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "model",
+      "role": { "id": "passive-ceiling.model", "major": 1 },
+      "media_type": "application/vnd.avila.passive-ceiling-model+json",
+      "claim_model": { "model": "unquantified" }
+    }
+  ],
+  "workflow": [
+    {
+      "step_id": "ceiling",
+      "capability_type": { "id": "passive-ceiling.ncsx-full-matrix", "major": 1 },
+      "bindings": [
+        { "input_slot": "ceiling-script", "source": { "source": "contract_input", "input_id": "ceiling-script" } },
+        { "input_slot": "field-kernel", "source": { "source": "contract_input", "input_id": "field-kernel" } },
+        { "input_slot": "coil-data", "source": { "source": "contract_input", "input_id": "coil-data" } },
+        { "input_slot": "boundary-data", "source": { "source": "contract_input", "input_id": "boundary-data" } },
+        { "input_slot": "model", "source": { "source": "contract_input", "input_id": "model" } }
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "CEILING-R1-REDUCTION",
+      "statement": "The fine-grid global passive linear ceiling is at least 1.5 times the declared uncoupled directional control.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.passive-ceiling", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "ceiling", "output_slot": "linear-ceiling" },
+      "comparison": "greater_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1.5", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "CEILING-R2-COMPLIANCE",
+      "statement": "The ideal full-matrix realization has worst compliance no more than twice the unit isotropic support.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.passive-ceiling", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "ceiling", "output_slot": "compliance-ratio" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "2", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "CEILING-R3-CONDITION",
+      "statement": "The ideal full-matrix realization has stiffness condition number no greater than 10.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.passive-ceiling", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "ceiling", "output_slot": "condition-number" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "10", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "CEILING-R4-LINEARIZATION",
+      "statement": "The worst reference-grid linear-versus-exact displaced-geometry error is no more than 10 percent.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.passive-ceiling", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "ceiling", "output_slot": "linearization-error" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.1", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "CEILING-R5-RESOLUTION",
+      "statement": "The ceiling changes by no more than 15 percent from the reference to fine discretization.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.passive-ceiling", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "ceiling", "output_slot": "resolution-difference" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.15", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "CEILING-R6-DERIVATIVE",
+      "statement": "The fine-grid magnetic sensitivity changes by no more than 2 percent when the central-difference step is halved.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.passive-ceiling", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "ceiling", "output_slot": "derivative-difference" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.02", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    }
+  ]
+}

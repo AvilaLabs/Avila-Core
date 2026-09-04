@@ -75,6 +75,25 @@ implementation that cites and reproduces the numerical result of NAFEMS Test
 text. NAFEMS identifies the thermal benchmark collections at
 <https://www.nafems.org/publications/glossaryofbenchmarks/thermalanalysis/>.
 
+## SIMSOPT NCSX reference inputs (not distributed)
+
+CASE-005's included result was generated from the NCSX modular-coil
+coefficients and plasma-boundary coefficients in the public SIMSOPT repository
+at commit `c648630cfc5625863b291709c17015bcdcba13af`. The source files are
+content-identified by the case package but are not copied into this repository.
+
+- Upstream: <https://github.com/hiddenSymmetries/simsopt>
+- Source files: `src/simsopt/configs/NCSX.dat` and
+  `tests/test_files/input.NCSX_c09r00_halfTeslaTF`
+- Copyright: 2023 SIMSOPT contributors
+- License: MIT
+- Local use: independent Biot–Savart sensitivity and passive-stiffness ceiling
+  calculation; no upstream code is imported or executed
+- License text: <https://github.com/hiddenSymmetries/simsopt/blob/c648630cfc5625863b291709c17015bcdcba13af/LICENSE>
+
+The generated CASE-005 result is not endorsed or validated by the SIMSOPT
+contributors or NCSX institutions.
+
 ## Rust dependencies and bundled fonts
 
 Rust dependencies are resolved by `Cargo.lock` and are not vendored in this

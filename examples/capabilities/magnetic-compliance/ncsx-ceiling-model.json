@@ -1,0 +1,45 @@
+{
+  "schema": "avila.magnetic-compliance/ncsx-ceiling-model/v1",
+  "model_id": "simsopt-ncsx-passive-full-matrix-ceiling-r0",
+  "source": {
+    "repository": "https://github.com/hiddenSymmetries/simsopt",
+    "commit": "c648630cfc5625863b291709c17015bcdcba13af",
+    "coil_path": "src/simsopt/configs/NCSX.dat",
+    "boundary_path": "tests/test_files/input.NCSX_c09r00_halfTeslaTF"
+  },
+  "geometry": {
+    "nfp": 3,
+    "stellarator_symmetry": true,
+    "base_coil_count": 3,
+    "coil_fourier_order": 25,
+    "base_currents_a": ["652271.9419853", "651868.5693674", "537743.5886473"],
+    "boundary_coefficient_count": 136
+  },
+  "numerics": {
+    "reference": {
+      "coil_segments": 128,
+      "surface_toroidal": 24,
+      "surface_poloidal": 16
+    },
+    "fine": {
+      "coil_segments": 256,
+      "surface_toroidal": 48,
+      "surface_poloidal": 32
+    },
+    "derivative_step_m": "0.0002",
+    "operating_displacement_m": "0.005"
+  },
+  "uncoupled_control": {
+    "allocation_levels": ["0.25", "0.5", "0.75", "1", "1.25", "1.5", "1.75", "2", "2.25", "2.5"],
+    "maximum_compliance_ratio": "2",
+    "maximum_condition_number": "10"
+  },
+  "gate": {
+    "minimum_linear_ceiling": "1.5",
+    "maximum_compliance_ratio": "2",
+    "maximum_condition_number": "10",
+    "maximum_linearization_error": "0.1",
+    "maximum_resolution_difference": "0.15",
+    "maximum_derivative_difference": "0.02"
+  }
+}

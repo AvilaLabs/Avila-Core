@@ -1,0 +1,119 @@
+{
+  "schema_version": "avila.core/execution-receipt/v0.1-draft",
+  "case_id": "CASE-005",
+  "compiled_snapshot_sha256": "sha256:d96108327efe08783749330a843f431e00d83e89ef224c45a1998c969968833f",
+  "step_id": "ceiling",
+  "capability_type": {
+    "id": "passive-ceiling.ncsx-full-matrix",
+    "major": 1
+  },
+  "adapter": "avila-labs.magnetic-compliance/ncsx-passive-ceiling@1",
+  "capability": {
+    "capability_id": "python3-numpy",
+    "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+    "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+  },
+  "parameters": {},
+  "inputs": [
+    {
+      "input_slot": "boundary-data",
+      "evidence_id": "input:boundary-data",
+      "workspace_path": "inputs/ncsx-boundary.focus",
+      "media_type": "text/plain",
+      "sha256": "sha256:32b5609d02643d05b30c353ba5ab0a9b3ef6c486a8122f141a3c14e01748c956",
+      "bytes": 15440
+    },
+    {
+      "input_slot": "ceiling-script",
+      "evidence_id": "input:ceiling-script",
+      "workspace_path": "tools/ncsx_passive_ceiling.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:5e804c32b031aa2f31761cadbd8a65dc6ecbedd7d7109c9b7e07a182624e4d21",
+      "bytes": 31770
+    },
+    {
+      "input_slot": "coil-data",
+      "evidence_id": "input:coil-data",
+      "workspace_path": "inputs/NCSX.dat",
+      "media_type": "text/csv",
+      "sha256": "sha256:2b857ca137184d0f4b5e7fa271c6cf946cf7fdfa127a19ec302d4f9731db57a7",
+      "bytes": 11893
+    },
+    {
+      "input_slot": "field-kernel",
+      "evidence_id": "input:field-kernel",
+      "workspace_path": "tools/magnetic_compliance.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3",
+      "bytes": 31472
+    },
+    {
+      "input_slot": "model",
+      "evidence_id": "input:model",
+      "workspace_path": "inputs/model.json",
+      "media_type": "application/vnd.avila.passive-ceiling-model+json",
+      "sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62",
+      "bytes": 1409
+    }
+  ],
+  "invocation": {
+    "program": "python3.14",
+    "arguments": [
+      "tools/ncsx_passive_ceiling.py",
+      "tools/magnetic_compliance.py",
+      "inputs/NCSX.dat",
+      "inputs/ncsx-boundary.focus",
+      "inputs/model.json",
+      "outputs/ncsx-passive-ceiling-result.json"
+    ],
+    "working_directory": ".",
+    "adapter_sha256": "sha256:35e0c58eeb517ad17bd73769e72bdfbdea1fb8999c985b2e55142feab2cda513",
+    "environment": {},
+    "timeout_ms": 60000
+  },
+  "invocation_sha256": "sha256:70f8b2b6f06f8f983589f6449a673d3486972032632467342ad03769be1ad1f4",
+  "process": {
+    "started_at": "2026-09-04T15:38:43.480Z",
+    "finished_at": "2026-09-04T15:39:01.150Z",
+    "duration_ms": 17669,
+    "exit_status": 0,
+    "timed_out": false
+  },
+  "logs": [
+    {
+      "stream": "stdout",
+      "workspace_path": "logs/stdout.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "stream": "stderr",
+      "workspace_path": "logs/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "outputs": [
+    {
+      "output_id": "result",
+      "workspace_path": "outputs/ncsx-passive-ceiling-result.json",
+      "media_type": "application/vnd.avila.passive-ceiling-result+json",
+      "state": "collected",
+      "sha256": "sha256:294653bd7463b30ae414c06d6d2a158f8e0660635aefda49ee99316deba690d5",
+      "bytes": 3021
+    }
+  ],
+  "runner": {
+    "runner": "avila.core/cli-rust@0.1.0",
+    "os": "linux",
+    "arch": "x86_64"
+  },
+  "status": "completed",
+  "limitations": [
+    "Exit status and output digests are process evidence, not scientific success.",
+    "The executable digest identifies the bytes that ran; it does not qualify the method.",
+    "No sandbox, resource accounting, or signature was applied; the environment was cleared and the working directory confined to the workspace.",
+    "The checker owns the scientific calculation and mathematical derivation; Core validates the declared process, identities, extraction, evidence binding, and requirement arithmetic only."
+  ],
+  "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, practical suitability, or regulatory suitability."
+}

@@ -48,6 +48,12 @@ about a real stellarator equilibrium, coil bending, a surrounding structure,
 nonlocal or active mechanisms, mass, stress, fatigue, access, safety, novelty,
 or patentability.
 
+[CASE-005](../case-005-passive-compliance-ceiling/) subsequently repeated the
+question on the public SIMSOPT NCSX modular-coil geometry and relaxed the
+support to *any* full positive-definite stiffness matrix. Its global ceiling is
+still only 1.1347× against the 1.5× target, so a passive linear topology loop is
+not justified.
+
 ## Reproduce it
 
 Verify the complete package and replay its committed receipt without running

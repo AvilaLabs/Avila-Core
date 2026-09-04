@@ -254,9 +254,12 @@ impl Adapter {
 
     /// Facts about this step for a qualification envelope, as the kernel's
     /// applicability context in JSON. Every adapter contributes the media
-    /// type and identity of each staged input; the transport adapter adds
-    /// what it reads from the source and candidate documents. Facts carry
-    /// the input's identity as provenance and the adapter as validator.
+    /// type and identity of each staged input; the transport and screen
+    /// adapters add what they read from the source and candidate documents.
+    /// Facts carry the input's identity as provenance and the adapter as
+    /// validator, so the same slab or plate geometry read by two adapters
+    /// (a screen and its transport or finite-element counterpart) produces
+    /// two independently attributed facts, one per adapter id.
     pub fn applicability(
         &self,
         staged: &[(String, String, String, Vec<u8>)],
@@ -278,8 +281,14 @@ impl Adapter {
                             "validator": self.id(), "receipt": format!("plan:{invocation_sha256}") }
             }),
         );
-        if matches!(self, Self::ShieldingTransport) {
-            shielding::transport_facts(staged, invocation_sha256, &mut facts, &mut inputs)?;
+        if matches!(self, Self::ShieldingScreen | Self::ShieldingTransport) {
+            shielding::transport_facts_for(
+                staged,
+                invocation_sha256,
+                &mut facts,
+                &mut inputs,
+                self.id(),
+            )?;
         }
         if matches!(self, Self::ShieldingActivation) {
             activation::activation_facts(staged, invocation_sha256, &mut facts, &mut inputs)?;
@@ -292,8 +301,14 @@ impl Adapter {
                 &mut inputs,
             )?;
         }
-        if matches!(self, Self::ThermalSpreaderFe) {
-            thermal::thermal_facts(staged, invocation_sha256, &mut facts, &mut inputs)?;
+        if matches!(self, Self::ThermalScreen | Self::ThermalSpreaderFe) {
+            thermal::thermal_facts_for(
+                staged,
+                invocation_sha256,
+                &mut facts,
+                &mut inputs,
+                self.id(),
+            )?;
         }
         Ok(serde_json::json!({ "facts": facts, "inputs": inputs }))
     }

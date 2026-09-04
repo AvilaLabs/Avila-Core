@@ -2017,11 +2017,14 @@ fn case_001_carries_the_library_requirement_set_byte_for_byte() {
 }
 
 /// Bind a qualification for the synthetic `stub` capability whose envelope
-/// is written over the generic facts every adapter reports.
+/// is written over the generic facts every adapter reports. `covered_output_slots`
+/// mirrors the record field of the same name: `None` covers every output the
+/// capability produces.
 fn declare_qualification(
     synthetic: &Synthetic,
     media_types: &[&str],
     executable_sha256: Option<&str>,
+    covered_output_slots: Option<&[&str]>,
 ) {
     let package_value: Value =
         serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
@@ -2038,7 +2041,7 @@ fn declare_qualification(
                 .to_string()
         })
         .unwrap();
-    let record = json!({
+    let mut record = json!({
         "schema_version": "avila.core/qualification/v0.1-draft",
         "qualification_id": "test/stub-classification", "revision": 1, "owner": "test",
         "adapter": "avila-labs.aftermatter/evaluate@1",
@@ -2050,6 +2053,9 @@ fn declare_qualification(
                         "source_requirement": { "class": "runner_measured", "validator": "avila-labs.aftermatter/evaluate@1" } } }
         ] }
     });
+    if let Some(slots) = covered_output_slots {
+        record["covered_output_slots"] = json!(slots);
+    }
     fs::write(
         synthetic.case_dir.join("qualification.json"),
         serde_json::to_vec_pretty(&record).unwrap(),
@@ -2085,7 +2091,7 @@ fn a_run_inside_the_envelope_carries_the_qualification_on_its_claims() {
         .find(|input| input["input_id"] == "aftermatter-case")
         .map(|input| input["media_type"].as_str().unwrap().to_string())
         .unwrap();
-    declare_qualification(&synthetic, &[media_type.as_str()], None);
+    declare_qualification(&synthetic, &[media_type.as_str()], None, None);
     let workspace = dir.workspace();
     let report = execute_case(
         &synthetic.case_dir,
@@ -2128,7 +2134,7 @@ fn a_run_inside_the_envelope_carries_the_qualification_on_its_claims() {
 fn a_run_outside_the_envelope_cannot_establish_a_bounded_requirement() {
     let dir = TestDir::new();
     let synthetic = blessed(&dir);
-    declare_qualification(&synthetic, &["text/plain"], None);
+    declare_qualification(&synthetic, &["text/plain"], None, None);
     let report = execute_case(
         &synthetic.case_dir,
         &reuse_options(&synthetic, dir.workspace()),
@@ -2168,6 +2174,7 @@ fn a_qualification_for_a_different_executable_is_refused() {
         &synthetic,
         &["text/plain"],
         Some("sha256:0000000000000000000000000000000000000000000000000000000000000000"),
+        None,
     );
     let error = execute_case(
         &synthetic.case_dir,
@@ -2176,6 +2183,96 @@ fn a_qualification_for_a_different_executable_is_refused() {
     .unwrap_err()
     .to_string();
     assert!(error.contains("covers executable"), "{error}");
+}
+
+#[test]
+fn a_qualification_scoped_to_one_output_slot_leaves_the_others_unqualified() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+
+    // Require a qualification behind every bounded requirement's evidence,
+    // so an uncovered claim is visibly refused rather than merely footnoted.
+    let contract_path = synthetic.case_dir.join("contract.json");
+    let mut contract: Value = serde_json::from_slice(&fs::read(&contract_path).unwrap()).unwrap();
+    contract["execution_policy"]["require_qualification"] = json!(true);
+    let media_type = contract["inputs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|input| input["input_id"] == "aftermatter-case")
+        .map(|input| input["media_type"].as_str().unwrap().to_string())
+        .unwrap();
+    fs::write(
+        &contract_path,
+        serde_json::to_vec_pretty(&contract).unwrap(),
+    )
+    .unwrap();
+    rehash_document(&synthetic.case_dir, "contract", "contract.json");
+
+    // The classification step produces two bounded claims from one output
+    // document, table-1 and table-2; the record covers only table-1.
+    declare_qualification(
+        &synthetic,
+        &[media_type.as_str()],
+        None,
+        Some(&["table-1-class-a-fraction"]),
+    );
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let assessment = step(&report)
+        .qualification
+        .as_ref()
+        .expect("envelope assessed");
+    assert_eq!(
+        assessment.state,
+        avila_core_compiler::EnvelopeState::Inside,
+        "{summary}"
+    );
+
+    // The covered claim carries the envelope; the uncovered one, from the
+    // very same step and the very same executed run, carries none at all.
+    let evidence_claims = &report.claims.as_ref().unwrap().evidence_claims;
+    let claim = |claim_id: &str| -> Value {
+        evidence_claims
+            .iter()
+            .find(|claim| claim["claim_id"] == claim_id)
+            .unwrap()
+            .clone()
+    };
+    let table_1 = claim("aftermatter-r0-table-1-class-a-fraction");
+    assert_eq!(table_1["qualification"]["state"], "inside", "{table_1}");
+    let table_2 = claim("aftermatter-r0-table-2-class-a-fraction");
+    assert!(
+        table_2.get("qualification").is_none(),
+        "an uncovered claim must carry no qualification at all: {table_2}"
+    );
+
+    // CASE-000-R1 (table-1) evaluates on the qualified claim; CASE-000-R2
+    // (table-2) is refused under `require_qualification` exactly as if no
+    // record had been bound for its output at all.
+    let campaign = report.campaign.as_ref().expect("campaign evaluated");
+    let verdict = |requirement_id: &str| {
+        campaign
+            .verdicts
+            .iter()
+            .find(|verdict| verdict.requirement_id == requirement_id)
+            .unwrap()
+    };
+    let r1 = verdict("CASE-000-R1");
+    assert_ne!(r1.verdict.status, VerdictStatus::NotEvaluated, "{summary}");
+    let r1_reasons = serde_json::to_string(&r1.verdict.reasons).unwrap();
+    assert!(!r1_reasons.contains("CORE-A4402"), "{r1_reasons}");
+
+    let r2 = verdict("CASE-000-R2");
+    assert_eq!(r2.verdict.status, VerdictStatus::NotEvaluated, "{summary}");
+    assert_eq!(r2.verdict.rule, "not_evaluated.unqualified", "{summary}");
+    let r2_reasons = serde_json::to_string(&r2.verdict.reasons).unwrap();
+    assert!(r2_reasons.contains("CORE-A4402"), "{r2_reasons}");
 }
 
 #[test]

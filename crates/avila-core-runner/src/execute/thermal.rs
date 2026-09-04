@@ -9,9 +9,10 @@
 use std::collections::BTreeMap;
 use std::time::Duration;
 
-use avila_core_kernel::{lower_authored_decimal, read_authoritative_decimal};
+use avila_core_kernel::{ExactNumber, lower_authored_decimal, read_authoritative_decimal};
 use serde_json::{Value, json};
 
+use super::claims::canonical_decimal;
 use super::{AdapterOutput, ExtractedClaim, StepContext};
 
 pub const SCREEN_ADAPTER_ID: &str = "avila-labs.thermal/screen@1";
@@ -230,24 +231,27 @@ pub fn fe_claims(
     ])
 }
 
-/// Facts the finite-element qualification can be written over: the
-/// candidate's layer count and each layer's material as an attribute of the
-/// candidate input, padded with `none` beyond the third layer exactly as
-/// `shielding::transport_facts` pads the slab candidate's layers, and the
-/// source document's heat flux, convection coefficient, and strip width as
-/// quantity facts. Mirrors `transport_facts` in `shielding.rs`: same shape,
-/// same provenance convention, applied to the thermal source and candidate
-/// documents instead of the shielding ones.
-pub fn thermal_facts(
+/// Facts a qualification envelope over this plate geometry can be written
+/// over: the candidate's total thickness and layer count, and each layer's
+/// material as an attribute of the candidate input, padded with `none`
+/// beyond the third layer exactly as `shielding::transport_facts_for` pads
+/// the slab candidate's layers, and the source document's heat flux,
+/// convection coefficient, and strip width as quantity facts. Shared by the
+/// screen and the finite-element adapters, each calling it with its own
+/// adapter id as `validator`: same shape, same provenance convention, as
+/// `shielding::transport_facts_for` applied to the thermal source and
+/// candidate documents instead of the shielding ones.
+pub fn thermal_facts_for(
     staged: &[(String, String, String, Vec<u8>)],
     invocation_sha256: &str,
     facts: &mut serde_json::Map<String, Value>,
     inputs: &mut serde_json::Map<String, Value>,
+    validator: &str,
 ) -> Result<(), String> {
     let receipt = format!("plan:{invocation_sha256}");
     let source_of = |identity: &str| {
         json!({ "class": "validated_input", "identity": identity,
-                "validator": FE_ADAPTER_ID, "receipt": receipt })
+                "validator": validator, "receipt": receipt })
     };
     for (slot, _, sha256, bytes) in staged {
         match slot.as_str() {
@@ -259,8 +263,24 @@ pub fn thermal_facts(
                     .and_then(Value::as_array)
                     .cloned()
                     .unwrap_or_default();
+                let mut total =
+                    ExactNumber::from_canonical("0").map_err(|error| error.detail().to_string())?;
                 let mut attributes = serde_json::Map::new();
                 for (index, layer) in layers.iter().enumerate() {
+                    let thickness = layer
+                        .get("thickness_mm")
+                        .and_then(Value::as_str)
+                        .ok_or_else(|| format!("layer {} has no thickness_mm", index + 1))?;
+                    let value = ExactNumber::from_canonical(thickness).map_err(|error| {
+                        format!(
+                            "layer {} thickness_mm `{thickness}`: {}",
+                            index + 1,
+                            error.detail()
+                        )
+                    })?;
+                    total = total
+                        .checked_add(&value)
+                        .map_err(|error| error.detail().to_string())?;
                     attributes.insert(
                         format!("layer.{}.material", index + 1),
                         json!(layer.get("material").and_then(Value::as_str).unwrap_or("")),
@@ -269,6 +289,11 @@ pub fn thermal_facts(
                 for index in layers.len()..3 {
                     attributes.insert(format!("layer.{}.material", index + 1), json!("none"));
                 }
+                facts.insert(
+                    "plate.total_thickness".into(),
+                    json!({ "value": { "value": canonical_decimal(&total)?, "unit": "mm" },
+                            "source": source_of(sha256) }),
+                );
                 facts.insert(
                     "plate.layer_count".into(),
                     json!({ "value": layers.len(), "source": source_of(sha256) }),
@@ -501,9 +526,24 @@ mod tests {
         ];
         let mut facts = serde_json::Map::new();
         let mut inputs = serde_json::Map::new();
-        thermal_facts(&staged, "invocation-sha", &mut facts, &mut inputs).unwrap();
+        thermal_facts_for(
+            &staged,
+            "invocation-sha",
+            &mut facts,
+            &mut inputs,
+            FE_ADAPTER_ID,
+        )
+        .unwrap();
 
         assert_eq!(facts["plate.layer_count"]["value"], json!(2));
+        assert_eq!(
+            facts["plate.total_thickness"]["value"],
+            json!({ "value": "13", "unit": "mm" })
+        );
+        assert_eq!(
+            facts["plate.total_thickness"]["source"]["validator"],
+            json!(FE_ADAPTER_ID)
+        );
         assert_eq!(
             facts["source.heat_flux"]["value"],
             json!({ "value": "50000", "unit": "W/m2" })
@@ -532,8 +572,23 @@ mod tests {
         )];
         let mut facts = serde_json::Map::new();
         let mut inputs = serde_json::Map::new();
-        thermal_facts(&staged, "invocation-sha", &mut facts, &mut inputs).unwrap();
+        thermal_facts_for(
+            &staged,
+            "invocation-sha",
+            &mut facts,
+            &mut inputs,
+            SCREEN_ADAPTER_ID,
+        )
+        .unwrap();
         assert_eq!(facts["plate.layer_count"]["value"], json!(1));
+        assert_eq!(
+            facts["plate.total_thickness"]["value"],
+            json!({ "value": "30", "unit": "mm" })
+        );
+        assert_eq!(
+            facts["plate.total_thickness"]["source"]["validator"],
+            json!(SCREEN_ADAPTER_ID)
+        );
         let attributes = &inputs["candidate"]["attributes"];
         assert_eq!(attributes["layer.1.material"], json!("aluminium"));
         assert_eq!(attributes["layer.2.material"], json!("none"));

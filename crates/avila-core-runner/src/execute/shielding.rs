@@ -301,28 +301,16 @@ mod tests {
     }
 }
 
-/// Facts the transport qualification can be written over: the source energy
-/// and geometry, the slab's total thickness and layer count, and each
-/// layer's material as an attribute of the candidate input (absent layers
-/// read `none`, so an envelope can list them explicitly).
-pub fn transport_facts(
-    staged: &[(String, String, String, Vec<u8>)],
-    invocation_sha256: &str,
-    facts: &mut serde_json::Map<String, Value>,
-    inputs: &mut serde_json::Map<String, Value>,
-) -> Result<(), String> {
-    transport_facts_for(
-        staged,
-        invocation_sha256,
-        facts,
-        inputs,
-        TRANSPORT_ADAPTER_ID,
-    )
-}
-
-/// The same extraction attributed to another adapter id, so an adapter that
-/// reuses this slab model (the coupled transport) reports facts a
-/// qualification record over its own id can consume.
+/// Facts a qualification envelope over this slab geometry can be written
+/// over: the source energy and geometry, the slab's total thickness and
+/// layer count, and each layer's material as an attribute of the candidate
+/// input (absent layers read `none`, so an envelope can list them
+/// explicitly). Shared by the screen and both transport adapters (v1 and the
+/// coupled v2), each calling it with its own adapter id as `validator`: the
+/// arithmetic screen and the physical transport read the identical candidate
+/// and source bytes, so their facts differ only in which adapter is named as
+/// having read them, and a qualification record's `source_requirement`
+/// validator selects which of the two it accepts.
 pub fn transport_facts_for(
     staged: &[(String, String, String, Vec<u8>)],
     invocation_sha256: &str,

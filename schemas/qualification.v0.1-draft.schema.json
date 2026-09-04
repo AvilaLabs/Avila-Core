@@ -23,6 +23,13 @@
     },
     "statement": { "type": "string", "minLength": 1 },
     "scope": { "type": "object", "description": "A kernel applicability predicate: all, any, not, param_in_range, input_attribute_in, environment_image_in, fact." },
+    "covered_output_slots": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "The bound capability's output slots this record's envelope covers. Omitted (the default) covers every output slot the capability produces. A claim on an output slot not named here carries no qualification assessment at all, exactly as if no record had been bound for the capability: it can still satisfy a nominal-basis requirement, but a bounded or enclosure requirement over it is `CORE-A4402` (or, absent `require_qualification`, informational `CORE-A4403`), never `inside` this record."
+    },
     "fact_kinds": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Quantity kind for each quantity-valued fact the scope names." },
     "validation_evidence": {
       "type": "array",

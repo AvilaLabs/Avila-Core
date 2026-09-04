@@ -2314,6 +2314,11 @@ struct Runner<'a> {
     envelopes: &'a Envelopes,
     /// The envelope assessment of the step being run, attached to its claims.
     current_qualification: Option<Value>,
+    /// The bound record's covered output slots, when it names any (`None`
+    /// covers every output the step produces). Checked per claim in
+    /// `promote` so a claim on an uncovered output slot never carries
+    /// `current_qualification`, even though the step's other outputs do.
+    current_qualification_covered_slots: Option<Vec<String>>,
 }
 
 /// A qualification record the package binds, already checked against the
@@ -2438,6 +2443,7 @@ impl<'a> Runner<'a> {
             replay_applicable,
             envelopes,
             current_qualification: None,
+            current_qualification_covered_slots: None,
         }
     }
 
@@ -2914,10 +2920,12 @@ impl<'a> Runner<'a> {
         // The producer's qualification envelope over this run's facts, when
         // the package binds one for this adapter and capability. Evaluated
         // before anything runs so a plan can already say "outside".
+        let mut qualification_covered_slots: Option<Vec<String>> = None;
         if let Some(bound) = self.envelopes.records.iter().find(|bound| {
             bound.record.adapter == execution.adapter
                 && bound.record.capability.capability_id == execution.capability_id
         }) {
+            qualification_covered_slots = bound.record.covered_output_slots.clone();
             let mut staged_bytes = Vec::with_capacity(staged.len());
             for input in &staged {
                 staged_bytes.push((
@@ -2952,6 +2960,7 @@ impl<'a> Runner<'a> {
         self.current_qualification = report.qualification.as_ref().map(|assessment| {
             serde_json::to_value(ClaimQualification::from(assessment)).unwrap_or(Value::Null)
         });
+        self.current_qualification_covered_slots = qualification_covered_slots;
 
         // Compare with the committed receipt: what changed, by class.
         let committed = self.committed_receipt(&step.step_id)?;
@@ -3393,6 +3402,7 @@ impl<'a> Runner<'a> {
         reused: bool,
     ) -> Result<(), Box<dyn Error>> {
         let qualification = self.current_qualification.clone();
+        let covered_slots = self.current_qualification_covered_slots.clone();
         for claim in extracted {
             let (output, path) = produced
                 .iter()
@@ -3414,6 +3424,16 @@ impl<'a> Runner<'a> {
                     media_type: output.media_type.clone(),
                 },
             );
+            // The bound record's envelope, when the record names covered
+            // output slots at all, is attached only to a claim on one of
+            // them; an uncovered claim (e.g. a screen's dose estimate next to
+            // its qualified geometry claims) carries none, exactly as if no
+            // record had been bound for this capability.
+            let claim_qualification = qualification.clone().filter(|_| {
+                covered_slots
+                    .as_ref()
+                    .is_none_or(|slots| slots.iter().any(|slot| slot == &claim.output_slot))
+            });
             self.claims.push(GeneratedClaim {
                 claim_id: (*claim_id).to_string(),
                 step_id: step.step_id.clone(),
@@ -3423,7 +3443,7 @@ impl<'a> Runner<'a> {
                 producer_package_id: identity.package_id.clone(),
                 producer_sha256: identity.executable_sha256.clone(),
                 claim: claim.claim.clone(),
-                qualification: qualification.clone(),
+                qualification: claim_qualification,
                 reused,
             });
         }
@@ -5028,7 +5048,7 @@ mod tests {
         assert_eq!(stage.readiness, PresentationGateReadiness::ReadyForAgent);
         assert_eq!(
             stage.request_sha256,
-            "sha256:f5c42c12e270bcf683656bf19cf7ff71b640d63322c5fc61ad8ab10b610887aa"
+            "sha256:d21d5702aa3f7431d6ccea7d7b5f529687b1143547db1fc07bc89db2ef78449e"
         );
         assert_eq!(
             stage

@@ -37,6 +37,12 @@ pub struct QualificationRecord {
     pub statement: String,
     /// The kernel applicability predicate, kept as authored for reporting.
     pub scope: Value,
+    /// The bound capability's output slots this record covers. `None` (the
+    /// default) covers every output slot the capability produces. A claim on
+    /// an uncovered output slot never carries this record's assessment, so it
+    /// can still satisfy only a nominal-basis requirement over it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub covered_output_slots: Option<Vec<String>>,
     /// Quantity kinds for the quantity-valued facts the scope names.
     #[serde(default)]
     pub fact_kinds: BTreeMap<String, String>,
@@ -44,6 +50,18 @@ pub struct QualificationRecord {
     pub validation_evidence: Vec<ValidationEvidence>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub limitations: Vec<String>,
+}
+
+impl QualificationRecord {
+    /// Whether this record's envelope covers the named output slot. Absent
+    /// `covered_output_slots` covers every output slot the capability
+    /// produces, matching the record's pre-scoping behaviour.
+    #[must_use]
+    pub fn covers_output_slot(&self, output_slot: &str) -> bool {
+        self.covered_output_slots
+            .as_ref()
+            .is_none_or(|slots| slots.iter().any(|slot| slot == output_slot))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -155,6 +173,16 @@ pub fn parse_qualification(bytes: &[u8]) -> Result<QualificationRecord, String> 
     }
     serde_json::from_value::<Predicate>(record.scope.clone())
         .map_err(|error| format!("qualification scope is not a valid predicate: {error}"))?;
+    if let Some(slots) = &record.covered_output_slots {
+        if slots.is_empty() {
+            return Err(
+                "qualification `covered_output_slots` must not be empty when present".into(),
+            );
+        }
+        if slots.iter().any(|slot| slot.trim().is_empty()) {
+            return Err("qualification `covered_output_slots` entries must not be empty".into());
+        }
+    }
     Ok(record)
 }
 
@@ -348,5 +376,39 @@ mod tests {
                 .unwrap_err()
                 .contains("valid predicate")
         );
+    }
+
+    #[test]
+    fn covered_output_slots_scopes_which_claims_the_record_covers() {
+        let unscoped = record(scope());
+        assert!(unscoped.covered_output_slots.is_none());
+        assert!(unscoped.covers_output_slot("mass"));
+        assert!(unscoped.covers_output_slot("anything"));
+
+        let scoped_json = json!({
+            "schema_version": QUALIFICATION_SCHEMA_VERSION,
+            "qualification_id": "test/q", "revision": 1, "owner": "test",
+            "adapter": "test/adapter@1",
+            "capability": { "capability_id": "stub", "executable_sha256": "sha256:aa" },
+            "statement": "test envelope",
+            "scope": scope(),
+            "covered_output_slots": ["mass", "thickness"]
+        });
+        let scoped = parse_qualification(&serde_json::to_vec(&scoped_json).unwrap()).unwrap();
+        assert!(scoped.covers_output_slot("mass"));
+        assert!(scoped.covers_output_slot("thickness"));
+        assert!(!scoped.covers_output_slot("dose-rate"));
+
+        let empty_json = json!({
+            "schema_version": QUALIFICATION_SCHEMA_VERSION,
+            "qualification_id": "test/q", "revision": 1, "owner": "test",
+            "adapter": "test/adapter@1",
+            "capability": { "capability_id": "stub", "executable_sha256": "sha256:aa" },
+            "statement": "test envelope",
+            "scope": scope(),
+            "covered_output_slots": []
+        });
+        let error = parse_qualification(&serde_json::to_vec(&empty_json).unwrap()).unwrap_err();
+        assert!(error.contains("covered_output_slots"), "{error}");
     }
 }

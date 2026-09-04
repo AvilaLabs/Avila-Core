@@ -86,14 +86,88 @@ seeing results.
 
 ## Pre-registration items still required
 
-- exact model and prompt identities;
-- scored trial count;
-- fixed screen and full-evaluation budgets for all arms;
-- retry, timeout, and failure-handling rules;
-- randomization procedure;
-- precise wall-time and cost instrumentation;
-- immutable harness and case commit;
-- package manifest and solver identities;
-- analysis script and report format.
+Drafted by the harness builder (`examples/agents/ablation/`) from one
+reduced-budget dry run per arm; nothing below has been exercised at scored
+budgets or trial count. The lead freezes and hashes this section before any
+scored run begins.
+
+- **Exact model and prompt identities.** Designer model: `claude-sonnet-5`,
+  confirmed as the exact id both the session-init event and every `result`
+  event's `modelUsage` key report, via Claude Code CLI 2.1.261, invoked
+  headless (`claude -p --output-format stream-json`, no API key). There is
+  no separate Fable-orchestrator process in this implementation: one
+  headless Sonnet session both reasons about the design and calls the arm's
+  tool script directly, matching how the campaign-1 designer ran (a single
+  Claude Code subagent with shell access) rather than a two-tier
+  orchestrator/worker split. The "Fixed factors" section above names "the
+  exact Fable orchestrator and Sonnet worker versions" together; if a
+  two-tier setup is intended for the scored run, this is a fixed-factors
+  amendment the lead should make explicitly, not something this harness
+  introduces on its own. Each arm's exact prompt is a frozen file under
+  `examples/agents/ablation/prompts/`; its sha256 is recorded per trial in
+  `config.json`.
+- **Scored trial count.** Proposed: **5 trials per arm (15 total)**, chosen
+  before viewing any scored result, per `experiments/README.md`'s rule for
+  stochastic agent arms.
+- **Fixed screen and full-evaluation budgets for all arms.** Screens: 40.
+  Full evaluations: 12. Arm C's one-shot final set: at most `N_eval = 12`
+  candidates, submitted in its one `submit` call.
+- **Retry, timeout, and failure-handling rules.** Wall-clock timeout: 1800 s
+  per designer session (`--timeout-s`). On a non-success session (nonzero
+  exit, timeout, or a stream with no well-formed final `success` `result`
+  event) the harness retries once (two attempts total) with a **fresh**
+  session — never `--resume`, since sessions run with
+  `--no-session-persistence` — and logs every attempt to `retries.jsonl`
+  before the next one starts, never silently. A trial that fails both
+  attempts is recorded `DONE.json: {"status": "failed"}` with every attempt's
+  transcript and stderr preserved, is not retried further automatically,
+  and is excluded from the success-rate numerator but kept in the record
+  with its failure reason (`experiments/README.md`: "preserve failed and
+  amended runs").
+- **Randomization procedure.** `random.Random(seed).shuffle` over the full
+  cross product of arm × local trial index (`run_block`); one seed fixed
+  before any scored trial runs and recorded verbatim in
+  `block-summary.json`. Execution is strictly sequential, never concurrent.
+- **Precise wall-time and cost instrumentation.** Session wall time: the
+  designer subprocess's own start-to-exit time (`config.json`
+  `session_wall_s`). Tokens and cost: copied verbatim from the stream's
+  final `result` event (`total_cost_usd`, `usage.*`) — never recomputed.
+  Core time vs. solver time: exact and per-call for arm B (the tool's own
+  `timing.jsonl`) and for every arm's post-hoc Core pass
+  (`post-hoc-core-timing.jsonl`, plus each call's own execution receipts);
+  a **trial-level aggregate only** for arm A's live Core calls, since arm A
+  reuses `shield_llm_tools.py` unmodified and per-call attribution would
+  need either a timestamp-window match to Core's own
+  `workspaces/CASE-003/<ts>/` directories or a reviewed change to that
+  shared tool, neither done in this slice. See
+  `examples/agents/ablation/README.md`'s "Timing methodology" section for
+  the exact method and its stated limits.
+- **Immutable harness and case commit.** This worktree's harness
+  (`examples/agents/ablation/`) at the commit the lead freezes; CASE-003
+  contract revision 2, package manifest
+  `sha256:9634fcc1a39e9116e6c875c522ec8fd704dc721e5552251ea78737284158216f`
+  (enforced on every Core invocation, live or post-hoc, via
+  `--expect-manifest`), unchanged from campaign-1; the `avila-core` CLI
+  binary's own sha256 recorded per trial in `config.json`
+  (`core_binary_sha256`) — the lead should confirm which build is frozen
+  for the scored run rather than assuming the commit this dry run used.
+- **Package manifest and solver identities.** Manifest sha256 above; screen
+  script (`thermal_screen.py`, `sha256:0c3259481b6e6ccf0ade84705d0def70a34bad4a2de27061713ece99af4834f7`)
+  and finite-element script (`thermal_fe.py`,
+  `sha256:9a64eb0922b786bd50ece00e8b60206e23194f7566296ccd6ef900a71c491b63`)
+  as already bound in `package.json`; the finite-element interpreter is
+  identified by the system Python binary's digest, with the actual
+  `scikit-fem` package version recorded only in each result document — an
+  existing CASE-003 limitation, not introduced here.
+- **Analysis script and report format.** `examples/agents/ablation/harness.py
+  score <run-dir>` (deterministic, reads only files already on disk) writes
+  `scores.json` (one row per trial) and `scores.md` (the same rows as a
+  Markdown table). Metric definitions live in
+  `examples/agents/ablation/scoring.py` and are unit-tested in
+  `test_ablation.py`: `success`, `evaluations_to_first_all_pass`,
+  `lightest_all_pass_mass_kg_m2`, `invalid_or_refused`, `out_of_envelope`,
+  `inconclusive`, `not_evaluated_other`, plus `leak_clean`/`leak_hits` (the
+  isolation check on arms B/C's tool output) and per-trial timing/cost
+  fields.
 
 No scored run should begin until those items are frozen.

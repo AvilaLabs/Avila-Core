@@ -887,7 +887,7 @@ fn show_overview(
                     compiled.contract_id,
                     compiled.contract_revision,
                     compiled.workflow.len(),
-                    compiled.requirements.len()
+                    compiled.requirements.len() + compiled.categorical_requirements.len()
                 ),
             ),
             None if report.compile.is_some() => stage_row(
@@ -1135,6 +1135,12 @@ fn show_compile(ui: &mut egui::Ui, compile: Option<&CompileReport>, sources: &[(
                 }
                 ui.add_space(6.0);
                 for requirement in &compiled.requirements {
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label(egui::RichText::new(&requirement.requirement_id).strong());
+                        ui.label(&requirement.statement);
+                    });
+                }
+                for requirement in &compiled.categorical_requirements {
                     ui.horizontal_wrapped(|ui| {
                         ui.label(egui::RichText::new(&requirement.requirement_id).strong());
                         ui.label(&requirement.statement);

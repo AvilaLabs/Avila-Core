@@ -56,6 +56,22 @@ pub(super) fn validate_contract_registry_refs(
             ));
         }
     }
+    for (index, requirement) in contract.categorical_requirements.iter().enumerate() {
+        if !registry.purposes.contains_key(&requirement.purpose) {
+            findings.push(CoreDiagnostic::new(
+                CORE_T2601,
+                FindingClass::Invalid,
+                "requester",
+                contract_location(format!(
+                    "/categorical_requirements/{index}/purpose"
+                )),
+                format!(
+                    "categorical requirement references governed purpose `{}@{}` absent from the supplied registry snapshot",
+                    requirement.purpose.id, requirement.purpose.major
+                ),
+            ));
+        }
+    }
     for (index, input) in contract.inputs.iter().enumerate() {
         match registry.roles.get(&input.role) {
             None => {

@@ -7,9 +7,10 @@ use crate::diagnostic::{
     RepairEdit,
 };
 use crate::document::{
-    AuthoredBinding, BasisKind, BoundSide, ClaimModelDeclaration, Comparison, ContractSource,
-    ContractStatus, ParameterType, RegistrySnapshot, RequirementBasis, ReviewDisposition,
-    ReviewerRole, SourceRef, TypedQuantity, VersionedRef,
+    AuthoredBinding, BasisKind, BoundSide, CategoricalPredicate, CategoricalRequirementSource,
+    ClaimModelDeclaration, Comparison, ContractSource, ContractStatus, ParameterType,
+    RegistrySnapshot, RequirementBasis, ReviewDisposition, ReviewerRole, SourceRef, TypedQuantity,
+    VersionedRef,
 };
 use avila_core_kernel::ExactNumber;
 use std::collections::BTreeSet;
@@ -101,6 +102,50 @@ fn resolved_fixture_compiles_deterministically() {
         compiled.snapshot_sha256,
         "sha256:cc802164995a2a326855de6414b175e2fb750072711fcebc175957540904bd3d"
     );
+}
+
+#[test]
+fn closed_vocabulary_categorical_requirements_compile_without_changing_numeric_semantics() {
+    let mut source = contract();
+    let mut registry = registry();
+    registry.roles[0].categorical_values = vec!["clear".into(), "rejected".into()];
+    source
+        .categorical_requirements
+        .push(CategoricalRequirementSource {
+            requirement_id: "R-CATEGORY".into(),
+            statement: "The source classification must be clear.".into(),
+            purpose: source.requirements[0].purpose.clone(),
+            metric: Some(SourceRef::ContractInput {
+                input_id: "case".into(),
+            }),
+            predicate: CategoricalPredicate::Equals {
+                value: "clear".into(),
+            },
+        });
+
+    let report = compile_with_registry(&source, &registry);
+    assert_eq!(
+        report.status,
+        CompilationStatus::Compiled,
+        "{:?}",
+        report.findings
+    );
+    let compiled = report.compiled.unwrap();
+    assert_eq!(compiled.requirements.len(), 1);
+    assert_eq!(compiled.categorical_requirements.len(), 1);
+
+    source.categorical_requirements[0].predicate = CategoricalPredicate::InSet {
+        values: vec!["clear".into(), "invented".into()],
+    };
+    let rejected = compile_with_registry(&source, &registry);
+    assert_eq!(rejected.status, CompilationStatus::Rejected);
+    let finding = rejected
+        .findings
+        .iter()
+        .find(|finding| finding.primary.pointer == "/categorical_requirements/0/predicate")
+        .unwrap();
+    assert_eq!(finding.code, CORE_T2102);
+    assert!(finding.message.contains("invented"));
 }
 
 #[test]

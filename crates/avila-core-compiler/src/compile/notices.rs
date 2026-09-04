@@ -31,6 +31,12 @@ pub(super) fn report_unconsumed_declarations(
                 .iter()
                 .filter_map(|requirement| requirement.metric.clone()),
         )
+        .chain(
+            contract
+                .categorical_requirements
+                .iter()
+                .filter_map(|requirement| requirement.metric.clone()),
+        )
         .collect();
     for (index, input) in contract.inputs.iter().enumerate() {
         let source = SourceRef::ContractInput {

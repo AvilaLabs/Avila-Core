@@ -108,9 +108,9 @@ pub struct SuppliedInput {
     pub sha256: String,
 }
 
-/// One requirement's outcome with the numbers that decided it and the
-/// distance to its limit, for search and for people. Read from the kernel's
-/// verdict output; nothing here is re-derived.
+/// One requirement's outcome with the numeric or categorical values that
+/// decided it, for search and for people. Read from the kernel's verdict
+/// output; nothing here is re-derived.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct VerdictMargin {
@@ -127,6 +127,10 @@ pub struct VerdictMargin {
     pub upper: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nominal: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub observed_category: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub accepted_categories: Option<Vec<String>>,
     /// Limit minus the decisive bound for an upper limit, decisive bound
     /// minus limit for a lower limit: positive means inside, negative means
     /// outside. Absent when no number decided the verdict.
@@ -1097,6 +1101,8 @@ fn margins(compiled: &CompiledContract, campaign: &CampaignReport) -> Vec<Verdic
                 lower: output.lower_canonical.clone(),
                 upper: output.upper_canonical.clone(),
                 nominal: output.nominal_canonical.clone(),
+                observed_category: output.observed_category.clone(),
+                accepted_categories: output.accepted_categories.clone(),
                 margin,
             }
         })
@@ -3384,7 +3390,7 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                 let _ = writeln!(
                     out,
                     "   {} requirement(s); snapshot {}",
-                    compiled.requirements.len(),
+                    compiled.requirements.len() + compiled.categorical_requirements.len(),
                     compiled.snapshot_sha256
                 );
                 if let Some(coverage) = &report.coverage {
@@ -3754,6 +3760,12 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                     }
                     if let Some(value) = &margin.margin {
                         parts.push(format!("margin {} {unit}", display_number(value)));
+                    }
+                    if let Some(value) = &margin.observed_category {
+                        parts.push(format!("observed {value}"));
+                    }
+                    if let Some(values) = &margin.accepted_categories {
+                        parts.push(format!("accepted {}", values.join(" | ")));
                     }
                     if parts.is_empty() {
                         String::new()

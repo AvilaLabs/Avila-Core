@@ -1,7 +1,7 @@
 //! Requirement metric binding, claim-model sufficiency, and exact lowering.
 
 use super::findings::{contract_location, invalid_value};
-use super::ir::{CanonicalTypedQuantity, CompiledRequirement};
+use super::ir::{CanonicalTypedQuantity, CompiledCategoricalRequirement, CompiledRequirement};
 use super::registry::RegistryIndex;
 use super::resolve::{
     Candidate, find_exact_candidate, missing_source_finding, produced_by_unknown_type,
@@ -13,8 +13,8 @@ use crate::diagnostic::{
     RepairEdit,
 };
 use crate::document::{
-    BasisKind, BoundSide, ClaimModelDeclaration, Comparison, ContractSource, RequirementBasis,
-    RequirementSource, SourceRef, TypedQuantity,
+    BasisKind, BoundSide, CategoricalPredicate, ClaimModelDeclaration, Comparison, ContractSource,
+    RequirementBasis, RequirementSource, SourceRef, TypedQuantity,
 };
 use avila_core_kernel::{ExactNumber, read_authoritative_decimal};
 use std::cmp::Ordering;
@@ -206,6 +206,189 @@ pub(super) fn compile_requirements(
         });
     }
     compiled
+}
+
+pub(super) fn compile_categorical_requirements(
+    contract: &ContractSource,
+    registry: &RegistryIndex<'_>,
+    candidates: &[Candidate],
+    invalid_sources: &BTreeSet<SourceRef>,
+    unknown_type_steps: &BTreeSet<&str>,
+    findings: &mut Vec<CoreDiagnostic>,
+) -> Vec<CompiledCategoricalRequirement> {
+    let mut compiled = Vec::new();
+    for (index, requirement) in contract.categorical_requirements.iter().enumerate() {
+        let root = format!("/categorical_requirements/{index}");
+        let values_valid = validate_categorical_predicate(&root, &requirement.predicate, findings);
+        let Some(metric) = &requirement.metric else {
+            findings.push(CoreDiagnostic::new(
+                CORE_R3301,
+                FindingClass::Missing,
+                "requester",
+                contract_location(format!("{root}/metric")),
+                format!(
+                    "categorical requirement `{}` does not name a metric source",
+                    requirement.requirement_id
+                ),
+            ));
+            continue;
+        };
+        let Some(candidate) = find_exact_candidate(candidates, metric) else {
+            if produced_by_unknown_type(metric, unknown_type_steps) {
+                continue;
+            }
+            let (_, message) = missing_source_finding(contract, registry, metric);
+            findings.push(CoreDiagnostic::new(
+                CORE_R3301,
+                FindingClass::Missing,
+                "requester",
+                contract_location(format!("{root}/metric")),
+                format!(
+                    "categorical metric source `{}` cannot be resolved: {message}",
+                    metric.label()
+                ),
+            ));
+            continue;
+        };
+        if invalid_sources.contains(&candidate.source) {
+            continue;
+        }
+        if registry.purposes.contains_key(&requirement.purpose)
+            && candidate.excluded_purposes.contains(&requirement.purpose)
+        {
+            findings.push(CoreDiagnostic::new(
+                CORE_T2601,
+                FindingClass::Unsatisfied,
+                "requester",
+                contract_location(format!("{root}/purpose")),
+                format!(
+                    "categorical metric source `{}` explicitly excludes governed purpose `{}@{}`",
+                    candidate.source.label(),
+                    requirement.purpose.id,
+                    requirement.purpose.major
+                ),
+            ));
+        }
+        if !candidate
+            .claim_models
+            .contains(&ClaimModelDeclaration::Unquantified)
+        {
+            findings.push(CoreDiagnostic::new(
+                CORE_T2201,
+                FindingClass::Unsatisfied,
+                "requester",
+                contract_location(format!("{root}/predicate")),
+                "categorical metric source does not permit the unquantified claim model",
+            ));
+        }
+        let Some(role) = registry.roles.get(&candidate.role) else {
+            continue;
+        };
+        if role.quantity_kind.is_some() || role.unit_class.is_some() {
+            findings.push(CoreDiagnostic::new(
+                CORE_T2102,
+                FindingClass::Invalid,
+                "requester",
+                contract_location(format!("{root}/metric")),
+                format!(
+                    "categorical metric role `{}@{}` must be non-quantitative",
+                    role.role.id, role.role.major
+                ),
+            ));
+            continue;
+        }
+        if role.categorical_values.is_empty() {
+            findings.push(CoreDiagnostic::new(
+                CORE_T2102,
+                FindingClass::Invalid,
+                "requester",
+                contract_location(format!("{root}/metric")),
+                format!(
+                    "metric role `{}@{}` does not declare a closed categorical vocabulary",
+                    role.role.id, role.role.major
+                ),
+            ));
+            continue;
+        }
+        let outside: Vec<_> = requirement
+            .predicate
+            .accepted_values()
+            .iter()
+            .filter(|value| !role.categorical_values.contains(value))
+            .cloned()
+            .collect();
+        if !outside.is_empty() {
+            findings.push(CoreDiagnostic::new(
+                CORE_T2102,
+                FindingClass::Invalid,
+                "requester",
+                contract_location(format!("{root}/predicate")),
+                format!(
+                    "predicate values {outside:?} are outside role `{}@{}` vocabulary {:?}",
+                    role.role.id, role.role.major, role.categorical_values
+                ),
+            ));
+        }
+        if values_valid
+            && outside.is_empty()
+            && candidate
+                .claim_models
+                .contains(&ClaimModelDeclaration::Unquantified)
+        {
+            compiled.push(CompiledCategoricalRequirement {
+                requirement_id: requirement.requirement_id.clone(),
+                statement: requirement.statement.clone(),
+                purpose: requirement.purpose.clone(),
+                metric: metric.clone(),
+                metric_role: candidate.role.clone(),
+                predicate: requirement.predicate.clone(),
+            });
+        }
+    }
+    compiled
+}
+
+fn validate_categorical_predicate(
+    root: &str,
+    predicate: &CategoricalPredicate,
+    findings: &mut Vec<CoreDiagnostic>,
+) -> bool {
+    let values = predicate.accepted_values();
+    if values.is_empty() {
+        invalid_value(
+            contract_location(format!("{root}/predicate/values")),
+            "an `in_set` predicate must contain at least one accepted value",
+            "requester",
+            findings,
+        );
+        return false;
+    }
+    let mut valid = true;
+    let mut unique = BTreeSet::new();
+    for (index, value) in values.iter().enumerate() {
+        let field = match predicate {
+            CategoricalPredicate::Equals { .. } => "value".to_owned(),
+            CategoricalPredicate::InSet { .. } => format!("values/{index}"),
+        };
+        if value.trim().is_empty() {
+            invalid_value(
+                contract_location(format!("{root}/predicate/{field}")),
+                "a categorical predicate value must not be empty",
+                "requester",
+                findings,
+            );
+            valid = false;
+        } else if !unique.insert(value.as_str()) {
+            invalid_value(
+                contract_location(format!("{root}/predicate/{field}")),
+                format!("categorical predicate repeats value `{value}`"),
+                "requester",
+                findings,
+            );
+            valid = false;
+        }
+    }
+    valid
 }
 
 /// Checks that a `coverage` basis is a canonical decimal in `(0, 1]` and is

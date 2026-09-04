@@ -275,9 +275,19 @@ pub fn assess_coverage(
                 .iter()
                 .find(|candidate| &candidate.requirement_id == requirement_id)
             else {
-                entry_issues.push(format!(
-                    "mapped contract requirement `{requirement_id}` does not exist"
-                ));
+                if compiled
+                    .categorical_requirements
+                    .iter()
+                    .any(|candidate| &candidate.requirement_id == requirement_id)
+                {
+                    entry_issues.push(format!(
+                        "mapped contract requirement `{requirement_id}` is categorical and cannot cover a quantitative requirement-set entry"
+                    ));
+                } else {
+                    entry_issues.push(format!(
+                        "mapped contract requirement `{requirement_id}` does not exist"
+                    ));
+                }
                 continue;
             };
             mapped_contract_ids.insert(requirement_id.clone());
@@ -341,6 +351,12 @@ pub fn assess_coverage(
         .iter()
         .map(|requirement| requirement.requirement_id.clone())
         .filter(|id| !mapped_contract_ids.contains(id))
+        .chain(
+            compiled
+                .categorical_requirements
+                .iter()
+                .map(|requirement| requirement.requirement_id.clone()),
+        )
         .collect();
     let incomplete = !issues.is_empty()
         || entries.iter().any(|entry| {

@@ -49,7 +49,7 @@ regulatory review. It makes their boundaries explicit and inspectable.
 ## What works today
 
 - A versioned evidence-contract and registry model.
-- Deterministic JSON, exact quantities and unit scaling, applicability
+- Deterministic JSON, exact quantities and unit scaling, closed-set categorical
   predicates, and four-state requirement verdicts.
 - Stable compiler and runtime diagnostics with source locations, owners, and
   bounded next actions.

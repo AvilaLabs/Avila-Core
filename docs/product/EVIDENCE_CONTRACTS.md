@@ -26,9 +26,10 @@ A production contract must identify at least:
    it.
 3. **System boundary:** configurations, populations, geometries, time periods, or
    operating regimes included and excluded.
-4. **Requirements:** metrics, comparison semantics, limits, nominal quantity
-   kinds, exact unit scaling, aggregation rules, and any governance-required
-   decision transformation. Display rounding is never requirement logic.
+4. **Requirements:** quantitative metrics, comparisons, limits, nominal
+   quantity kinds and exact unit scaling; or non-quantity metrics with
+   role-owned closed vocabularies and categorical predicates. Display rounding
+   is never requirement logic.
 5. **Inputs:** roles, immutable identities, allowed transformations, and owners.
 6. **Assumptions and facts:** conditions accepted without being established by
    the campaign, typed facts used by applicability predicates, their providers,

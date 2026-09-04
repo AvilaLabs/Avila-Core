@@ -27,6 +27,13 @@ pub enum VerdictComparison {
     Equal,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CategoricalComparison {
+    Equals,
+    InSet,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BasisKind {
@@ -161,6 +168,30 @@ pub struct VerdictCase {
     pub evidence: Vec<EvidenceClaim>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CategoricalRequirement {
+    pub comparison: CategoricalComparison,
+    pub accepted_values: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CategoricalEvidenceClaim {
+    pub evidence_id: String,
+    pub state: EvidenceState,
+    #[serde(default)]
+    pub value: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CategoricalVerdictCase {
+    pub requirement: CategoricalRequirement,
+    #[serde(default)]
+    pub evidence: Vec<CategoricalEvidenceClaim>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(untagged)]
 pub enum VerdictReason {
@@ -202,6 +233,10 @@ pub struct VerdictOutput {
     pub basis_visible: Option<BasisKind>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub numbers_present: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub observed_category: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub accepted_categories: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub reasons: Vec<VerdictReason>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -223,6 +258,8 @@ impl VerdictOutput {
             coverage: None,
             basis_visible: None,
             numbers_present: Some(false),
+            observed_category: None,
+            accepted_categories: None,
             reasons,
             display_upper_text: None,
         }
@@ -369,6 +406,8 @@ impl<'a> VerdictEvaluator<'a> {
             basis_visible: (case.requirement.basis.kind == BasisKind::Nominal)
                 .then_some(BasisKind::Nominal),
             numbers_present: None,
+            observed_category: None,
+            accepted_categories: None,
             reasons: Vec::new(),
             display_upper_text: None,
         };
@@ -542,6 +581,119 @@ impl<'a> VerdictEvaluator<'a> {
             rounded.to_fixed_decimal(scale)?,
             rounding.quantum.unit
         ))
+    }
+}
+
+pub struct CategoricalVerdictEvaluator;
+
+impl CategoricalVerdictEvaluator {
+    pub fn evaluate(case: &CategoricalVerdictCase) -> Result<VerdictOutput, KernelError> {
+        let accepted = &case.requirement.accepted_values;
+        if accepted.is_empty() {
+            return Err(invalid_verdict(
+                "a categorical requirement must accept at least one value",
+            ));
+        }
+        if case.requirement.comparison == CategoricalComparison::Equals && accepted.len() != 1 {
+            return Err(invalid_verdict(
+                "categorical equality requires exactly one accepted value",
+            ));
+        }
+        if accepted.iter().any(|value| value.trim().is_empty()) {
+            return Err(invalid_verdict(
+                "categorical accepted values must not be empty",
+            ));
+        }
+        let unique: BTreeSet<_> = accepted.iter().collect();
+        if unique.len() != accepted.len() {
+            return Err(invalid_verdict(
+                "categorical accepted values must not repeat",
+            ));
+        }
+
+        if case.evidence.is_empty() {
+            let mut output = VerdictOutput::not_evaluated(
+                "not_evaluated.missing",
+                vec![VerdictReason::CodeOwner {
+                    code: CORE_R3301.into(),
+                    owner: "requester".into(),
+                }],
+            );
+            output.accepted_categories = Some(accepted.clone());
+            return Ok(output);
+        }
+        if let Some(claim) = case
+            .evidence
+            .iter()
+            .find(|claim| claim.state != EvidenceState::Admitted)
+        {
+            let mut output = VerdictOutput::not_evaluated(
+                format!("not_evaluated.{}", claim.state.label()),
+                vec![VerdictReason::EvidenceState {
+                    evidence_id: claim.evidence_id.clone(),
+                    state: claim.state.label().into(),
+                }],
+            );
+            output.accepted_categories = Some(accepted.clone());
+            return Ok(output);
+        }
+        if case.evidence.len() > 1 {
+            let mut output = VerdictOutput::not_evaluated(
+                "not_evaluated.duplicate_claim",
+                vec![VerdictReason::DuplicateClaims {
+                    code: CORE_E7301.into(),
+                    evidence_ids: case
+                        .evidence
+                        .iter()
+                        .map(|claim| claim.evidence_id.clone())
+                        .collect(),
+                }],
+            );
+            output.accepted_categories = Some(accepted.clone());
+            return Ok(output);
+        }
+        let claim = &case.evidence[0];
+        let Some(value) = &claim.value else {
+            let mut output = VerdictOutput::not_evaluated(
+                "not_evaluated.category_missing",
+                vec![VerdictReason::CodeOwner {
+                    code: CORE_R3301.into(),
+                    owner: "executor".into(),
+                }],
+            );
+            output.accepted_categories = Some(accepted.clone());
+            return Ok(output);
+        };
+        let matches = accepted.contains(value);
+        let operator = match case.requirement.comparison {
+            CategoricalComparison::Equals => "equals",
+            CategoricalComparison::InSet => "in_set",
+        };
+        Ok(VerdictOutput {
+            status: if matches {
+                VerdictStatus::Pass
+            } else {
+                VerdictStatus::Fail
+            },
+            rule: format!(
+                "categorical.{operator}.{}",
+                if matches { "match" } else { "mismatch" }
+            ),
+            aggregation: None,
+            canonical_unit: None,
+            limit_canonical: None,
+            lower_canonical: None,
+            upper_canonical: None,
+            nominal_canonical: None,
+            tolerance_canonical: None,
+            coverage: None,
+            basis_visible: None,
+            numbers_present: Some(false),
+            observed_category: Some(value.clone()),
+            accepted_categories: Some(accepted.clone()),
+            reasons: Vec::new(),
+            display_upper_text: None,
+        })
     }
 }
 
@@ -977,5 +1129,62 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn categorical_equals_and_in_set_are_closed_and_four_state() {
+        let evidence = |value: Option<&str>, state| CategoricalEvidenceClaim {
+            evidence_id: "category".into(),
+            state,
+            value: value.map(str::to_owned),
+        };
+        let equals = |value: Option<&str>, state| CategoricalVerdictCase {
+            requirement: CategoricalRequirement {
+                comparison: CategoricalComparison::Equals,
+                accepted_values: vec!["candidate_unreviewed".into()],
+            },
+            evidence: vec![evidence(value, state)],
+        };
+
+        let pass = CategoricalVerdictEvaluator::evaluate(&equals(
+            Some("candidate_unreviewed"),
+            EvidenceState::Admitted,
+        ))
+        .unwrap();
+        assert_eq!(pass.status, VerdictStatus::Pass);
+        assert_eq!(pass.rule, "categorical.equals.match");
+        assert_eq!(
+            pass.observed_category.as_deref(),
+            Some("candidate_unreviewed")
+        );
+
+        let fail = CategoricalVerdictEvaluator::evaluate(&equals(
+            Some("rejected"),
+            EvidenceState::Admitted,
+        ))
+        .unwrap();
+        assert_eq!(fail.status, VerdictStatus::Fail);
+        assert_eq!(fail.rule, "categorical.equals.mismatch");
+
+        let quarantined = CategoricalVerdictEvaluator::evaluate(&equals(
+            Some("candidate_unreviewed"),
+            EvidenceState::Quarantined,
+        ))
+        .unwrap();
+        assert_eq!(quarantined.status, VerdictStatus::NotEvaluated);
+
+        let in_set = CategoricalVerdictCase {
+            requirement: CategoricalRequirement {
+                comparison: CategoricalComparison::InSet,
+                accepted_values: vec!["clear".into(), "candidate_unreviewed".into()],
+            },
+            evidence: vec![evidence(Some("clear"), EvidenceState::Admitted)],
+        };
+        assert_eq!(
+            CategoricalVerdictEvaluator::evaluate(&in_set)
+                .unwrap()
+                .status,
+            VerdictStatus::Pass
+        );
     }
 }

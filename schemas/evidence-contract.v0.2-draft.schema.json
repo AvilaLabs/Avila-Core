@@ -12,8 +12,7 @@
     "revision",
     "status",
     "question",
-    "workflow",
-    "requirements"
+    "workflow"
   ],
   "properties": {
     "schema_version": {
@@ -69,10 +68,18 @@
     },
     "requirements": {
       "type": "array",
-      "minItems": 1,
       "items": {
         "$ref": "#/$defs/requirement"
-      }
+      },
+      "default": []
+    },
+    "categorical_requirements": {
+      "description": "Closed-vocabulary requirements over non-quantity evidence roles.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/categoricalRequirement"
+      },
+      "default": []
     }
   },
   "$defs": {
@@ -399,6 +406,60 @@
           "$ref": "#/$defs/requirementBasis"
         }
       }
+    },
+    "categoricalRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement_id",
+        "statement",
+        "purpose",
+        "predicate"
+      ],
+      "properties": {
+        "requirement_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "statement": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "purpose": {
+          "$ref": "#/$defs/versionedRef"
+        },
+        "metric": {
+          "$ref": "#/$defs/sourceRef"
+        },
+        "predicate": {
+          "$ref": "#/$defs/categoricalPredicate"
+        }
+      }
+    },
+    "categoricalPredicate": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["operator", "value"],
+          "properties": {
+            "operator": { "const": "equals" },
+            "value": { "$ref": "#/$defs/nonemptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["operator", "values"],
+          "properties": {
+            "operator": { "const": "in_set" },
+            "values": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/nonemptyString" }
+            }
+          }
+        }
+      ]
     },
     "typedQuantity": {
       "type": "object",

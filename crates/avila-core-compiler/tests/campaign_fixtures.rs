@@ -182,3 +182,99 @@ fn optional_agent_review_is_not_a_technical_verdict_input() {
         avila_core_kernel::VerdictStatus::Pass
     );
 }
+
+#[test]
+fn categorical_claims_produce_closed_set_pass_and_fail_verdicts() {
+    let root = fixture_root();
+    let mut contract: Value = serde_json::from_slice(
+        &fs::read(root.join("../types/types.R1.resolved.pass.contract.json")).unwrap(),
+    )
+    .unwrap();
+    let mut registry: Value =
+        serde_json::from_slice(&fs::read(root.join("../types/compiler.registry.v1.json")).unwrap())
+            .unwrap();
+    registry["roles"].as_array_mut().unwrap().push(json!({
+        "role": {"id": "fixture.classification", "major": 1},
+        "owner": "fixture.method_owner",
+        "validator": "fixture.validate.classification@1",
+        "accepted_media_types": ["application/vnd.fixture.category+json"],
+        "permitted_claim_models": [{"model": "unquantified"}],
+        "categorical_values": ["clear", "rejected"]
+    }));
+    registry["capability_types"][0]["outputs"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({
+            "slot_id": "classification",
+            "role": {"id": "fixture.classification", "major": 1},
+            "media_type": "application/vnd.fixture.category+json",
+            "permitted_claim_models": [{"model": "unquantified"}]
+        }));
+    contract["categorical_requirements"] = json!([{
+        "requirement_id": "R-CATEGORY",
+        "statement": "The classification must be clear.",
+        "purpose": {"id": "fixture.requirement_evaluation", "major": 1},
+        "metric": {"source": "step_output", "step_id": "calculate", "output_slot": "classification"},
+        "predicate": {"operator": "equals", "value": "clear"}
+    }]);
+
+    let contract = serde_json::to_vec(&contract).unwrap();
+    let registry = serde_json::to_vec(&registry).unwrap();
+    let snapshot = compile_documents(&contract, &registry)
+        .unwrap()
+        .compiled
+        .unwrap()
+        .snapshot_sha256;
+    let mut claims: Value = serde_json::from_slice(
+        &fs::read(root.join("campaign.le.within.pass.claims.json")).unwrap(),
+    )
+    .unwrap();
+    claims["compiled_snapshot_sha256"] = json!(snapshot);
+    claims["claims"].as_array_mut().unwrap().push(json!({
+        "claim_id": "classification",
+        "step_id": "calculate",
+        "output_slot": "classification",
+        "artifact": {
+            "sha256": "sha256:abababababababababababababababababababababababababababababababab",
+            "media_type": "application/vnd.fixture.category+json"
+        },
+        "claim": {"model": "unquantified", "value": "clear"}
+    }));
+
+    let report =
+        evaluate_campaign(&contract, &registry, &serde_json::to_vec(&claims).unwrap()).unwrap();
+    let categorical = report
+        .verdicts
+        .iter()
+        .find(|verdict| verdict.requirement_id == "R-CATEGORY")
+        .unwrap();
+    assert_eq!(
+        categorical.verdict.status,
+        avila_core_kernel::VerdictStatus::Pass
+    );
+    assert_eq!(categorical.verdict.rule, "categorical.equals.match");
+    assert_eq!(
+        categorical.verdict.observed_category.as_deref(),
+        Some("clear")
+    );
+
+    let category_claim = claims["claims"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|claim| claim["claim_id"] == "classification")
+        .unwrap();
+    category_claim["claim"]["value"] = json!("rejected");
+    let report =
+        evaluate_campaign(&contract, &registry, &serde_json::to_vec(&claims).unwrap()).unwrap();
+    let categorical = report
+        .verdicts
+        .iter()
+        .find(|verdict| verdict.requirement_id == "R-CATEGORY")
+        .unwrap();
+    assert_eq!(
+        categorical.verdict.status,
+        avila_core_kernel::VerdictStatus::Fail
+    );
+    assert_eq!(categorical.verdict.rule, "categorical.equals.mismatch");
+}

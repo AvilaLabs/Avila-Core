@@ -2,8 +2,9 @@
 
 use crate::diagnostic::CoreDiagnostic;
 use crate::document::{
-    Comparison, ContractInput, DeterminismClass, ExecutionPolicy, ImmutablePolicyRef,
-    RequirementBasis, ReviewDisposition, ReviewIndependence, ReviewerRole, SourceRef, VersionedRef,
+    CategoricalPredicate, Comparison, ContractInput, DeterminismClass, ExecutionPolicy,
+    ImmutablePolicyRef, RequirementBasis, ReviewDisposition, ReviewIndependence, ReviewerRole,
+    SourceRef, VersionedRef,
 };
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -58,6 +59,8 @@ pub struct CompiledContract {
     pub inputs: Vec<ContractInput>,
     pub workflow: Vec<CompiledStep>,
     pub requirements: Vec<CompiledRequirement>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub categorical_requirements: Vec<CompiledCategoricalRequirement>,
     pub snapshot_sha256: String,
 }
 
@@ -145,6 +148,17 @@ pub struct CompiledRequirement {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tolerance: Option<CanonicalTypedQuantity>,
     pub basis: RequirementBasis,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct CompiledCategoricalRequirement {
+    pub requirement_id: String,
+    pub statement: String,
+    pub purpose: VersionedRef,
+    pub metric: SourceRef,
+    pub metric_role: VersionedRef,
+    pub predicate: CategoricalPredicate,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

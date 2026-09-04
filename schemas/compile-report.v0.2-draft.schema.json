@@ -644,6 +644,52 @@
         }
       }
     },
+    "compiledCategoricalRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement_id",
+        "statement",
+        "purpose",
+        "metric",
+        "metric_role",
+        "predicate"
+      ],
+      "properties": {
+        "requirement_id": { "$ref": "#/$defs/nonemptyString" },
+        "statement": { "$ref": "#/$defs/nonemptyString" },
+        "purpose": { "$ref": "#/$defs/versionedRef" },
+        "metric": { "$ref": "#/$defs/sourceRef" },
+        "metric_role": { "$ref": "#/$defs/versionedRef" },
+        "predicate": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["operator", "value"],
+              "properties": {
+                "operator": { "const": "equals" },
+                "value": { "$ref": "#/$defs/nonemptyString" }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["operator", "values"],
+              "properties": {
+                "operator": { "const": "in_set" },
+                "values": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": { "$ref": "#/$defs/nonemptyString" }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
     "canonicalQuantity": {
       "type": "object",
       "additionalProperties": false,
@@ -762,6 +808,12 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/compiledRequirement"
+          }
+        },
+        "categorical_requirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/compiledCategoricalRequirement"
           }
         },
         "snapshot_sha256": {

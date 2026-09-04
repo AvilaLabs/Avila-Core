@@ -23,7 +23,7 @@ use self::findings::contract_location;
 use self::notices::report_unconsumed_declarations;
 use self::registry::RegistryIndex;
 use self::reproducibility::compile_reproducibility;
-use self::requirements::compile_requirements;
+use self::requirements::{compile_categorical_requirements, compile_requirements};
 use self::resolve::{
     collect_sources, resolve_workflow, validate_contract_registry_refs, validate_graph,
 };
@@ -43,9 +43,10 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub use ir::{
-    COMPILE_NOTICE, CanonicalTypedQuantity, CompilationStatus, CompileReport, CompiledContract,
-    CompiledParameterValue, CompiledPresentationGate, CompiledReproducibility, CompiledRequirement,
-    CompiledStep, CompilerError, DocumentIdentity, PresentationGateState, ResolvedBinding,
+    COMPILE_NOTICE, CanonicalTypedQuantity, CompilationStatus, CompileReport,
+    CompiledCategoricalRequirement, CompiledContract, CompiledParameterValue,
+    CompiledPresentationGate, CompiledReproducibility, CompiledRequirement, CompiledStep,
+    CompilerError, DocumentIdentity, PresentationGateState, ResolvedBinding,
 };
 
 const COMPILER_ID: &str = concat!("avila.core/compiler-rust@", env!("CARGO_PKG_VERSION"));
@@ -139,6 +140,14 @@ pub fn compile_documents(
         &unknown_type_steps,
         &mut findings,
     );
+    let compiled_categorical_requirements = compile_categorical_requirements(
+        &contract,
+        &registry_index,
+        &candidates,
+        &invalid_sources,
+        &unknown_type_steps,
+        &mut findings,
+    );
 
     if !findings.iter().any(CoreDiagnostic::blocks_compilation) {
         report_unconsumed_declarations(
@@ -171,6 +180,8 @@ pub fn compile_documents(
     inputs.sort_by(|left, right| left.input_id.cmp(&right.input_id));
     let mut requirements = compiled_requirements;
     requirements.sort_by(|left, right| left.requirement_id.cmp(&right.requirement_id));
+    let mut categorical_requirements = compiled_categorical_requirements;
+    categorical_requirements.sort_by(|left, right| left.requirement_id.cmp(&right.requirement_id));
 
     let compiled = create_compiled_contract(
         &contract,
@@ -180,6 +191,7 @@ pub fn compile_documents(
         inputs,
         workflow,
         requirements,
+        categorical_requirements,
     )?;
 
     Ok(CompileReport {
@@ -236,6 +248,7 @@ fn create_compiled_contract(
     inputs: Vec<ContractInput>,
     workflow: Vec<CompiledStep>,
     requirements: Vec<CompiledRequirement>,
+    categorical_requirements: Vec<CompiledCategoricalRequirement>,
 ) -> Result<CompiledContract, CompilerError> {
     #[derive(Serialize)]
     struct IdentityBody<'a> {
@@ -254,6 +267,8 @@ fn create_compiled_contract(
         inputs: &'a [ContractInput],
         workflow: &'a [CompiledStep],
         requirements: &'a [CompiledRequirement],
+        #[serde(skip_serializing_if = "<[CompiledCategoricalRequirement]>::is_empty")]
+        categorical_requirements: &'a [CompiledCategoricalRequirement],
     }
 
     let body = IdentityBody {
@@ -272,6 +287,7 @@ fn create_compiled_contract(
         inputs: &inputs,
         workflow: &workflow,
         requirements: &requirements,
+        categorical_requirements: &categorical_requirements,
     };
     let bytes = serde_json::to_vec(&body)
         .map_err(|error| CompilerError::Serialization(error.to_string()))?;
@@ -295,6 +311,7 @@ fn create_compiled_contract(
         inputs,
         workflow,
         requirements,
+        categorical_requirements,
         snapshot_sha256,
     })
 }

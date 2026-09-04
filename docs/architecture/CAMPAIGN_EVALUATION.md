@@ -43,8 +43,9 @@ A claims document carries:
   unknown position, is `NOT_EVALUATED` under `CORE-A4401` before the kernel
   is asked, see ADR-0008): `exact`, `interval`, `coverage_interval`,
   `worst_case`, or `unquantified`. An unquantified non-quantity claim may
-  preserve a categorical value as evidence; that value is never lowered into
-  the numeric verdict kernel (ADR-0011).
+  preserve a categorical value as evidence. It is never lowered into the
+  numeric verdict kernel; when its role declares a complete vocabulary, it may
+  instead feed an `equals` or `in_set` categorical requirement (ADR-0011).
 
 Quantities are exact strings with units; the kernel scales them into the
 role's canonical unit exactly, so a claim in `Sv/s` and a limit in `uSv/h`
@@ -62,7 +63,7 @@ conditions checked are the type-level subset of SC-11:
 | A1, partial | the artifact identity is a well-formed `sha256:` digest; an unattested input is missing | `CORE-E7101` |
 | A3 | every parent bound to the producing step is admitted; admission fails closed along the dataflow | `CORE-E7103` |
 | A5 | a claim exists for the output | verdict `not_evaluated.missing` |
-| A6, type level | the claim model is permitted by the output, its shape satisfies the model, quantities scale in the role's kind, bounds are ordered, a nominal lies inside its interval, coverage is in `(0, 1]`, a categorical value is nonempty and appears only on a non-quantity unquantified role, and the media type matches | `CORE-E7201` |
+| A6, type level | the claim model is permitted by the output, its shape satisfies the model, quantities scale in the role's kind, bounds are ordered, a nominal lies inside its interval, coverage is in `(0, 1]`, a categorical value is nonempty, belongs to its role's vocabulary when one is declared, and appears only on a non-quantity unquantified role, and the media type matches | `CORE-E7201` |
 | cardinality | exactly one claim per output slot; a duplicate quarantines every claim for the slot | `CORE-E7301` |
 
 A quarantined parent quarantines its descendants. That cascade is intended:
@@ -77,6 +78,12 @@ missing claim yields `NOT_EVALUATED` with the reason. Admitted claims are
 reduced under SC-3, scaled exactly, and compared under the SC-10 tables:
 `bounded.le.within`, `bounded.le.crossing`, `bounded.le.exceeds`, and the
 rest.
+
+Categorical requirements use a registry-owned closed vocabulary and an
+`equals` or `in_set` predicate. An admitted matching category is `PASS`; an
+admitted nonmatching category is `FAIL`; missing, quarantined, duplicate, or
+out-of-qualification evidence is `NOT_EVALUATED`. The observed and accepted
+categories are retained in the verdict output.
 
 Technical verdicts are review-independent. Campaign evaluation does not read a
 review record, human acknowledgement, or presentation disposition, so none can
@@ -150,10 +157,9 @@ the campaign returns `PASS / bounded.lt.within` for both requirements. No
 human, professional, or agent review is needed to establish those technical
 verdicts.
 
-The case deliberately retains the Aftermatter route result as unquantified:
-all three modeled routes are unresolved, and the current numeric requirement
-language does not treat categorical route state as a requirement value.
-CASE-000 therefore records
+The case currently retains the Aftermatter route result as unquantified and
+does not yet declare a categorical route requirement; all three modeled routes
+are unresolved. CASE-000 therefore records
 both what the executable slice can establish and the next vertical gaps
 without pretending the upstream bytes, packages, or qualification have
 been verified. The case runner makes the byte boundary visible: nine

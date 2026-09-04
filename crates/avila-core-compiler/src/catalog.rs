@@ -197,10 +197,10 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
     },
     DiagnosticExplanation {
         code: "CORE-T2102",
-        title: "Kind mismatch",
+        title: "Metric domain mismatch",
         rule: "SC-1 and SC-6 R6",
-        meaning: "A requirement's `limit` or `tolerance` names a quantity kind different from the metric role's kind, or the metric role is not a quantity role at all.",
-        next_action: "Set the kind to the metric role's kind, or choose a quantitative metric.",
+        meaning: "A quantitative requirement uses the wrong quantity kind or a non-quantity role. A categorical requirement uses a quantity role, a role without a closed vocabulary, or predicate values outside that vocabulary.",
+        next_action: "Choose a metric with the required domain, or make the requirement match the metric role's governed quantity kind or categorical vocabulary.",
     },
     DiagnosticExplanation {
         code: "CORE-T2103",

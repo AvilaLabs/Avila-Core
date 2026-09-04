@@ -54,18 +54,22 @@ being disguised as a number or process exit status.
    The producing checker owns the meaning and validation of those values. Core
    checks only the declared transport, shape, identity, and type boundary.
 
-5. **Categorical evidence stays unquantified.** The draft evidence-claims
+5. **Categorical evidence stays unquantified and may be required.** The draft evidence-claims
    schema permits an optional nonempty `value` on `model: unquantified` for a
    non-quantity role. Admission rejects categorical values on quantity roles.
    Core preserves the value in generated claims, the case report, the human
-   summary, and the attempt log, but the value is never lowered into the numeric
-   verdict kernel. This is a compatible extension of the unreleased
-   `v0.2-draft`, not a claim that the draft is stable.
+   summary, and the attempt log without lowering it into the numeric verdict
+   kernel. A role may declare its complete `categorical_values` vocabulary; a
+   contract may then apply an explicit `equals` or `in_set` requirement to that
+   role. The categorical kernel returns `PASS` for a match, `FAIL` for a
+   mismatch, and `NOT_EVALUATED` for missing, quarantined, duplicate, or
+   out-of-qualification evidence. This is a compatible extension of the
+   unreleased `v0.2-draft`, not a claim that the draft is stable.
 
 6. **Scientific rejection is not execution failure.** A checker that verifies
    its inputs and emits an allowed rejection category exits successfully. A
-   separately extracted exact value may then produce a Core `FAIL` under an
-   authored requirement. Parse errors, evidence-chain mismatches, unknown
+   separately extracted exact or categorical value may then produce a Core
+   `FAIL` under an authored requirement. Parse errors, evidence-chain mismatches, unknown
    categories, missing outputs, nonzero exits, and timeouts remain execution or
    evidence failures and cannot masquerade as scientific verdicts.
 
@@ -108,7 +112,9 @@ vocabulary expansion; they do not make the vocabulary authoritative.
 - The runner never invokes a shell for a package-declared checker.
 - A valid checker run produces a verified receipt and generated claims under
   the same binding and replay rules as a built-in adapter.
-- A categorical result survives in the generated claims and attempt log but
-  cannot satisfy a quantitative requirement.
+- A categorical result survives in the generated claims and attempt log. It
+  cannot satisfy a quantitative requirement, but a role-owned closed
+  vocabulary can feed an explicit categorical `equals` or `in_set`
+  requirement.
 - A checker may report scientific rejection with exit status zero while Core
   independently derives a technical `FAIL` from an exact claim.

@@ -31,10 +31,11 @@ pub use predicate::{
 };
 pub use unit::{CanonicalQuantity, KindDefinition, KindRegistry, Quantity, UnitDefinition};
 pub use verdict::{
-    Aggregation, AuthoredQuantity, BasisKind, DisplayRounding, EvidenceClaim, EvidenceModel,
-    EvidenceState, KernelRequirement, RequirementBasis, RequirementPolicy, RoundingMode,
-    VerdictCase, VerdictComparison, VerdictEvaluator, VerdictOutput, VerdictReason, VerdictStatus,
-    aggregate_verdicts,
+    Aggregation, AuthoredQuantity, BasisKind, CategoricalComparison, CategoricalEvidenceClaim,
+    CategoricalRequirement, CategoricalVerdictCase, CategoricalVerdictEvaluator, DisplayRounding,
+    EvidenceClaim, EvidenceModel, EvidenceState, KernelRequirement, RequirementBasis,
+    RequirementPolicy, RoundingMode, VerdictCase, VerdictComparison, VerdictEvaluator,
+    VerdictOutput, VerdictReason, VerdictStatus, aggregate_verdicts,
 };
 
 /// Draft profile implemented incrementally by this kernel.

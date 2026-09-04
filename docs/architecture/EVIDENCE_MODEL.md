@@ -114,10 +114,11 @@ replay is reported not applicable.
 An unquantified claim for a non-quantity role may carry a nonempty categorical
 `value`. Package-declared external checkers may extract that value only from a
 closed set fixed in their hashed descriptor. Core preserves the category in
-the claims document, case report, human summary, and attempt log, but does not
-coerce it into a number or feed it to the numeric verdict kernel. Quantitative
-roles reject categorical values. A contract that needs a technical verdict
-must bind a separate reducible claim to an explicit requirement. The adapter
+the claims document, case report, human summary, and attempt log without
+coercing it into a number. A registry role may additionally own the complete
+closed vocabulary; an `equals` or `in_set` categorical requirement can then
+derive a four-state technical verdict from that role. Quantitative roles reject
+categorical values. The adapter
 descriptor's raw-byte digest is part of the invocation identity, so changing
 the extraction map invalidates receipt reuse even when the executable and
 inputs are unchanged.

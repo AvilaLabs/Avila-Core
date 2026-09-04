@@ -87,8 +87,8 @@ pub enum ClaimValue {
     },
     Unquantified {
         /// An optional categorical value for a non-quantity evidence role.
-        /// It is preserved as evidence but is not lowered into the numeric
-        /// verdict kernel.
+        /// It is never coerced into a number. A role with a registry-owned
+        /// closed vocabulary may feed a categorical requirement directly.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         value: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]

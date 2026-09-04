@@ -47,7 +47,7 @@ pub(super) fn validate_contract_shape(
             findings,
         );
     }
-    if contract.requirements.is_empty() {
+    if contract.requirements.is_empty() && contract.categorical_requirements.is_empty() {
         invalid_value(
             contract_location("/requirements"),
             "a contract must contain at least one requirement",
@@ -62,6 +62,33 @@ pub(super) fn validate_contract_shape(
         "/inputs",
         findings,
     );
+    find_duplicate_ids(
+        contract
+            .categorical_requirements
+            .iter()
+            .map(|item| item.requirement_id.as_str()),
+        "categorical requirement",
+        "/categorical_requirements",
+        findings,
+    );
+    let quantitative_ids: BTreeSet<_> = contract
+        .requirements
+        .iter()
+        .map(|item| item.requirement_id.as_str())
+        .collect();
+    for (index, requirement) in contract.categorical_requirements.iter().enumerate() {
+        if quantitative_ids.contains(requirement.requirement_id.as_str()) {
+            invalid_value(
+                contract_location(format!("/categorical_requirements/{index}/requirement_id")),
+                format!(
+                    "requirement id `{}` is shared by quantitative and categorical requirements",
+                    requirement.requirement_id
+                ),
+                "requester",
+                findings,
+            );
+        }
+    }
     find_duplicate_ids(
         contract.workflow.iter().map(|item| item.step_id.as_str()),
         "workflow step",
@@ -205,5 +232,25 @@ pub(super) fn validate_contract_shape(
                 findings,
             );
         }
+    }
+    for (index, requirement) in contract.categorical_requirements.iter().enumerate() {
+        require_nonempty(
+            &requirement.requirement_id,
+            contract_location(format!("/categorical_requirements/{index}/requirement_id")),
+            "requester",
+            findings,
+        );
+        require_nonempty(
+            &requirement.statement,
+            contract_location(format!("/categorical_requirements/{index}/statement")),
+            "requester",
+            findings,
+        );
+        validate_versioned_ref(
+            &requirement.purpose,
+            contract_location(format!("/categorical_requirements/{index}/purpose")),
+            "requester",
+            findings,
+        );
     }
 }

@@ -90,7 +90,7 @@ impl<'a> RegistryIndex<'a> {
                     error.code(),
                     FindingClass::Invalid,
                     "registry_owner",
-                    registry_location(pointer),
+                    registry_location(&pointer),
                     error.detail(),
                 )),
             }
@@ -164,6 +164,33 @@ impl<'a> RegistryIndex<'a> {
                     findings,
                 );
             }
+            let mut categories = BTreeSet::new();
+            for (category_index, category) in role.categorical_values.iter().enumerate() {
+                let location =
+                    registry_location(format!("{pointer}/categorical_values/{category_index}"));
+                if category.trim().is_empty() {
+                    registry_incomplete(
+                        location,
+                        "a categorical role value must not be empty",
+                        findings,
+                    );
+                } else if !categories.insert(category.as_str()) {
+                    registry_incomplete(
+                        location,
+                        format!("categorical role repeats value `{category}`"),
+                        findings,
+                    );
+                }
+            }
+            if !role.categorical_values.is_empty()
+                && role.permitted_claim_models.as_slice() != [ClaimModelDeclaration::Unquantified]
+            {
+                registry_incomplete(
+                    registry_location(format!("{pointer}/permitted_claim_models")),
+                    "a closed categorical role must permit only the unquantified claim model",
+                    findings,
+                );
+            }
             if roles.insert(role.role.clone(), role).is_some() {
                 invalid_value(
                     registry_location(format!("{pointer}/role")),
@@ -193,10 +220,19 @@ impl<'a> RegistryIndex<'a> {
                 },
                 (None, None) => {}
                 _ => registry_incomplete(
-                    registry_location(pointer),
+                    registry_location(&pointer),
                     "a quantity role must declare both quantity_kind and unit_class",
                     findings,
                 ),
+            }
+            if !role.categorical_values.is_empty()
+                && (role.quantity_kind.is_some() || role.unit_class.is_some())
+            {
+                registry_incomplete(
+                    registry_location(format!("{pointer}/categorical_values")),
+                    "a closed categorical role must be non-quantitative",
+                    findings,
+                );
             }
         }
 

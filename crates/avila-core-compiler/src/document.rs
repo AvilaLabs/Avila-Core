@@ -56,7 +56,13 @@ pub struct ContractSource {
     #[serde(default)]
     pub inputs: Vec<ContractInput>,
     pub workflow: Vec<WorkflowStep>,
+    #[serde(default)]
     pub requirements: Vec<RequirementSource>,
+    /// Closed-vocabulary requirements over non-quantity evidence. Kept
+    /// separate from quantitative requirements so neither kind needs dummy
+    /// fields from the other semantic domain.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub categorical_requirements: Vec<CategoricalRequirementSource>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -138,6 +144,34 @@ pub struct RequirementSource {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tolerance: Option<TypedQuantity>,
     pub basis: RequirementBasis,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CategoricalRequirementSource {
+    pub requirement_id: String,
+    pub statement: String,
+    pub purpose: VersionedRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metric: Option<SourceRef>,
+    pub predicate: CategoricalPredicate,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "operator", rename_all = "snake_case", deny_unknown_fields)]
+pub enum CategoricalPredicate {
+    Equals { value: String },
+    InSet { values: Vec<String> },
+}
+
+impl CategoricalPredicate {
+    #[must_use]
+    pub fn accepted_values(&self) -> &[String] {
+        match self {
+            Self::Equals { value } => std::slice::from_ref(value),
+            Self::InSet { values } => values,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -224,6 +258,10 @@ pub struct RoleDefinition {
     pub unit_class: Option<String>,
     pub accepted_media_types: Vec<String>,
     pub permitted_claim_models: Vec<ClaimModelDeclaration>,
+    /// The complete vocabulary for categorical values carried by this role.
+    /// An empty list means the role is not a closed-set categorical role.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub categorical_values: Vec<String>,
     #[serde(default)]
     pub non_claims: Vec<String>,
 }
@@ -486,5 +524,6 @@ pub fn current_profile_contract(contract_id: impl Into<String>) -> ContractSourc
         inputs: Vec::new(),
         workflow: Vec::new(),
         requirements: Vec::new(),
+        categorical_requirements: Vec::new(),
     }
 }

@@ -398,6 +398,28 @@ fn validate_claim(
     {
         problems.push("an unquantified categorical value must not be empty".into());
     }
+    if let Some(role) = role
+        && !role.categorical_values.is_empty()
+    {
+        match &claim.claim {
+            ClaimValue::Unquantified {
+                value: Some(value),
+                nominal: None,
+            } if role.categorical_values.contains(value) => {}
+            ClaimValue::Unquantified {
+                value: Some(value),
+                nominal: None,
+            } => problems.push(format!(
+                "categorical value `{value}` is outside role `{}@{}` vocabulary {:?}",
+                role.role.id, role.role.major, role.categorical_values
+            )),
+            ClaimValue::Unquantified { value: None, .. } => problems.push(format!(
+                "categorical role `{}@{}` requires a categorical value",
+                role.role.id, role.role.major
+            )),
+            _ => {}
+        }
+    }
     match kind {
         Some(kind) => {
             let mut canonical = BTreeMap::new();

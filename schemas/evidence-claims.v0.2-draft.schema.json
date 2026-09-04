@@ -86,7 +86,7 @@
         { "type": "object", "additionalProperties": false, "required": ["model"],
           "properties": { "model": { "const": "worst_case" }, "lower": { "$ref": "#/$defs/quantityValue" }, "upper": { "$ref": "#/$defs/quantityValue" }, "nominal": { "$ref": "#/$defs/quantityValue" } } },
         { "type": "object", "additionalProperties": false, "required": ["model"],
-          "properties": { "model": { "const": "unquantified" }, "value": { "$ref": "#/$defs/nonemptyString", "description": "Optional categorical evidence for a non-quantity role. It is preserved but never lowered into the numeric verdict kernel." }, "nominal": { "$ref": "#/$defs/quantityValue" } } }
+          "properties": { "model": { "const": "unquantified" }, "value": { "$ref": "#/$defs/nonemptyString", "description": "Optional categorical evidence for a non-quantity role. It is never coerced into a number and may feed a closed-vocabulary categorical requirement." }, "nominal": { "$ref": "#/$defs/quantityValue" } } }
       ]
     }
   }

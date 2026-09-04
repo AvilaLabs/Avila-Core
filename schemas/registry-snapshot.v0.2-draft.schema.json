@@ -190,6 +190,15 @@
             "$ref": "#/$defs/claimModel"
           }
         },
+        "categorical_values": {
+          "description": "Complete closed vocabulary for a non-quantity categorical role.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonemptyString"
+          }
+        },
         "non_claims": {
           "type": "array",
           "items": {

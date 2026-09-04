@@ -2,9 +2,11 @@
 //! admission states and claims for the requirement's metric source.
 
 use avila_core_kernel::{
-    BasisKind as KernelBasis, EvidenceClaim, EvidenceModel, EvidenceState, ExactNumber,
-    KernelRequirement, Quantity, RequirementBasis as KernelRequirementBasis, RequirementPolicy,
-    VerdictCase, VerdictComparison, VerdictEvaluator, VerdictOutput, VerdictReason, VerdictStatus,
+    BasisKind as KernelBasis, CategoricalComparison, CategoricalEvidenceClaim,
+    CategoricalRequirement, CategoricalVerdictCase, CategoricalVerdictEvaluator, EvidenceClaim,
+    EvidenceModel, EvidenceState, ExactNumber, KernelRequirement, Quantity,
+    RequirementBasis as KernelRequirementBasis, RequirementPolicy, VerdictCase, VerdictComparison,
+    VerdictEvaluator, VerdictOutput, VerdictReason, VerdictStatus,
 };
 
 use super::document::{ClaimValue, ClaimsDocument};
@@ -12,7 +14,7 @@ use super::{AdmissionRecord, AdmissionState, VerdictBoundary, VerdictRecord};
 use crate::compile::registry::RegistryIndex;
 use crate::compile::{CanonicalTypedQuantity, CompiledContract};
 use crate::diagnostic::CORE_A4401;
-use crate::document::{BasisKind, Comparison, QuantityValue, SourceRef};
+use crate::document::{BasisKind, CategoricalPredicate, Comparison, QuantityValue, SourceRef};
 use crate::qualification::{ClaimQualification, EnvelopeState};
 
 pub(super) fn evaluate(
@@ -24,7 +26,7 @@ pub(super) fn evaluate(
 ) -> Vec<VerdictRecord> {
     let evaluator = VerdictEvaluator::new(&registry.kinds);
 
-    compiled
+    let mut verdicts: Vec<_> = compiled
         .requirements
         .iter()
         .map(|requirement| {
@@ -80,7 +82,7 @@ pub(super) fn evaluate(
             };
             // A claim from outside its producer's qualification envelope, or
             // of unknown position, cannot establish a bounded requirement.
-            let quarantined = quarantined_by_qualification(requirement, claims, admissions);
+            let quarantined = quarantined_by_qualification(&requirement.metric, claims, admissions);
             let verdict = if !quarantined.is_empty() && requirement.basis.kind != BasisKind::Nominal
             {
                 qualification_verdict(&quarantined)
@@ -100,6 +102,8 @@ pub(super) fn evaluate(
                         coverage: None,
                         basis_visible: None,
                         numbers_present: Some(false),
+                        observed_category: None,
+                        accepted_categories: None,
                         reasons: vec![VerdictReason::CodeOwner {
                             code: error.code().into(),
                             owner: "executor".into(),
@@ -120,19 +124,106 @@ pub(super) fn evaluate(
                 boundary: boundary.clone(),
             }
         })
-        .collect()
+        .collect();
+
+    verdicts.extend(compiled.categorical_requirements.iter().map(|requirement| {
+        let mut evidence = Vec::new();
+        for record in admissions
+            .iter()
+            .filter(|record| record.source == requirement.metric)
+        {
+            let state = match record.state {
+                AdmissionState::Admitted => EvidenceState::Admitted,
+                AdmissionState::Quarantined => EvidenceState::Quarantined,
+                AdmissionState::Missing => continue,
+            };
+            let claim = claims
+                .claims
+                .iter()
+                .find(|claim| claim.claim_id == record.evidence_id);
+            let Some(claim) = claim else {
+                continue;
+            };
+            let value = match &claim.claim {
+                ClaimValue::Unquantified { value, .. } => value.clone(),
+                _ => None,
+            };
+            evidence.push(CategoricalEvidenceClaim {
+                evidence_id: record.evidence_id.clone(),
+                state,
+                value,
+            });
+        }
+        let evidence_ids = evidence
+            .iter()
+            .map(|claim| claim.evidence_id.clone())
+            .collect();
+        let (comparison, accepted_values) = match &requirement.predicate {
+            CategoricalPredicate::Equals { value } => {
+                (CategoricalComparison::Equals, vec![value.clone()])
+            }
+            CategoricalPredicate::InSet { values } => {
+                (CategoricalComparison::InSet, values.clone())
+            }
+        };
+        let case = CategoricalVerdictCase {
+            requirement: CategoricalRequirement {
+                comparison,
+                accepted_values,
+            },
+            evidence,
+        };
+        let quarantined = quarantined_by_qualification(&requirement.metric, claims, admissions);
+        let verdict = if quarantined.is_empty() {
+            CategoricalVerdictEvaluator::evaluate(&case).unwrap_or_else(|error| VerdictOutput {
+                status: VerdictStatus::NotEvaluated,
+                rule: "not_evaluated.kernel_refusal".into(),
+                aggregation: None,
+                canonical_unit: None,
+                limit_canonical: None,
+                lower_canonical: None,
+                upper_canonical: None,
+                nominal_canonical: None,
+                tolerance_canonical: None,
+                coverage: None,
+                basis_visible: None,
+                numbers_present: Some(false),
+                observed_category: None,
+                accepted_categories: Some(case.requirement.accepted_values.clone()),
+                reasons: vec![VerdictReason::CodeOwner {
+                    code: error.code().into(),
+                    owner: "executor".into(),
+                }],
+                display_upper_text: None,
+            })
+        } else {
+            let mut output = qualification_verdict(&quarantined);
+            output.accepted_categories = Some(case.requirement.accepted_values.clone());
+            output
+        };
+        VerdictRecord {
+            requirement_id: requirement.requirement_id.clone(),
+            statement: requirement.statement.clone(),
+            metric: requirement.metric.clone(),
+            evidence_ids,
+            verdict,
+            boundary: boundary.clone(),
+        }
+    }));
+    verdicts.sort_by(|left, right| left.requirement_id.cmp(&right.requirement_id));
+    verdicts
 }
 
 /// Admitted claims for the requirement's metric whose producer's envelope
 /// did not contain this run.
 fn quarantined_by_qualification(
-    requirement: &crate::compile::CompiledRequirement,
+    metric: &SourceRef,
     claims: &ClaimsDocument,
     admissions: &[AdmissionRecord],
 ) -> Vec<(String, ClaimQualification)> {
     admissions
         .iter()
-        .filter(|record| record.source == requirement.metric)
+        .filter(|record| &record.source == metric)
         .filter(|record| record.state == AdmissionState::Admitted)
         .filter_map(|record| {
             claims
@@ -199,6 +290,8 @@ fn qualification_verdict(quarantined: &[(String, ClaimQualification)]) -> Verdic
         coverage: None,
         basis_visible: None,
         numbers_present: Some(false),
+        observed_category: None,
+        accepted_categories: None,
         reasons: qualification_reasons(quarantined),
         display_upper_text: None,
     }

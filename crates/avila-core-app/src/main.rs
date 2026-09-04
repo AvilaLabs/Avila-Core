@@ -416,7 +416,10 @@ fn show_overview(ui: &mut egui::Ui, specimen: &Specimen) {
             badge(ui, "DRAFT", egui::Color32::from_rgb(120, 164, 210));
             badge(
                 ui,
-                &format!("{} REQUIREMENT", contract.requirements.len()),
+                &format!(
+                    "{} REQUIREMENT",
+                    contract.requirements.len() + contract.categorical_requirements.len()
+                ),
                 muted(ui),
             );
             badge(ui, &format!("{} STEPS", contract.workflow.len()), muted(ui));
@@ -556,6 +559,26 @@ fn show_contract(ui: &mut egui::Ui, contract: &ContractSource) {
                     requirement.limit.kind,
                     requirement.purpose.id,
                     requirement.purpose.major
+                ),
+            );
+        }
+        for requirement in &contract.categorical_requirements {
+            ui.separator();
+            ui.label(egui::RichText::new(&requirement.requirement_id).strong());
+            ui.label(&requirement.statement);
+            let predicate = match &requirement.predicate {
+                avila_core_compiler::CategoricalPredicate::Equals { value } => {
+                    format!("Category equals {value}")
+                }
+                avila_core_compiler::CategoricalPredicate::InSet { values } => {
+                    format!("Category in [{}]", values.join(", "))
+                }
+            };
+            ui.colored_label(
+                muted(ui),
+                format!(
+                    "{}  ·  purpose {}@{}",
+                    predicate, requirement.purpose.id, requirement.purpose.major
                 ),
             );
         }
@@ -751,6 +774,18 @@ fn show_results(ui: &mut egui::Ui, contract: &ContractSource) {
                 muted(ui),
                 "No observed value, uncertainty bound, or admissible evidence exists.",
             );
+        });
+    }
+    for requirement in &contract.categorical_requirements {
+        card(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new(&requirement.requirement_id).strong());
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    verdict_badge(ui, VerdictStatus::NotEvaluated);
+                });
+            });
+            ui.label(&requirement.statement);
+            ui.colored_label(muted(ui), "No admitted categorical evidence exists.");
         });
     }
     ui.add_space(10.0);

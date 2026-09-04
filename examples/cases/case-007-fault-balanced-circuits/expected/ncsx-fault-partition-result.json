@@ -1,0 +1,185 @@
+{
+  "fine": {
+    "candidate": [
+      {
+        "current_share": "0.333333333333",
+        "endpoint_peak_force_ratio": "0.884194821986",
+        "force_shape_departure": "0.386851450981",
+        "magnetic_shape_departure": "0.038956411166",
+        "post_fault_normal_fraction": "0.060069626903"
+      },
+      {
+        "current_share": "0.333333333333",
+        "endpoint_peak_force_ratio": "0.884194821986",
+        "force_shape_departure": "0.386851450981",
+        "magnetic_shape_departure": "0.038956411166",
+        "post_fault_normal_fraction": "0.060069626903"
+      },
+      {
+        "current_share": "0.333333333333",
+        "endpoint_peak_force_ratio": "0.884194821986",
+        "force_shape_departure": "0.386851450981",
+        "magnetic_shape_departure": "0.038956411166",
+        "post_fault_normal_fraction": "0.060069626903"
+      }
+    ],
+    "comparator": [
+      {
+        "current_share": "0.354133",
+        "endpoint_peak_force_ratio": "0.847258846309",
+        "force_shape_departure": "0.430258118315",
+        "magnetic_shape_departure": "0.051797385665",
+        "post_fault_normal_fraction": "0.08460929218"
+      },
+      {
+        "current_share": "0.353914",
+        "endpoint_peak_force_ratio": "0.573729016589",
+        "force_shape_departure": "0.428379577625",
+        "magnetic_shape_departure": "0.043733983335",
+        "post_fault_normal_fraction": "0.070669056826"
+      },
+      {
+        "current_share": "0.291953",
+        "endpoint_peak_force_ratio": "0.8716046032",
+        "force_shape_departure": "0.434276957135",
+        "magnetic_shape_departure": "0.05312818248",
+        "post_fault_normal_fraction": "0.071682333208"
+      }
+    ]
+  },
+  "interpretation": "candidate-justified",
+  "iteration_1_interpretation": "revise",
+  "limitations": [
+    "Magnetostatic filament and force-density proxies omit inductance, resistance, voltage, thermal propagation, hot spots, eddy currents, structures, stress, and plasma dynamics.",
+    "The NCSX geometry is a public numerical proxy; the candidate is a new-design winding partition, not a retrofit prescription or a statement of the historical NCSX circuit topology.",
+    "Different base-coil ampere-turns are represented by turn-count scaling at a common circuit current; winding packs and integer turn counts are not designed.",
+    "The thresholds were fixed during an interactive reference-grid exploration, not preregistered before all reference results were observed; the fine mesh is only a numerical holdout.",
+    "A passing result justifies a coupled circuit/quench model, not hardware, safety, novelty, patentability, or commercial claims."
+  ],
+  "metrics": {
+    "fault_group_relative_spread": "0",
+    "fine_candidate_post_fault_normal_fraction": "0.060069626903",
+    "fine_force_reduction_factor": "1.122593584782",
+    "fine_magnetic_reduction_factor": "1.363785340836",
+    "fine_nominal_force_rms_n_per_m": "353633.389516001393",
+    "fine_nominal_normal_fraction": "0.013919613557",
+    "fine_nominal_peak_force_n_per_m": "877004.891580291209",
+    "fine_peak_force_ratio": "1",
+    "first_force_reduction_factor": "1.050010969423",
+    "first_magnetic_reduction_factor": "1.437441452678",
+    "resolution_relative_difference": "0.00114190798",
+    "trajectory_overshoot_ratio": "1"
+  },
+  "model_id": "simsopt-ncsx-three-circuit-fault-partition-r0",
+  "partition_validity": "valid",
+  "schema": "avila.magnetic-compliance/ncsx-fault-partition-result/v1",
+  "search": {
+    "architectures_evaluated": 121500,
+    "final_candidate_groups": [
+      [
+        0,
+        4,
+        7,
+        11,
+        14,
+        15
+      ],
+      [
+        1,
+        3,
+        8,
+        10,
+        12,
+        17
+      ],
+      [
+        2,
+        5,
+        6,
+        9,
+        13,
+        16
+      ]
+    ],
+    "final_candidate_reference": [
+      {
+        "current_share": "0.333333333333",
+        "endpoint_peak_force_ratio": "0.882999209164",
+        "force_shape_departure": "0.386689136807",
+        "magnetic_shape_departure": "0.03961783587",
+        "post_fault_normal_fraction": "0.061095366141"
+      },
+      {
+        "current_share": "0.333333333333",
+        "endpoint_peak_force_ratio": "0.882999209164",
+        "force_shape_departure": "0.386689136807",
+        "magnetic_shape_departure": "0.03961783587",
+        "post_fault_normal_fraction": "0.061095366141"
+      },
+      {
+        "current_share": "0.333333333333",
+        "endpoint_peak_force_ratio": "0.882999209164",
+        "force_shape_departure": "0.386689136807",
+        "magnetic_shape_departure": "0.03961783587",
+        "post_fault_normal_fraction": "0.061095366141"
+      }
+    ],
+    "first_candidate_groups": [
+      [
+        0,
+        2,
+        4,
+        5,
+        9,
+        13
+      ],
+      [
+        1,
+        3,
+        6,
+        8,
+        16,
+        17
+      ],
+      [
+        7,
+        10,
+        11,
+        12,
+        14,
+        15
+      ]
+    ],
+    "first_candidate_reference": [
+      {
+        "current_share": "0.333333333333",
+        "endpoint_peak_force_ratio": "0.967199072254",
+        "force_shape_departure": "0.413450465887",
+        "magnetic_shape_departure": "0.037544851758",
+        "post_fault_normal_fraction": "0.058075299884"
+      },
+      {
+        "current_share": "0.333333333333",
+        "endpoint_peak_force_ratio": "0.967199072254",
+        "force_shape_departure": "0.413450465887",
+        "magnetic_shape_departure": "0.037544851758",
+        "post_fault_normal_fraction": "0.058075299884"
+      },
+      {
+        "current_share": "0.333333333333",
+        "endpoint_peak_force_ratio": "0.967199072254",
+        "force_shape_departure": "0.413450465887",
+        "magnetic_shape_departure": "0.037544851758",
+        "post_fault_normal_fraction": "0.058075299884"
+      }
+    ]
+  },
+  "source_identity": {
+    "base_model_sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62",
+    "boundary_sha256": "sha256:32b5609d02643d05b30c353ba5ab0a9b3ef6c486a8122f141a3c14e01748c956",
+    "ceiling_library_sha256": "sha256:5e804c32b031aa2f31761cadbd8a65dc6ecbedd7d7109c9b7e07a182624e4d21",
+    "coil_sha256": "sha256:2b857ca137184d0f4b5e7fa271c6cf946cf7fdfa127a19ec302d4f9731db57a7",
+    "field_kernel_sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3",
+    "partition_model_sha256": "sha256:085dd1bf78b83e35aff4964145274fa519e4258529b07e36cdd4d48d2502ebc9"
+  }
+}

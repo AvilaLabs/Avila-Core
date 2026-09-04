@@ -1,0 +1,37 @@
+{
+  "schema_version": "avila.core/external-checker-adapter/v0.1-draft",
+  "adapter_id": "avila-labs.magnetic-compliance/ncsx-fault-partition@1",
+  "capability_type": { "id": "magnetic-compliance.ncsx-fault-partition", "major": 1 },
+  "input_slots": ["partition-script", "ceiling-library", "field-kernel", "coil-data", "boundary-data", "base-model", "partition-model"],
+  "arguments": [
+    { "kind": "input_path", "input_slot": "partition-script" },
+    { "kind": "input_path", "input_slot": "field-kernel" },
+    { "kind": "input_path", "input_slot": "ceiling-library" },
+    { "kind": "input_path", "input_slot": "coil-data" },
+    { "kind": "input_path", "input_slot": "boundary-data" },
+    { "kind": "input_path", "input_slot": "base-model" },
+    { "kind": "input_path", "input_slot": "partition-model" },
+    { "kind": "output_path", "output_id": "result" }
+  ],
+  "outputs": [
+    {
+      "output_id": "result",
+      "workspace_path": "outputs/ncsx-fault-partition-result.json",
+      "media_type": "application/vnd.avila.ncsx-fault-partition-result+json"
+    }
+  ],
+  "claims": [
+    { "model": "exact", "output_slot": "magnetic-reduction", "output_id": "result", "pointer": "/metrics/fine_magnetic_reduction_factor", "unit": "1" },
+    { "model": "exact", "output_slot": "force-reduction", "output_id": "result", "pointer": "/metrics/fine_force_reduction_factor", "unit": "1" },
+    { "model": "exact", "output_slot": "peak-force-ratio", "output_id": "result", "pointer": "/metrics/fine_peak_force_ratio", "unit": "1" },
+    { "model": "exact", "output_slot": "trajectory-overshoot", "output_id": "result", "pointer": "/metrics/trajectory_overshoot_ratio", "unit": "1" },
+    { "model": "exact", "output_slot": "resolution-difference", "output_id": "result", "pointer": "/metrics/resolution_relative_difference", "unit": "1" },
+    { "model": "exact", "output_slot": "fault-group-spread", "output_id": "result", "pointer": "/metrics/fault_group_relative_spread", "unit": "1" },
+    { "model": "categorical", "output_slot": "partition-validity", "output_id": "result", "pointer": "/partition_validity", "allowed_values": ["valid", "invalid"] },
+    { "model": "categorical", "output_slot": "interpretation", "output_id": "result", "pointer": "/interpretation", "allowed_values": ["candidate-justified", "stop"] }
+  ],
+  "timeout_ms": 60000,
+  "limitations": [
+    "The checker owns the exploratory magnetostatic calculation; Core validates declared identities, execution, extraction, evidence binding, and requirement arithmetic only."
+  ]
+}

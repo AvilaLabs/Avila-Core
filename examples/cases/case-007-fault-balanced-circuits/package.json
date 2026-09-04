@@ -1,0 +1,210 @@
+{
+  "schema_version": "avila.core/case-package/v0.1-draft",
+  "case_id": "CASE-007",
+  "title": "NCSX fault-balanced winding-circuit partition screen",
+  "documents": [
+    {
+      "document_id": "case-007-contract",
+      "role": "contract",
+      "path": "contract.json",
+      "sha256": "sha256:152c3eacb2f2b517f86d05073cf1241f9fb1a25b6348c94f84026e9ef5a0a0cf"
+    },
+    {
+      "document_id": "case-007-registry",
+      "role": "registry",
+      "path": "registry.json",
+      "sha256": "sha256:659327f0617e4f70fdd0edc191c4d538206b943bbf9e175708f4357f21db8d4b"
+    },
+    {
+      "document_id": "case-007-claims",
+      "role": "claims",
+      "path": "claims.json",
+      "sha256": "sha256:0bac2555f8935d76838ebc4f81a0e36da311d8d39f350dbea4d4a40ab3bc9de9"
+    },
+    {
+      "document_id": "avila-labs.magnetic-compliance/ncsx-fault-partition@1",
+      "role": "external_checker_adapter",
+      "path": "adapter.json",
+      "sha256": "sha256:d7186a369b4089224d2e90f36fe3af90d0cf8cb7e64632f9bda3cd2a1b1c9240"
+    },
+    {
+      "document_id": "case-007-expected-campaign",
+      "role": "expected_campaign_report",
+      "path": "campaign-report.json",
+      "sha256": "sha256:b433f3c836222810ac4df37211e9f24f0ed117468595909cf31e067e889d507a"
+    },
+    {
+      "document_id": "case-007-fault-partition-receipt",
+      "role": "execution_receipt",
+      "path": "receipts/fault-partition.json",
+      "sha256": "sha256:9cd5aedb4c1ae128439f93e568cb378e608422cb65ab9dff4babf46911a0b6c2",
+      "step_id": "fault-partition"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "partition-script",
+      "evidence_ids": [
+        "input:partition-script"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx_fault_partition_gate.py",
+      "sha256": "sha256:0fa70cf3506aff9ec96d9a6289fff5862df8a1ac79a507c422111d72704033eb"
+    },
+    {
+      "artifact_id": "ceiling-library",
+      "evidence_ids": [
+        "input:ceiling-library"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx_passive_ceiling.py",
+      "sha256": "sha256:5e804c32b031aa2f31761cadbd8a65dc6ecbedd7d7109c9b7e07a182624e4d21"
+    },
+    {
+      "artifact_id": "field-kernel",
+      "evidence_ids": [
+        "input:field-kernel"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "magnetic_compliance.py",
+      "sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3"
+    },
+    {
+      "artifact_id": "ncsx-coils",
+      "evidence_ids": [
+        "input:coil-data"
+      ],
+      "source_root": "simsopt",
+      "path": "src/simsopt/configs/NCSX.dat",
+      "sha256": "sha256:2b857ca137184d0f4b5e7fa271c6cf946cf7fdfa127a19ec302d4f9731db57a7"
+    },
+    {
+      "artifact_id": "ncsx-boundary",
+      "evidence_ids": [
+        "input:boundary-data"
+      ],
+      "source_root": "simsopt",
+      "path": "tests/test_files/input.NCSX_c09r00_halfTeslaTF",
+      "sha256": "sha256:32b5609d02643d05b30c353ba5ab0a9b3ef6c486a8122f141a3c14e01748c956"
+    },
+    {
+      "artifact_id": "base-model",
+      "evidence_ids": [
+        "input:base-model"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx-ceiling-model.json",
+      "sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62"
+    },
+    {
+      "artifact_id": "partition-model",
+      "evidence_ids": [
+        "input:partition-model"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx_fault_partition_model.json",
+      "sha256": "sha256:085dd1bf78b83e35aff4964145274fa519e4258529b07e36cdd4d48d2502ebc9"
+    },
+    {
+      "artifact_id": "reference-result",
+      "evidence_ids": [
+        "fault-magnetic-reduction",
+        "fault-force-reduction",
+        "fault-peak-force",
+        "fault-trajectory-overshoot",
+        "fault-resolution",
+        "fault-group-spread",
+        "fault-partition-validity",
+        "fault-interpretation"
+      ],
+      "source_root": "case",
+      "path": "expected/ncsx-fault-partition-result.json",
+      "sha256": "sha256:a2fa9e2f21b021aa3e5db4a4d3b77bf7aa10a19c69e9a091c1c34d42f276d226"
+    }
+  ],
+  "capabilities": [
+    {
+      "capability_id": "python3-numpy",
+      "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+      "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+    }
+  ],
+  "executions": [
+    {
+      "step_id": "fault-partition",
+      "adapter": "avila-labs.magnetic-compliance/ncsx-fault-partition@1",
+      "capability_id": "python3-numpy",
+      "inputs": [
+        {
+          "input_slot": "partition-script",
+          "workspace_path": "tools/ncsx_fault_partition_gate.py"
+        },
+        {
+          "input_slot": "ceiling-library",
+          "workspace_path": "tools/ncsx_passive_ceiling.py"
+        },
+        {
+          "input_slot": "field-kernel",
+          "workspace_path": "tools/magnetic_compliance.py"
+        },
+        {
+          "input_slot": "coil-data",
+          "workspace_path": "inputs/NCSX.dat"
+        },
+        {
+          "input_slot": "boundary-data",
+          "workspace_path": "inputs/ncsx-boundary.focus"
+        },
+        {
+          "input_slot": "base-model",
+          "workspace_path": "inputs/base-model.json"
+        },
+        {
+          "input_slot": "partition-model",
+          "workspace_path": "inputs/partition-model.json"
+        }
+      ],
+      "outputs": [
+        {
+          "output_slot": "magnetic-reduction",
+          "claim_id": "fault-magnetic-reduction"
+        },
+        {
+          "output_slot": "force-reduction",
+          "claim_id": "fault-force-reduction"
+        },
+        {
+          "output_slot": "peak-force-ratio",
+          "claim_id": "fault-peak-force"
+        },
+        {
+          "output_slot": "trajectory-overshoot",
+          "claim_id": "fault-trajectory-overshoot"
+        },
+        {
+          "output_slot": "resolution-difference",
+          "claim_id": "fault-resolution"
+        },
+        {
+          "output_slot": "fault-group-spread",
+          "claim_id": "fault-group-spread"
+        },
+        {
+          "output_slot": "partition-validity",
+          "claim_id": "fault-partition-validity"
+        },
+        {
+          "output_slot": "interpretation",
+          "claim_id": "fault-interpretation"
+        }
+      ]
+    }
+  ],
+  "free_inputs": [],
+  "limitations": [
+    "CASE-007 is an exploratory magnetostatic partition screen, not a coupled quench, circuit, thermal, stress, safety, or patentability analysis.",
+    "External SIMSOPT artifacts are content-bound but not distributed in this repository.",
+    "The interpreter bytes are bound; the adjacent NumPy installation is named rather than fully environment-locked.",
+    "The thresholds were selected during interactive reference-grid exploration; only the frozen candidate's fine-grid check is held out from selection."
+  ]
+}

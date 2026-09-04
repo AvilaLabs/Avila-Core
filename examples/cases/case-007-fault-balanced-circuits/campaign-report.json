@@ -1,0 +1,331 @@
+{
+  "schema_version": "avila.core/campaign-report/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "status": "evaluated",
+  "compiled_snapshot_sha256": "sha256:4a1bd2b8a49532f2e714f5318724b63e41fec7fead3594322182d24c1bad16c3",
+  "claims_sha256": "sha256:b51f60207370759ef57266004995006cf955d40e176a7a6ffc693bf85e70d801",
+  "admissions": [
+    {
+      "evidence_id": "input:base-model",
+      "source": {
+        "source": "contract_input",
+        "input_id": "base-model"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:boundary-data",
+      "source": {
+        "source": "contract_input",
+        "input_id": "boundary-data"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:ceiling-library",
+      "source": {
+        "source": "contract_input",
+        "input_id": "ceiling-library"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:coil-data",
+      "source": {
+        "source": "contract_input",
+        "input_id": "coil-data"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:field-kernel",
+      "source": {
+        "source": "contract_input",
+        "input_id": "field-kernel"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:partition-model",
+      "source": {
+        "source": "contract_input",
+        "input_id": "partition-model"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:partition-script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "partition-script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "fault-magnetic-reduction",
+      "source": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "magnetic-reduction"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "fault-force-reduction",
+      "source": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "force-reduction"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "fault-peak-force",
+      "source": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "peak-force-ratio"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "fault-trajectory-overshoot",
+      "source": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "trajectory-overshoot"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "fault-resolution",
+      "source": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "resolution-difference"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "fault-group-spread",
+      "source": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "fault-group-spread"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "fault-partition-validity",
+      "source": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "partition-validity"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "fault-interpretation",
+      "source": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "interpretation"
+      },
+      "state": "admitted"
+    }
+  ],
+  "verdicts": [
+    {
+      "requirement_id": "FAULT-R1-MAGNETIC",
+      "statement": "The fine-grid candidate reduces worst single-circuit-loss magnetic-shape departure by at least 1.25 times relative to the type-segregated control.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "magnetic-reduction"
+      },
+      "evidence_ids": [
+        "fault-magnetic-reduction"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.ge.within",
+        "canonical_unit": "1",
+        "limit_canonical": "5/4",
+        "nominal_canonical": "340946335209/250000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4a1bd2b8a49532f2e714f5318724b63e41fec7fead3594322182d24c1bad16c3",
+        "claims_sha256": "sha256:b51f60207370759ef57266004995006cf955d40e176a7a6ffc693bf85e70d801"
+      }
+    },
+    {
+      "requirement_id": "FAULT-R2-FORCE",
+      "statement": "The fine-grid candidate reduces worst single-circuit-loss distributed-force departure by at least 1.1 times relative to the type-segregated control.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "force-reduction"
+      },
+      "evidence_ids": [
+        "fault-force-reduction"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.ge.within",
+        "canonical_unit": "1",
+        "limit_canonical": "11/10",
+        "nominal_canonical": "561296792391/500000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4a1bd2b8a49532f2e714f5318724b63e41fec7fead3594322182d24c1bad16c3",
+        "claims_sha256": "sha256:b51f60207370759ef57266004995006cf955d40e176a7a6ffc693bf85e70d801"
+      }
+    },
+    {
+      "requirement_id": "FAULT-R3-PEAK-FORCE",
+      "statement": "No sampled partial-loss state exceeds the nominal peak local inter-coil force density.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "peak-force-ratio"
+      },
+      "evidence_ids": [
+        "fault-peak-force"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1",
+        "nominal_canonical": "1",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4a1bd2b8a49532f2e714f5318724b63e41fec7fead3594322182d24c1bad16c3",
+        "claims_sha256": "sha256:b51f60207370759ef57266004995006cf955d40e176a7a6ffc693bf85e70d801"
+      }
+    },
+    {
+      "requirement_id": "FAULT-R4-TRAJECTORY",
+      "statement": "The sampled partial-loss path has no magnetic or force-departure overshoot greater than one percent beyond its complete-loss endpoint.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "trajectory-overshoot"
+      },
+      "evidence_ids": [
+        "fault-trajectory-overshoot"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "101/100",
+        "nominal_canonical": "1",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4a1bd2b8a49532f2e714f5318724b63e41fec7fead3594322182d24c1bad16c3",
+        "claims_sha256": "sha256:b51f60207370759ef57266004995006cf955d40e176a7a6ffc693bf85e70d801"
+      }
+    },
+    {
+      "requirement_id": "FAULT-R5-RESOLUTION",
+      "statement": "The worse of the magnetic and force reduction-factor changes is no more than two percent between reference and fine meshes.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "resolution-difference"
+      },
+      "evidence_ids": [
+        "fault-resolution"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/50",
+        "nominal_canonical": "57095399/50000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4a1bd2b8a49532f2e714f5318724b63e41fec7fead3594322182d24c1bad16c3",
+        "claims_sha256": "sha256:b51f60207370759ef57266004995006cf955d40e176a7a6ffc693bf85e70d801"
+      }
+    },
+    {
+      "requirement_id": "FAULT-R6-BALANCE",
+      "statement": "Symmetry-related candidate circuits have no more than one-billionth relative spread in fine-grid magnetic or force departure.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "fault-group-spread"
+      },
+      "evidence_ids": [
+        "fault-group-spread"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/1000000000",
+        "nominal_canonical": "0",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4a1bd2b8a49532f2e714f5318724b63e41fec7fead3594322182d24c1bad16c3",
+        "claims_sha256": "sha256:b51f60207370759ef57266004995006cf955d40e176a7a6ffc693bf85e70d801"
+      }
+    },
+    {
+      "requirement_id": "FAULT-R7-PARTITION",
+      "statement": "The selected architecture partitions all 18 physical coils exactly once and places two copies of every coil type in each circuit.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "fault-partition",
+        "output_slot": "partition-validity"
+      },
+      "evidence_ids": [
+        "fault-partition-validity"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "categorical.equals.match",
+        "numbers_present": false,
+        "observed_category": "valid",
+        "accepted_categories": [
+          "valid"
+        ]
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4a1bd2b8a49532f2e714f5318724b63e41fec7fead3594322182d24c1bad16c3",
+        "claims_sha256": "sha256:b51f60207370759ef57266004995006cf955d40e176a7a6ffc693bf85e70d801"
+      }
+    }
+  ],
+  "campaign_sha256": "sha256:5456ff7078348ab395e4f6cb89c737574d5f0715f5f3a2ae5698c3fa9b2fdfcd",
+  "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
+}

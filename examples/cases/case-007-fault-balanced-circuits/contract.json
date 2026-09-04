@@ -1,0 +1,108 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "case-007.fault-balanced-circuit-partition",
+  "revision": 1,
+  "status": "draft",
+  "question": "Does an exhaustive balanced partition of the 18 public NCSX coils into three equal winding circuits reduce both worst single-circuit-loss magnetic-shape departure and distributed-force departure relative to a type-segregated three-circuit control, without a force overshoot or numerical-instability failure?",
+  "assumptions": [
+    "This is a new-design winding-partition screen on public NCSX geometry, not a reconstruction or retrofit recommendation for the historical NCSX electrical system.",
+    "Each candidate circuit contains two copies of each of the three coil types; type-dependent turn count realizes the declared nominal ampere-turns under a common series current.",
+    "The declared fault endpoint sets one complete circuit current to zero while the other two remain nominal. Twenty-one proportional intermediate states audit the path but do not solve an electrical or thermal transient.",
+    "Magnetic departure is the RMS surface-normal field left after removing the best common-current scaling. Force departure is the length-weighted RMS change from the corresponding common-current-squared distributed-force pattern.",
+    "The comparator places all six symmetry copies of one coil type in each circuit. It is a conceptual equal-count control, not a claim about historical NCSX wiring or an industry standard.",
+    "The reference mesh selects the candidate exhaustively; the fine mesh checks the frozen candidate without reselection.",
+    "Thresholds were fixed during interactive reference-grid exploration rather than preregistered before every reference result was observed, so this is exploratory evidence.",
+    "Passing justifies a coupled circuit, quench, voltage, thermal, and structural feasibility model. It does not establish a practical circuit, safe plasma survival, novelty, patentability, or commercial value."
+  ],
+  "execution_policy": { "permit_nominal_basis": true },
+  "inputs": [
+    { "input_id": "partition-script", "role": { "id": "fault-partition.checker-script", "major": 1 }, "media_type": "text/x-python", "claim_model": { "model": "unquantified" } },
+    { "input_id": "ceiling-library", "role": { "id": "fault-partition.ceiling-library", "major": 1 }, "media_type": "text/x-python", "claim_model": { "model": "unquantified" } },
+    { "input_id": "field-kernel", "role": { "id": "fault-partition.field-kernel", "major": 1 }, "media_type": "text/x-python", "claim_model": { "model": "unquantified" } },
+    { "input_id": "coil-data", "role": { "id": "fault-partition.ncsx-coils", "major": 1 }, "media_type": "text/csv", "claim_model": { "model": "unquantified" } },
+    { "input_id": "boundary-data", "role": { "id": "fault-partition.ncsx-boundary", "major": 1 }, "media_type": "text/plain", "claim_model": { "model": "unquantified" } },
+    { "input_id": "base-model", "role": { "id": "fault-partition.base-model", "major": 1 }, "media_type": "application/vnd.avila.passive-ceiling-model+json", "claim_model": { "model": "unquantified" } },
+    { "input_id": "partition-model", "role": { "id": "fault-partition.model", "major": 1 }, "media_type": "application/vnd.avila.ncsx-fault-partition-model+json", "claim_model": { "model": "unquantified" } }
+  ],
+  "workflow": [
+    {
+      "step_id": "fault-partition",
+      "capability_type": { "id": "magnetic-compliance.ncsx-fault-partition", "major": 1 },
+      "bindings": [
+        { "input_slot": "partition-script", "source": { "source": "contract_input", "input_id": "partition-script" } },
+        { "input_slot": "ceiling-library", "source": { "source": "contract_input", "input_id": "ceiling-library" } },
+        { "input_slot": "field-kernel", "source": { "source": "contract_input", "input_id": "field-kernel" } },
+        { "input_slot": "coil-data", "source": { "source": "contract_input", "input_id": "coil-data" } },
+        { "input_slot": "boundary-data", "source": { "source": "contract_input", "input_id": "boundary-data" } },
+        { "input_slot": "base-model", "source": { "source": "contract_input", "input_id": "base-model" } },
+        { "input_slot": "partition-model", "source": { "source": "contract_input", "input_id": "partition-model" } }
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "FAULT-R1-MAGNETIC",
+      "statement": "The fine-grid candidate reduces worst single-circuit-loss magnetic-shape departure by at least 1.25 times relative to the type-segregated control.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.fault-partition", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "fault-partition", "output_slot": "magnetic-reduction" },
+      "comparison": "greater_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1.25", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "FAULT-R2-FORCE",
+      "statement": "The fine-grid candidate reduces worst single-circuit-loss distributed-force departure by at least 1.1 times relative to the type-segregated control.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.fault-partition", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "fault-partition", "output_slot": "force-reduction" },
+      "comparison": "greater_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1.1", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "FAULT-R3-PEAK-FORCE",
+      "statement": "No sampled partial-loss state exceeds the nominal peak local inter-coil force density.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.fault-partition", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "fault-partition", "output_slot": "peak-force-ratio" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "FAULT-R4-TRAJECTORY",
+      "statement": "The sampled partial-loss path has no magnetic or force-departure overshoot greater than one percent beyond its complete-loss endpoint.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.fault-partition", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "fault-partition", "output_slot": "trajectory-overshoot" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1.01", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "FAULT-R5-RESOLUTION",
+      "statement": "The worse of the magnetic and force reduction-factor changes is no more than two percent between reference and fine meshes.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.fault-partition", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "fault-partition", "output_slot": "resolution-difference" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.02", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "FAULT-R6-BALANCE",
+      "statement": "Symmetry-related candidate circuits have no more than one-billionth relative spread in fine-grid magnetic or force departure.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.fault-partition", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "fault-partition", "output_slot": "fault-group-spread" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.000000001", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    }
+  ],
+  "categorical_requirements": [
+    {
+      "requirement_id": "FAULT-R7-PARTITION",
+      "statement": "The selected architecture partitions all 18 physical coils exactly once and places two copies of every coil type in each circuit.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.fault-partition", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "fault-partition", "output_slot": "partition-validity" },
+      "predicate": { "operator": "equals", "value": "valid" }
+    }
+  ]
+}

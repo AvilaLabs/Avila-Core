@@ -1,0 +1,212 @@
+{
+  "claims": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-fault-partition-result+json",
+        "sha256": "sha256:a2fa9e2f21b021aa3e5db4a4d3b77bf7aa10a19c69e9a091c1c34d42f276d226"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "1.363785340836"
+        }
+      },
+      "claim_id": "fault-magnetic-reduction",
+      "output_slot": "magnetic-reduction",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "fault-partition"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-fault-partition-result+json",
+        "sha256": "sha256:a2fa9e2f21b021aa3e5db4a4d3b77bf7aa10a19c69e9a091c1c34d42f276d226"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "1.122593584782"
+        }
+      },
+      "claim_id": "fault-force-reduction",
+      "output_slot": "force-reduction",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "fault-partition"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-fault-partition-result+json",
+        "sha256": "sha256:a2fa9e2f21b021aa3e5db4a4d3b77bf7aa10a19c69e9a091c1c34d42f276d226"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "1"
+        }
+      },
+      "claim_id": "fault-peak-force",
+      "output_slot": "peak-force-ratio",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "fault-partition"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-fault-partition-result+json",
+        "sha256": "sha256:a2fa9e2f21b021aa3e5db4a4d3b77bf7aa10a19c69e9a091c1c34d42f276d226"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "1"
+        }
+      },
+      "claim_id": "fault-trajectory-overshoot",
+      "output_slot": "trajectory-overshoot",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "fault-partition"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-fault-partition-result+json",
+        "sha256": "sha256:a2fa9e2f21b021aa3e5db4a4d3b77bf7aa10a19c69e9a091c1c34d42f276d226"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.00114190798"
+        }
+      },
+      "claim_id": "fault-resolution",
+      "output_slot": "resolution-difference",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "fault-partition"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-fault-partition-result+json",
+        "sha256": "sha256:a2fa9e2f21b021aa3e5db4a4d3b77bf7aa10a19c69e9a091c1c34d42f276d226"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0"
+        }
+      },
+      "claim_id": "fault-group-spread",
+      "output_slot": "fault-group-spread",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "fault-partition"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-fault-partition-result+json",
+        "sha256": "sha256:a2fa9e2f21b021aa3e5db4a4d3b77bf7aa10a19c69e9a091c1c34d42f276d226"
+      },
+      "claim": {
+        "model": "unquantified",
+        "value": "valid"
+      },
+      "claim_id": "fault-partition-validity",
+      "output_slot": "partition-validity",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "fault-partition"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-fault-partition-result+json",
+        "sha256": "sha256:a2fa9e2f21b021aa3e5db4a4d3b77bf7aa10a19c69e9a091c1c34d42f276d226"
+      },
+      "claim": {
+        "model": "unquantified",
+        "value": "candidate-justified"
+      },
+      "claim_id": "fault-interpretation",
+      "output_slot": "interpretation",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "fault-partition"
+    }
+  ],
+  "compiled_snapshot_sha256": "sha256:4a1bd2b8a49532f2e714f5318724b63e41fec7fead3594322182d24c1bad16c3",
+  "inputs": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.passive-ceiling-model+json",
+        "sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62"
+      },
+      "input_id": "base-model"
+    },
+    {
+      "artifact": {
+        "media_type": "text/plain",
+        "sha256": "sha256:32b5609d02643d05b30c353ba5ab0a9b3ef6c486a8122f141a3c14e01748c956"
+      },
+      "input_id": "boundary-data"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:5e804c32b031aa2f31761cadbd8a65dc6ecbedd7d7109c9b7e07a182624e4d21"
+      },
+      "input_id": "ceiling-library"
+    },
+    {
+      "artifact": {
+        "media_type": "text/csv",
+        "sha256": "sha256:2b857ca137184d0f4b5e7fa271c6cf946cf7fdfa127a19ec302d4f9731db57a7"
+      },
+      "input_id": "coil-data"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3"
+      },
+      "input_id": "field-kernel"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-fault-partition-model+json",
+        "sha256": "sha256:085dd1bf78b83e35aff4964145274fa519e4258529b07e36cdd4d48d2502ebc9"
+      },
+      "input_id": "partition-model"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:0fa70cf3506aff9ec96d9a6289fff5862df8a1ac79a507c422111d72704033eb"
+      },
+      "input_id": "partition-script"
+    }
+  ],
+  "schema_version": "avila.core/evidence-claims/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft"
+}

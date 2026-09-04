@@ -32,6 +32,11 @@ integrations, safety analyses, or evidence of compliance.
   CASE-005 with a field-preserving Fourier near-nullspace loop. It finds a
   small valid improvement, catches coarse-grid overfitting, and still fails
   the fixed reduction target, so that local candidate family stops.
+- `cases/case-007-fault-balanced-circuits/` switches mechanisms and treats
+  winding-circuit assignment as a fault-design variable. Its first
+  magnetic-only proposal fails the force gate; an exhaustive minimax repair
+  finds a symmetry-related interleaving that passes seven exploratory gates
+  and justifies—but does not perform—a coupled quench/circuit study.
 
 The dose limit, unit factors, parameter domains, and every capability
 description are hypothetical. They must never be used for engineering or

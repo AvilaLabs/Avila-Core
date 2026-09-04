@@ -535,7 +535,10 @@ fn check_workspace_file(
         None => (None, IntegrityCheckState::Missing),
     };
     match state {
-        IntegrityCheckState::Verified => {}
+        // A workspace file is always re-hashed from the copy the runner just
+        // staged or produced; the operator hash cache never applies here, so
+        // this state is unreachable in practice but must still be handled.
+        IntegrityCheckState::Verified | IntegrityCheckState::VerifiedCached => {}
         IntegrityCheckState::Mismatch => issues.push(format!(
             "{role} `{workspace_path}` no longer matches the receipt digest"
         )),

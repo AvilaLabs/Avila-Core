@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
+use crate::hash_cache::{FileStamp, HashCache};
 use crate::sha256_hex;
 
 pub const CASE_PACKAGE_SCHEMA_VERSION: &str = "avila.core/case-package/v0.1-draft";
@@ -150,6 +151,13 @@ pub enum PackageIntegrityStatus {
 #[serde(rename_all = "snake_case")]
 pub enum IntegrityCheckState {
     Verified,
+    /// The digest was not recomputed from bytes: an operator-supplied
+    /// `--hash-cache` had a matching path, size, mtime, and (where the
+    /// platform exposes them) device and inode for this artifact, and the
+    /// recorded digest is used instead. Still compared to the manifest's
+    /// bound identity exactly as `Verified` would be. See
+    /// `crate::hash_cache` for the trust this state accepts.
+    VerifiedCached,
     NotChecked,
     Missing,
     Mismatch,
@@ -234,13 +242,27 @@ pub enum PackageError {
     },
 }
 
+/// An operator-supplied verified-hash cache and the timestamp to record
+/// against any entry this call adds or refreshes. Passing `None` re-hashes
+/// every supplied artifact from bytes, exactly as before this cache existed.
+pub struct HashCacheContext<'a> {
+    pub cache: &'a mut HashCache,
+    pub verified_at: &'a str,
+}
+
 /// Verify all package documents and every external artifact whose named root
 /// is supplied. An omitted external root is reported as `not_checked`; a root
 /// that is supplied but contains a missing or different file fails integrity.
+///
+/// `hash_cache` is consulted only for artifacts resolved under a supplied
+/// `--source-root`; package documents and any artifact that resolves inside
+/// `package_root` itself are always re-hashed from bytes. See
+/// `crate::hash_cache` for exactly what a cache hit trusts.
 pub fn verify_case_package(
     manifest_bytes: &[u8],
     package_root: &Path,
     source_roots: &BTreeMap<String, PathBuf>,
+    mut hash_cache: Option<HashCacheContext<'_>>,
 ) -> Result<VerifiedCasePackage, PackageError> {
     let manifest: CasePackageManifest = serde_json::from_slice(manifest_bytes)?;
     validate_manifest(&manifest)?;
@@ -282,19 +304,72 @@ pub fn verify_case_package(
         });
     }
 
-    // Artifacts under supplied roots are hashed in parallel: the bound data
-    // releases run to hundreds of megabytes, and every run re-hashes them.
-    let checks: Vec<Result<(Option<String>, IntegrityCheckState), PackageError>> =
+    // Resolve every artifact's confined path first. This is cheap (no bytes
+    // read) and lets a cache hit skip hashing entirely rather than only
+    // skipping the comparison. A path that resolves inside the package
+    // directory itself is never cache-eligible, whatever root named it.
+    let mut resolved_paths: Vec<Option<PathBuf>> = Vec::with_capacity(manifest.artifacts.len());
+    for artifact in &manifest.artifacts {
+        let path = match canonical_source_roots.get(&artifact.source_root) {
+            Some(root) => resolve_confined(root, &artifact.path)?,
+            None => None,
+        };
+        resolved_paths.push(path);
+    }
+
+    // A hit reuses the recorded digest without reading the file; a miss (or
+    // no cache at all) is hashed. Misses are hashed in parallel: the bound
+    // data releases run to hundreds of megabytes, and a cold or invalidated
+    // cache still re-hashes every one of them.
+    let mut results: Vec<Option<(Option<String>, IntegrityCheckState)>> =
+        Vec::with_capacity(manifest.artifacts.len());
+    let mut pending: Vec<(usize, PathBuf)> = Vec::new();
+    let mut pending_stamps: BTreeMap<usize, (String, FileStamp)> = BTreeMap::new();
+    for (index, path) in resolved_paths.into_iter().enumerate() {
+        let Some(path) = path else {
+            let state =
+                if canonical_source_roots.contains_key(&manifest.artifacts[index].source_root) {
+                    IntegrityCheckState::Missing
+                } else {
+                    IntegrityCheckState::NotChecked
+                };
+            results.push(Some((None, state)));
+            continue;
+        };
+        let eligible = !path.starts_with(&package_root);
+        if eligible && let Some(context) = hash_cache.as_ref() {
+            let metadata = fs::metadata(&path).map_err(|source| PackageError::Io {
+                path: path.display().to_string(),
+                source,
+            })?;
+            let stamp = FileStamp::read(&metadata).map_err(|source| PackageError::Io {
+                path: path.display().to_string(),
+                source,
+            })?;
+            let key = path.to_string_lossy().into_owned();
+            if let Some(cached_sha256) = context.cache.hit(&key, &stamp) {
+                let expected = &manifest.artifacts[index].sha256;
+                let state = if cached_sha256 == expected {
+                    IntegrityCheckState::VerifiedCached
+                } else {
+                    IntegrityCheckState::Mismatch
+                };
+                results.push(Some((Some(cached_sha256.to_string()), state)));
+                continue;
+            }
+            pending_stamps.insert(index, (key, stamp));
+        }
+        pending.push((index, path));
+        results.push(None);
+    }
+
+    let hashed: Vec<Result<(Option<String>, IntegrityCheckState), PackageError>> =
         std::thread::scope(|scope| {
-            let handles: Vec<_> = manifest
-                .artifacts
+            let handles: Vec<_> = pending
                 .iter()
-                .map(|artifact| {
-                    let root = canonical_source_roots.get(&artifact.source_root);
-                    scope.spawn(move || match root {
-                        Some(root) => check_file(root, &artifact.path, &artifact.sha256),
-                        None => Ok((None, IntegrityCheckState::NotChecked)),
-                    })
+                .map(|(index, path)| {
+                    let expected = manifest.artifacts[*index].sha256.as_str();
+                    scope.spawn(move || hash_and_compare(path, expected))
                 })
                 .collect();
             handles
@@ -308,9 +383,23 @@ pub fn verify_case_package(
                 })
                 .collect()
         });
+    for ((index, _path), outcome) in pending.iter().zip(hashed) {
+        let (actual_sha256, state) = outcome?;
+        if let (Some(sha256), Some(context)) = (&actual_sha256, hash_cache.as_mut())
+            && let Some((key, stamp)) = pending_stamps.remove(index)
+        {
+            let verified_at = context.verified_at.to_string();
+            context
+                .cache
+                .record(key, stamp, sha256.clone(), verified_at);
+        }
+        results[*index] = Some((actual_sha256, state));
+    }
+
     let mut artifacts = Vec::with_capacity(manifest.artifacts.len());
-    for (artifact, check) in manifest.artifacts.iter().zip(checks) {
-        let (actual_sha256, state) = check?;
+    for (artifact, check) in manifest.artifacts.iter().zip(results) {
+        let (actual_sha256, state) =
+            check.expect("every artifact index is resolved exactly once above");
         artifacts.push(ArtifactCheck {
             artifact_id: artifact.artifact_id.clone(),
             evidence_ids: artifact.evidence_ids.clone(),
@@ -699,16 +788,10 @@ fn resolve_confined(root: &Path, relative: &str) -> Result<Option<PathBuf>, Pack
     Ok(Some(canonical))
 }
 
-/// Hash a regular file confined beneath `root` in fixed-size chunks. Returns
-/// the prefixed digest and byte length, or `None` when the file is absent.
-pub(crate) fn hash_confined_file(
-    root: &Path,
-    relative: &str,
-) -> Result<Option<(String, u64)>, PackageError> {
-    let Some(path) = resolve_confined(root, relative)? else {
-        return Ok(None);
-    };
-    let mut file = fs::File::open(&path).map_err(|source| PackageError::Io {
+/// Hash an already-resolved regular file in fixed-size chunks. Returns the
+/// prefixed digest and byte length.
+fn hash_file(path: &Path) -> Result<(String, u64), PackageError> {
+    let mut file = fs::File::open(path).map_err(|source| PackageError::Io {
         path: path.display().to_string(),
         source,
     })?;
@@ -726,17 +809,28 @@ pub(crate) fn hash_confined_file(
         length += count as u64;
         hasher.update(&buffer[..count]);
     }
-    Ok(Some((format!("sha256:{:x}", hasher.finalize()), length)))
+    Ok((format!("sha256:{:x}", hasher.finalize()), length))
 }
 
-fn check_file(
+/// Hash a regular file confined beneath `root`. Returns the prefixed digest
+/// and byte length, or `None` when the file is absent.
+pub(crate) fn hash_confined_file(
     root: &Path,
     relative: &str,
+) -> Result<Option<(String, u64)>, PackageError> {
+    let Some(path) = resolve_confined(root, relative)? else {
+        return Ok(None);
+    };
+    hash_file(&path).map(Some)
+}
+
+/// Hash an already-resolved file and compare it with the manifest's bound
+/// identity. The caller has already confirmed the file exists.
+fn hash_and_compare(
+    path: &Path,
     expected: &str,
 ) -> Result<(Option<String>, IntegrityCheckState), PackageError> {
-    let Some((actual, _)) = hash_confined_file(root, relative)? else {
-        return Ok((None, IntegrityCheckState::Missing));
-    };
+    let (actual, _length) = hash_file(path)?;
     let state = if actual == expected {
         IntegrityCheckState::Verified
     } else {
@@ -831,7 +925,7 @@ mod tests {
         let root = TestDir::new();
         let manifest = fixture(&root.0);
 
-        let partial = verify_case_package(&manifest, &root.0, &BTreeMap::new()).unwrap();
+        let partial = verify_case_package(&manifest, &root.0, &BTreeMap::new(), None).unwrap();
         assert_eq!(partial.integrity.status, PackageIntegrityStatus::Partial);
         assert_eq!(
             partial.integrity.artifacts[0].state,
@@ -839,7 +933,7 @@ mod tests {
         );
 
         let sources = BTreeMap::from([("source".into(), root.0.join("source"))]);
-        let complete = verify_case_package(&manifest, &root.0, &sources).unwrap();
+        let complete = verify_case_package(&manifest, &root.0, &sources, None).unwrap();
         assert_eq!(complete.integrity.status, PackageIntegrityStatus::Complete);
         assert_eq!(
             complete.integrity.artifacts[0].state,
@@ -847,7 +941,7 @@ mod tests {
         );
 
         fs::write(root.0.join("source/artifact.bin"), b"different").unwrap();
-        let failed = verify_case_package(&manifest, &root.0, &sources).unwrap();
+        let failed = verify_case_package(&manifest, &root.0, &sources, None).unwrap();
         assert_eq!(failed.integrity.status, PackageIntegrityStatus::Failed);
         assert_eq!(
             failed.integrity.artifacts[0].state,
@@ -874,7 +968,7 @@ mod tests {
             environment: Vec::new(),
         });
         let bytes = serde_json::to_vec(&manifest).unwrap();
-        let error = verify_case_package(&bytes, &root.0, &BTreeMap::new()).unwrap_err();
+        let error = verify_case_package(&bytes, &root.0, &BTreeMap::new(), None).unwrap_err();
         assert!(error.to_string().contains("does not declare"), "{error}");
 
         manifest.capabilities.push(PackageCapability {
@@ -885,7 +979,7 @@ mod tests {
             executable_sha256: digest(b"stub"),
         });
         let bytes = serde_json::to_vec(&manifest).unwrap();
-        let error = verify_case_package(&bytes, &root.0, &BTreeMap::new()).unwrap_err();
+        let error = verify_case_package(&bytes, &root.0, &BTreeMap::new(), None).unwrap_err();
         assert!(
             error
                 .to_string()
@@ -897,7 +991,7 @@ mod tests {
             .evidence_ids
             .push("step-result".into());
         let bytes = serde_json::to_vec(&manifest).unwrap();
-        let package = verify_case_package(&bytes, &root.0, &BTreeMap::new()).unwrap();
+        let package = verify_case_package(&bytes, &root.0, &BTreeMap::new(), None).unwrap();
         assert_eq!(package.manifest.executions.len(), 1);
 
         manifest.documents.push(PackageDocument {
@@ -908,7 +1002,7 @@ mod tests {
             step_id: Some("other".into()),
         });
         let bytes = serde_json::to_vec(&manifest).unwrap();
-        let error = verify_case_package(&bytes, &root.0, &BTreeMap::new()).unwrap_err();
+        let error = verify_case_package(&bytes, &root.0, &BTreeMap::new(), None).unwrap_err();
         assert!(
             error.to_string().contains("not declared for execution"),
             "{error}"
@@ -922,8 +1016,339 @@ mod tests {
         manifest.documents[0].path = "../contract.json".into();
         let bytes = serde_json::to_vec(&manifest).unwrap();
         assert!(matches!(
-            verify_case_package(&bytes, &root.0, &BTreeMap::new()),
+            verify_case_package(&bytes, &root.0, &BTreeMap::new(), None),
             Err(PackageError::InvalidManifest(_))
         ));
+    }
+
+    // --- S-038: opt-in verified-hash cache -----------------------------
+
+    /// A fixture whose "source" root is genuinely external to the package
+    /// directory (unlike `fixture()`'s nested `source/`), so its artifact is
+    /// cache-eligible.
+    fn external_fixture(package_root: &Path, external_source: &Path) -> Vec<u8> {
+        for name in ["contract.json", "registry.json", "claims.json"] {
+            fs::write(package_root.join(name), name.as_bytes()).unwrap();
+        }
+        fs::write(external_source.join("artifact.bin"), b"artifact").unwrap();
+        serde_json::to_vec(&CasePackageManifest {
+            schema_version: CASE_PACKAGE_SCHEMA_VERSION.into(),
+            case_id: "CASE-TEST".into(),
+            title: "hash cache fixture".into(),
+            documents: ["contract", "registry", "claims"]
+                .into_iter()
+                .map(|role| PackageDocument {
+                    document_id: role.into(),
+                    role: role.into(),
+                    path: format!("{role}.json"),
+                    sha256: digest(format!("{role}.json").as_bytes()),
+                    step_id: None,
+                })
+                .collect(),
+            artifacts: vec![PackageArtifact {
+                artifact_id: "artifact".into(),
+                evidence_ids: vec!["input:artifact".into()],
+                source_root: "external".into(),
+                path: "artifact.bin".into(),
+                sha256: digest(b"artifact"),
+            }],
+            capabilities: Vec::new(),
+            executions: Vec::new(),
+            free_inputs: Vec::new(),
+            coverage: None,
+            limitations: vec!["fixture only".into()],
+        })
+        .unwrap()
+    }
+
+    fn context(cache: &mut HashCache) -> HashCacheContext<'_> {
+        HashCacheContext {
+            cache,
+            verified_at: "2026-09-04T00:00:00Z",
+        }
+    }
+
+    #[test]
+    fn cold_run_populates_and_warm_run_hits_the_cache() {
+        let root = TestDir::new();
+        let external = TestDir::new();
+        let manifest = external_fixture(&root.0, &external.0);
+        let roots = BTreeMap::from([("external".to_string(), external.0.clone())]);
+
+        let mut cache = HashCache::new();
+        let cold =
+            verify_case_package(&manifest, &root.0, &roots, Some(context(&mut cache))).unwrap();
+        assert_eq!(
+            cold.integrity.artifacts[0].state,
+            IntegrityCheckState::Verified,
+            "a cold cache must not fabricate a hit"
+        );
+        assert_eq!(
+            cache.entries.len(),
+            1,
+            "the cold run must populate the cache"
+        );
+
+        let warm =
+            verify_case_package(&manifest, &root.0, &roots, Some(context(&mut cache))).unwrap();
+        assert_eq!(
+            warm.integrity.artifacts[0].state,
+            IntegrityCheckState::VerifiedCached,
+            "a warm hit must be reported as the distinct cached state, never plain verified"
+        );
+        assert_eq!(
+            warm.integrity.artifacts[0].actual_sha256, cold.integrity.artifacts[0].actual_sha256,
+            "the cached digest must be the one the cold run actually measured"
+        );
+    }
+
+    #[test]
+    fn a_size_change_misses_the_cache() {
+        let root = TestDir::new();
+        let external = TestDir::new();
+        let mut manifest: CasePackageManifest =
+            serde_json::from_slice(&external_fixture(&root.0, &external.0)).unwrap();
+        let roots = BTreeMap::from([("external".to_string(), external.0.clone())]);
+        let mut cache = HashCache::new();
+        verify_case_package(
+            &serde_json::to_vec(&manifest).unwrap(),
+            &root.0,
+            &roots,
+            Some(context(&mut cache)),
+        )
+        .unwrap();
+
+        // Grow the file (same mtime is not guaranteed here; the point is
+        // that a size change alone is sufficient to miss).
+        fs::write(external.0.join("artifact.bin"), b"artifact-with-more-bytes").unwrap();
+        manifest.artifacts[0].sha256 = digest(b"artifact-with-more-bytes");
+        let bytes = serde_json::to_vec(&manifest).unwrap();
+        let rehashed =
+            verify_case_package(&bytes, &root.0, &roots, Some(context(&mut cache))).unwrap();
+        assert_eq!(
+            rehashed.integrity.artifacts[0].state,
+            IntegrityCheckState::Verified,
+            "a changed size must miss the cache and re-hash from bytes"
+        );
+    }
+
+    #[test]
+    fn an_mtime_change_misses_the_cache() {
+        let root = TestDir::new();
+        let external = TestDir::new();
+        let manifest = external_fixture(&root.0, &external.0);
+        let roots = BTreeMap::from([("external".to_string(), external.0.clone())]);
+        let mut cache = HashCache::new();
+        verify_case_package(&manifest, &root.0, &roots, Some(context(&mut cache))).unwrap();
+
+        // Same bytes, but the modification time is moved forward explicitly
+        // (not by sleeping, which a coarse filesystem clock could hide).
+        let path = external.0.join("artifact.bin");
+        let bumped =
+            fs::metadata(&path).unwrap().modified().unwrap() + std::time::Duration::from_secs(3600);
+        fs::File::options()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_modified(bumped)
+            .unwrap();
+        let rewritten =
+            verify_case_package(&manifest, &root.0, &roots, Some(context(&mut cache))).unwrap();
+        assert_eq!(
+            rewritten.integrity.artifacts[0].state,
+            IntegrityCheckState::Verified,
+            "a changed mtime must miss the cache even though the bytes are unchanged"
+        );
+    }
+
+    /// The cache's documented limitation: a cache hit trusts the recorded
+    /// stamp, not the bytes. An actor who can rewrite a file while
+    /// preserving its size and modification time is not caught by this
+    /// cache; that is exactly the trust statement in SECURITY.md and
+    /// `crate::hash_cache`, demonstrated rather than hidden.
+    #[test]
+    fn adversarial_same_size_and_mtime_with_different_bytes_is_accepted_from_cache() {
+        let root = TestDir::new();
+        let external = TestDir::new();
+        let mut manifest: CasePackageManifest =
+            serde_json::from_slice(&external_fixture(&root.0, &external.0)).unwrap();
+        let roots = BTreeMap::from([("external".to_string(), external.0.clone())]);
+        let mut cache = HashCache::new();
+        verify_case_package(
+            &serde_json::to_vec(&manifest).unwrap(),
+            &root.0,
+            &roots,
+            Some(context(&mut cache)),
+        )
+        .unwrap();
+
+        let path = external.0.join("artifact.bin");
+        let original_modified = fs::metadata(&path).unwrap().modified().unwrap();
+        // Same length as b"artifact" (8 bytes), different content.
+        fs::write(&path, b"ARTIFACT").unwrap();
+        fs::File::open(&path)
+            .unwrap()
+            .set_modified(original_modified)
+            .unwrap();
+        assert_eq!(fs::metadata(&path).unwrap().len(), 8);
+        assert_eq!(
+            fs::metadata(&path).unwrap().modified().unwrap(),
+            original_modified
+        );
+
+        // The manifest still names the ORIGINAL bytes' digest, exactly as an
+        // operator who trusts the cache and never re-blessed the package
+        // would leave it.
+        let bytes = serde_json::to_vec(&manifest).unwrap();
+        let accepted =
+            verify_case_package(&bytes, &root.0, &roots, Some(context(&mut cache))).unwrap();
+        assert_eq!(
+            accepted.integrity.artifacts[0].state,
+            IntegrityCheckState::VerifiedCached,
+            "documented limitation: a stamp match is accepted from cache without reading bytes"
+        );
+
+        // Without the cache, the same tampering is caught immediately.
+        manifest.artifacts[0].sha256 = digest(b"artifact"); // unchanged, still wrong for "ARTIFACT"
+        let bytes = serde_json::to_vec(&manifest).unwrap();
+        let honest = verify_case_package(&bytes, &root.0, &roots, None).unwrap();
+        assert_eq!(
+            honest.integrity.artifacts[0].state,
+            IntegrityCheckState::Mismatch,
+            "hashing from bytes must still catch what the cache could not"
+        );
+    }
+
+    #[test]
+    fn a_cache_hit_disagreeing_with_the_manifest_still_fails_closed() {
+        let root = TestDir::new();
+        let external = TestDir::new();
+        let mut manifest: CasePackageManifest =
+            serde_json::from_slice(&external_fixture(&root.0, &external.0)).unwrap();
+        let roots = BTreeMap::from([("external".to_string(), external.0.clone())]);
+        let mut cache = HashCache::new();
+        verify_case_package(
+            &serde_json::to_vec(&manifest).unwrap(),
+            &root.0,
+            &roots,
+            Some(context(&mut cache)),
+        )
+        .unwrap();
+
+        // The file and the cache are both untouched; only the manifest's
+        // bound identity now names a different digest, as it would after an
+        // edit to the manifest that was never followed by a rehash.
+        manifest.artifacts[0].sha256 = digest(b"a different expectation entirely");
+        let bytes = serde_json::to_vec(&manifest).unwrap();
+        let result =
+            verify_case_package(&bytes, &root.0, &roots, Some(context(&mut cache))).unwrap();
+        assert_eq!(
+            result.integrity.artifacts[0].state,
+            IntegrityCheckState::Mismatch,
+            "a cache hit must still be compared to the manifest's bound identity"
+        );
+        assert_eq!(result.integrity.status, PackageIntegrityStatus::Failed);
+    }
+
+    #[test]
+    fn corrupt_cache_contents_are_ignored_by_verify_case_package_itself() {
+        // verify_case_package never reads the cache file; a corrupt file on
+        // disk is entirely the caller's concern (see hash_cache::tests and
+        // the runner's CORE-X1003 finding). What matters here is that an
+        // in-memory cache with a wrong entry for this path never crashes the
+        // verifier; it is just another miss or another disagreement, both
+        // already exercised above.
+        let root = TestDir::new();
+        let external = TestDir::new();
+        let manifest = external_fixture(&root.0, &external.0);
+        let roots = BTreeMap::from([("external".to_string(), external.0.clone())]);
+        let mut cache = HashCache::new();
+        cache.record(
+            external
+                .0
+                .join("artifact.bin")
+                .to_string_lossy()
+                .into_owned(),
+            FileStamp {
+                size: 999,
+                mtime_ns: 0,
+                dev: None,
+                ino: None,
+            },
+            "sha256:0000000000000000000000000000000000000000000000000000000000000".into(),
+            "2020-01-01T00:00:00Z".into(),
+        );
+        let result =
+            verify_case_package(&manifest, &root.0, &roots, Some(context(&mut cache))).unwrap();
+        assert_eq!(
+            result.integrity.artifacts[0].state,
+            IntegrityCheckState::Verified,
+            "a stale stamp is a miss, hashed fresh, never a panic"
+        );
+    }
+
+    #[test]
+    fn package_documents_are_never_cached() {
+        let root = TestDir::new();
+        let manifest = fixture(&root.0); // "source" is nested inside the package root
+        let mut cache = HashCache::new();
+        // Seed a wrong entry for the contract document's path; if the
+        // document loop ever consulted a cache, this would corrupt its
+        // integrity check silently.
+        cache.record(
+            root.0.join("contract.json").to_string_lossy().into_owned(),
+            FileStamp {
+                size: 0,
+                mtime_ns: 0,
+                dev: None,
+                ino: None,
+            },
+            "sha256:0000000000000000000000000000000000000000000000000000000000000".into(),
+            "2020-01-01T00:00:00Z".into(),
+        );
+        let package = verify_case_package(
+            &manifest,
+            &root.0,
+            &BTreeMap::new(),
+            Some(context(&mut cache)),
+        )
+        .unwrap();
+        assert_eq!(
+            package.integrity.documents[0].state,
+            IntegrityCheckState::Verified
+        );
+    }
+
+    #[test]
+    fn artifacts_inside_the_case_directory_are_always_rehashed() {
+        // fixture()'s "source" root resolves inside the package directory,
+        // exactly like CASE-002's "case" root does for its expected/*
+        // outputs; it must never be cache-eligible even when a cache is
+        // supplied and primed with a wrong entry for it.
+        let root = TestDir::new();
+        let manifest = fixture(&root.0);
+        let sources = BTreeMap::from([("source".to_string(), root.0.join("source"))]);
+        let mut cache = HashCache::new();
+        cache.record(
+            root.0
+                .join("source/artifact.bin")
+                .to_string_lossy()
+                .into_owned(),
+            FileStamp {
+                size: 0,
+                mtime_ns: 0,
+                dev: None,
+                ino: None,
+            },
+            "sha256:0000000000000000000000000000000000000000000000000000000000000".into(),
+            "2020-01-01T00:00:00Z".into(),
+        );
+        let package =
+            verify_case_package(&manifest, &root.0, &sources, Some(context(&mut cache))).unwrap();
+        assert_eq!(
+            package.integrity.artifacts[0].state,
+            IntegrityCheckState::Verified,
+            "an in-package artifact must be rehashed, ignoring any cache entry"
+        );
     }
 }

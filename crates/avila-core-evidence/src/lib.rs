@@ -7,15 +7,20 @@
 
 #![forbid(unsafe_code)]
 
+mod hash_cache;
 mod package;
 mod receipt;
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+pub use hash_cache::{
+    FileStamp, HASH_CACHE_SCHEMA_VERSION, HashCache, HashCacheEntry, HashCacheError,
+    load_hash_cache, save_hash_cache,
+};
 pub use package::{
     ArtifactCheck, CASE_PACKAGE_SCHEMA_VERSION, CasePackageManifest, DocumentCheck,
-    ExecutionInputStaging, ExecutionOutputBinding, IntegrityCheckState,
+    ExecutionInputStaging, ExecutionOutputBinding, HashCacheContext, IntegrityCheckState,
     PACKAGE_INTEGRITY_REPORT_SCHEMA_VERSION, PackageArtifact, PackageCapability, PackageCoverage,
     PackageDocument, PackageError, PackageExecution, PackageIntegrityReport,
     PackageIntegrityStatus, PackageOmission, VerifiedCasePackage, verify_case_package,

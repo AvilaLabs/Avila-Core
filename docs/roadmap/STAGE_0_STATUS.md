@@ -66,10 +66,10 @@ external product gate.
 | Technical verdict independent of review | Implemented | Kernel, campaign, claims, schemas, CASE-000, and regressions contain no review-gating path |
 | Fixed requirements during search | Implemented for native JSON attempt lineages | CASE-008 and CASE-009 each record two attempts under one manifest and compiled snapshot; Core refuses a child if its parent record, manifest, snapshot, candidate state, or derived diff cannot be revalidated. CASE-009 additionally demonstrates exact negative margin comparison and PASS→FAIL transitions. Signed package roots remain future work. |
 | Known shortcut refusal | Exercised | An adversarial designer arm (CASE-002 campaign 3, amendment A6) confirmed refusals for out-of-envelope candidates, a wrong interpreter digest, a particle count below its domain, and coverage on a weaker basis, and obtained undeserved verdicts only by rewriting the package; the identity log and the manifest pin (S-030) now make a rewritten package a refusal or a visibly different identity | Signed receipts and manifests |
-| Autonomous search outcome | Reached once | CASE-002 campaign 3: a language-model designer found an all-PASS design 277 kg lighter than the sweep's best at its second transport and stopped by judgment; the seeded surrogate found one at its eleventh; see `RESULTS.md` | Repeat on a second domain (CASE-003) and under the manifest pin |
+| Autonomous search outcome | Reached twice | CASE-002 campaign 3: a language-model designer found an all-PASS design 277 kg lighter than the sweep's best at its second transport and stopped by judgment; the seeded surrogate found one at its eleventh. CASE-003 campaign 1, under the manifest pin: the same designer found an all-PASS spreader five times lighter than the sweep's bar at its sixth evaluation; see each case's `RESULTS.md` | A matched-arm ablation (EXP-002) that isolates Core's contribution, with a predeclared shortcut refused during a successful search |
 | Optional practicality routing | Implemented for the slice | Exact instructed dossier exercises both `request_changes` and `present_to_user`; omission leaves Core fully usable |
 | Independent verification | Open | A separately implemented verifier reproduces package identity and verdicts |
-| Performance baseline | Open | Record candidates explored, wall time, compute, retries, and convergence or exhaustion |
+| Performance baseline | Measured once, debug build (2026-09-04) | Verify-only run of CASE-003: 10–40 ms. CASE-002 with every root supplied: 0.31 s per invocation, almost all of it re-hashing ~250 MB of static nuclear and ACTINV artifacts; a fresh screen adds ~30 ms; activation staging copy plus hash 1.1–1.5 s against a 12.4 s step; transport 4–6 min per candidate at 5e5 particles. Attempt lineage: 0.36 ms per log line plus 18 ms. See the [proposal review](reviews/2026-09-04-architecture-proposal-review.md) | A release-build baseline (EXP-003) with a frozen workload and machine, cold and warm separated, machine time separated from model time |
 | Tool license and deployment feasibility | Open | Every external tool in the chosen reference chain |
 
 User interviews, partner participation, and external reviews may be useful
@@ -94,18 +94,36 @@ Before that point:
 
 ## Immediate work queue
 
-1. Sign receipts and manifests so the requester's manifest pin is no longer
-   the only anchor against a rewritten package (S-030).
-2. Diffusion synthetic acceleration for the slab S_N solver (S-031), so the
-   forward screen runs in under a second and the adjoint makes CADIS windows
-   worth their cost; then bind the solver as the shielding screen and qualify
-   it for the polyethylene families against the Monte Carlo record.
-3. Run a CASE-003 campaign under the manifest pin with the same arms as
-   CASE-002 campaign 3.
-4. Make every bounded verdict require an applicable qualification record, as
-   deferred by ADR-0008, and bind a bounded activation claim.
-5. Build an independent offline verifier for the package, compiled snapshot,
-   claims, and campaign identities.
+Order adopted 2026-09-04 (S-034) after checking the external architecture
+proposal against the code; see the
+[review](reviews/2026-09-04-architecture-proposal-review.md).
+
+1. EXP-002, the Core-feedback ablation, on CASE-003 with matched arms
+   (Core feedback, raw solver output, no iterative feedback), a predeclared
+   tempting shortcut so refusal during a successful search is exercised
+   (EXP-005 folded in), designer transcripts and model identities bound to
+   the record, and the protocol frozen and hashed before any scored trial.
+2. Strict qualification: a contract policy under which every bounded or
+   enclosure verdict requires an applicable qualification record, as deferred
+   by ADR-0008, with the legacy profile visibly marked; and candidate
+   validation at the design boundary, so a malformed free input is refused
+   with pointer-anchored findings before anything is staged.
+3. Runner integrity fixes: process-group kill on timeout, one locked write per
+   campaign-log line, an opt-in verified-hash cache for operator artifact
+   roots reported as a distinct integrity state, and extraction of rendering
+   and logging from the case runner without behaviour change.
+4. Sign receipts and manifests against a pinned trust root so the requester's
+   manifest pin is no longer the only anchor against a rewritten package
+   (S-030), then build the independent offline verifier for package,
+   compiled snapshot, claims, and campaign identities.
+5. Constellation queries over the campaign logs; a harder coupled search
+   (EXP-007) once EXP-002 shows the experiment discriminates; and a fresh
+   speed-tier attempt gated on agreement with the verified S_N solver
+   (S-031, S-033).
+
+The proposal's prepared session, transactional store, obligation graph and
+bounded scheduler are considered only after the scored EXP-002 result and a
+release-build baseline show a campaign that needs them.
 
 ## Update rule
 

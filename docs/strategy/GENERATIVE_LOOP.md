@@ -4,6 +4,11 @@
 slices that serve it are listed at the end. Read this before proposing work
 on Core, and read [DEFINITIONS.md](../DEFINITIONS.md) for the words.
 
+> Current gate state lives in the
+> [Stage 0 status ledger](../roadmap/STAGE_0_STATUS.md). The dated sections
+> below are a narrative record of what each case demonstrated and are not
+> rewritten when a gate moves.
+
 ## What Core is for, in the founder's words
 
 Core is not meant to be only a verifier of work people already do. It is

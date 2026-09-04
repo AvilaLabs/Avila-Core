@@ -1,0 +1,39 @@
+{
+  "schema_version": "avila.core/external-checker-adapter/v0.1-draft",
+  "adapter_id": "avila-labs.magnetic-compliance/ncsx-codesign-gate@1",
+  "capability_type": { "id": "magnetic-compliance.ncsx-codesign-gate", "major": 1 },
+  "input_slots": ["codesign-script", "ceiling-library", "field-kernel", "coil-data", "boundary-data", "base-model", "search-record", "codesign-model"],
+  "arguments": [
+    { "kind": "input_path", "input_slot": "codesign-script" },
+    { "kind": "input_path", "input_slot": "ceiling-library" },
+    { "kind": "input_path", "input_slot": "field-kernel" },
+    { "kind": "input_path", "input_slot": "coil-data" },
+    { "kind": "input_path", "input_slot": "boundary-data" },
+    { "kind": "input_path", "input_slot": "base-model" },
+    { "kind": "input_path", "input_slot": "search-record" },
+    { "kind": "input_path", "input_slot": "codesign-model" },
+    { "kind": "output_path", "output_id": "result" }
+  ],
+  "outputs": [
+    {
+      "output_id": "result",
+      "workspace_path": "outputs/ncsx-codesign-gate-result.json",
+      "media_type": "application/vnd.avila.ncsx-codesign-gate-result+json"
+    }
+  ],
+  "claims": [
+    { "model": "exact", "output_slot": "reduction", "output_id": "result", "pointer": "/metrics/fine_reduction_factor", "unit": "1" },
+    { "model": "exact", "output_slot": "normal-field-ratio", "output_id": "result", "pointer": "/metrics/fine_normal_field_ratio", "unit": "1" },
+    { "model": "exact", "output_slot": "field-strength-ratio", "output_id": "result", "pointer": "/metrics/fine_field_strength_ratio", "unit": "1" },
+    { "model": "exact", "output_slot": "geometry-utilization", "output_id": "result", "pointer": "/metrics/geometry_envelope_utilization", "unit": "1" },
+    { "model": "exact", "output_slot": "compliance-ratio", "output_id": "result", "pointer": "/metrics/ideal_worst_compliance_ratio", "unit": "1" },
+    { "model": "exact", "output_slot": "condition-number", "output_id": "result", "pointer": "/metrics/ideal_condition_number", "unit": "1" },
+    { "model": "exact", "output_slot": "resolution-difference", "output_id": "result", "pointer": "/metrics/resolution_relative_difference", "unit": "1" },
+    { "model": "exact", "output_slot": "derivative-difference", "output_id": "result", "pointer": "/metrics/derivative_relative_difference", "unit": "1" },
+    { "model": "categorical", "output_slot": "interpretation", "output_id": "result", "pointer": "/interpretation", "allowed_values": ["candidate-justified", "stop"] }
+  ],
+  "timeout_ms": 60000,
+  "limitations": [
+    "The checker owns the exploratory scientific calculation; Core validates declared identities, execution, extraction, evidence binding, and requirement arithmetic only."
+  ]
+}

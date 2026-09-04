@@ -87,6 +87,11 @@ Each is a new contract and hypothesis. Lowering the 1.5× target, changing the
 load basis after seeing the result, or letting a candidate alter the checker
 would turn the loop into gate gaming rather than discovery.
 
+[CASE-006](../case-006-coil-support-codesign/) subsequently tested a bounded
+version of the first route. Its field-preserving Fourier search produced only
+a 2.0% fine-grid improvement over this fixed-geometry ceiling and still
+failed the inherited target, so it does not justify a larger campaign.
+
 ## Reproduce it
 
 The two SIMSOPT inputs are bound at commit

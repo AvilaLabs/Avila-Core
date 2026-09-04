@@ -1,0 +1,228 @@
+{
+  "schema_version": "avila.core/case-package/v0.1-draft",
+  "case_id": "CASE-006",
+  "title": "NCSX field-preserving coil and passive-support co-design gate",
+  "documents": [
+    {
+      "document_id": "case-006-contract",
+      "role": "contract",
+      "path": "contract.json",
+      "sha256": "sha256:d7d177f4776366aef5ec3942832f76c04c86193b260a26ca5ea6b12d304165d7"
+    },
+    {
+      "document_id": "case-006-registry",
+      "role": "registry",
+      "path": "registry.json",
+      "sha256": "sha256:5fff5fa8c453b32fecd7c4830370241c834b55ac64572f8147d7094b7711b989"
+    },
+    {
+      "document_id": "case-006-claims",
+      "role": "claims",
+      "path": "claims.json",
+      "sha256": "sha256:6466e3941c16fc3fea60e0737619729202910c48d005ec2b31ea9ce7c1abca75"
+    },
+    {
+      "document_id": "avila-labs.magnetic-compliance/ncsx-codesign-gate@1",
+      "role": "external_checker_adapter",
+      "path": "adapter.json",
+      "sha256": "sha256:601d5c88a137a54e09cdd7dc8de19bef1e358e11797632e5a2f4932772d1cb44"
+    },
+    {
+      "document_id": "case-006-expected-campaign",
+      "role": "expected_campaign_report",
+      "path": "campaign-report.json",
+      "sha256": "sha256:d018dcc7837619647209b0bafbb5519a54e0f0d57681d27e4b3d1e831f5bcd08"
+    },
+    {
+      "document_id": "case-006-codesign-gate-receipt",
+      "role": "execution_receipt",
+      "path": "receipts/codesign-gate.json",
+      "sha256": "sha256:518acadf47429ef162a86369f51cba7df0ba18310c19ed72e2d81773ec3da8bc",
+      "step_id": "codesign-gate"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "codesign-script",
+      "evidence_ids": [
+        "input:codesign-script"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx_codesign_gate.py",
+      "sha256": "sha256:c2fe04fd88ab6e211869ab31cd66a8a4168cd47cbae0158f47ccc8802442d383"
+    },
+    {
+      "artifact_id": "ceiling-library",
+      "evidence_ids": [
+        "input:ceiling-library"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx_passive_ceiling.py",
+      "sha256": "sha256:5e804c32b031aa2f31761cadbd8a65dc6ecbedd7d7109c9b7e07a182624e4d21"
+    },
+    {
+      "artifact_id": "field-kernel",
+      "evidence_ids": [
+        "input:field-kernel"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "magnetic_compliance.py",
+      "sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3"
+    },
+    {
+      "artifact_id": "ncsx-coils",
+      "evidence_ids": [
+        "input:coil-data"
+      ],
+      "source_root": "simsopt",
+      "path": "src/simsopt/configs/NCSX.dat",
+      "sha256": "sha256:2b857ca137184d0f4b5e7fa271c6cf946cf7fdfa127a19ec302d4f9731db57a7"
+    },
+    {
+      "artifact_id": "ncsx-boundary",
+      "evidence_ids": [
+        "input:boundary-data"
+      ],
+      "source_root": "simsopt",
+      "path": "tests/test_files/input.NCSX_c09r00_halfTeslaTF",
+      "sha256": "sha256:32b5609d02643d05b30c353ba5ab0a9b3ef6c486a8122f141a3c14e01748c956"
+    },
+    {
+      "artifact_id": "base-model",
+      "evidence_ids": [
+        "input:base-model"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx-ceiling-model.json",
+      "sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62"
+    },
+    {
+      "artifact_id": "search-record",
+      "evidence_ids": [
+        "input:search-record"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx-codesign-search-record.json",
+      "sha256": "sha256:06f928a9b83ef262f07a0ea663848daa3344acae61c09623073a31d0eab6cb1b"
+    },
+    {
+      "artifact_id": "codesign-model",
+      "evidence_ids": [
+        "input:codesign-model"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx-codesign-gate-model.json",
+      "sha256": "sha256:526421e0a62dd05429ef353945b6dd594b14e22858e82c4d8be7c15447cb010c"
+    },
+    {
+      "artifact_id": "reference-result",
+      "evidence_ids": [
+        "codesign-reduction",
+        "codesign-normal-field",
+        "codesign-field-strength",
+        "codesign-geometry",
+        "codesign-compliance",
+        "codesign-condition",
+        "codesign-resolution",
+        "codesign-derivative",
+        "codesign-interpretation"
+      ],
+      "source_root": "case",
+      "path": "expected/ncsx-codesign-gate-result.json",
+      "sha256": "sha256:3defbd5ab3b45df8e03cae52d12863fcd43ee6d9e9cd7d66ef0ab56fdb154bb8"
+    }
+  ],
+  "capabilities": [
+    {
+      "capability_id": "python3-numpy",
+      "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+      "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+    }
+  ],
+  "executions": [
+    {
+      "step_id": "codesign-gate",
+      "adapter": "avila-labs.magnetic-compliance/ncsx-codesign-gate@1",
+      "capability_id": "python3-numpy",
+      "inputs": [
+        {
+          "input_slot": "codesign-script",
+          "workspace_path": "tools/ncsx_codesign_gate.py"
+        },
+        {
+          "input_slot": "ceiling-library",
+          "workspace_path": "tools/ncsx_passive_ceiling.py"
+        },
+        {
+          "input_slot": "field-kernel",
+          "workspace_path": "tools/magnetic_compliance.py"
+        },
+        {
+          "input_slot": "coil-data",
+          "workspace_path": "inputs/NCSX.dat"
+        },
+        {
+          "input_slot": "boundary-data",
+          "workspace_path": "inputs/ncsx-boundary.focus"
+        },
+        {
+          "input_slot": "base-model",
+          "workspace_path": "inputs/base-model.json"
+        },
+        {
+          "input_slot": "search-record",
+          "workspace_path": "inputs/search-record.json"
+        },
+        {
+          "input_slot": "codesign-model",
+          "workspace_path": "inputs/codesign-model.json"
+        }
+      ],
+      "outputs": [
+        {
+          "output_slot": "reduction",
+          "claim_id": "codesign-reduction"
+        },
+        {
+          "output_slot": "normal-field-ratio",
+          "claim_id": "codesign-normal-field"
+        },
+        {
+          "output_slot": "field-strength-ratio",
+          "claim_id": "codesign-field-strength"
+        },
+        {
+          "output_slot": "geometry-utilization",
+          "claim_id": "codesign-geometry"
+        },
+        {
+          "output_slot": "compliance-ratio",
+          "claim_id": "codesign-compliance"
+        },
+        {
+          "output_slot": "condition-number",
+          "claim_id": "codesign-condition"
+        },
+        {
+          "output_slot": "resolution-difference",
+          "claim_id": "codesign-resolution"
+        },
+        {
+          "output_slot": "derivative-difference",
+          "claim_id": "codesign-derivative"
+        },
+        {
+          "output_slot": "interpretation",
+          "claim_id": "codesign-interpretation"
+        }
+      ]
+    }
+  ],
+  "free_inputs": [],
+  "limitations": [
+    "CASE-006 is an exploratory, unqualified local search and feasibility gate, not an equilibrium calculation, structural design, safety case, or patentability determination.",
+    "External SIMSOPT artifacts are bound by digest but not distributed in this repository.",
+    "The interpreter bytes are bound; the adjacent NumPy installation is named rather than fully environment-locked.",
+    "The fine grid provided iteration feedback and is not an independent holdout."
+  ]
+}

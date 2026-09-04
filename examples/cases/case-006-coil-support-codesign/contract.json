@@ -1,0 +1,127 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "case-006.coil-support-codesign",
+  "revision": 1,
+  "status": "draft",
+  "question": "Did the declared field-preserving low-order NCSX coil-geometry search produce a candidate whose globally ideal equal-trace passive support reaches 1.5 times the original NCSX uncoupled-control performance without violating the fixed magnetic, geometry, compliance, or numerical gates?",
+  "assumptions": [
+    "The public SIMSOPT NCSX coil and plasma-boundary data, currents, symmetry expansion, and original uncoupled control are fixed to the bound CASE-005 model and upstream commit.",
+    "The exploratory family perturbs only Cartesian Fourier coefficients through mode 6 for the three unique modular coils, with all physical symmetry copies regenerated from those unique coils.",
+    "The control denominator and field normalization are always recomputed on the original NCSX geometry at the same resolution; a candidate cannot improve by weakening or redefining its comparator.",
+    "The candidate receives the same deliberately generous global full-matrix stiffness relaxation as CASE-005. Failure is evidence against this declared local search, not a global theorem over all coil geometries.",
+    "The complete orthogonal rigid-translation load basis remains direction-neutral and is not a reactor load distribution.",
+    "The fine grid was used as compiler feedback to roll the raw candidate back by the bound factor. It is not an independent holdout, so a passing result would justify only a new confirmatory equilibrium study.",
+    "The 1.5 target and support limits are inherited from the earlier protocol. Magnetic and geometry limits were frozen before the exploratory candidate search."
+  ],
+  "execution_policy": { "permit_nominal_basis": true },
+  "inputs": [
+    { "input_id": "codesign-script", "role": { "id": "codesign.checker-script", "major": 1 }, "media_type": "text/x-python", "claim_model": { "model": "unquantified" } },
+    { "input_id": "ceiling-library", "role": { "id": "codesign.ceiling-library", "major": 1 }, "media_type": "text/x-python", "claim_model": { "model": "unquantified" } },
+    { "input_id": "field-kernel", "role": { "id": "codesign.field-kernel", "major": 1 }, "media_type": "text/x-python", "claim_model": { "model": "unquantified" } },
+    { "input_id": "coil-data", "role": { "id": "codesign.ncsx-coils", "major": 1 }, "media_type": "text/csv", "claim_model": { "model": "unquantified" } },
+    { "input_id": "boundary-data", "role": { "id": "codesign.ncsx-boundary", "major": 1 }, "media_type": "text/plain", "claim_model": { "model": "unquantified" } },
+    { "input_id": "base-model", "role": { "id": "codesign.base-model", "major": 1 }, "media_type": "application/vnd.avila.passive-ceiling-model+json", "claim_model": { "model": "unquantified" } },
+    { "input_id": "search-record", "role": { "id": "codesign.search-record", "major": 1 }, "media_type": "application/vnd.avila.ncsx-codesign-search-record+json", "claim_model": { "model": "unquantified" } },
+    { "input_id": "codesign-model", "role": { "id": "codesign.gate-model", "major": 1 }, "media_type": "application/vnd.avila.ncsx-codesign-gate-model+json", "claim_model": { "model": "unquantified" } }
+  ],
+  "workflow": [
+    {
+      "step_id": "codesign-gate",
+      "capability_type": { "id": "magnetic-compliance.ncsx-codesign-gate", "major": 1 },
+      "bindings": [
+        { "input_slot": "codesign-script", "source": { "source": "contract_input", "input_id": "codesign-script" } },
+        { "input_slot": "ceiling-library", "source": { "source": "contract_input", "input_id": "ceiling-library" } },
+        { "input_slot": "field-kernel", "source": { "source": "contract_input", "input_id": "field-kernel" } },
+        { "input_slot": "coil-data", "source": { "source": "contract_input", "input_id": "coil-data" } },
+        { "input_slot": "boundary-data", "source": { "source": "contract_input", "input_id": "boundary-data" } },
+        { "input_slot": "base-model", "source": { "source": "contract_input", "input_id": "base-model" } },
+        { "input_slot": "search-record", "source": { "source": "contract_input", "input_id": "search-record" } },
+        { "input_slot": "codesign-model", "source": { "source": "contract_input", "input_id": "codesign-model" } }
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "CODESIGN-R1-REDUCTION",
+      "statement": "The fine-grid candidate ceiling is at least 1.5 times the original NCSX uncoupled control.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.codesign-gate", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "codesign-gate", "output_slot": "reduction" },
+      "comparison": "greater_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1.5", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "CODESIGN-R2-NORMAL-FIELD",
+      "statement": "The candidate surface-normal field error is no more than 1.02 times the original NCSX value.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.codesign-gate", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "codesign-gate", "output_slot": "normal-field-ratio" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1.02", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "CODESIGN-R3-FIELD-LOWER",
+      "statement": "The candidate surface RMS field remains at least 0.98 times the original value.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.codesign-gate", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "codesign-gate", "output_slot": "field-strength-ratio" },
+      "comparison": "greater_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.98", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "CODESIGN-R4-FIELD-UPPER",
+      "statement": "The candidate surface RMS field remains no more than 1.02 times the original value.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.codesign-gate", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "codesign-gate", "output_slot": "field-strength-ratio" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1.02", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "CODESIGN-R5-GEOMETRY",
+      "statement": "The maximum normalized utilization across displacement, length, and curvature limits is no greater than one.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.codesign-gate", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "codesign-gate", "output_slot": "geometry-utilization" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "CODESIGN-R6-COMPLIANCE",
+      "statement": "The ideal support's worst compliance is no more than twice the unit isotropic support.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.codesign-gate", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "codesign-gate", "output_slot": "compliance-ratio" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "2", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "CODESIGN-R7-CONDITION",
+      "statement": "The ideal support's stiffness condition number is no greater than ten.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.codesign-gate", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "codesign-gate", "output_slot": "condition-number" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "10", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "CODESIGN-R8-RESOLUTION",
+      "statement": "The candidate ceiling changes by no more than 15 percent from reference to fine resolution.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.codesign-gate", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "codesign-gate", "output_slot": "resolution-difference" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.15", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "CODESIGN-R9-DERIVATIVE",
+      "statement": "The candidate fine-grid sensitivity changes by no more than two percent when the finite-difference step doubles.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.codesign-gate", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "codesign-gate", "output_slot": "derivative-difference" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.02", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    }
+  ]
+}

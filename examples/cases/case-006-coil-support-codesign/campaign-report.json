@@ -1,0 +1,401 @@
+{
+  "schema_version": "avila.core/campaign-report/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "status": "evaluated",
+  "compiled_snapshot_sha256": "sha256:4428784c12a8c40ddab7b38a5d0461a12e284f0e6d724319d53b65110646d63b",
+  "claims_sha256": "sha256:c6828e0c7b6d92c2f73c59fe8f1832212fd8ec14455f818a747f07fcc4c8311c",
+  "admissions": [
+    {
+      "evidence_id": "input:base-model",
+      "source": {
+        "source": "contract_input",
+        "input_id": "base-model"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:boundary-data",
+      "source": {
+        "source": "contract_input",
+        "input_id": "boundary-data"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:ceiling-library",
+      "source": {
+        "source": "contract_input",
+        "input_id": "ceiling-library"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:codesign-model",
+      "source": {
+        "source": "contract_input",
+        "input_id": "codesign-model"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:codesign-script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "codesign-script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:coil-data",
+      "source": {
+        "source": "contract_input",
+        "input_id": "coil-data"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:field-kernel",
+      "source": {
+        "source": "contract_input",
+        "input_id": "field-kernel"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:search-record",
+      "source": {
+        "source": "contract_input",
+        "input_id": "search-record"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "codesign-reduction",
+      "source": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "reduction"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "codesign-normal-field",
+      "source": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "normal-field-ratio"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "codesign-field-strength",
+      "source": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "field-strength-ratio"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "codesign-geometry",
+      "source": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "geometry-utilization"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "codesign-compliance",
+      "source": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "compliance-ratio"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "codesign-condition",
+      "source": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "condition-number"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "codesign-resolution",
+      "source": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "resolution-difference"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "codesign-derivative",
+      "source": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "derivative-difference"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "codesign-interpretation",
+      "source": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "interpretation"
+      },
+      "state": "admitted"
+    }
+  ],
+  "verdicts": [
+    {
+      "requirement_id": "CODESIGN-R1-REDUCTION",
+      "statement": "The fine-grid candidate ceiling is at least 1.5 times the original NCSX uncoupled control.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "reduction"
+      },
+      "evidence_ids": [
+        "codesign-reduction"
+      ],
+      "verdict": {
+        "status": "fail",
+        "rule": "nominal.ge.below",
+        "canonical_unit": "1",
+        "limit_canonical": "3/2",
+        "nominal_canonical": "1157277665703/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4428784c12a8c40ddab7b38a5d0461a12e284f0e6d724319d53b65110646d63b",
+        "claims_sha256": "sha256:c6828e0c7b6d92c2f73c59fe8f1832212fd8ec14455f818a747f07fcc4c8311c"
+      }
+    },
+    {
+      "requirement_id": "CODESIGN-R2-NORMAL-FIELD",
+      "statement": "The candidate surface-normal field error is no more than 1.02 times the original NCSX value.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "normal-field-ratio"
+      },
+      "evidence_ids": [
+        "codesign-normal-field"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "51/50",
+        "nominal_canonical": "504088948069/500000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4428784c12a8c40ddab7b38a5d0461a12e284f0e6d724319d53b65110646d63b",
+        "claims_sha256": "sha256:c6828e0c7b6d92c2f73c59fe8f1832212fd8ec14455f818a747f07fcc4c8311c"
+      }
+    },
+    {
+      "requirement_id": "CODESIGN-R3-FIELD-LOWER",
+      "statement": "The candidate surface RMS field remains at least 0.98 times the original value.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "field-strength-ratio"
+      },
+      "evidence_ids": [
+        "codesign-field-strength"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.ge.within",
+        "canonical_unit": "1",
+        "limit_canonical": "49/50",
+        "nominal_canonical": "1000063686747/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4428784c12a8c40ddab7b38a5d0461a12e284f0e6d724319d53b65110646d63b",
+        "claims_sha256": "sha256:c6828e0c7b6d92c2f73c59fe8f1832212fd8ec14455f818a747f07fcc4c8311c"
+      }
+    },
+    {
+      "requirement_id": "CODESIGN-R4-FIELD-UPPER",
+      "statement": "The candidate surface RMS field remains no more than 1.02 times the original value.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "field-strength-ratio"
+      },
+      "evidence_ids": [
+        "codesign-field-strength"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "51/50",
+        "nominal_canonical": "1000063686747/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4428784c12a8c40ddab7b38a5d0461a12e284f0e6d724319d53b65110646d63b",
+        "claims_sha256": "sha256:c6828e0c7b6d92c2f73c59fe8f1832212fd8ec14455f818a747f07fcc4c8311c"
+      }
+    },
+    {
+      "requirement_id": "CODESIGN-R5-GEOMETRY",
+      "statement": "The maximum normalized utilization across displacement, length, and curvature limits is no greater than one.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "geometry-utilization"
+      },
+      "evidence_ids": [
+        "codesign-geometry"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1",
+        "nominal_canonical": "29546035393/31250000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4428784c12a8c40ddab7b38a5d0461a12e284f0e6d724319d53b65110646d63b",
+        "claims_sha256": "sha256:c6828e0c7b6d92c2f73c59fe8f1832212fd8ec14455f818a747f07fcc4c8311c"
+      }
+    },
+    {
+      "requirement_id": "CODESIGN-R6-COMPLIANCE",
+      "statement": "The ideal support's worst compliance is no more than twice the unit isotropic support.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "compliance-ratio"
+      },
+      "evidence_ids": [
+        "codesign-compliance"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "2",
+        "nominal_canonical": "923514580971/500000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4428784c12a8c40ddab7b38a5d0461a12e284f0e6d724319d53b65110646d63b",
+        "claims_sha256": "sha256:c6828e0c7b6d92c2f73c59fe8f1832212fd8ec14455f818a747f07fcc4c8311c"
+      }
+    },
+    {
+      "requirement_id": "CODESIGN-R7-CONDITION",
+      "statement": "The ideal support's stiffness condition number is no greater than ten.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "condition-number"
+      },
+      "evidence_ids": [
+        "codesign-condition"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "10",
+        "nominal_canonical": "3006041849509/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4428784c12a8c40ddab7b38a5d0461a12e284f0e6d724319d53b65110646d63b",
+        "claims_sha256": "sha256:c6828e0c7b6d92c2f73c59fe8f1832212fd8ec14455f818a747f07fcc4c8311c"
+      }
+    },
+    {
+      "requirement_id": "CODESIGN-R8-RESOLUTION",
+      "statement": "The candidate ceiling changes by no more than 15 percent from reference to fine resolution.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "resolution-difference"
+      },
+      "evidence_ids": [
+        "codesign-resolution"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "3/20",
+        "nominal_canonical": "17602373043/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4428784c12a8c40ddab7b38a5d0461a12e284f0e6d724319d53b65110646d63b",
+        "claims_sha256": "sha256:c6828e0c7b6d92c2f73c59fe8f1832212fd8ec14455f818a747f07fcc4c8311c"
+      }
+    },
+    {
+      "requirement_id": "CODESIGN-R9-DERIVATIVE",
+      "statement": "The candidate fine-grid sensitivity changes by no more than two percent when the finite-difference step doubles.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "codesign-gate",
+        "output_slot": "derivative-difference"
+      },
+      "evidence_ids": [
+        "codesign-derivative"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/50",
+        "nominal_canonical": "288297/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:4428784c12a8c40ddab7b38a5d0461a12e284f0e6d724319d53b65110646d63b",
+        "claims_sha256": "sha256:c6828e0c7b6d92c2f73c59fe8f1832212fd8ec14455f818a747f07fcc4c8311c"
+      }
+    }
+  ],
+  "campaign_sha256": "sha256:f926a74434635714ff84623f47a184e0f05ee1c4d99f06bc5a5262268aa8b233",
+  "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
+}

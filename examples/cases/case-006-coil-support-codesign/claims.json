@@ -1,0 +1,242 @@
+{
+  "claims": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-codesign-gate-result+json",
+        "sha256": "sha256:3defbd5ab3b45df8e03cae52d12863fcd43ee6d9e9cd7d66ef0ab56fdb154bb8"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "1.157277665703"
+        }
+      },
+      "claim_id": "codesign-reduction",
+      "output_slot": "reduction",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "codesign-gate"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-codesign-gate-result+json",
+        "sha256": "sha256:3defbd5ab3b45df8e03cae52d12863fcd43ee6d9e9cd7d66ef0ab56fdb154bb8"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "1.008177896138"
+        }
+      },
+      "claim_id": "codesign-normal-field",
+      "output_slot": "normal-field-ratio",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "codesign-gate"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-codesign-gate-result+json",
+        "sha256": "sha256:3defbd5ab3b45df8e03cae52d12863fcd43ee6d9e9cd7d66ef0ab56fdb154bb8"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "1.000063686747"
+        }
+      },
+      "claim_id": "codesign-field-strength",
+      "output_slot": "field-strength-ratio",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "codesign-gate"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-codesign-gate-result+json",
+        "sha256": "sha256:3defbd5ab3b45df8e03cae52d12863fcd43ee6d9e9cd7d66ef0ab56fdb154bb8"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.945473132576"
+        }
+      },
+      "claim_id": "codesign-geometry",
+      "output_slot": "geometry-utilization",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "codesign-gate"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-codesign-gate-result+json",
+        "sha256": "sha256:3defbd5ab3b45df8e03cae52d12863fcd43ee6d9e9cd7d66ef0ab56fdb154bb8"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "1.847029161942"
+        }
+      },
+      "claim_id": "codesign-compliance",
+      "output_slot": "compliance-ratio",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "codesign-gate"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-codesign-gate-result+json",
+        "sha256": "sha256:3defbd5ab3b45df8e03cae52d12863fcd43ee6d9e9cd7d66ef0ab56fdb154bb8"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "3.006041849509"
+        }
+      },
+      "claim_id": "codesign-condition",
+      "output_slot": "condition-number",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "codesign-gate"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-codesign-gate-result+json",
+        "sha256": "sha256:3defbd5ab3b45df8e03cae52d12863fcd43ee6d9e9cd7d66ef0ab56fdb154bb8"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.017602373043"
+        }
+      },
+      "claim_id": "codesign-resolution",
+      "output_slot": "resolution-difference",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "codesign-gate"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-codesign-gate-result+json",
+        "sha256": "sha256:3defbd5ab3b45df8e03cae52d12863fcd43ee6d9e9cd7d66ef0ab56fdb154bb8"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.000000288297"
+        }
+      },
+      "claim_id": "codesign-derivative",
+      "output_slot": "derivative-difference",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "codesign-gate"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-codesign-gate-result+json",
+        "sha256": "sha256:3defbd5ab3b45df8e03cae52d12863fcd43ee6d9e9cd7d66ef0ab56fdb154bb8"
+      },
+      "claim": {
+        "model": "unquantified",
+        "value": "stop"
+      },
+      "claim_id": "codesign-interpretation",
+      "output_slot": "interpretation",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "codesign-gate"
+    }
+  ],
+  "compiled_snapshot_sha256": "sha256:4428784c12a8c40ddab7b38a5d0461a12e284f0e6d724319d53b65110646d63b",
+  "inputs": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.passive-ceiling-model+json",
+        "sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62"
+      },
+      "input_id": "base-model"
+    },
+    {
+      "artifact": {
+        "media_type": "text/plain",
+        "sha256": "sha256:32b5609d02643d05b30c353ba5ab0a9b3ef6c486a8122f141a3c14e01748c956"
+      },
+      "input_id": "boundary-data"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:5e804c32b031aa2f31761cadbd8a65dc6ecbedd7d7109c9b7e07a182624e4d21"
+      },
+      "input_id": "ceiling-library"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-codesign-gate-model+json",
+        "sha256": "sha256:526421e0a62dd05429ef353945b6dd594b14e22858e82c4d8be7c15447cb010c"
+      },
+      "input_id": "codesign-model"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:c2fe04fd88ab6e211869ab31cd66a8a4168cd47cbae0158f47ccc8802442d383"
+      },
+      "input_id": "codesign-script"
+    },
+    {
+      "artifact": {
+        "media_type": "text/csv",
+        "sha256": "sha256:2b857ca137184d0f4b5e7fa271c6cf946cf7fdfa127a19ec302d4f9731db57a7"
+      },
+      "input_id": "coil-data"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3"
+      },
+      "input_id": "field-kernel"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-codesign-search-record+json",
+        "sha256": "sha256:06f928a9b83ef262f07a0ea663848daa3344acae61c09623073a31d0eab6cb1b"
+      },
+      "input_id": "search-record"
+    }
+  ],
+  "schema_version": "avila.core/evidence-claims/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft"
+}

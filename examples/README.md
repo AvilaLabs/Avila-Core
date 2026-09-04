@@ -28,6 +28,10 @@ integrations, safety analyses, or evidence of compliance.
   optimum over every equal-trace positive-definite stiffness matrix. The
   mathematical ceiling still misses the inherited target, so no iterative
   passive linear topology campaign is started.
+- `cases/case-006-coil-support-codesign/` tries the geometry escape route from
+  CASE-005 with a field-preserving Fourier near-nullspace loop. It finds a
+  small valid improvement, catches coarse-grid overfitting, and still fails
+  the fixed reduction target, so that local candidate family stops.
 
 The dose limit, unit factors, parameter domains, and every capability
 description are hypothetical. They must never be used for engineering or

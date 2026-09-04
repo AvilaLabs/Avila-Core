@@ -1,0 +1,146 @@
+{
+  "schema_version": "avila.core/execution-receipt/v0.1-draft",
+  "case_id": "CASE-006",
+  "compiled_snapshot_sha256": "sha256:4428784c12a8c40ddab7b38a5d0461a12e284f0e6d724319d53b65110646d63b",
+  "step_id": "codesign-gate",
+  "capability_type": {
+    "id": "magnetic-compliance.ncsx-codesign-gate",
+    "major": 1
+  },
+  "adapter": "avila-labs.magnetic-compliance/ncsx-codesign-gate@1",
+  "capability": {
+    "capability_id": "python3-numpy",
+    "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+    "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+  },
+  "parameters": {},
+  "inputs": [
+    {
+      "input_slot": "base-model",
+      "evidence_id": "input:base-model",
+      "workspace_path": "inputs/base-model.json",
+      "media_type": "application/vnd.avila.passive-ceiling-model+json",
+      "sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62",
+      "bytes": 1409
+    },
+    {
+      "input_slot": "boundary-data",
+      "evidence_id": "input:boundary-data",
+      "workspace_path": "inputs/ncsx-boundary.focus",
+      "media_type": "text/plain",
+      "sha256": "sha256:32b5609d02643d05b30c353ba5ab0a9b3ef6c486a8122f141a3c14e01748c956",
+      "bytes": 15440
+    },
+    {
+      "input_slot": "ceiling-library",
+      "evidence_id": "input:ceiling-library",
+      "workspace_path": "tools/ncsx_passive_ceiling.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:5e804c32b031aa2f31761cadbd8a65dc6ecbedd7d7109c9b7e07a182624e4d21",
+      "bytes": 31770
+    },
+    {
+      "input_slot": "codesign-model",
+      "evidence_id": "input:codesign-model",
+      "workspace_path": "inputs/codesign-model.json",
+      "media_type": "application/vnd.avila.ncsx-codesign-gate-model+json",
+      "sha256": "sha256:526421e0a62dd05429ef353945b6dd594b14e22858e82c4d8be7c15447cb010c",
+      "bytes": 1155
+    },
+    {
+      "input_slot": "codesign-script",
+      "evidence_id": "input:codesign-script",
+      "workspace_path": "tools/ncsx_codesign_gate.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:c2fe04fd88ab6e211869ab31cd66a8a4168cd47cbae0158f47ccc8802442d383",
+      "bytes": 28351
+    },
+    {
+      "input_slot": "coil-data",
+      "evidence_id": "input:coil-data",
+      "workspace_path": "inputs/NCSX.dat",
+      "media_type": "text/csv",
+      "sha256": "sha256:2b857ca137184d0f4b5e7fa271c6cf946cf7fdfa127a19ec302d4f9731db57a7",
+      "bytes": 11893
+    },
+    {
+      "input_slot": "field-kernel",
+      "evidence_id": "input:field-kernel",
+      "workspace_path": "tools/magnetic_compliance.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3",
+      "bytes": 31472
+    },
+    {
+      "input_slot": "search-record",
+      "evidence_id": "input:search-record",
+      "workspace_path": "inputs/search-record.json",
+      "media_type": "application/vnd.avila.ncsx-codesign-search-record+json",
+      "sha256": "sha256:06f928a9b83ef262f07a0ea663848daa3344acae61c09623073a31d0eab6cb1b",
+      "bytes": 5695
+    }
+  ],
+  "invocation": {
+    "program": "python3.14",
+    "arguments": [
+      "tools/ncsx_codesign_gate.py",
+      "tools/ncsx_passive_ceiling.py",
+      "tools/magnetic_compliance.py",
+      "inputs/NCSX.dat",
+      "inputs/ncsx-boundary.focus",
+      "inputs/base-model.json",
+      "inputs/search-record.json",
+      "inputs/codesign-model.json",
+      "outputs/ncsx-codesign-gate-result.json"
+    ],
+    "working_directory": ".",
+    "adapter_sha256": "sha256:601d5c88a137a54e09cdd7dc8de19bef1e358e11797632e5a2f4932772d1cb44",
+    "environment": {},
+    "timeout_ms": 60000
+  },
+  "invocation_sha256": "sha256:8482242f9881d1d97a3fdc796cc9d08589f6abcc5a5dae3f5ae2b799e924c9fb",
+  "process": {
+    "started_at": "2026-09-04T16:03:55.334Z",
+    "finished_at": "2026-09-04T16:04:21.398Z",
+    "duration_ms": 26063,
+    "exit_status": 0,
+    "timed_out": false
+  },
+  "logs": [
+    {
+      "stream": "stdout",
+      "workspace_path": "logs/stdout.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "stream": "stderr",
+      "workspace_path": "logs/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "outputs": [
+    {
+      "output_id": "result",
+      "workspace_path": "outputs/ncsx-codesign-gate-result.json",
+      "media_type": "application/vnd.avila.ncsx-codesign-gate-result+json",
+      "state": "collected",
+      "sha256": "sha256:3defbd5ab3b45df8e03cae52d12863fcd43ee6d9e9cd7d66ef0ab56fdb154bb8",
+      "bytes": 2856
+    }
+  ],
+  "runner": {
+    "runner": "avila.core/cli-rust@0.1.0",
+    "os": "linux",
+    "arch": "x86_64"
+  },
+  "status": "completed",
+  "limitations": [
+    "Exit status and output digests are process evidence, not scientific success.",
+    "The executable digest identifies the bytes that ran; it does not qualify the method.",
+    "No sandbox, resource accounting, or signature was applied; the environment was cleared and the working directory confined to the workspace.",
+    "The checker owns the exploratory scientific calculation; Core validates declared identities, execution, extraction, evidence binding, and requirement arithmetic only."
+  ],
+  "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, practical suitability, or regulatory suitability."
+}

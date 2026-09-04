@@ -118,5 +118,8 @@ under the [GNU Affero General Public License v3.0
 only](LICENSE) (`AGPL-3.0-only`). The license applies to Core, not automatically
 to ordinary inputs or outputs created or evaluated with Core.
 
+Included and generated third-party material is identified in the
+[third-party notices](THIRD_PARTY_NOTICES.md).
+
 The Avila Core name and logo are separately reserved; see
 [`assets/branding/README.md`](assets/branding/README.md).

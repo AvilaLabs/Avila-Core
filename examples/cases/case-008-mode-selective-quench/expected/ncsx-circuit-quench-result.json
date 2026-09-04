@@ -1,0 +1,214 @@
+{
+  "candidate_id": "mode-selective-dump-r1",
+  "fine": {
+    "candidate": [
+      {
+        "fault_circuit": 0,
+        "final_energy_fraction": "0.000000000002",
+        "minimum_current_fraction": "0.00000061116",
+        "normalized_i2t": "0.303411955997",
+        "peak_force_shape_departure": "0.103792523766",
+        "peak_magnetic_shape_departure": "0.01330846759",
+        "peak_normalized_resistive_element_voltage": "1.463839245031"
+      },
+      {
+        "fault_circuit": 1,
+        "final_energy_fraction": "0.000000000002",
+        "minimum_current_fraction": "0.00000061116",
+        "normalized_i2t": "0.303411955997",
+        "peak_force_shape_departure": "0.103792523766",
+        "peak_magnetic_shape_departure": "0.01330846759",
+        "peak_normalized_resistive_element_voltage": "1.463839245031"
+      },
+      {
+        "fault_circuit": 2,
+        "final_energy_fraction": "0.000000000002",
+        "minimum_current_fraction": "0.00000061116",
+        "normalized_i2t": "0.303411955997",
+        "peak_force_shape_departure": "0.103792523766",
+        "peak_magnetic_shape_departure": "0.01330846759",
+        "peak_normalized_resistive_element_voltage": "1.463839245031"
+      }
+    ],
+    "control": [
+      {
+        "fault_circuit": 0,
+        "final_energy_fraction": "0.000000083316",
+        "minimum_current_fraction": "0.000039187528",
+        "normalized_i2t": "0.290525356681",
+        "peak_force_shape_departure": "0.174886293623",
+        "peak_magnetic_shape_departure": "0.021478690158",
+        "peak_normalized_resistive_element_voltage": "1.405357058203"
+      },
+      {
+        "fault_circuit": 1,
+        "final_energy_fraction": "0.000000083316",
+        "minimum_current_fraction": "0.000039187528",
+        "normalized_i2t": "0.290525356681",
+        "peak_force_shape_departure": "0.174886293623",
+        "peak_magnetic_shape_departure": "0.021478690158",
+        "peak_normalized_resistive_element_voltage": "1.405357058203"
+      },
+      {
+        "fault_circuit": 2,
+        "final_energy_fraction": "0.000000083316",
+        "minimum_current_fraction": "0.000039187528",
+        "normalized_i2t": "0.290525356681",
+        "peak_force_shape_departure": "0.174886293623",
+        "peak_magnetic_shape_departure": "0.021478690158",
+        "peak_normalized_resistive_element_voltage": "1.405357058203"
+      }
+    ]
+  },
+  "inductance": {
+    "fine_condition_number": "1.768317777466",
+    "fine_eigenvalues": [
+      "0.796111203238",
+      "0.796111203238",
+      "1.407777593525"
+    ],
+    "fine_normalized_matrix": [
+      [
+        "1",
+        "0.203888796762",
+        "0.203888796762"
+      ],
+      [
+        "0.203888796762",
+        "1",
+        "0.203888796762"
+      ],
+      [
+        "0.203888796762",
+        "0.203888796762",
+        "1"
+      ]
+    ],
+    "matrix_resolution_relative_difference": "0.01209454761",
+    "reference_normalized_matrix": [
+      [
+        "1",
+        "0.194988239778",
+        "0.194988239778"
+      ],
+      [
+        "0.194988239778",
+        "1",
+        "0.194988239778"
+      ],
+      [
+        "0.194988239778",
+        "0.194988239778",
+        "1"
+      ]
+    ]
+  },
+  "interpretation": "candidate-justified",
+  "limitations": [
+    "The regularized filament inductance is normalized and does not establish winding-pack self-inductance, stored energy, or dimensional resistance.",
+    "The prescribed quench-resistance ramp is not a conductor thermal or propagation calculation; normalized I-squared-t is only a comparative burden proxy.",
+    "Reported voltage is the largest normalized drop across modeled resistive elements, not terminal-to-ground, turn-to-turn, insulation, switch, or power-supply voltage.",
+    "The passive mesh matrix is a circuit-theory realization of private and pair-shared resistors; no switch, diode, grounding, failure, or installation topology is designed.",
+    "Magnetic and filament force-shape metrics remove the common current mode and do not establish plasma survival or structural stress.",
+    "Thresholds and candidate settings were selected during interactive feasibility exploration; this is not preregistered confirmation, safety evidence, or a patentability conclusion."
+  ],
+  "method": {
+    "circuit_equation": "L-dx-dt-plus-R-protection-plus-R-quench-times-x-equals-zero",
+    "field_and_force": "case-007-common-mode-removed-shape-metrics",
+    "inductance": "regularized-neumann-midpoint-normalized-by-mean-self",
+    "integration": "fixed-step-rk4-with-detection-event-split",
+    "numpy_version": "2.3.5",
+    "search_inside_checker": false
+  },
+  "metrics": {
+    "fault_relative_spread": "0",
+    "fine_final_energy_fraction": "0.000000000002",
+    "fine_force_reduction_factor": "1.684960412155",
+    "fine_i2t_ratio": "1.044356194802",
+    "fine_magnetic_reduction_factor": "1.613911595185",
+    "fine_peak_element_voltage_ratio": "1.041613756794",
+    "inductance_condition_number": "1.768317777466",
+    "resolution_relative_difference": "0.003108292151",
+    "time_step_relative_difference": "0.00001008724"
+  },
+  "model_id": "ncsx-three-loop-mode-selective-dump-r0",
+  "network": {
+    "common_mode_resistance_scale": "1.45",
+    "differential_mode_resistance_scale": "2.9",
+    "differential_to_common_mode_ratio": "2",
+    "private_resistance_scale": "1.45",
+    "shared_pair_resistance_scale": "0.483333333333"
+  },
+  "network_validity": "valid",
+  "reference": {
+    "candidate": [
+      {
+        "fault_circuit": 0,
+        "final_energy_fraction": "0.000000000001",
+        "minimum_current_fraction": "0.000000521445",
+        "normalized_i2t": "0.301978868611",
+        "peak_force_shape_departure": "0.102316133885",
+        "peak_magnetic_shape_departure": "0.0134285832",
+        "peak_normalized_resistive_element_voltage": "1.463258606096"
+      },
+      {
+        "fault_circuit": 1,
+        "final_energy_fraction": "0.000000000001",
+        "minimum_current_fraction": "0.000000521445",
+        "normalized_i2t": "0.301978868611",
+        "peak_force_shape_departure": "0.102316133885",
+        "peak_magnetic_shape_departure": "0.0134285832",
+        "peak_normalized_resistive_element_voltage": "1.463258606096"
+      },
+      {
+        "fault_circuit": 2,
+        "final_energy_fraction": "0.000000000001",
+        "minimum_current_fraction": "0.000000521445",
+        "normalized_i2t": "0.301978868611",
+        "peak_force_shape_departure": "0.102316133885",
+        "peak_magnetic_shape_departure": "0.0134285832",
+        "peak_normalized_resistive_element_voltage": "1.463258606096"
+      }
+    ],
+    "control": [
+      {
+        "fault_circuit": 0,
+        "final_energy_fraction": "0.000000072013",
+        "minimum_current_fraction": "0.000035173904",
+        "normalized_i2t": "0.290054710572",
+        "peak_force_shape_departure": "0.1721541335",
+        "peak_magnetic_shape_departure": "0.021657884569",
+        "peak_normalized_resistive_element_voltage": "1.404745335815"
+      },
+      {
+        "fault_circuit": 1,
+        "final_energy_fraction": "0.000000072013",
+        "minimum_current_fraction": "0.000035173904",
+        "normalized_i2t": "0.290054710572",
+        "peak_force_shape_departure": "0.1721541335",
+        "peak_magnetic_shape_departure": "0.021657884569",
+        "peak_normalized_resistive_element_voltage": "1.404745335815"
+      },
+      {
+        "fault_circuit": 2,
+        "final_energy_fraction": "0.000000072013",
+        "minimum_current_fraction": "0.000035173904",
+        "normalized_i2t": "0.290054710572",
+        "peak_force_shape_departure": "0.1721541335",
+        "peak_magnetic_shape_departure": "0.021657884569",
+        "peak_normalized_resistive_element_voltage": "1.404745335815"
+      }
+    ]
+  },
+  "schema": "avila.magnetic-compliance/ncsx-circuit-quench-result/v1",
+  "source_identity": {
+    "base_model_sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62",
+    "boundary_sha256": "sha256:32b5609d02643d05b30c353ba5ab0a9b3ef6c486a8122f141a3c14e01748c956",
+    "candidate_sha256": "sha256:ac776247625ce4e3335622d39abc8f1339f800228ebbd0e3e3d4f628aeea8082",
+    "ceiling_library_sha256": "sha256:5e804c32b031aa2f31761cadbd8a65dc6ecbedd7d7109c9b7e07a182624e4d21",
+    "circuit_model_sha256": "sha256:3706f3b3971222ddb4f3efd0845c7dafe987dcf851289adc86d93b3b56fe6ae6",
+    "coil_sha256": "sha256:2b857ca137184d0f4b5e7fa271c6cf946cf7fdfa127a19ec302d4f9731db57a7",
+    "fault_library_sha256": "sha256:0fa70cf3506aff9ec96d9a6289fff5862df8a1ac79a507c422111d72704033eb",
+    "field_kernel_sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3"
+  }
+}

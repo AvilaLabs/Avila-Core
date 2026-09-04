@@ -65,7 +65,9 @@ ordinary run record without embedding their contents.
   that may have moved.
 - Rewriting requirements during search becomes a refused identity change, not
   an undocumented optimization tactic.
-- CASE-007's next coupled circuit/quench iteration can measure whether this
-  memory improves repair quality and evaluation efficiency.
+- CASE-008's coupled circuit/quench iteration exercises this layer: one root
+  misses two fixed gates, one identity-bound child changes a single physical
+  parameter and passes all ten, and the unchanged manifest and compiled
+  snapshot are recorded on both lines.
 - A future constellation view or optimizer can read this record without
   acquiring authority over compilation, evidence admission, or verdicts.

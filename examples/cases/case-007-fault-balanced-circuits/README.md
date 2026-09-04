@@ -100,3 +100,8 @@ python3 -m unittest \
 
 The [protocol](PROTOCOL.md) fixes the exact model, metrics, feedback rule, and
 stop/advance boundary.
+
+[CASE-008](../case-008-mode-selective-quench/) now performs the bounded next
+gate with a geometry-derived circuit inductance surrogate, prescribed quench
+resistance, passive dump-network candidates, and Core's native attempt
+lineage.

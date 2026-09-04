@@ -1,0 +1,40 @@
+{
+  "schema": "avila.magnetic-compliance/ncsx-circuit-quench-model/v1",
+  "model_id": "ncsx-three-loop-mode-selective-dump-r0",
+  "base_model_sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62",
+  "architecture": {
+    "groups": [
+      [0, 4, 7, 11, 14, 15],
+      [1, 3, 8, 10, 12, 17],
+      [2, 5, 6, 9, 13, 16]
+    ],
+    "inductance_method": "regularized-neumann-midpoint",
+    "regularization_radius_m": "0.02",
+    "inductance_normalization": "mean-circuit-self-inductance",
+    "resistor_network": "three-private-loop-resistors-plus-equal-pairwise-shared-resistors"
+  },
+  "transient": {
+    "initial_current_fraction": "1",
+    "detection_time": "0.12",
+    "quench_resistance_rise_time": "0.4",
+    "quench_resistance_plateau": "3",
+    "end_time": "10",
+    "reference_time_step": "0.0025",
+    "refined_time_step": "0.00125"
+  },
+  "control": {
+    "private_resistance_scale": "1",
+    "differential_to_common_mode_ratio": "1"
+  },
+  "gate": {
+    "minimum_magnetic_reduction": "1.5",
+    "minimum_force_reduction": "1.5",
+    "maximum_i2t_ratio": "1.05",
+    "maximum_element_voltage_ratio": "1.05",
+    "maximum_final_energy_fraction": "0.000001",
+    "maximum_resolution_relative_difference": "0.01",
+    "maximum_time_step_relative_difference": "0.001",
+    "maximum_inductance_condition_number": "2",
+    "maximum_fault_relative_spread": "0.000000001"
+  }
+}

@@ -1,0 +1,187 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "case-008.mode-selective-quench",
+  "revision": 1,
+  "status": "draft",
+  "question": "Can a passive three-loop dump network that damps differential circuit-current modes more strongly than the common mode reduce both transient magnetic-shape and distributed-force departure by at least 1.5 times relative to the fixed independent-dump control, without increasing the normalized current-squared-time or peak modeled resistive-element voltage proxies by more than five percent?",
+  "assumptions": [
+    "The three winding circuits use the CASE-007 fault-balanced partition of the 18 public SIMSOPT NCSX modular coils. This is a hypothetical new-design topology, not a reconstruction or retrofit prescription for the historical NCSX electrical system.",
+    "The circuit inductance matrix is calculated from a midpoint Neumann integral with a fixed 20 mm distance regularization and continuous turn-count scaling inherited from CASE-007, then normalized by mean circuit self-inductance. It is a geometry-coupled dimensionless surrogate, not a winding-pack inductance calculation.",
+    "After a fault starts, the power supply contributes no voltage. One circuit receives a prescribed dimensionless quench resistance that rises linearly to three by normalized time 0.4. The protection network activates at time 0.12 and the ODE L dx/dt + (R_protection + R_quench) x = 0 is integrated to time 10.",
+    "The independent-dump control has three private unit resistors and no pair-shared branches. A candidate has three equal private resistors p and three equal pair-shared resistors b = p(rho - 1)/3, giving common-mode resistance p and two differential-mode resistances p rho. Only passive candidates with p in [0.25, 2] and rho in [1, 4] are accepted.",
+    "Magnetic-shape departure removes the best common current scale. Force-shape departure removes the corresponding common-current-squared force pattern. Both reuse the CASE-007 filament and plasma-surface proxies and are evaluated over each of the three possible initiating circuits.",
+    "The current-squared-time metric is normalized to the control and is not converted to conductor temperature. The voltage metric is the largest normalized drop across a modeled quench, private, or shared resistive element and is not a terminal-to-ground, turn-to-turn, insulation, switch, diode, or power-supply voltage.",
+    "The reference and fine coil meshes use 128 and 256 segments. The fine transient is repeated at half the time step. These checks measure only declared numerical stability.",
+    "The model, thresholds, and candidate settings were selected during interactive feasibility exploration before the formal Core lineage was recorded. This is exploratory mechanism evidence, not preregistered confirmation.",
+    "Passing justifies a higher-fidelity conductor, switching, dimensional voltage, thermal, structural, and plasma-response study. It does not establish a practical protection system, safety, novelty, patentability, or commercial value."
+  ],
+  "execution_policy": {
+    "permit_nominal_basis": true
+  },
+  "inputs": [
+    {
+      "input_id": "circuit-script",
+      "role": { "id": "circuit-quench.checker-script", "major": 1 },
+      "media_type": "text/x-python",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "field-kernel",
+      "role": { "id": "circuit-quench.field-kernel", "major": 1 },
+      "media_type": "text/x-python",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "ceiling-library",
+      "role": { "id": "circuit-quench.ceiling-library", "major": 1 },
+      "media_type": "text/x-python",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "fault-library",
+      "role": { "id": "circuit-quench.fault-library", "major": 1 },
+      "media_type": "text/x-python",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "coil-data",
+      "role": { "id": "circuit-quench.ncsx-coils", "major": 1 },
+      "media_type": "text/csv",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "boundary-data",
+      "role": { "id": "circuit-quench.ncsx-boundary", "major": 1 },
+      "media_type": "text/plain",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "base-model",
+      "role": { "id": "circuit-quench.base-model", "major": 1 },
+      "media_type": "application/vnd.avila.passive-ceiling-model+json",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "circuit-model",
+      "role": { "id": "circuit-quench.model", "major": 1 },
+      "media_type": "application/vnd.avila.ncsx-circuit-quench-model+json",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "candidate",
+      "role": { "id": "circuit-quench.candidate", "major": 1 },
+      "media_type": "application/vnd.avila.ncsx-circuit-quench-candidate+json",
+      "claim_model": { "model": "unquantified" }
+    }
+  ],
+  "workflow": [
+    {
+      "step_id": "circuit-quench",
+      "capability_type": { "id": "magnetic-compliance.ncsx-circuit-quench", "major": 1 },
+      "bindings": [
+        { "input_slot": "circuit-script", "source": { "source": "contract_input", "input_id": "circuit-script" } },
+        { "input_slot": "field-kernel", "source": { "source": "contract_input", "input_id": "field-kernel" } },
+        { "input_slot": "ceiling-library", "source": { "source": "contract_input", "input_id": "ceiling-library" } },
+        { "input_slot": "fault-library", "source": { "source": "contract_input", "input_id": "fault-library" } },
+        { "input_slot": "coil-data", "source": { "source": "contract_input", "input_id": "coil-data" } },
+        { "input_slot": "boundary-data", "source": { "source": "contract_input", "input_id": "boundary-data" } },
+        { "input_slot": "base-model", "source": { "source": "contract_input", "input_id": "base-model" } },
+        { "input_slot": "circuit-model", "source": { "source": "contract_input", "input_id": "circuit-model" } },
+        { "input_slot": "candidate", "source": { "source": "contract_input", "input_id": "candidate" } }
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "QUENCH-R1-MAGNETIC",
+      "statement": "The fine-mesh candidate reduces the worst transient magnetic-shape departure by at least 1.5 times relative to the fixed independent-dump control.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.mode-selective-quench", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "circuit-quench", "output_slot": "magnetic-reduction" },
+      "comparison": "greater_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1.5", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "QUENCH-R2-FORCE",
+      "statement": "The fine-mesh candidate reduces the worst transient distributed-force-shape departure by at least 1.5 times relative to the fixed independent-dump control.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.mode-selective-quench", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "circuit-quench", "output_slot": "force-reduction" },
+      "comparison": "greater_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1.5", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "QUENCH-R3-I2T",
+      "statement": "The worst normalized initiating-circuit current-squared-time proxy is no more than 1.05 times the fixed independent-dump control.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.mode-selective-quench", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "circuit-quench", "output_slot": "i2t-ratio" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1.05", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "QUENCH-R4-ELEMENT-VOLTAGE",
+      "statement": "The worst modeled normalized resistive-element voltage is no more than 1.05 times the fixed independent-dump control.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.mode-selective-quench", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "circuit-quench", "output_slot": "element-voltage-ratio" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "1.05", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "QUENCH-R5-ENERGY",
+      "statement": "The candidate leaves no more than one-millionth of its initial normalized magnetic energy at the end of the simulated interval.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.mode-selective-quench", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "circuit-quench", "output_slot": "final-energy-fraction" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.000001", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "QUENCH-R6-RESOLUTION",
+      "statement": "The largest relative change in a primary candidate/control metric between reference and fine coil meshes is no more than one percent.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.mode-selective-quench", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "circuit-quench", "output_slot": "resolution-difference" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.01", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "QUENCH-R7-TIME-STEP",
+      "statement": "The largest relative change in a primary fine-mesh metric when the time step is halved is no more than one tenth of one percent.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.mode-selective-quench", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "circuit-quench", "output_slot": "time-step-difference" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.001", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "QUENCH-R8-INDUCTANCE",
+      "statement": "The fine normalized circuit inductance matrix has condition number no greater than two.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.mode-selective-quench", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "circuit-quench", "output_slot": "inductance-condition" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "2", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    },
+    {
+      "requirement_id": "QUENCH-R9-SYMMETRY",
+      "statement": "The relative spread among the three initiating-circuit cases is no greater than one-billionth for every primary fine-mesh fault metric.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.mode-selective-quench", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "circuit-quench", "output_slot": "fault-spread" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.ratio", "value": "0.000000001", "unit": "1" },
+      "basis": { "kind": "nominal" }
+    }
+  ],
+  "categorical_requirements": [
+    {
+      "requirement_id": "QUENCH-R10-NETWORK",
+      "statement": "The candidate lies inside the declared box and maps to nonnegative private and pair-shared passive resistances.",
+      "purpose": { "id": "avila-labs.magnetic-compliance.mode-selective-quench", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "circuit-quench", "output_slot": "network-validity" },
+      "predicate": { "operator": "equals", "value": "valid" }
+    }
+  ]
+}

@@ -1,0 +1,253 @@
+{
+  "schema_version": "avila.core/case-package/v0.1-draft",
+  "case_id": "CASE-008",
+  "title": "NCSX passive mode-selective circuit/quench feasibility gate",
+  "documents": [
+    {
+      "document_id": "case-008-contract",
+      "role": "contract",
+      "path": "contract.json",
+      "sha256": "sha256:0dea22d9955e32a687e994003f48838598cd22c030e33b0862eb91c710346ae4"
+    },
+    {
+      "document_id": "case-008-registry",
+      "role": "registry",
+      "path": "registry.json",
+      "sha256": "sha256:ffb0592147417aa4c038584a33c4971dcf9da33477e6fdaab3958ca53197aad9"
+    },
+    {
+      "document_id": "case-008-claims",
+      "role": "claims",
+      "path": "claims.json",
+      "sha256": "sha256:742063f5dcafc664be40b780c5301bcba080a8844ae5395bc2175f1c94326108"
+    },
+    {
+      "document_id": "avila-labs.magnetic-compliance/ncsx-circuit-quench@1",
+      "role": "external_checker_adapter",
+      "path": "adapter.json",
+      "sha256": "sha256:1b6afcee5c0c582bf66f85634cccf46f3e62281c4142498874e9cbb31f781472"
+    },
+    {
+      "document_id": "case-008-expected-campaign",
+      "role": "expected_campaign_report",
+      "path": "campaign-report.json",
+      "sha256": "sha256:a63f4610d1e0a5344283513270fc0acd6c1a5c472aae1e3351b419986ae69952"
+    },
+    {
+      "document_id": "case-008-circuit-quench-receipt",
+      "role": "execution_receipt",
+      "path": "receipts/circuit-quench.json",
+      "sha256": "sha256:f97e9be5eb3d95c9f8a9202e14dd79b642eedd651448654a7cb34a189b805a94",
+      "step_id": "circuit-quench"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "circuit-script",
+      "evidence_ids": [
+        "input:circuit-script"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx_circuit_quench_gate.py",
+      "sha256": "sha256:ce4818323a45ac35f29bf0dcad4192f59fb78e4edd2941f223ba5e50f12a0f16"
+    },
+    {
+      "artifact_id": "field-kernel",
+      "evidence_ids": [
+        "input:field-kernel"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "magnetic_compliance.py",
+      "sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3"
+    },
+    {
+      "artifact_id": "ceiling-library",
+      "evidence_ids": [
+        "input:ceiling-library"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx_passive_ceiling.py",
+      "sha256": "sha256:5e804c32b031aa2f31761cadbd8a65dc6ecbedd7d7109c9b7e07a182624e4d21"
+    },
+    {
+      "artifact_id": "fault-library",
+      "evidence_ids": [
+        "input:fault-library"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx_fault_partition_gate.py",
+      "sha256": "sha256:0fa70cf3506aff9ec96d9a6289fff5862df8a1ac79a507c422111d72704033eb"
+    },
+    {
+      "artifact_id": "ncsx-coils",
+      "evidence_ids": [
+        "input:coil-data"
+      ],
+      "source_root": "simsopt",
+      "path": "src/simsopt/configs/NCSX.dat",
+      "sha256": "sha256:2b857ca137184d0f4b5e7fa271c6cf946cf7fdfa127a19ec302d4f9731db57a7"
+    },
+    {
+      "artifact_id": "ncsx-boundary",
+      "evidence_ids": [
+        "input:boundary-data"
+      ],
+      "source_root": "simsopt",
+      "path": "tests/test_files/input.NCSX_c09r00_halfTeslaTF",
+      "sha256": "sha256:32b5609d02643d05b30c353ba5ab0a9b3ef6c486a8122f141a3c14e01748c956"
+    },
+    {
+      "artifact_id": "base-model",
+      "evidence_ids": [
+        "input:base-model"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx-ceiling-model.json",
+      "sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62"
+    },
+    {
+      "artifact_id": "circuit-model",
+      "evidence_ids": [
+        "input:circuit-model"
+      ],
+      "source_root": "magnetic-compliance",
+      "path": "ncsx-circuit-quench-model.json",
+      "sha256": "sha256:3706f3b3971222ddb4f3efd0845c7dafe987dcf851289adc86d93b3b56fe6ae6"
+    },
+    {
+      "artifact_id": "reference-candidate",
+      "evidence_ids": [
+        "input:candidate"
+      ],
+      "source_root": "case",
+      "path": "candidates/mode-selective-dump.json",
+      "sha256": "sha256:ac776247625ce4e3335622d39abc8f1339f800228ebbd0e3e3d4f628aeea8082"
+    },
+    {
+      "artifact_id": "reference-result",
+      "evidence_ids": [
+        "quench-magnetic-reduction",
+        "quench-force-reduction",
+        "quench-i2t-ratio",
+        "quench-element-voltage-ratio",
+        "quench-final-energy-fraction",
+        "quench-resolution-difference",
+        "quench-time-step-difference",
+        "quench-inductance-condition",
+        "quench-fault-spread",
+        "quench-network-validity",
+        "quench-interpretation"
+      ],
+      "source_root": "case",
+      "path": "expected/ncsx-circuit-quench-result.json",
+      "sha256": "sha256:6b5c22cb125dc5e69bb43754adb3d40b337dce1f2af3e07fbefe61d3c88246e3"
+    }
+  ],
+  "capabilities": [
+    {
+      "capability_id": "python3-numpy",
+      "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+      "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+    }
+  ],
+  "executions": [
+    {
+      "step_id": "circuit-quench",
+      "adapter": "avila-labs.magnetic-compliance/ncsx-circuit-quench@1",
+      "capability_id": "python3-numpy",
+      "inputs": [
+        {
+          "input_slot": "circuit-script",
+          "workspace_path": "tools/ncsx_circuit_quench_gate.py"
+        },
+        {
+          "input_slot": "field-kernel",
+          "workspace_path": "tools/magnetic_compliance.py"
+        },
+        {
+          "input_slot": "ceiling-library",
+          "workspace_path": "tools/ncsx_passive_ceiling.py"
+        },
+        {
+          "input_slot": "fault-library",
+          "workspace_path": "tools/ncsx_fault_partition_gate.py"
+        },
+        {
+          "input_slot": "coil-data",
+          "workspace_path": "inputs/NCSX.dat"
+        },
+        {
+          "input_slot": "boundary-data",
+          "workspace_path": "inputs/ncsx-boundary.focus"
+        },
+        {
+          "input_slot": "base-model",
+          "workspace_path": "inputs/base-model.json"
+        },
+        {
+          "input_slot": "circuit-model",
+          "workspace_path": "inputs/circuit-model.json"
+        },
+        {
+          "input_slot": "candidate",
+          "workspace_path": "inputs/candidate.json"
+        }
+      ],
+      "outputs": [
+        {
+          "output_slot": "magnetic-reduction",
+          "claim_id": "quench-magnetic-reduction"
+        },
+        {
+          "output_slot": "force-reduction",
+          "claim_id": "quench-force-reduction"
+        },
+        {
+          "output_slot": "i2t-ratio",
+          "claim_id": "quench-i2t-ratio"
+        },
+        {
+          "output_slot": "element-voltage-ratio",
+          "claim_id": "quench-element-voltage-ratio"
+        },
+        {
+          "output_slot": "final-energy-fraction",
+          "claim_id": "quench-final-energy-fraction"
+        },
+        {
+          "output_slot": "resolution-difference",
+          "claim_id": "quench-resolution-difference"
+        },
+        {
+          "output_slot": "time-step-difference",
+          "claim_id": "quench-time-step-difference"
+        },
+        {
+          "output_slot": "inductance-condition",
+          "claim_id": "quench-inductance-condition"
+        },
+        {
+          "output_slot": "fault-spread",
+          "claim_id": "quench-fault-spread"
+        },
+        {
+          "output_slot": "network-validity",
+          "claim_id": "quench-network-validity"
+        },
+        {
+          "output_slot": "interpretation",
+          "claim_id": "quench-interpretation"
+        }
+      ]
+    }
+  ],
+  "free_inputs": [
+    "candidate"
+  ],
+  "limitations": [
+    "CASE-008 is an exploratory, dimensionless circuit mechanism screen, not a conductor-temperature, dimensional voltage, switching, structural, plasma, safety, or patentability analysis.",
+    "External SIMSOPT artifacts are content-bound but not distributed in this repository.",
+    "The interpreter bytes are bound; the adjacent NumPy installation is named rather than fully environment-locked.",
+    "Thresholds and candidate settings were chosen during interactive feasibility exploration; the formal attempt lineage demonstrates governance and reproduction, not an independent holdout."
+  ]
+}

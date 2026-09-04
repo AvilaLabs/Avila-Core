@@ -221,3 +221,31 @@ entry. Core still has no built-in optimizer or constellation view: proposal
 strategy remains outside the oracle, and the next real campaign must determine
 whether the new lineage actually improves iteration rather than merely making
 it tidier.
+
+## What CASE-008 demonstrated (2026-09-04)
+
+[CASE-008](../../examples/cases/case-008-mode-selective-quench/README.md) is
+that campaign. It exposes one passive protection-network candidate as a free
+JSON input and makes the checker evaluate exactly one candidate. The formal
+root used independent dump resistors and passed eight requirements but missed
+the fixed magnetic- and force-shape reduction gates. Its child changed only
+the candidate id and the differential/common modal-resistance ratio. Core
+derived those JSON-Pointer changes, verified the exact parent record and the
+unchanged manifest and compiled snapshot, then reported ten passes.
+
+The useful idea came from reasoning outside Core: three private dump resistors
+plus equal pair-shared branches form a passive loop-resistance matrix whose two
+differential modes can be damped faster than its common mode. In the declared
+dimensionless transient, the child reaches 1.614× magnetic-shape and 1.685×
+force-shape reduction while its I²t and modeled element-voltage ratios remain
+below 1.05. Geometry-mesh and time-step changes are below 0.32% and 0.002%.
+
+That is meaningful evidence for Core's use in our workflow: it made the failed
+proposal, exact repair, fixed question, execution identities, and absence of
+gate movement one inspectable chain. It did not invent the topology, judge the
+quench model, or turn normalized proxies into engineering safety. The I²t
+margin is especially narrow, and a conductor-resolved model is now the proper
+scientific falsification step. The most visible product gap after this exercise
+is comparison ergonomics: the log contains parent and child verdicts and exact
+claims, but Core does not yet render a parent-to-child verdict/margin delta or
+a constellation view without external analysis.

@@ -1,0 +1,455 @@
+{
+  "schema_version": "avila.core/campaign-report/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "status": "evaluated",
+  "compiled_snapshot_sha256": "sha256:6c39fe31eb3a30e10dabdffa51856a3a835b2fbcc9a8ac81cd84b9be42154c0e",
+  "claims_sha256": "sha256:af02878ff9bd341c607d651e91167d92ab5b585c12c729b3f89ceec155d28694",
+  "admissions": [
+    {
+      "evidence_id": "input:base-model",
+      "source": {
+        "source": "contract_input",
+        "input_id": "base-model"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:boundary-data",
+      "source": {
+        "source": "contract_input",
+        "input_id": "boundary-data"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:candidate",
+      "source": {
+        "source": "contract_input",
+        "input_id": "candidate"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:ceiling-library",
+      "source": {
+        "source": "contract_input",
+        "input_id": "ceiling-library"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:circuit-model",
+      "source": {
+        "source": "contract_input",
+        "input_id": "circuit-model"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:circuit-script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "circuit-script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:coil-data",
+      "source": {
+        "source": "contract_input",
+        "input_id": "coil-data"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:fault-library",
+      "source": {
+        "source": "contract_input",
+        "input_id": "fault-library"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:field-kernel",
+      "source": {
+        "source": "contract_input",
+        "input_id": "field-kernel"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "quench-magnetic-reduction",
+      "source": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "magnetic-reduction"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "quench-force-reduction",
+      "source": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "force-reduction"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "quench-i2t-ratio",
+      "source": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "i2t-ratio"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "quench-element-voltage-ratio",
+      "source": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "element-voltage-ratio"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "quench-final-energy-fraction",
+      "source": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "final-energy-fraction"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "quench-resolution-difference",
+      "source": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "resolution-difference"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "quench-time-step-difference",
+      "source": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "time-step-difference"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "quench-inductance-condition",
+      "source": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "inductance-condition"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "quench-fault-spread",
+      "source": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "fault-spread"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "quench-network-validity",
+      "source": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "network-validity"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "quench-interpretation",
+      "source": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "interpretation"
+      },
+      "state": "admitted"
+    }
+  ],
+  "verdicts": [
+    {
+      "requirement_id": "QUENCH-R1-MAGNETIC",
+      "statement": "The fine-mesh candidate reduces the worst transient magnetic-shape departure by at least 1.5 times relative to the fixed independent-dump control.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "magnetic-reduction"
+      },
+      "evidence_ids": [
+        "quench-magnetic-reduction"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.ge.within",
+        "canonical_unit": "1",
+        "limit_canonical": "3/2",
+        "nominal_canonical": "322782319037/200000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:6c39fe31eb3a30e10dabdffa51856a3a835b2fbcc9a8ac81cd84b9be42154c0e",
+        "claims_sha256": "sha256:af02878ff9bd341c607d651e91167d92ab5b585c12c729b3f89ceec155d28694"
+      }
+    },
+    {
+      "requirement_id": "QUENCH-R10-NETWORK",
+      "statement": "The candidate lies inside the declared box and maps to nonnegative private and pair-shared passive resistances.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "network-validity"
+      },
+      "evidence_ids": [
+        "quench-network-validity"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "categorical.equals.match",
+        "numbers_present": false,
+        "observed_category": "valid",
+        "accepted_categories": [
+          "valid"
+        ]
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:6c39fe31eb3a30e10dabdffa51856a3a835b2fbcc9a8ac81cd84b9be42154c0e",
+        "claims_sha256": "sha256:af02878ff9bd341c607d651e91167d92ab5b585c12c729b3f89ceec155d28694"
+      }
+    },
+    {
+      "requirement_id": "QUENCH-R2-FORCE",
+      "statement": "The fine-mesh candidate reduces the worst transient distributed-force-shape departure by at least 1.5 times relative to the fixed independent-dump control.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "force-reduction"
+      },
+      "evidence_ids": [
+        "quench-force-reduction"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.ge.within",
+        "canonical_unit": "1",
+        "limit_canonical": "3/2",
+        "nominal_canonical": "336992082431/200000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:6c39fe31eb3a30e10dabdffa51856a3a835b2fbcc9a8ac81cd84b9be42154c0e",
+        "claims_sha256": "sha256:af02878ff9bd341c607d651e91167d92ab5b585c12c729b3f89ceec155d28694"
+      }
+    },
+    {
+      "requirement_id": "QUENCH-R3-I2T",
+      "statement": "The worst normalized initiating-circuit current-squared-time proxy is no more than 1.05 times the fixed independent-dump control.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "i2t-ratio"
+      },
+      "evidence_ids": [
+        "quench-i2t-ratio"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "21/20",
+        "nominal_canonical": "522178097401/500000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:6c39fe31eb3a30e10dabdffa51856a3a835b2fbcc9a8ac81cd84b9be42154c0e",
+        "claims_sha256": "sha256:af02878ff9bd341c607d651e91167d92ab5b585c12c729b3f89ceec155d28694"
+      }
+    },
+    {
+      "requirement_id": "QUENCH-R4-ELEMENT-VOLTAGE",
+      "statement": "The worst modeled normalized resistive-element voltage is no more than 1.05 times the fixed independent-dump control.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "element-voltage-ratio"
+      },
+      "evidence_ids": [
+        "quench-element-voltage-ratio"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "21/20",
+        "nominal_canonical": "520806878397/500000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:6c39fe31eb3a30e10dabdffa51856a3a835b2fbcc9a8ac81cd84b9be42154c0e",
+        "claims_sha256": "sha256:af02878ff9bd341c607d651e91167d92ab5b585c12c729b3f89ceec155d28694"
+      }
+    },
+    {
+      "requirement_id": "QUENCH-R5-ENERGY",
+      "statement": "The candidate leaves no more than one-millionth of its initial normalized magnetic energy at the end of the simulated interval.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "final-energy-fraction"
+      },
+      "evidence_ids": [
+        "quench-final-energy-fraction"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/1000000",
+        "nominal_canonical": "1/500000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:6c39fe31eb3a30e10dabdffa51856a3a835b2fbcc9a8ac81cd84b9be42154c0e",
+        "claims_sha256": "sha256:af02878ff9bd341c607d651e91167d92ab5b585c12c729b3f89ceec155d28694"
+      }
+    },
+    {
+      "requirement_id": "QUENCH-R6-RESOLUTION",
+      "statement": "The largest relative change in a primary candidate/control metric between reference and fine coil meshes is no more than one percent.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "resolution-difference"
+      },
+      "evidence_ids": [
+        "quench-resolution-difference"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/100",
+        "nominal_canonical": "3108292151/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:6c39fe31eb3a30e10dabdffa51856a3a835b2fbcc9a8ac81cd84b9be42154c0e",
+        "claims_sha256": "sha256:af02878ff9bd341c607d651e91167d92ab5b585c12c729b3f89ceec155d28694"
+      }
+    },
+    {
+      "requirement_id": "QUENCH-R7-TIME-STEP",
+      "statement": "The largest relative change in a primary fine-mesh metric when the time step is halved is no more than one tenth of one percent.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "time-step-difference"
+      },
+      "evidence_ids": [
+        "quench-time-step-difference"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/1000",
+        "nominal_canonical": "252181/25000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:6c39fe31eb3a30e10dabdffa51856a3a835b2fbcc9a8ac81cd84b9be42154c0e",
+        "claims_sha256": "sha256:af02878ff9bd341c607d651e91167d92ab5b585c12c729b3f89ceec155d28694"
+      }
+    },
+    {
+      "requirement_id": "QUENCH-R8-INDUCTANCE",
+      "statement": "The fine normalized circuit inductance matrix has condition number no greater than two.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "inductance-condition"
+      },
+      "evidence_ids": [
+        "quench-inductance-condition"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "2",
+        "nominal_canonical": "884158888733/500000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:6c39fe31eb3a30e10dabdffa51856a3a835b2fbcc9a8ac81cd84b9be42154c0e",
+        "claims_sha256": "sha256:af02878ff9bd341c607d651e91167d92ab5b585c12c729b3f89ceec155d28694"
+      }
+    },
+    {
+      "requirement_id": "QUENCH-R9-SYMMETRY",
+      "statement": "The relative spread among the three initiating-circuit cases is no greater than one-billionth for every primary fine-mesh fault metric.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "circuit-quench",
+        "output_slot": "fault-spread"
+      },
+      "evidence_ids": [
+        "quench-fault-spread"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/1000000000",
+        "nominal_canonical": "0",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:6c39fe31eb3a30e10dabdffa51856a3a835b2fbcc9a8ac81cd84b9be42154c0e",
+        "claims_sha256": "sha256:af02878ff9bd341c607d651e91167d92ab5b585c12c729b3f89ceec155d28694"
+      }
+    }
+  ],
+  "campaign_sha256": "sha256:d4c15b64430ad0e1531aff4bde226e3c3be6c6089f98b7cea3792a107a4da4e3",
+  "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
+}

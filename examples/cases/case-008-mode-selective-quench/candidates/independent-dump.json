@@ -1,0 +1,8 @@
+{
+  "schema": "avila.magnetic-compliance/ncsx-circuit-quench-candidate/v1",
+  "candidate_id": "independent-dump-r0",
+  "network": {
+    "private_resistance_scale": "1.45",
+    "differential_to_common_mode_ratio": "1"
+  }
+}

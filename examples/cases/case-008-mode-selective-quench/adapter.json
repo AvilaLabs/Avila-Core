@@ -1,0 +1,42 @@
+{
+  "schema_version": "avila.core/external-checker-adapter/v0.1-draft",
+  "adapter_id": "avila-labs.magnetic-compliance/ncsx-circuit-quench@1",
+  "capability_type": { "id": "magnetic-compliance.ncsx-circuit-quench", "major": 1 },
+  "input_slots": ["circuit-script", "field-kernel", "ceiling-library", "fault-library", "coil-data", "boundary-data", "base-model", "circuit-model", "candidate"],
+  "arguments": [
+    { "kind": "input_path", "input_slot": "circuit-script" },
+    { "kind": "input_path", "input_slot": "field-kernel" },
+    { "kind": "input_path", "input_slot": "ceiling-library" },
+    { "kind": "input_path", "input_slot": "fault-library" },
+    { "kind": "input_path", "input_slot": "coil-data" },
+    { "kind": "input_path", "input_slot": "boundary-data" },
+    { "kind": "input_path", "input_slot": "base-model" },
+    { "kind": "input_path", "input_slot": "circuit-model" },
+    { "kind": "input_path", "input_slot": "candidate" },
+    { "kind": "output_path", "output_id": "result" }
+  ],
+  "outputs": [
+    {
+      "output_id": "result",
+      "workspace_path": "outputs/ncsx-circuit-quench-result.json",
+      "media_type": "application/vnd.avila.ncsx-circuit-quench-result+json"
+    }
+  ],
+  "claims": [
+    { "model": "exact", "output_slot": "magnetic-reduction", "output_id": "result", "pointer": "/metrics/fine_magnetic_reduction_factor", "unit": "1" },
+    { "model": "exact", "output_slot": "force-reduction", "output_id": "result", "pointer": "/metrics/fine_force_reduction_factor", "unit": "1" },
+    { "model": "exact", "output_slot": "i2t-ratio", "output_id": "result", "pointer": "/metrics/fine_i2t_ratio", "unit": "1" },
+    { "model": "exact", "output_slot": "element-voltage-ratio", "output_id": "result", "pointer": "/metrics/fine_peak_element_voltage_ratio", "unit": "1" },
+    { "model": "exact", "output_slot": "final-energy-fraction", "output_id": "result", "pointer": "/metrics/fine_final_energy_fraction", "unit": "1" },
+    { "model": "exact", "output_slot": "resolution-difference", "output_id": "result", "pointer": "/metrics/resolution_relative_difference", "unit": "1" },
+    { "model": "exact", "output_slot": "time-step-difference", "output_id": "result", "pointer": "/metrics/time_step_relative_difference", "unit": "1" },
+    { "model": "exact", "output_slot": "inductance-condition", "output_id": "result", "pointer": "/metrics/inductance_condition_number", "unit": "1" },
+    { "model": "exact", "output_slot": "fault-spread", "output_id": "result", "pointer": "/metrics/fault_relative_spread", "unit": "1" },
+    { "model": "categorical", "output_slot": "network-validity", "output_id": "result", "pointer": "/network_validity", "allowed_values": ["valid", "invalid"] },
+    { "model": "categorical", "output_slot": "interpretation", "output_id": "result", "pointer": "/interpretation", "allowed_values": ["candidate-justified", "revise"] }
+  ],
+  "timeout_ms": 120000,
+  "limitations": [
+    "The checker owns the exploratory reduced-order calculation; Core validates declared identities, execution, extraction, evidence binding, candidate lineage, and requirement arithmetic only."
+  ]
+}

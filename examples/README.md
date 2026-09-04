@@ -37,6 +37,11 @@ integrations, safety analyses, or evidence of compliance.
   magnetic-only proposal fails the force gate; an exhaustive minimax repair
   finds a symmetry-related interleaving that passes seven exploratory gates
   and justifies—but does not perform—a coupled quench/circuit study.
+- `cases/case-008-mode-selective-quench/` performs that next reduced-order
+  gate. A native Core lineage records an independent-dump root that misses two
+  shape gates and a one-variable passive pair-shared-resistor child that passes
+  all ten gates, while keeping its normalized I²t and element-voltage proxies
+  within five percent of the control.
 
 The dose limit, unit factors, parameter domains, and every capability
 description are hypothetical. They must never be used for engineering or

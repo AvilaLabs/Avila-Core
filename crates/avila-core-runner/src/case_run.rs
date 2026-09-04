@@ -50,9 +50,9 @@ use crate::attempt::{
     revalidate_before_append,
 };
 use crate::diagnostic::{
-    CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1101, CORE_X1201, CORE_X1301, CORE_X2001, CORE_X2101, CORE_X2201,
-    CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001,
-    CORE_X3101, CORE_X3201, CORE_X3301, CORE_X9001, RunFinding, RunStage,
+    CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1101, CORE_X1201, CORE_X1301, CORE_X2001, CORE_X2101,
+    CORE_X2201, CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801,
+    CORE_X3001, CORE_X3101, CORE_X3201, CORE_X3301, CORE_X9001, RunFinding, RunStage,
 };
 use crate::execute::claims::{
     GeneratedClaim, canonical_decimal, canonical_identity, generate_claims,

@@ -57,6 +57,14 @@ regulatory review. It makes their boundaries explicit and inspectable.
   content hashes, receipts, replay checks, and selective reuse.
 - Hash-bound, package-declared command-line checkers with closed numeric and
   categorical claim extraction.
+- An execution policy that can require a qualification assessment behind
+  every bounded or enclosure verdict, refusing unqualified evidence outright
+  or, at its default, evaluating it while visibly flagging the gap.
+- Registry-declared structural schemas for free inputs such as a search
+  candidate, so a malformed one is refused before anything is staged.
+- An opt-in verified-hash cache for large, unchanging operator-supplied
+  artifacts, reported as a state distinct from a fresh hash and never
+  weakening the check against the manifest's bound identity.
 - End-to-end case reports for integrity, compilation, execution, evidence
   binding, coverage, and verdicts.
 - Identity-bound attempt lineage with automatic typed candidate diffs and

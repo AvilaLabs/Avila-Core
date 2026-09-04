@@ -53,7 +53,7 @@ qualification.
 
 The current repository remains in this stage. Its draft kernel executes 91 pure
 vectors, its static compiler executes 68 fixtures through R10, and its campaign
-harness executes 12 fixtures over the first SC-10/SC-11 slice. That slice
+harness executes 15 fixtures over the first SC-10/SC-11 slice. That slice
 performs type-level claim admission and verdict derivation. It does not perform
 full package-level evidence admission: the evaluator reads no bytes;
 artifact-byte and receipt verification exist only in the case runner for the

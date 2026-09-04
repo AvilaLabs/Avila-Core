@@ -1,0 +1,5 @@
+EXP-002 protocol frozen 2026-09-04
+freeze commit: b872f15
+sha256 experiments/EXP-002-core-feedback-ablation.md: cc3f7602eba552bc933c14f0686dea4b9505eed3a053ed3b75330c5fdc8dcfcb
+harness commit: ee25b71
+core binary sha256: e7bb598656962c49f4fc24d9c318cb0472eb265b8ad61e63d2cf46555e1b1809

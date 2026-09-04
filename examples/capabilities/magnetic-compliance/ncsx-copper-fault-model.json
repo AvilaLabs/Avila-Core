@@ -1,0 +1,87 @@
+{
+  "schema": "avila.magnetic-compliance/ncsx-copper-fault-model/v1",
+  "model_id": "ncsx-m45r00-asynchronous-discharge-r0",
+  "base_model_sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62",
+  "source_scope": {
+    "dimensional_revision": "NCSX conceptual-design m45r00",
+    "field_surrogate_revision": "SIMSOPT NCSX coils with c09r00-named boundary",
+    "engineering_design_url": "https://ncsx.pppl.gov/Meetings/CDR/CDRFinal/SDD_WBS1_C.pdf",
+    "technical_data_url": "https://ncsx.pppl.gov/Meetings/CDR/CDRFinal/TechnicalData2.pdf",
+    "nist_heat_capacity_url": "https://trc.nist.gov/cryogenics/materials/OFHC%20Copper/OFHC_Copper_rev1.htm",
+    "nist_resistivity_url": "https://doi.org/10.6028/NIST.MONO.177",
+    "production_voltage_url": "https://ncsx.pppl.gov/NCSX_Engineering/ModCoil_TF-Coil_VVSA_Fab/Jobs1451_1459_1408/011-May%20FDR%20NCSX/FDR%20Presentations/mcwf_fdr_wms.pdf",
+    "protection_closeout_url": "https://ncsx.pppl.gov/NCSX_Engineering/CloseOut_Documentation/Ramakrishnan/WBS4_Jobs/CloseoutNotes%20WBS4%20092508.pdf",
+    "copper_density_basis": "assumed-8960-kg-m3-not-provided-by-bound-ncsx-or-nist-pages",
+    "material_grade_basis": "NIST-OFHC-properties-used-as-model-assumption-m45r00-grade-not-established"
+  },
+  "circuits": {
+    "names": ["M1", "M2", "M3"],
+    "coils_per_circuit": 6,
+    "turns_per_coil": 36,
+    "centerline_length_m": ["7.351", "7.13", "6.537"],
+    "helical_length_factor": "1.05843",
+    "copper_area_mm2": "143.6015802",
+    "copper_density_kg_m3": "8960",
+    "resistivity_at_85k_ohm_m": "0.00000000236",
+    "coil_resistance_at_85k_ohm": ["0.02758", "0.02675", "0.02452"],
+    "line_resistance_ohm": "0.0172",
+    "coil_self_inductance_h": ["0.03828", "0.02848", "0.03138"],
+    "line_inductance_h": "0.00013",
+    "fault_onset_current_a": ["22685", "21392", "18008"],
+    "fault_onset_temperature_k": ["108", "110", "97"],
+    "prehistory_time_s": ["-0.8", "0", "0.05", "0.118", "0.213"],
+    "prehistory_current_a": [
+      ["0", "0", "0"],
+      ["22228", "22998", "17518"],
+      ["22228", "22998", "17518"],
+      ["22697", "21265", "18432"],
+      ["22685", "21392", "18008"]
+    ],
+    "thermal_validation_final_temperature_k": ["125.13", "120.62", "108.06"],
+    "thermal_validation_deposited_energy_j": ["22900000", "19500000", "10800000"]
+  },
+  "material": {
+    "specific_heat_log10_coefficients": [
+      "-1.91844", "-0.15973", "8.61013", "-18.996", "21.9661",
+      "-12.7328", "3.54322", "-0.3797", "0"
+    ],
+    "specific_heat_fit_error": "0.05",
+    "resistivity_coefficients": [
+      "0.00000000000000001171", "4.49", "38410000000", "1.14",
+      "50", "6.428", "0.4531"
+    ],
+    "resistivity_model": "nist-intrinsic-shape-scaled-to-published-85k-value",
+    "resistivity_sensitivity_scales": ["0.85", "1", "1.15"],
+    "resistivity_sensitivity_basis": "chosen-model-envelope-not-nist-uncertainty"
+  },
+  "transient": {
+    "fault": "one-converter-voltage-collapses-while-healthy-converters-hold-steady-loss-compensation-until-global-bypass",
+    "detection_delays_s": ["0", "0.025", "0.05", "0.1", "0.12"],
+    "nominal_detection_delay_s": "0.05",
+    "end_time_s": "3",
+    "reference_time_step_s": "0.001",
+    "refined_time_step_s": "0.0005",
+    "geometry_confirmation_multiplier": 2
+  },
+  "control": {
+    "private_dump_resistance_ohm": "0.05",
+    "differential_to_common_mode_ratio": "1"
+  },
+  "gate": {
+    "minimum_magnetic_reduction": "1.5",
+    "minimum_force_reduction": "1.5",
+    "maximum_total_i2t_a2s": "530000000",
+    "maximum_temperature_k": "125",
+    "maximum_absolute_current_a": "24000",
+    "minimum_current_a": "0",
+    "maximum_modeled_component_voltage_v": "2000",
+    "maximum_final_energy_fraction": "0.0001",
+    "maximum_energy_balance_relative_error": "0.00001",
+    "maximum_time_step_relative_difference": "0.001",
+    "maximum_shape_resolution_relative_difference": "0.01",
+    "maximum_inductance_resolution_relative_difference": "0.005",
+    "maximum_inductance_condition_number": "3",
+    "maximum_geometry_length_mismatch": "0.01",
+    "maximum_thermal_validation_energy_error": "0.02"
+  }
+}

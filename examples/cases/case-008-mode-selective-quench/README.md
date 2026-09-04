@@ -1,15 +1,23 @@
 # CASE-008 — Passive mode-selective quench response
 
+> Historical correction: actual NCSX modular coils were cryoresistive copper,
+> not superconducting coils; the conceptual source bound by CASE-009 does not
+> establish the grade. “Quench” in this case labels a prescribed,
+> hypothetical resistance-rise mechanism on NCSX geometry; it does not describe
+> NCSX hardware. [CASE-009](../case-009-ncsx-copper-discharge/) replaces that
+> framing with a dimensional copper fault/discharge model.
+
 CASE-008 found a mechanism worth one higher-fidelity study. In a reduced
 three-circuit transient on the public NCSX coil geometry, adding equal passive
 resistor branches shared between the CASE-007 winding circuits reduced the
-worst magnetic-shape excursion by **1.614×** and the worst distributed-force
-shape excursion by **1.685×** relative to the fixed independent-dump control.
+worst magnetic-shape excursion by **1.614×** and the worst inter-coil
+filament-force-shape excursion by **1.685×** relative to the fixed
+independent-dump control.
 All ten exploratory Core requirements pass.
 
-This is not a quench-protection design. Inductance, resistance, time, voltage,
-and current are normalized; the quench resistance is prescribed rather than
-calculated from conductor heating or propagation.
+This is not a quench-protection design or a historical NCSX model. Inductance,
+resistance, time, voltage, and current are normalized; the resistance rise is
+prescribed rather than calculated from conductor heating or propagation.
 
 ## The mechanism
 
@@ -48,7 +56,7 @@ ten thresholds fixed. Its two records are in
 | Fine-grid gate | Required | Independent root | Mode-selective child |
 | --- | ---: | ---: | ---: |
 | magnetic-shape reduction | ≥ 1.5× | 1.2315× FAIL | **1.6139× PASS** |
-| force-shape reduction | ≥ 1.5× | 1.3222× FAIL | **1.6850× PASS** |
+| inter-coil filament-force-shape reduction | ≥ 1.5× | 1.3222× FAIL | **1.6850× PASS** |
 | normalized initiating-circuit I²t / control | ≤ 1.05 | 0.9513 PASS | **1.0444 PASS** |
 | peak modeled element voltage / control | ≤ 1.05 | 1.0416 PASS | **1.0416 PASS** |
 | final energy fraction | ≤ 1e-6 | 7.1e-11 PASS | **2e-12 PASS** |
@@ -70,7 +78,8 @@ The 20 mm filament regularization is not a winding-pack self-inductance model.
 The I²t proxy is not a hot-spot temperature. The reported voltage is a
 normalized resistive-element drop, not terminal-to-ground or turn-to-turn
 voltage. Switches, diodes, power supplies, insulation, quench detection,
-propagation, eddy currents, structures, stress, and plasma response are absent.
+propagation, eddy currents, filament self/hoop force, structures, stress, and
+plasma response are absent.
 
 Standard quench analysis couples inductance, resistance, current decay, and
 thermal properties; multi-coil systems also require mutual-inductance and
@@ -114,3 +123,6 @@ python3 -m unittest \
 
 The [protocol](PROTOCOL.md) fixes the reduced equations, comparison, candidate
 box, gates, and stop/advance boundary.
+
+The dimensional follow-up in [CASE-009](../case-009-ncsx-copper-discharge/)
+rejects the delayed mesh on the historical copper type circuits.

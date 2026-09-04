@@ -1,0 +1,423 @@
+{
+  "claims": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.770524581518"
+        }
+      },
+      "claim_id": "copper-magnetic-reduction",
+      "output_slot": "magnetic-reduction",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.714235816035"
+        }
+      },
+      "claim_id": "copper-force-reduction",
+      "output_slot": "force-reduction",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "A2s",
+          "value": "414647634.147419095039"
+        }
+      },
+      "claim_id": "copper-total-i2t",
+      "output_slot": "total-i2t",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "K",
+          "value": "124.891925417279"
+        }
+      },
+      "claim_id": "copper-maximum-temperature",
+      "output_slot": "maximum-temperature",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "A",
+          "value": "23682.141089139473"
+        }
+      },
+      "claim_id": "copper-maximum-current",
+      "output_slot": "maximum-current",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "A",
+          "value": "7.945036475832"
+        }
+      },
+      "claim_id": "copper-minimum-current",
+      "output_slot": "minimum-current",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "V",
+          "value": "1797.838940149833"
+        }
+      },
+      "claim_id": "copper-component-voltage",
+      "output_slot": "component-voltage",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.000001600104"
+        }
+      },
+      "claim_id": "copper-final-energy-fraction",
+      "output_slot": "final-energy-fraction",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.000000000001"
+        }
+      },
+      "claim_id": "copper-energy-balance-error",
+      "output_slot": "energy-balance-error",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.000004171081"
+        }
+      },
+      "claim_id": "copper-time-step-difference",
+      "output_slot": "time-step-difference",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.006936060551"
+        }
+      },
+      "claim_id": "copper-shape-resolution-difference",
+      "output_slot": "shape-resolution-difference",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.000326510605"
+        }
+      },
+      "claim_id": "copper-inductance-resolution-difference",
+      "output_slot": "inductance-resolution-difference",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "2.359769181817"
+        }
+      },
+      "claim_id": "copper-inductance-condition",
+      "output_slot": "inductance-condition",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.008682776531"
+        }
+      },
+      "claim_id": "copper-geometry-length-mismatch",
+      "output_slot": "geometry-length-mismatch",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0.013995763795"
+        }
+      },
+      "claim_id": "copper-thermal-validation-error",
+      "output_slot": "thermal-validation-error",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "unquantified",
+        "value": "valid"
+      },
+      "claim_id": "copper-network-validity",
+      "output_slot": "network-validity",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "unquantified",
+        "value": "complete"
+      },
+      "claim_id": "copper-sweep-coverage",
+      "output_slot": "sweep-coverage",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+        "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140"
+      },
+      "claim": {
+        "model": "unquantified",
+        "value": "post-activation-shape-redistribution"
+      },
+      "claim_id": "copper-primary-cause",
+      "output_slot": "primary-cause",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "copper-discharge"
+    }
+  ],
+  "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+  "inputs": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.passive-ceiling-model+json",
+        "sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62"
+      },
+      "input_id": "base-model"
+    },
+    {
+      "artifact": {
+        "media_type": "text/plain",
+        "sha256": "sha256:32b5609d02643d05b30c353ba5ab0a9b3ef6c486a8122f141a3c14e01748c956"
+      },
+      "input_id": "boundary-data"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-fault-candidate+json",
+        "sha256": "sha256:38813ccc91bc00e2a46dc30df8f4ab5183c51189c61d3321c70559134c590b73"
+      },
+      "input_id": "candidate"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:5e804c32b031aa2f31761cadbd8a65dc6ecbedd7d7109c9b7e07a182624e4d21"
+      },
+      "input_id": "ceiling-library"
+    },
+    {
+      "artifact": {
+        "media_type": "text/csv",
+        "sha256": "sha256:2b857ca137184d0f4b5e7fa271c6cf946cf7fdfa127a19ec302d4f9731db57a7"
+      },
+      "input_id": "coil-data"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.ncsx-copper-fault-model+json",
+        "sha256": "sha256:0d5eb7f40cfd75a2a0c1d3a2acc52b6e8ecb58ad44dcc5beb797b273d9a53aae"
+      },
+      "input_id": "copper-model"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:0fa70cf3506aff9ec96d9a6289fff5862df8a1ac79a507c422111d72704033eb"
+      },
+      "input_id": "fault-library"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:c6757194b513281f4d5497db2bd34dc85dd1fc72eccc069119617d7ac12a4a57"
+      },
+      "input_id": "fault-script"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3"
+      },
+      "input_id": "field-kernel"
+    }
+  ],
+  "schema_version": "avila.core/evidence-claims/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft"
+}

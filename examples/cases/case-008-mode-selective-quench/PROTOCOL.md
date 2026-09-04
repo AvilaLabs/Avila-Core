@@ -5,10 +5,16 @@ reported settings were selected during interactive exploration on 2026-09-04.
 They were frozen before the formal two-attempt Core lineage, but the lineage is
 not a statistical holdout or preregistration.
 
+Historical correction: NCSX modular coils were cryoresistive copper. The
+prescribed “quench resistance” below is a hypothetical normalized disturbance
+on NCSX geometry, not a model of the NCSX conductor. CASE-009 carries the
+mechanism into a dimensional copper fault/discharge model.
+
 ## Question
 
 Can a passive three-loop dump network damp differential circuit-current modes
-strongly enough to reduce both magnetic-shape and force-shape excursions by at
+strongly enough to reduce both magnetic-shape and inter-coil
+filament-force-shape excursions by at
 least 1.5 times relative to an independent-dump control, while remaining
 within five percent of that control's normalized I²t and peak modeled
 resistive-element voltage?
@@ -60,8 +66,9 @@ not search.
 
 - Magnetic departure is the RMS surface-normal field left after subtracting
   the instantaneous best common-current scaling.
-- Distributed-force departure is the length-weighted RMS filament force change
-  left after subtracting the common-current-squared nominal force pattern.
+- Inter-coil filament-force departure is the length-weighted RMS force change
+  left after subtracting the common-current-squared nominal force pattern;
+  singular filament self/hoop force is omitted.
 - I²t is the time integral of the initiating loop's normalized current squared.
 - Element voltage is the greatest normalized resistive drop across the quench,
   a private resistor, or a pair-shared resistor.
@@ -71,7 +78,8 @@ not search.
 ## Frozen gates
 
 1. Fine magnetic-departure reduction versus control is at least `1.5`.
-2. Fine force-departure reduction versus control is at least `1.5`.
+2. Fine inter-coil filament-force-departure reduction versus control is at
+   least `1.5`.
 3. Fine initiating-circuit I²t ratio versus control is at most `1.05`.
 4. Fine peak modeled element-voltage ratio versus control is at most `1.05`.
 5. Fine final energy fraction is at most `0.000001`.

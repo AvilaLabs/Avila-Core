@@ -1,0 +1,49 @@
+{
+  "schema_version": "avila.core/external-checker-adapter/v0.1-draft",
+  "adapter_id": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1",
+  "capability_type": { "id": "magnetic-compliance.ncsx-copper-discharge", "major": 1 },
+  "input_slots": ["fault-script", "field-kernel", "ceiling-library", "fault-library", "coil-data", "boundary-data", "base-model", "copper-model", "candidate"],
+  "arguments": [
+    { "kind": "input_path", "input_slot": "fault-script" },
+    { "kind": "input_path", "input_slot": "field-kernel" },
+    { "kind": "input_path", "input_slot": "ceiling-library" },
+    { "kind": "input_path", "input_slot": "fault-library" },
+    { "kind": "input_path", "input_slot": "coil-data" },
+    { "kind": "input_path", "input_slot": "boundary-data" },
+    { "kind": "input_path", "input_slot": "base-model" },
+    { "kind": "input_path", "input_slot": "copper-model" },
+    { "kind": "input_path", "input_slot": "candidate" },
+    { "kind": "output_path", "output_id": "result" }
+  ],
+  "outputs": [
+    {
+      "output_id": "result",
+      "workspace_path": "outputs/ncsx-copper-discharge-result.json",
+      "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json"
+    }
+  ],
+  "claims": [
+    { "model": "exact", "output_slot": "magnetic-reduction", "output_id": "result", "pointer": "/metrics/minimum_magnetic_reduction_factor", "unit": "1" },
+    { "model": "exact", "output_slot": "force-reduction", "output_id": "result", "pointer": "/metrics/minimum_force_reduction_factor", "unit": "1" },
+    { "model": "exact", "output_slot": "total-i2t", "output_id": "result", "pointer": "/metrics/maximum_total_i2t_a2s", "unit": "A2s" },
+    { "model": "exact", "output_slot": "maximum-temperature", "output_id": "result", "pointer": "/metrics/maximum_temperature_k", "unit": "K" },
+    { "model": "exact", "output_slot": "maximum-current", "output_id": "result", "pointer": "/metrics/maximum_absolute_current_a", "unit": "A" },
+    { "model": "exact", "output_slot": "minimum-current", "output_id": "result", "pointer": "/metrics/minimum_current_a", "unit": "A" },
+    { "model": "exact", "output_slot": "component-voltage", "output_id": "result", "pointer": "/metrics/maximum_modeled_component_voltage_v", "unit": "V" },
+    { "model": "exact", "output_slot": "final-energy-fraction", "output_id": "result", "pointer": "/metrics/maximum_final_energy_fraction", "unit": "1" },
+    { "model": "exact", "output_slot": "energy-balance-error", "output_id": "result", "pointer": "/metrics/maximum_energy_balance_relative_error", "unit": "1" },
+    { "model": "exact", "output_slot": "time-step-difference", "output_id": "result", "pointer": "/metrics/time_step_relative_difference", "unit": "1" },
+    { "model": "exact", "output_slot": "shape-resolution-difference", "output_id": "result", "pointer": "/metrics/shape_resolution_relative_difference", "unit": "1" },
+    { "model": "exact", "output_slot": "inductance-resolution-difference", "output_id": "result", "pointer": "/metrics/inductance_resolution_relative_difference", "unit": "1" },
+    { "model": "exact", "output_slot": "inductance-condition", "output_id": "result", "pointer": "/metrics/inductance_condition_number", "unit": "1" },
+    { "model": "exact", "output_slot": "geometry-length-mismatch", "output_id": "result", "pointer": "/metrics/geometry_length_mismatch", "unit": "1" },
+    { "model": "exact", "output_slot": "thermal-validation-error", "output_id": "result", "pointer": "/metrics/thermal_validation_energy_error", "unit": "1" },
+    { "model": "categorical", "output_slot": "network-validity", "output_id": "result", "pointer": "/topology_validity", "allowed_values": ["valid", "invalid"] },
+    { "model": "categorical", "output_slot": "sweep-coverage", "output_id": "result", "pointer": "/sweep_coverage", "allowed_values": ["complete", "incomplete"] },
+    { "model": "categorical", "output_slot": "primary-cause", "output_id": "result", "pointer": "/compiler_feedback/primary_cause", "allowed_values": ["limiting-shape-peak-at-or-before-network-activation", "mixed-pre-and-post-activation-shape-failure", "post-activation-shape-redistribution", "non-shape-gate-failure", "none"] }
+  ],
+  "timeout_ms": 180000,
+  "limitations": [
+    "The checker owns the research model and causal label; Core validates identities, execution, extraction, evidence binding, lineage, and declared requirement arithmetic."
+  ]
+}

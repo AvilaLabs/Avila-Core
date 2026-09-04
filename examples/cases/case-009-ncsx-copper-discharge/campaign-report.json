@@ -1,0 +1,708 @@
+{
+  "schema_version": "avila.core/campaign-report/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "status": "evaluated",
+  "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+  "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38",
+  "admissions": [
+    {
+      "evidence_id": "input:base-model",
+      "source": {
+        "source": "contract_input",
+        "input_id": "base-model"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:boundary-data",
+      "source": {
+        "source": "contract_input",
+        "input_id": "boundary-data"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:candidate",
+      "source": {
+        "source": "contract_input",
+        "input_id": "candidate"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:ceiling-library",
+      "source": {
+        "source": "contract_input",
+        "input_id": "ceiling-library"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:coil-data",
+      "source": {
+        "source": "contract_input",
+        "input_id": "coil-data"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:copper-model",
+      "source": {
+        "source": "contract_input",
+        "input_id": "copper-model"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:fault-library",
+      "source": {
+        "source": "contract_input",
+        "input_id": "fault-library"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:fault-script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "fault-script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:field-kernel",
+      "source": {
+        "source": "contract_input",
+        "input_id": "field-kernel"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-magnetic-reduction",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "magnetic-reduction"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-force-reduction",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "force-reduction"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-total-i2t",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "total-i2t"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-maximum-temperature",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "maximum-temperature"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-maximum-current",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "maximum-current"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-minimum-current",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "minimum-current"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-component-voltage",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "component-voltage"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-final-energy-fraction",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "final-energy-fraction"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-energy-balance-error",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "energy-balance-error"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-time-step-difference",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "time-step-difference"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-shape-resolution-difference",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "shape-resolution-difference"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-inductance-resolution-difference",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "inductance-resolution-difference"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-inductance-condition",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "inductance-condition"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-geometry-length-mismatch",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "geometry-length-mismatch"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-thermal-validation-error",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "thermal-validation-error"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-network-validity",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "network-validity"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-sweep-coverage",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "sweep-coverage"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "copper-primary-cause",
+      "source": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "primary-cause"
+      },
+      "state": "admitted"
+    }
+  ],
+  "verdicts": [
+    {
+      "requirement_id": "COPPER-R1-MAGNETIC",
+      "statement": "The candidate improves the worst magnetic-shape departure by at least 1.5 times relative to the same private-dump network without shared branches.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "magnetic-reduction"
+      },
+      "evidence_ids": [
+        "copper-magnetic-reduction"
+      ],
+      "verdict": {
+        "status": "fail",
+        "rule": "nominal.ge.below",
+        "canonical_unit": "1",
+        "limit_canonical": "3/2",
+        "nominal_canonical": "385262290759/500000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R10-TIMESTEP",
+      "statement": "Across all fault and delay cases at nominal material properties, halving the transient time step changes no gated physical aggregate or per-scenario field/force peak by more than 0.1 percent; the roundoff-scale energy-balance residual has its own absolute gate.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "time-step-difference"
+      },
+      "evidence_ids": [
+        "copper-time-step-difference"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/1000",
+        "nominal_canonical": "4171081/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R11-SHAPE-RESOLUTION",
+      "statement": "Across all fault and delay cases at nominal material properties, the 256-to-512-segment confirmation refinement changes no gated physical aggregate or per-scenario field/force peak by more than one percent; the roundoff-scale energy-balance residual has its own absolute gate.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "shape-resolution-difference"
+      },
+      "evidence_ids": [
+        "copper-shape-resolution-difference"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/100",
+        "nominal_canonical": "6936060551/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R12-L-RESOLUTION",
+      "statement": "The off-diagonal mutual-inductance Frobenius norm changes by no more than 0.5 percent under the 256-to-512-segment confirmation refinement.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "inductance-resolution-difference"
+      },
+      "evidence_ids": [
+        "copper-inductance-resolution-difference"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/200",
+        "nominal_canonical": "65302121/200000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R13-L-CONDITION",
+      "statement": "The dimensional fine circuit-inductance matrix has condition number no greater than three.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "inductance-condition"
+      },
+      "evidence_ids": [
+        "copper-inductance-condition"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "3",
+        "nominal_canonical": "2359769181817/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R14-LENGTH",
+      "statement": "The c09r00 surrogate centerline lengths differ from the m45r00 dimensional lengths by no more than one percent; this does not establish revision equivalence.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "geometry-length-mismatch"
+      },
+      "evidence_ids": [
+        "copper-geometry-length-mismatch"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/100",
+        "nominal_canonical": "8682776531/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R15-THERMAL-VALIDATION",
+      "statement": "The assumed NIST heat-capacity enthalpy curve internally reproduces the published deposited-energy/final-temperature mapping within two percent; this is not a physical temperature-accuracy claim.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "thermal-validation-error"
+      },
+      "evidence_ids": [
+        "copper-thermal-validation-error"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/50",
+        "nominal_canonical": "2799152759/200000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R16-NETWORK",
+      "statement": "The declared private and shared resistor network is passive and its incidence-matrix power identity holds.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "network-validity"
+      },
+      "evidence_ids": [
+        "copper-network-validity"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "categorical.equals.match",
+        "numbers_present": false,
+        "observed_category": "valid",
+        "accepted_categories": [
+          "valid"
+        ]
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R17-COVERAGE",
+      "statement": "The checker covers all three faulted converters, five delays, three resistivity scales, and three heat-capacity scales.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "sweep-coverage"
+      },
+      "evidence_ids": [
+        "copper-sweep-coverage"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "categorical.equals.match",
+        "numbers_present": false,
+        "observed_category": "complete",
+        "accepted_categories": [
+          "complete"
+        ]
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R2-FORCE",
+      "statement": "The candidate improves the worst inter-coil filament-force-shape departure by at least 1.5 times relative to the same private-dump network without shared branches; singular self/hoop force is outside this surrogate.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "force-reduction"
+      },
+      "evidence_ids": [
+        "copper-force-reduction"
+      ],
+      "verdict": {
+        "status": "fail",
+        "rule": "nominal.ge.below",
+        "canonical_unit": "1",
+        "limit_canonical": "3/2",
+        "nominal_canonical": "142847163207/200000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R3-I2T",
+      "statement": "Every circuit remains below the conceptual-design table's 5.3e8 ampere-squared-second circuit rating, used here as a provisional screen rather than a demonstrated fault-survival limit, including the piecewise-linear bound prehistory.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "total-i2t"
+      },
+      "evidence_ids": [
+        "copper-total-i2t"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "A2s",
+        "limit_canonical": "530000000",
+        "nominal_canonical": "414647634147419095039/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R4-TEMPERATURE",
+      "statement": "The lumped winding temperature does not exceed the conceptual-design 125 K limit.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "maximum-temperature"
+      },
+      "evidence_ids": [
+        "copper-maximum-temperature"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "K",
+        "limit_canonical": "125",
+        "nominal_canonical": "124891925417279/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R5-OVERCURRENT",
+      "statement": "No modeled circuit exceeds the published conceptual-design 24 kA rating.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "maximum-current"
+      },
+      "evidence_ids": [
+        "copper-maximum-current"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "A",
+        "limit_canonical": "24000",
+        "nominal_canonical": "23682141089139473/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R6-REVERSAL",
+      "statement": "No modeled circuit current reverses sign.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "minimum-current"
+      },
+      "evidence_ids": [
+        "copper-minimum-current"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.ge.within",
+        "canonical_unit": "A",
+        "limit_canonical": "0",
+        "nominal_canonical": "993129559479/125000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R7-VOLTAGE",
+      "statement": "The maximum modeled component voltage remains below a provisional 2 kV screen borrowed from a later production design; its voltage reference is unspecified.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "component-voltage"
+      },
+      "evidence_ids": [
+        "copper-component-voltage"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "V",
+        "limit_canonical": "2000",
+        "nominal_canonical": "1797838940149833/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R8-ENERGY",
+      "statement": "At most one ten-thousandth of the initial magnetic energy remains after three seconds.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "final-energy-fraction"
+      },
+      "evidence_ids": [
+        "copper-final-energy-fraction"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/10000",
+        "nominal_canonical": "200013/125000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    },
+    {
+      "requirement_id": "COPPER-R9-BALANCE",
+      "statement": "The maximum relative electrical energy-balance residual is at most 1e-5.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "copper-discharge",
+        "output_slot": "energy-balance-error"
+      },
+      "evidence_ids": [
+        "copper-energy-balance-error"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1/100000",
+        "nominal_canonical": "1/1000000000000",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+        "claims_sha256": "sha256:d9c7658e8297b2beeb4af2365854bd5ef2f060efb2c60f855af863d670b5ad38"
+      }
+    }
+  ],
+  "campaign_sha256": "sha256:7031a340abcdd75bce2e1b95d43477f96b0881ba2739e3d6d2b001c997c23bd8",
+  "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
+}

@@ -81,6 +81,9 @@ ordinary run record without embedding their contents.
   misses two fixed gates, one identity-bound child changes a single physical
   parameter and passes all ten, and the unchanged manifest and compiled
   snapshot are recorded on both lines.
+- CASE-009 exercises the negative direction: a stronger child remains below
+  both shape gates, worsens both exact margins, and introduces a voltage
+  PASS→FAIL transition without moving the contract or thresholds.
 - A child no longer requires external log analysis to expose what changed in
   the result: the report carries exact, parent-bound verdict transitions and
   margin comparisons. This comparison remains descriptive and has no authority

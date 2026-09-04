@@ -1,0 +1,155 @@
+{
+  "schema_version": "avila.core/execution-receipt/v0.1-draft",
+  "case_id": "CASE-009",
+  "compiled_snapshot_sha256": "sha256:3bd6a253bd6b8ad2c734fe7b9e163ac65162eb708f11ad5bd7c3dbbd13fb5d3e",
+  "step_id": "copper-discharge",
+  "capability_type": {
+    "id": "magnetic-compliance.ncsx-copper-discharge",
+    "major": 1
+  },
+  "adapter": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1",
+  "capability": {
+    "capability_id": "python3-numpy",
+    "package_id": "org.python/cpython@3.14.4+numpy-2.3.5",
+    "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+  },
+  "parameters": {},
+  "inputs": [
+    {
+      "input_slot": "base-model",
+      "evidence_id": "input:base-model",
+      "workspace_path": "inputs/base-model.json",
+      "media_type": "application/vnd.avila.passive-ceiling-model+json",
+      "sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62",
+      "bytes": 1409
+    },
+    {
+      "input_slot": "boundary-data",
+      "evidence_id": "input:boundary-data",
+      "workspace_path": "inputs/ncsx-boundary.focus",
+      "media_type": "text/plain",
+      "sha256": "sha256:32b5609d02643d05b30c353ba5ab0a9b3ef6c486a8122f141a3c14e01748c956",
+      "bytes": 15440
+    },
+    {
+      "input_slot": "candidate",
+      "evidence_id": "input:candidate",
+      "workspace_path": "inputs/candidate.json",
+      "media_type": "application/vnd.avila.ncsx-copper-fault-candidate+json",
+      "sha256": "sha256:38813ccc91bc00e2a46dc30df8f4ab5183c51189c61d3321c70559134c590b73",
+      "bytes": 194
+    },
+    {
+      "input_slot": "ceiling-library",
+      "evidence_id": "input:ceiling-library",
+      "workspace_path": "tools/ncsx_passive_ceiling.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:5e804c32b031aa2f31761cadbd8a65dc6ecbedd7d7109c9b7e07a182624e4d21",
+      "bytes": 31770
+    },
+    {
+      "input_slot": "coil-data",
+      "evidence_id": "input:coil-data",
+      "workspace_path": "inputs/NCSX.dat",
+      "media_type": "text/csv",
+      "sha256": "sha256:2b857ca137184d0f4b5e7fa271c6cf946cf7fdfa127a19ec302d4f9731db57a7",
+      "bytes": 11893
+    },
+    {
+      "input_slot": "copper-model",
+      "evidence_id": "input:copper-model",
+      "workspace_path": "inputs/copper-model.json",
+      "media_type": "application/vnd.avila.ncsx-copper-fault-model+json",
+      "sha256": "sha256:0d5eb7f40cfd75a2a0c1d3a2acc52b6e8ecb58ad44dcc5beb797b273d9a53aae",
+      "bytes": 4150
+    },
+    {
+      "input_slot": "fault-library",
+      "evidence_id": "input:fault-library",
+      "workspace_path": "tools/ncsx_fault_partition_gate.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:0fa70cf3506aff9ec96d9a6289fff5862df8a1ac79a507c422111d72704033eb",
+      "bytes": 27501
+    },
+    {
+      "input_slot": "fault-script",
+      "evidence_id": "input:fault-script",
+      "workspace_path": "tools/ncsx_copper_fault_gate.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:c6757194b513281f4d5497db2bd34dc85dd1fc72eccc069119617d7ac12a4a57",
+      "bytes": 75569
+    },
+    {
+      "input_slot": "field-kernel",
+      "evidence_id": "input:field-kernel",
+      "workspace_path": "tools/magnetic_compliance.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3",
+      "bytes": 31472
+    }
+  ],
+  "invocation": {
+    "program": "python3.14",
+    "arguments": [
+      "tools/ncsx_copper_fault_gate.py",
+      "tools/magnetic_compliance.py",
+      "tools/ncsx_passive_ceiling.py",
+      "tools/ncsx_fault_partition_gate.py",
+      "inputs/NCSX.dat",
+      "inputs/ncsx-boundary.focus",
+      "inputs/base-model.json",
+      "inputs/copper-model.json",
+      "inputs/candidate.json",
+      "outputs/ncsx-copper-discharge-result.json"
+    ],
+    "working_directory": ".",
+    "adapter_sha256": "sha256:2acbc9c15643a65f9aab83a3030149fc433d72123836e36f7a86a9078bed23de",
+    "environment": {},
+    "timeout_ms": 180000
+  },
+  "invocation_sha256": "sha256:20f8e2e1560fea23ef216c03591469279bb90baf6dc0287c0a6429bd6ce79acc",
+  "process": {
+    "started_at": "2026-09-04T18:57:36.959Z",
+    "finished_at": "2026-09-04T18:58:38.532Z",
+    "duration_ms": 61572,
+    "exit_status": 0,
+    "timed_out": false
+  },
+  "logs": [
+    {
+      "stream": "stdout",
+      "workspace_path": "logs/stdout.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "stream": "stderr",
+      "workspace_path": "logs/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "outputs": [
+    {
+      "output_id": "result",
+      "workspace_path": "outputs/ncsx-copper-discharge-result.json",
+      "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json",
+      "state": "collected",
+      "sha256": "sha256:f192b1bf394931d4827ba0b3f024e01ddea31012387a33e2ed7cd35474252140",
+      "bytes": 18837
+    }
+  ],
+  "runner": {
+    "runner": "avila.core/cli-rust@0.1.0",
+    "os": "linux",
+    "arch": "x86_64"
+  },
+  "status": "completed",
+  "limitations": [
+    "Exit status and output digests are process evidence, not scientific success.",
+    "The executable digest identifies the bytes that ran; it does not qualify the method.",
+    "No sandbox, resource accounting, or signature was applied; the environment was cleared and the working directory confined to the workspace.",
+    "The checker owns the research model and causal label; Core validates identities, execution, extraction, evidence binding, lineage, and declared requirement arithmetic."
+  ],
+  "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, practical suitability, or regulatory suitability."
+}

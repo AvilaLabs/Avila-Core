@@ -1,0 +1,503 @@
+{
+  "candidate_id": "delayed-differential-mesh-ratio2",
+  "compiler_feedback": {
+    "observation": "The limiting failed shape metrics arise after activation, so the mesh's current redistribution does not achieve the required field or force reduction.",
+    "primary_cause": "post-activation-shape-redistribution",
+    "repair_boundary": "Do not increase the same mesh ratio blindly; a child must alter activation timing or network dynamics and predict which limiting case it removes."
+  },
+  "failed_gates": [
+    "minimum_magnetic_reduction",
+    "minimum_force_reduction"
+  ],
+  "gate_verdicts": {
+    "geometry_length_cross_check": true,
+    "inductance_conditioning": true,
+    "inductance_resolution_convergence": true,
+    "maximum_absolute_current": true,
+    "maximum_energy_balance_error": true,
+    "maximum_final_energy_fraction": true,
+    "maximum_modeled_component_voltage": true,
+    "maximum_temperature": true,
+    "maximum_total_i2t": true,
+    "minimum_force_reduction": false,
+    "minimum_magnetic_reduction": false,
+    "no_current_reversal": true,
+    "passive_network_identity": true,
+    "sensitivity_coverage": true,
+    "shape_resolution_convergence": true,
+    "thermal_scale_validation": true,
+    "time_step_convergence": true
+  },
+  "geometry_surrogate": {
+    "base_fine_centerline_length_m": [
+      "7.285711039965",
+      "7.124304541727",
+      "6.572170241174"
+    ],
+    "confirmation_centerline_length_m": [
+      "7.28717290972",
+      "7.126097600712",
+      "6.574142237983"
+    ],
+    "dimensional_revision": "NCSX conceptual-design m45r00",
+    "field_current_scaling": [
+      "1.252023806994",
+      "1.181391519992",
+      "1.205570858838"
+    ],
+    "field_revision": "SIMSOPT NCSX coils with c09r00-named boundary",
+    "m45r00_fault_state_ampere_turns_a": [
+      "816660",
+      "770112",
+      "648288"
+    ],
+    "maximum_relative_length_mismatch": "0.008682776531",
+    "published_centerline_length_m": [
+      "7.351",
+      "7.13",
+      "6.537"
+    ],
+    "revision_equivalence_established": false,
+    "simsopt_ncsx_geometry_ampere_turns_a": [
+      "652271.941985299927",
+      "651868.569367400021",
+      "537743.588647300028"
+    ]
+  },
+  "inductance": {
+    "base_fine_coil_matrix_h": [
+      [
+        "0.03828",
+        "0.009115041504",
+        "0.004489218624"
+      ],
+      [
+        "0.009115041504",
+        "0.02848",
+        "0.008297362694"
+      ],
+      [
+        "0.004489218624",
+        "0.008297362694",
+        "0.03138"
+      ]
+    ],
+    "confirmation_coil_matrix_h": [
+      [
+        "0.03828",
+        "0.009117122885",
+        "0.00449027568"
+      ],
+      [
+        "0.009117122885",
+        "0.02848",
+        "0.008300955402"
+      ],
+      [
+        "0.00449027568",
+        "0.008300955402",
+        "0.03138"
+      ]
+    ],
+    "confirmation_total_condition_number": "2.359769181817",
+    "confirmation_total_eigenvalues_h": [
+      "0.020371606799",
+      "0.030086103292",
+      "0.048072289909"
+    ],
+    "line_inductance_h": "0.00013",
+    "resolution_metric": "off-diagonal-mutual-frobenius-relative-change"
+  },
+  "interpretation": "stop",
+  "limitations": [
+    "The m45r00 dimensional model and SIMSOPT NCSX coils paired with a c09r00-named boundary are not proven to be the same revision; a sub-one-percent centerline-length check does not establish geometry equivalence.",
+    "The fault is converter-voltage collapse, not the later NCSX strawman cases of one coil terminal short or a string held at zero current.",
+    "Each winding is one adiabatic lump; local strand, joint, turn, insulation, cooling, and hotspot behavior are absent.",
+    "The 2 kV screen is borrowed from a later production-design operating-voltage datum whose terminal or ground reference was not specified.",
+    "The switched resistor incidence proves a passive circuit-theory mesh, not switch commutation, arcing, grounding, packaging, or failure tolerance.",
+    "The m45r00 source does not establish a copper grade; NIST OFHC heat capacity, 8960 kg/m3 density, and the plus-or-minus-15-percent resistivity sensitivity are explicit modeling assumptions.",
+    "The NIST heat-capacity fit's stated plus-or-minus-five-percent error is propagated as a sensitivity; the tighter reproduction gate checks internal consistency with published aggregate energy and temperature, not physical temperature accuracy.",
+    "The published 5.3e8 A2s conceptual circuit-rating datum is used provisionally as a screen, not as a demonstrated fault-survival or damage threshold.",
+    "Every fault starts from the selected published 0.213 s pre-high-beta state; later and worst-time-in-pulse fault onsets are not covered, so the thermal and I2t passes are conditional on that onset.",
+    "The NIST zero-field resistivity curve is anchored at the published 85 K value; magnetoresistance is not resolved.",
+    "The inter-coil filament-force shape surrogate omits singular self/hoop force and does not establish structural stress.",
+    "Field and inter-coil filament-force shape metrics do not establish plasma survival, safety, manufacturability, novelty, patentability, or commercial value."
+  ],
+  "limiting_shape_cases": {
+    "force": {
+      "at_or_before_activation": false,
+      "candidate_peak_departure": "0.124491388884",
+      "candidate_peak_time_s": "0.164",
+      "control_peak_departure": "0.088916208729",
+      "control_peak_time_s": "0.187",
+      "detection_delay_s": "0",
+      "fault_circuit": "M1",
+      "heat_capacity_scale": "1.05",
+      "reduction_factor": "0.714235816035",
+      "resistivity_scale": "0.85"
+    },
+    "magnetic": {
+      "at_or_before_activation": false,
+      "candidate_peak_departure": "0.00518707006",
+      "candidate_peak_time_s": "0.256",
+      "control_peak_departure": "0.003996764987",
+      "control_peak_time_s": "0.315",
+      "detection_delay_s": "0.025",
+      "fault_circuit": "M1",
+      "heat_capacity_scale": "1.05",
+      "reduction_factor": "0.770524581518",
+      "resistivity_scale": "0.85"
+    }
+  },
+  "material": {
+    "copper_density_basis": "assumed-8960-kg-m3-not-provided-by-bound-ncsx-or-nist-pages",
+    "copper_mass_kg": [
+      "2162.36768952769",
+      "2097.358403799813",
+      "1922.921723091077"
+    ],
+    "nist_intrinsic_resistivity_at_85k_ohm_m": "0.000000002379626",
+    "resistivity_anchor_scale": "0.991752510692",
+    "resistivity_at_85k_ohm_m": "0.00000000236",
+    "resistivity_sensitivity_basis": "chosen-model-envelope-not-nist-uncertainty",
+    "resistivity_sensitivity_scales": [
+      "0.85",
+      "1",
+      "1.15"
+    ],
+    "specific_heat_curve_fit_error": "0.05",
+    "specific_heat_grade_assumption": "NIST-OFHC-properties-used-as-model-assumption-m45r00-grade-not-established",
+    "specific_heat_sensitivity_basis": "nist-five-percent-fit-error-endpoints-and-nominal",
+    "specific_heat_sensitivity_scales": [
+      "0.95",
+      "1",
+      "1.05"
+    ]
+  },
+  "method": {
+    "circuit_equation": "L-di-dt-equals-source-minus-temperature-dependent-copper-line-and-switched-protection-drops",
+    "convergence_scope": "all-faults-and-delays-at-nominal-material-properties",
+    "fault": "one-converter-voltage-collapse-followed-by-global-bypass-and-dump",
+    "field_force_basis": "scaled-SIMSOPT-NCSX-coils-with-c09r00-named-boundary-field-and-inter-coil-filament-force-shape-departure-from-best-common-scale",
+    "geometry_base_fine_resolution": {
+      "coil_segments": 256,
+      "surface_poloidal": 32,
+      "surface_toroidal": 48
+    },
+    "geometry_confirmation_resolution": {
+      "coil_segments": 512,
+      "surface_poloidal": 64,
+      "surface_toroidal": 96
+    },
+    "integration": "event-aligned-fixed-step-rk4",
+    "numpy_version": "2.3.5",
+    "search_inside_checker": false,
+    "technology": "cryoresistive-copper-not-superconducting",
+    "thermal_equation": "adiabatic-lumped-copper-mass-times-cp-dT-dt-equals-i-squared-Rcoil"
+  },
+  "metrics": {
+    "geometry_length_mismatch": "0.008682776531",
+    "inductance_condition_number": "2.359769181817",
+    "inductance_resolution_relative_difference": "0.000326510605",
+    "maximum_absolute_current_a": "23682.141089139473",
+    "maximum_energy_balance_relative_error": "0.000000000001",
+    "maximum_final_energy_fraction": "0.000001600104",
+    "maximum_modeled_component_voltage_v": "1797.838940149833",
+    "maximum_temperature_k": "124.891925417279",
+    "maximum_total_i2t_a2s": "414647634.147419095039",
+    "minimum_current_a": "7.945036475832",
+    "minimum_force_reduction_factor": "0.714235816035",
+    "minimum_magnetic_reduction_factor": "0.770524581518",
+    "shape_resolution_relative_difference": "0.006936060551",
+    "thermal_validation_energy_error": "0.013995763795",
+    "time_step_relative_difference": "0.000004171081"
+  },
+  "model_id": "ncsx-m45r00-asynchronous-discharge-r0",
+  "network": {
+    "activation": "private-and-shared-branches-together-at-detection",
+    "differential_to_common_mode_ratio": "2",
+    "private_dump_resistance_ohm": "0.05",
+    "shared_branch_incidence": [
+      [
+        1,
+        -1,
+        0
+      ],
+      [
+        0,
+        1,
+        -1
+      ],
+      [
+        -1,
+        0,
+        1
+      ]
+    ],
+    "shared_pair_resistance_ohm": "0.016666666667",
+    "switched_mesh_resistance_ohm": [
+      [
+        "0.083333333333",
+        "-0.016666666667",
+        "-0.016666666667"
+      ],
+      [
+        "-0.016666666667",
+        "0.083333333333",
+        "-0.016666666667"
+      ],
+      [
+        "-0.016666666667",
+        "-0.016666666667",
+        "0.083333333333"
+      ]
+    ]
+  },
+  "nominal_delay": {
+    "candidate": [
+      {
+        "detection_delay_s": "0.05",
+        "energy_balance_relative_error": "0.000000000001",
+        "fault_circuit": "M1",
+        "final_energy_fraction": "0.000000503719",
+        "heat_capacity_scale": "1",
+        "maximum_absolute_current_a": "22685",
+        "maximum_modeled_component_voltage_v": "1547.720752741955",
+        "maximum_temperature_k": "119.382063150101",
+        "minimum_current_a": "13.687426863335",
+        "peak_force_shape_departure": "0.150327394663",
+        "peak_force_time_s": "0.188",
+        "peak_magnetic_shape_departure": "0.006428335769",
+        "peak_magnetic_time_s": "0.05",
+        "resistivity_scale": "1",
+        "tail_i2t_a2s": [
+          "116802554.452474012971",
+          "108649844.227424547076",
+          "94731482.25886875391"
+        ],
+        "total_i2t_a2s": [
+          "356487816.624807357788",
+          "352677115.689757883549",
+          "245424249.162868767977"
+        ]
+      },
+      {
+        "detection_delay_s": "0.05",
+        "energy_balance_relative_error": "0.000000000001",
+        "fault_circuit": "M2",
+        "final_energy_fraction": "0.000000501171",
+        "heat_capacity_scale": "1",
+        "maximum_absolute_current_a": "23187.952968674148",
+        "maximum_modeled_component_voltage_v": "1700.678131772586",
+        "maximum_temperature_k": "119.228629711965",
+        "minimum_current_a": "13.79271216089",
+        "peak_force_shape_departure": "0.254447404411",
+        "peak_force_time_s": "0.05",
+        "peak_magnetic_shape_departure": "0.007602978229",
+        "peak_magnetic_time_s": "0.05",
+        "resistivity_scale": "1",
+        "tail_i2t_a2s": [
+          "131585347.462814763188",
+          "94130272.67213653028",
+          "95439799.329842492938"
+        ],
+        "total_i2t_a2s": [
+          "371270609.635148108006",
+          "338157544.134469866753",
+          "246132566.233842492104"
+        ]
+      },
+      {
+        "detection_delay_s": "0.05",
+        "energy_balance_relative_error": "0.000000000001",
+        "fault_circuit": "M3",
+        "final_energy_fraction": "0.000000501151",
+        "heat_capacity_scale": "1",
+        "maximum_absolute_current_a": "22744.704898437598",
+        "maximum_modeled_component_voltage_v": "1641.945800785728",
+        "maximum_temperature_k": "119.355402174549",
+        "minimum_current_a": "13.683425597942",
+        "peak_force_shape_departure": "0.187703574026",
+        "peak_force_time_s": "0.05",
+        "peak_magnetic_shape_departure": "0.005656838172",
+        "peak_magnetic_time_s": "0.05",
+        "resistivity_scale": "1",
+        "tail_i2t_a2s": [
+          "130740632.547300428152",
+          "108355786.357854694128",
+          "86219150.935917004943"
+        ],
+        "total_i2t_a2s": [
+          "370425894.719633817673",
+          "352383057.820188045502",
+          "236911917.839917004108"
+        ]
+      }
+    ],
+    "control": [
+      {
+        "detection_delay_s": "0.05",
+        "energy_balance_relative_error": "0.000000000001",
+        "fault_circuit": "M1",
+        "final_energy_fraction": "0.0000005162",
+        "heat_capacity_scale": "1",
+        "maximum_absolute_current_a": "22685",
+        "maximum_modeled_component_voltage_v": "1464.82155740434",
+        "maximum_temperature_k": "119.378928987374",
+        "minimum_current_a": "13.032947317059",
+        "peak_force_shape_departure": "0.119664768877",
+        "peak_force_time_s": "0.205",
+        "peak_magnetic_shape_departure": "0.006428335769",
+        "peak_magnetic_time_s": "0.05",
+        "resistivity_scale": "1",
+        "tail_i2t_a2s": [
+          "118808447.052666828036",
+          "108615279.932628914714",
+          "92745701.96025557816"
+        ],
+        "total_i2t_a2s": [
+          "358493709.225000202656",
+          "352642551.394962251186",
+          "243438468.864255607128"
+        ]
+      },
+      {
+        "detection_delay_s": "0.05",
+        "energy_balance_relative_error": "0.000000000001",
+        "fault_circuit": "M2",
+        "final_energy_fraction": "0.000000509682",
+        "heat_capacity_scale": "1",
+        "maximum_absolute_current_a": "23187.952968674148",
+        "maximum_modeled_component_voltage_v": "1551.186153161838",
+        "maximum_temperature_k": "119.704369619674",
+        "minimum_current_a": "13.239004471698",
+        "peak_force_shape_departure": "0.254447404411",
+        "peak_force_time_s": "0.05",
+        "peak_magnetic_shape_departure": "0.007602978229",
+        "peak_magnetic_time_s": "0.05",
+        "resistivity_scale": "1",
+        "tail_i2t_a2s": [
+          "136827302.910258829594",
+          "90975269.470120280981",
+          "93713069.549801662564"
+        ],
+        "total_i2t_a2s": [
+          "376512565.082592189312",
+          "335002540.932453632355",
+          "244405836.453801691532"
+        ]
+      },
+      {
+        "detection_delay_s": "0.05",
+        "energy_balance_relative_error": "0.000000000001",
+        "fault_circuit": "M3",
+        "final_energy_fraction": "0.000000510992",
+        "heat_capacity_scale": "1",
+        "maximum_absolute_current_a": "22744.704898437598",
+        "maximum_modeled_component_voltage_v": "1521.927855577418",
+        "maximum_temperature_k": "119.583225442955",
+        "minimum_current_a": "13.029331375995",
+        "peak_force_shape_departure": "0.187703574026",
+        "peak_force_time_s": "0.05",
+        "peak_magnetic_shape_departure": "0.005656838172",
+        "peak_magnetic_time_s": "0.05",
+        "resistivity_scale": "1",
+        "tail_i2t_a2s": [
+          "135494811.412484556437",
+          "108034890.484173670411",
+          "82013088.729911252856"
+        ],
+        "total_i2t_a2s": [
+          "375180073.584817886353",
+          "352062161.946507036686",
+          "232705855.633911252022"
+        ]
+      }
+    ]
+  },
+  "prehistory": {
+    "i2t_a2s": [
+      "239685262.172333359718",
+      "244027271.462333351374",
+      "150692766.904000014067"
+    ],
+    "interpolation": "piecewise-linear-current-with-exact-square-integral"
+  },
+  "schema": "avila.magnetic-compliance/ncsx-copper-fault-result/v1",
+  "sensitivity": {
+    "at_or_before_activation_peak_cases": 82,
+    "comparisons": 135,
+    "coverage": "complete",
+    "detection_delays_s": [
+      "0",
+      "0.025",
+      "0.05",
+      "0.1",
+      "0.12"
+    ],
+    "fault_circuits": [
+      "M1",
+      "M2",
+      "M3"
+    ],
+    "heat_capacity_scales": [
+      "0.95",
+      "1",
+      "1.05"
+    ],
+    "resistivity_scales": [
+      "0.85",
+      "1",
+      "1.15"
+    ]
+  },
+  "source_identity": {
+    "base_model_sha256": "sha256:450fb861fdbf9075b29a8ea6281a504afbb60f660f5db21038d28b733ca96b62",
+    "boundary_sha256": "sha256:32b5609d02643d05b30c353ba5ab0a9b3ef6c486a8122f141a3c14e01748c956",
+    "candidate_sha256": "sha256:38813ccc91bc00e2a46dc30df8f4ab5183c51189c61d3321c70559134c590b73",
+    "ceiling_library_sha256": "sha256:5e804c32b031aa2f31761cadbd8a65dc6ecbedd7d7109c9b7e07a182624e4d21",
+    "coil_sha256": "sha256:2b857ca137184d0f4b5e7fa271c6cf946cf7fdfa127a19ec302d4f9731db57a7",
+    "copper_model_sha256": "sha256:0d5eb7f40cfd75a2a0c1d3a2acc52b6e8ecb58ad44dcc5beb797b273d9a53aae",
+    "fault_library_sha256": "sha256:0fa70cf3506aff9ec96d9a6289fff5862df8a1ac79a507c422111d72704033eb",
+    "field_kernel_sha256": "sha256:a4dfd6cc95fb1e8a7fa829499dda6eafb51c7a90795c7b6fc372f8d4570a6ea3"
+  },
+  "source_scope": {
+    "copper_density_basis": "assumed-8960-kg-m3-not-provided-by-bound-ncsx-or-nist-pages",
+    "dimensional_revision": "NCSX conceptual-design m45r00",
+    "engineering_design_url": "https://ncsx.pppl.gov/Meetings/CDR/CDRFinal/SDD_WBS1_C.pdf",
+    "field_surrogate_revision": "SIMSOPT NCSX coils with c09r00-named boundary",
+    "material_grade_basis": "NIST-OFHC-properties-used-as-model-assumption-m45r00-grade-not-established",
+    "nist_heat_capacity_url": "https://trc.nist.gov/cryogenics/materials/OFHC%20Copper/OFHC_Copper_rev1.htm",
+    "nist_resistivity_url": "https://doi.org/10.6028/NIST.MONO.177",
+    "production_voltage_url": "https://ncsx.pppl.gov/NCSX_Engineering/ModCoil_TF-Coil_VVSA_Fab/Jobs1451_1459_1408/011-May%20FDR%20NCSX/FDR%20Presentations/mcwf_fdr_wms.pdf",
+    "protection_closeout_url": "https://ncsx.pppl.gov/NCSX_Engineering/CloseOut_Documentation/Ramakrishnan/WBS4_Jobs/CloseoutNotes%20WBS4%20092508.pdf",
+    "technical_data_url": "https://ncsx.pppl.gov/Meetings/CDR/CDRFinal/TechnicalData2.pdf"
+  },
+  "sweep_coverage": "complete",
+  "thermal_validation": {
+    "energy_from_published_temperature_j": [
+      "22819851.689640618861",
+      "19353009.276724711061",
+      "10951154.24898901023"
+    ],
+    "interpretation": "internal-curve-reproduction-not-physical-temperature-accuracy",
+    "maximum_energy_relative_error": "0.013995763795",
+    "maximum_temperature_absolute_error_k": "0.290504403404",
+    "published_energy_j": [
+      "22900000",
+      "19500000",
+      "10800000"
+    ],
+    "published_final_temperature_k": [
+      "125.13",
+      "120.62",
+      "108.06"
+    ],
+    "temperature_from_published_energy_k": [
+      "125.254754153478",
+      "120.860813563097",
+      "107.769495596596"
+    ]
+  },
+  "topology_validity": "valid"
+}

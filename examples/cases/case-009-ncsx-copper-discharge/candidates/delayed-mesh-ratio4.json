@@ -1,0 +1,7 @@
+{
+  "schema": "avila.magnetic-compliance/ncsx-copper-fault-candidate/v1",
+  "candidate_id": "delayed-differential-mesh-ratio4",
+  "network": {
+    "differential_to_common_mode_ratio": "4"
+  }
+}

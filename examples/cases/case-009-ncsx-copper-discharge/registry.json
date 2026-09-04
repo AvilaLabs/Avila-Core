@@ -1,0 +1,91 @@
+{
+  "schema_version": "avila.core/registry-snapshot/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "registry_id": "case-009.ncsx-copper-discharge.registry",
+  "revision": 1,
+  "kinds": [
+    { "kind_id": "core.ratio", "canonical_unit": "1", "unit_class": "core.ratio.units@1", "owner": "avila-labs.core", "units": [{ "symbol": "1", "factor": "1" }] },
+    { "kind_id": "core.temperature", "canonical_unit": "K", "unit_class": "core.temperature.units@1", "owner": "avila-labs.core", "units": [{ "symbol": "K", "factor": "1" }] },
+    { "kind_id": "electrical.current", "canonical_unit": "A", "unit_class": "electrical.current.units@1", "owner": "avila-labs.magnetic-compliance", "units": [{ "symbol": "A", "factor": "1" }] },
+    { "kind_id": "electrical.voltage", "canonical_unit": "V", "unit_class": "electrical.voltage.units@1", "owner": "avila-labs.magnetic-compliance", "units": [{ "symbol": "V", "factor": "1" }] },
+    { "kind_id": "electrical.current-squared-time", "canonical_unit": "A2s", "unit_class": "electrical.current-squared-time.units@1", "owner": "avila-labs.magnetic-compliance", "units": [{ "symbol": "A2s", "factor": "1" }] }
+  ],
+  "purposes": [
+    {
+      "purpose": { "id": "avila-labs.magnetic-compliance.copper-discharge", "major": 1 },
+      "owner": "avila-labs.magnetic-compliance",
+      "description": "An exploratory dimensional falsification gate for mode-selective discharge of cryoresistive NCSX-type copper circuits."
+    }
+  ],
+  "roles": [
+    { "role": { "id": "copper-discharge.checker-script", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "accepted_media_types": ["text/x-python"], "permitted_claim_models": [{ "model": "unquantified" }] },
+    { "role": { "id": "copper-discharge.field-kernel", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "accepted_media_types": ["text/x-python"], "permitted_claim_models": [{ "model": "unquantified" }] },
+    { "role": { "id": "copper-discharge.ceiling-library", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "accepted_media_types": ["text/x-python"], "permitted_claim_models": [{ "model": "unquantified" }] },
+    { "role": { "id": "copper-discharge.fault-library", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "accepted_media_types": ["text/x-python"], "permitted_claim_models": [{ "model": "unquantified" }] },
+    { "role": { "id": "copper-discharge.ncsx-coils", "major": 1 }, "owner": "simsopt-contributors", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "accepted_media_types": ["text/csv"], "permitted_claim_models": [{ "model": "unquantified" }] },
+    { "role": { "id": "copper-discharge.ncsx-boundary", "major": 1 }, "owner": "simsopt-contributors", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "accepted_media_types": ["text/plain"], "permitted_claim_models": [{ "model": "unquantified" }] },
+    { "role": { "id": "copper-discharge.base-model", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "accepted_media_types": ["application/vnd.avila.passive-ceiling-model+json"], "permitted_claim_models": [{ "model": "unquantified" }] },
+    { "role": { "id": "copper-discharge.model", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-fault-model+json"], "permitted_claim_models": [{ "model": "unquantified" }] },
+    { "role": { "id": "copper-discharge.candidate", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-fault-candidate+json"], "permitted_claim_models": [{ "model": "unquantified" }] },
+
+    { "role": { "id": "copper-discharge.magnetic-reduction", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "core.ratio", "unit_class": "core.ratio.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.force-reduction", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "core.ratio", "unit_class": "core.ratio.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.total-i2t", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "electrical.current-squared-time", "unit_class": "electrical.current-squared-time.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.maximum-temperature", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "core.temperature", "unit_class": "core.temperature.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.maximum-current", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "electrical.current", "unit_class": "electrical.current.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.minimum-current", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "electrical.current", "unit_class": "electrical.current.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.component-voltage", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "electrical.voltage", "unit_class": "electrical.voltage.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.final-energy-fraction", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "core.ratio", "unit_class": "core.ratio.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.energy-balance-error", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "core.ratio", "unit_class": "core.ratio.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.time-step-difference", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "core.ratio", "unit_class": "core.ratio.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.shape-resolution-difference", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "core.ratio", "unit_class": "core.ratio.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.inductance-resolution-difference", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "core.ratio", "unit_class": "core.ratio.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.inductance-condition", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "core.ratio", "unit_class": "core.ratio.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.geometry-length-mismatch", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "core.ratio", "unit_class": "core.ratio.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.thermal-validation-error", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "quantity_kind": "core.ratio", "unit_class": "core.ratio.units@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "exact" }] },
+    { "role": { "id": "copper-discharge.network-validity", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "unquantified" }], "categorical_values": ["valid", "invalid"] },
+    { "role": { "id": "copper-discharge.sweep-coverage", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "unquantified" }], "categorical_values": ["complete", "incomplete"] },
+    { "role": { "id": "copper-discharge.primary-cause", "major": 1 }, "owner": "avila-labs.magnetic-compliance", "validator": "avila-labs.magnetic-compliance/ncsx-copper-discharge@1", "accepted_media_types": ["application/vnd.avila.ncsx-copper-discharge-result+json"], "permitted_claim_models": [{ "model": "unquantified" }], "categorical_values": ["limiting-shape-peak-at-or-before-network-activation", "mixed-pre-and-post-activation-shape-failure", "post-activation-shape-redistribution", "non-shape-gate-failure", "none"], "non_claims": ["This label is deterministic checker feedback, not an independently validated physical diagnosis."] }
+  ],
+  "capability_types": [
+    {
+      "capability_type": { "id": "magnetic-compliance.ncsx-copper-discharge", "major": 1 },
+      "owner": "avila-labs.magnetic-compliance",
+      "reproducibility": { "determinism": "deterministic" },
+      "inputs": [
+        { "slot_id": "fault-script", "role": { "id": "copper-discharge.checker-script", "major": 1 }, "accepted_media_types": ["text/x-python"] },
+        { "slot_id": "field-kernel", "role": { "id": "copper-discharge.field-kernel", "major": 1 }, "accepted_media_types": ["text/x-python"] },
+        { "slot_id": "ceiling-library", "role": { "id": "copper-discharge.ceiling-library", "major": 1 }, "accepted_media_types": ["text/x-python"] },
+        { "slot_id": "fault-library", "role": { "id": "copper-discharge.fault-library", "major": 1 }, "accepted_media_types": ["text/x-python"] },
+        { "slot_id": "coil-data", "role": { "id": "copper-discharge.ncsx-coils", "major": 1 }, "accepted_media_types": ["text/csv"] },
+        { "slot_id": "boundary-data", "role": { "id": "copper-discharge.ncsx-boundary", "major": 1 }, "accepted_media_types": ["text/plain"] },
+        { "slot_id": "base-model", "role": { "id": "copper-discharge.base-model", "major": 1 }, "accepted_media_types": ["application/vnd.avila.passive-ceiling-model+json"] },
+        { "slot_id": "copper-model", "role": { "id": "copper-discharge.model", "major": 1 }, "accepted_media_types": ["application/vnd.avila.ncsx-copper-fault-model+json"] },
+        { "slot_id": "candidate", "role": { "id": "copper-discharge.candidate", "major": 1 }, "accepted_media_types": ["application/vnd.avila.ncsx-copper-fault-candidate+json"] }
+      ],
+      "outputs": [
+        { "slot_id": "magnetic-reduction", "role": { "id": "copper-discharge.magnetic-reduction", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "force-reduction", "role": { "id": "copper-discharge.force-reduction", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "total-i2t", "role": { "id": "copper-discharge.total-i2t", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "maximum-temperature", "role": { "id": "copper-discharge.maximum-temperature", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "maximum-current", "role": { "id": "copper-discharge.maximum-current", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "minimum-current", "role": { "id": "copper-discharge.minimum-current", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "component-voltage", "role": { "id": "copper-discharge.component-voltage", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "final-energy-fraction", "role": { "id": "copper-discharge.final-energy-fraction", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "energy-balance-error", "role": { "id": "copper-discharge.energy-balance-error", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "time-step-difference", "role": { "id": "copper-discharge.time-step-difference", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "shape-resolution-difference", "role": { "id": "copper-discharge.shape-resolution-difference", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "inductance-resolution-difference", "role": { "id": "copper-discharge.inductance-resolution-difference", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "inductance-condition", "role": { "id": "copper-discharge.inductance-condition", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "geometry-length-mismatch", "role": { "id": "copper-discharge.geometry-length-mismatch", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "thermal-validation-error", "role": { "id": "copper-discharge.thermal-validation-error", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "exact" }] },
+        { "slot_id": "network-validity", "role": { "id": "copper-discharge.network-validity", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "unquantified" }] },
+        { "slot_id": "sweep-coverage", "role": { "id": "copper-discharge.sweep-coverage", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "unquantified" }] },
+        { "slot_id": "primary-cause", "role": { "id": "copper-discharge.primary-cause", "major": 1 }, "media_type": "application/vnd.avila.ncsx-copper-discharge-result+json", "permitted_claim_models": [{ "model": "unquantified" }] }
+      ],
+      "non_claims": [
+        "This capability does not establish a worst-time-in-pulse protection envelope, local conductor temperature, singular filament self/hoop force, terminal-to-ground or turn voltage, switch behavior, structural stress, plasma survival, safety, manufacturability, novelty, patentability, or performance outside the declared reduced model."
+      ]
+    }
+  ]
+}

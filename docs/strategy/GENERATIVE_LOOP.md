@@ -228,8 +228,9 @@ it tidier.
 that campaign. It exposes one passive protection-network candidate as a free
 JSON input and makes the checker evaluate exactly one candidate. The formal
 root used independent dump resistors and passed eight requirements but missed
-the fixed magnetic- and force-shape reduction gates. Its child changed only
-the candidate id and the differential/common modal-resistance ratio. Core
+the fixed magnetic- and inter-coil filament-force-shape reduction gates. Its
+child changed only the candidate id and the differential/common
+modal-resistance ratio. Core
 derived those JSON-Pointer changes, verified the exact parent record and the
 unchanged manifest and compiled snapshot, then reported ten passes.
 
@@ -237,8 +238,9 @@ The useful idea came from reasoning outside Core: three private dump resistors
 plus equal pair-shared branches form a passive loop-resistance matrix whose two
 differential modes can be damped faster than its common mode. In the declared
 dimensionless transient, the child reaches 1.614× magnetic-shape and 1.685×
-force-shape reduction while its I²t and modeled element-voltage ratios remain
-below 1.05. Geometry-mesh and time-step changes are below 0.32% and 0.002%.
+inter-coil filament-force-shape reduction while its I²t and modeled
+element-voltage ratios remain below 1.05. Geometry-mesh and time-step changes
+are below 0.32% and 0.002%.
 
 That is meaningful evidence for Core's use in our workflow: it made the failed
 proposal, exact repair, fixed question, execution identities, and absence of
@@ -249,3 +251,28 @@ scientific falsification step. Core now derives a parent-bound comparison for
 each child: changed verdict states and exact child-minus-parent margin deltas
 are present in both JSON and concise human output. A constellation view and
 proposal strategy remain outside Core.
+
+## What CASE-009 demonstrated (2026-09-04)
+
+[CASE-009](../../examples/cases/case-009-ncsx-copper-discharge/README.md)
+performed that dimensional falsification and corrected a material premise:
+historical NCSX modular coils were cryoresistive copper, not superconducting.
+The case binds one coherent conceptual-design circuit data set, a model
+containing the cited NIST correlations, public field/coil surrogates, an
+explicit passive resistor incidence matrix, and 17 requirements across 135
+fault/delay/material comparisons.
+
+The ratio-two root passes the absolute thermal, current, I²t, provisional
+voltage, passivity, and numerical gates, but its worst magnetic and inter-coil
+filament-force reduction factors are 0.771 and 0.714: values below one mean the shared mesh
+amplifies the declared departures. The checker identifies the limiting cases
+as post-activation current redistribution. A ratio-four child then makes both
+shape margins worse and changes the voltage verdict from PASS to FAIL. Core's
+parent-bound comparison reports that transition and 15
+exact numeric margin deltas.
+
+This is a stronger demonstration of the loop than an all-pass result alone.
+Core preserved a negative result, separated the mechanism failure from the
+constraints that still passed, and showed that the obvious one-parameter
+repair was anti-responsive. It still did not generate the causal model or a
+new topology; proposal strategy remains outside the compiler.

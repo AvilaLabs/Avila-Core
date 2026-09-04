@@ -42,6 +42,13 @@ integrations, safety analyses, or evidence of compliance.
   shape gates and a one-variable passive pair-shared-resistor child that passes
   all ten gates, while keeping its normalized I²t and element-voltage proxies
   within five percent of the control.
+- `cases/case-009-ncsx-copper-discharge/` corrects the historical conductor
+  framing and tests that mechanism on dimensional cryoresistive-copper type
+  circuits. The ratio-two root amplifies the worst field and inter-coil
+  filament-force departures;
+  a ratio-four child worsens both margins and creates a voltage failure, so
+  further one-parameter tuning of the delayed symmetric mesh stops under the
+  fixed protocol.
 
 The dose limit, unit factors, parameter domains, and every capability
 description are hypothetical. They must never be used for engineering or

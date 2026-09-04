@@ -197,3 +197,24 @@ designer that rewrites the package, which is answered by the identity log
 and the manifest pin (S-030). [CASE-003](../../examples/cases/case-003-thermal-spreader/README.md)
 carries the mechanism into a second domain with the first qualification
 record that binds validation evidence.
+
+## What CASE-007 exposed (2026-09-04)
+
+[CASE-007](../../examples/cases/case-007-fault-balanced-circuits/README.md)
+showed both the value and the present boundary of the loop. Core fixed the
+question and gates, refused a malformed checker input, bound the executable
+and artifacts, admitted the repaired candidate, and reproduced the result.
+But the checker had supplied the useful schema mismatch only in stderr, while
+Core's normalized feedback said only that the process and receipt failed.
+Runtime failures now produce a bounded, redacted `CORE-X2501` stderr finding
+with the exact captured-log path, so a person or agent can act on the failure
+without discovering Core's workspace layout first.
+
+Core still did not generate the CASE-007 repair or preserve the failed first
+candidate and the repaired candidate as one first-class search lineage. The
+agent performed that reasoning outside Core and the final checker output
+described it after the fact. The next generative-loop weakness is therefore
+not another domain adapter: it is a native attempt record that relates a
+candidate to its parent, changed variables, Core findings, verdict margins,
+and resulting artifacts without allowing the designer to rewrite the fixed
+contract or gates.

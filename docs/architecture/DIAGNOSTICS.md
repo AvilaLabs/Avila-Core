@@ -56,6 +56,16 @@ report can be constructed are also appended with status `error` and
 `CORE-X9001`. A log-write failure is returned to the caller; Core does not
 silently claim an attempt was recorded.
 
+When a capability runs but fails, Core emits `CORE-X2501` with the process
+outcome, the workspace-relative path to `logs/stderr.log`, and a bounded tail
+of stderr: at most eight nonempty lines and 2,048 characters read from the
+last 16 KiB. Exact operator-supplied environment values are replaced with
+`[REDACTED]`, control characters are neutralized, and the excerpt is labeled
+as untrusted diagnostic data. If tail truncation would coincide with supplied
+environment values, Core withholds the excerpt rather than risk exposing a
+partial value. The complete hashed log remains in the execution workspace and
+receipt; the excerpt is feedback, not evidence or instructions.
+
 | Code | Title | Stage |
 | --- | --- | --- |
 | `CORE-X1001` | Package byte identity failed | package integrity |

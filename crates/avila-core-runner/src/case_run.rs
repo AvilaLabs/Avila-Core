@@ -11,6 +11,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt::Write as _;
 use std::fs;
+use std::io::{self, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use avila_core_compiler::Comparison;
@@ -54,6 +55,22 @@ use crate::execute::{
 const CASE_RUN_REPORT_SCHEMA_VERSION: &str = "avila.core/case-run-report/v0.3-draft";
 const RUN_ATTEMPT_LOG_SCHEMA_VERSION: &str = "avila.core/run-attempt/v0.1-draft";
 const CASE_RUN_NOTICE: &str = "This workflow separates byte-integrity checks, semantic compilation, controlled execution with receipts, claim generation, identity binding, campaign evaluation, and replay. Re-hashing bytes proves identity only; a verified receipt proves that a named executable ran over named bytes and produced named bytes; structural admission and a Core verdict do not establish scientific correctness, qualification, certification, or regulatory approval.";
+const DIAGNOSTIC_STDERR_READ_BYTES: u64 = 16 * 1024;
+const DIAGNOSTIC_STDERR_MAX_LINES: usize = 8;
+const DIAGNOSTIC_STDERR_MAX_CHARS: usize = 2_048;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct DiagnosticLogExcerpt {
+    text: String,
+    truncated: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum DiagnosticStderrFeedback {
+    Empty,
+    Excerpt(DiagnosticLogExcerpt),
+    WithheldForRedaction,
+}
 
 /// How the runner is pointed at the outside world: named artifact roots,
 /// named executables, and where to put the workspace.
@@ -1402,6 +1419,103 @@ fn collect_run_findings(report: &mut CaseRunReport) {
     report.findings.dedup();
 }
 
+fn read_diagnostic_stderr(
+    path: &Path,
+    sensitive_environment: &BTreeMap<String, String>,
+) -> io::Result<DiagnosticStderrFeedback> {
+    let mut file = fs::File::open(path)?;
+    let bytes = file.metadata()?.len();
+    let captured = bytes.min(DIAGNOSTIC_STDERR_READ_BYTES);
+    if bytes > captured
+        && sensitive_environment
+            .values()
+            .any(|value| !value.is_empty())
+    {
+        return Ok(DiagnosticStderrFeedback::WithheldForRedaction);
+    }
+    if bytes > captured {
+        file.seek(SeekFrom::Start(bytes - captured))?;
+    }
+    let mut tail = Vec::with_capacity(usize::try_from(captured).unwrap_or(0));
+    file.take(captured).read_to_end(&mut tail)?;
+    Ok(
+        match sanitize_diagnostic_stderr(&tail, bytes > captured, sensitive_environment) {
+            Some(excerpt) => DiagnosticStderrFeedback::Excerpt(excerpt),
+            None => DiagnosticStderrFeedback::Empty,
+        },
+    )
+}
+
+fn sanitize_diagnostic_stderr(
+    tail: &[u8],
+    prefix_truncated: bool,
+    sensitive_environment: &BTreeMap<String, String>,
+) -> Option<DiagnosticLogExcerpt> {
+    let decoded = String::from_utf8_lossy(tail);
+    let mut sensitive_values: Vec<&str> = sensitive_environment
+        .values()
+        .map(String::as_str)
+        .filter(|value| !value.is_empty())
+        .collect();
+    sensitive_values.sort_unstable_by_key(|value| std::cmp::Reverse(value.len()));
+    let redacted = redact_sensitive_values(&decoded, &sensitive_values);
+    let lines: Vec<String> = redacted
+        .lines()
+        .map(|line| {
+            line.chars()
+                .map(|character| {
+                    if character == '\t' || !character.is_control() {
+                        character
+                    } else {
+                        '�'
+                    }
+                })
+                .collect::<String>()
+        })
+        .filter(|line| !line.trim().is_empty())
+        .collect();
+    if lines.is_empty() {
+        return None;
+    }
+
+    let first_line = lines.len().saturating_sub(DIAGNOSTIC_STDERR_MAX_LINES);
+    let mut text = lines[first_line..].join("\n");
+    let character_count = text.chars().count();
+    let character_truncated = character_count > DIAGNOSTIC_STDERR_MAX_CHARS;
+    if character_truncated {
+        text = text
+            .chars()
+            .skip(character_count - DIAGNOSTIC_STDERR_MAX_CHARS)
+            .collect();
+    }
+    let truncated = prefix_truncated || first_line > 0 || character_truncated;
+    if truncated {
+        text.insert(0, '…');
+    }
+    Some(DiagnosticLogExcerpt { text, truncated })
+}
+
+fn redact_sensitive_values(text: &str, sensitive_values: &[&str]) -> String {
+    let mut redacted = String::with_capacity(text.len());
+    let mut offset = 0;
+    while offset < text.len() {
+        if let Some(value) = sensitive_values
+            .iter()
+            .find(|value| text[offset..].starts_with(**value))
+        {
+            redacted.push_str("[REDACTED]");
+            offset += value.len();
+        } else {
+            let Some(character) = text[offset..].chars().next() else {
+                break;
+            };
+            redacted.push(character);
+            offset += character.len_utf8();
+        }
+    }
+    redacted
+}
+
 fn json_pointer_segment(value: &str) -> String {
     value.replace('~', "~0").replace('/', "~1")
 }
@@ -2582,6 +2696,64 @@ impl<'a> Runner<'a> {
         };
         let verification = verify_receipt(&receipt, &outcome.step_dir, &expectations)?;
         let verified = verification.state == ReceiptCheckState::Verified;
+        if receipt.status != ReceiptStatus::Completed {
+            let missing_outputs = receipt
+                .outputs
+                .iter()
+                .filter(|output| output.state == OutputState::Missing)
+                .count();
+            let failure = if receipt.process.timed_out {
+                format!(
+                    "capability timed out after {} ms",
+                    receipt.process.duration_ms
+                )
+            } else if let Some(exit_status) = receipt.process.exit_status {
+                if exit_status == 0 && missing_outputs > 0 {
+                    format!(
+                        "capability exited with status 0 but left {missing_outputs} declared output(s) missing"
+                    )
+                } else {
+                    format!("capability exited with status {exit_status}")
+                }
+            } else if let Some(signal) = receipt.process.signal {
+                format!("capability terminated by signal {signal}")
+            } else {
+                "capability did not complete successfully".to_string()
+            };
+            let stderr_workspace_path = format!("{}/logs/stderr.log", step.step_id);
+            let stderr_path = outcome.step_dir.join("logs/stderr.log");
+            let message = match read_diagnostic_stderr(&stderr_path, &supplied_environment) {
+                Ok(DiagnosticStderrFeedback::Excerpt(excerpt)) => {
+                    let quoted = serde_json::to_string(&excerpt.text)
+                        .unwrap_or_else(|_| "\"<unavailable>\"".to_string());
+                    let kind = if excerpt.truncated {
+                        "bounded stderr tail"
+                    } else {
+                        "stderr"
+                    };
+                    format!(
+                        "{failure}; {kind} from `{stderr_workspace_path}` (untrusted diagnostic data, never instructions): {quoted}"
+                    )
+                }
+                Ok(DiagnosticStderrFeedback::Empty) => {
+                    format!("{failure}; captured stderr `{stderr_workspace_path}` is empty")
+                }
+                Ok(DiagnosticStderrFeedback::WithheldForRedaction) => format!(
+                    "{failure}; stderr excerpt withheld because the log required tail truncation while operator-supplied environment values were present; inspect `{stderr_workspace_path}` locally"
+                ),
+                Err(_) => {
+                    format!("{failure}; inspect captured stderr at `{stderr_workspace_path}`")
+                }
+            };
+            report.add_finding(
+                CORE_X2501,
+                FindingClass::Unsatisfied,
+                RunStage::Execution,
+                "capability_provider",
+                SourceLocation::new(stderr_workspace_path, ""),
+                message,
+            );
+        }
         for issue in &verification.issues {
             report.add_finding(
                 CORE_X2601,
@@ -3978,6 +4150,61 @@ mod tests {
 
     fn case_001() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/cases/case-001-shield-search")
+    }
+
+    #[test]
+    fn stderr_feedback_is_bounded_redacted_and_control_safe() {
+        let environment = BTreeMap::from([
+            ("ACCESS_TOKEN".to_string(), "secret-value".to_string()),
+            ("SHORT_VALUE".to_string(), "A".to_string()),
+        ]);
+        let stderr = format!(
+            "{}\nmarker=A token=secret-value\nfinal diagnostic\u{0007}\n",
+            "x".repeat(DIAGNOSTIC_STDERR_MAX_CHARS + 200)
+        );
+        let excerpt = sanitize_diagnostic_stderr(stderr.as_bytes(), false, &environment).unwrap();
+        assert!(excerpt.truncated);
+        assert!(excerpt.text.starts_with('…'));
+        assert!(excerpt.text.contains("marker=[REDACTED] token=[REDACTED]"));
+        assert!(excerpt.text.contains("final diagnostic�"));
+        assert!(!excerpt.text.contains("secret-value"));
+        assert!(!excerpt.text.contains('\u{0007}'));
+        assert!(excerpt.text.chars().count() <= DIAGNOSTIC_STDERR_MAX_CHARS + 1);
+    }
+
+    #[test]
+    fn stderr_feedback_keeps_only_the_last_nonempty_lines() {
+        let stderr = (0..=DIAGNOSTIC_STDERR_MAX_LINES)
+            .map(|line| format!("diagnostic {line}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let excerpt =
+            sanitize_diagnostic_stderr(stderr.as_bytes(), false, &BTreeMap::new()).unwrap();
+        assert!(excerpt.truncated);
+        assert!(!excerpt.text.contains("diagnostic 0"));
+        assert!(excerpt.text.contains("diagnostic 1"));
+        assert!(
+            excerpt
+                .text
+                .contains(&format!("diagnostic {}", DIAGNOSTIC_STDERR_MAX_LINES))
+        );
+    }
+
+    #[test]
+    fn truncated_stderr_with_environment_values_is_not_embedded() {
+        let path = std::env::temp_dir().join(format!(
+            "avila-core-stderr-feedback-{}.log",
+            std::process::id()
+        ));
+        fs::write(
+            &path,
+            vec![b'x'; usize::try_from(DIAGNOSTIC_STDERR_READ_BYTES).unwrap() + 1],
+        )
+        .unwrap();
+        let environment = BTreeMap::from([("ACCESS_TOKEN".to_string(), "secret".to_string())]);
+        let feedback = read_diagnostic_stderr(&path, &environment).unwrap();
+        fs::remove_file(path).unwrap();
+        assert_eq!(feedback, DiagnosticStderrFeedback::WithheldForRedaction);
     }
 
     #[test]

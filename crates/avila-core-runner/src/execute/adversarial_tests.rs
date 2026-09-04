@@ -21,7 +21,7 @@ use crate::case_run::{
     BindingStatus, CapabilityCheckState, CaseRunOptions, CaseRunReport, CaseRunStatus, ChangeClass,
     ExecutionStatus, StepExecutionState, execute_case, human_summary,
 };
-use crate::diagnostic::{CORE_X1001, CORE_X2601, CORE_X9001};
+use crate::diagnostic::{CORE_X1001, CORE_X2501, CORE_X2601, CORE_X9001};
 
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
 
@@ -111,7 +111,11 @@ fn write_copy_stub(path: &Path, canned: &Path) {
 }
 
 fn write_failing_stub(path: &Path) {
-    fs::write(path, "#!/bin/sh\nexit 3\n").unwrap();
+    fs::write(
+        path,
+        "#!/bin/sh\nprintf '%s\\n' 'model keys differ: missing=[force_model]' >&2\nexit 3\n",
+    )
+    .unwrap();
     fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
 }
 
@@ -719,6 +723,27 @@ fn a_failing_execution_produces_a_failed_receipt_and_no_verdict() {
             .iter()
             .any(|finding| finding.message.contains("was not produced"))
     );
+    let process_finding = executed
+        .findings
+        .iter()
+        .find(|finding| finding.code == CORE_X2501)
+        .expect("a failed process must expose its bounded diagnostic feedback");
+    assert_eq!(
+        process_finding.primary.document,
+        "classification/logs/stderr.log"
+    );
+    assert!(
+        process_finding
+            .message
+            .contains("model keys differ: missing=[force_model]")
+    );
+    assert!(
+        process_finding
+            .message
+            .contains("untrusted diagnostic data")
+    );
+    let summary = human_summary(&report);
+    assert!(summary.contains("model keys differ: missing=[force_model]"));
     assert!(report.claims.is_none());
     assert!(report.campaign.is_none());
     assert!(workspace.join("classification/receipt.json").is_file());
@@ -736,6 +761,18 @@ fn a_failing_execution_produces_a_failed_receipt_and_no_verdict() {
             .unwrap()
             .iter()
             .any(|finding| finding["code"] == CORE_X2601)
+    );
+    assert!(
+        logged["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|finding| {
+                finding["code"] == CORE_X2501
+                    && finding["message"]
+                        .as_str()
+                        .is_some_and(|message| message.contains("model keys differ"))
+            })
     );
 }
 

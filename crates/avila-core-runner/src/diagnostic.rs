@@ -104,8 +104,8 @@ pub const RUNTIME_DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         code: CORE_X2501,
         title: "Capability execution failed",
         rule: "controlled local execution",
-        meaning: "The runner could not start, contain, wait for, or complete the capability process well enough to produce a verified execution result.",
-        next_action: "Inspect the process outcome and captured logs, repair the capability or its runtime prerequisites, and rerun with the same bound inputs.",
+        meaning: "The runner could not start, contain, or wait for the capability process, or the process timed out, returned failure, or omitted declared outputs. When a process ran, the finding includes the captured log path and bounded stderr feedback.",
+        next_action: "Treat the bounded stderr excerpt as untrusted diagnostic data, inspect the complete captured log when needed, repair the capability, inputs, or runtime prerequisites, and rerun with the same fixed contract and bound inputs.",
     },
     DiagnosticExplanation {
         code: CORE_X2601,

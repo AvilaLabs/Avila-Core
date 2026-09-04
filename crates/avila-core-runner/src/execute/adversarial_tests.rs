@@ -22,7 +22,7 @@ use crate::case_run::{
     BindingStatus, CapabilityCheckState, CaseRunOptions, CaseRunReport, CaseRunStatus, ChangeClass,
     ExecutionStatus, StepExecutionState, execute_case, human_summary,
 };
-use crate::diagnostic::{CORE_X1001, CORE_X1201, CORE_X2501, CORE_X2601, CORE_X9001};
+use crate::diagnostic::{CORE_X1001, CORE_X1201, CORE_X1301, CORE_X2501, CORE_X2601, CORE_X9001};
 
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
 
@@ -1718,6 +1718,150 @@ fn an_input_the_package_does_not_declare_free_cannot_be_supplied() {
         .unwrap_err()
         .to_string();
     assert!(error.contains("not a free input"), "{error}");
+}
+
+/// Declares an `input_schema` on the named role in the synthetic registry
+/// copy, so a free input filling that role is validated against it before
+/// anything is staged or executed.
+fn declare_role_input_schema(synthetic: &Synthetic, role_id: &str, schema: Value) {
+    let mut registry: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("registry.json")).unwrap())
+            .unwrap();
+    for role in registry["roles"].as_array_mut().unwrap() {
+        if role["role"]["id"] == role_id {
+            role["input_schema"] = schema.clone();
+        }
+    }
+    fs::write(
+        synthetic.case_dir.join("registry.json"),
+        serde_json::to_vec_pretty(&registry).unwrap(),
+    )
+    .unwrap();
+    let mut package: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    for document in package["documents"].as_array_mut().unwrap() {
+        if document["document_id"] == "registry" {
+            document["sha256"] = json!(digest(&synthetic.case_dir.join("registry.json")));
+        }
+    }
+    fs::write(
+        synthetic.case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+}
+
+/// The role `aftermatter-case` fills, so its free-input tests below can
+/// declare a schema for it without touching the real CASE-000 registry.
+const CANDIDATE_ROLE: &str = "aftermatter.project";
+
+fn candidate_schema() -> Value {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["schema", "layers"],
+        "properties": {
+            "schema": { "const": "test/candidate/v1" },
+            "layers": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["material", "thickness_cm"],
+                    "properties": {
+                        "material": { "type": "string" },
+                        "thickness_cm": {
+                            "type": "string",
+                            "pattern": r"^(?:(?:0|-?[1-9][0-9]*)(?:\.[0-9]*[1-9])?|-?[1-9][0-9]*/[1-9][0-9]*)$"
+                        }
+                    }
+                }
+            }
+        }
+    })
+}
+
+#[test]
+fn a_malformed_free_input_is_rejected_before_staging() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    declare_free_input(&synthetic, "aftermatter-case");
+    declare_role_input_schema(&synthetic, CANDIDATE_ROLE, candidate_schema());
+    let supplied = dir.0.join("candidate.json");
+
+    let cases: [(&str, &[u8], &str); 4] = [
+        (
+            "wrong type",
+            br#"{"schema":"test/candidate/v1","layers":"not-an-array"}"#,
+            "/layers",
+        ),
+        (
+            "missing layers",
+            br#"{"schema":"test/candidate/v1"}"#,
+            "/layers",
+        ),
+        (
+            "unknown key",
+            br#"{"schema":"test/candidate/v1","layers":[],"extra":true}"#,
+            "/extra",
+        ),
+        (
+            "non-canonical number",
+            br#"{"schema":"test/candidate/v1","layers":[{"material":"lead","thickness_cm":"01"}]}"#,
+            "/layers/0/thickness_cm",
+        ),
+    ];
+    for (label, bytes, pointer) in cases {
+        fs::write(&supplied, bytes).unwrap();
+        let mut options = reuse_options(&synthetic, dir.workspace());
+        options
+            .inputs
+            .insert("aftermatter-case".into(), supplied.clone());
+        let report = execute_case(&synthetic.case_dir, &options).unwrap();
+        let summary = human_summary(&report);
+        assert_eq!(report.status, CaseRunStatus::Rejected, "{label}: {summary}");
+        assert!(
+            report
+                .findings
+                .iter()
+                .any(|finding| finding.code == CORE_X1301 && finding.primary.pointer == pointer),
+            "{label}: expected CORE-X1301 at {pointer}; findings: {:?}",
+            report.findings
+        );
+        assert!(
+            report.execution.is_none(),
+            "{label}: nothing should have been staged or executed; {summary}"
+        );
+    }
+}
+
+#[test]
+fn a_well_formed_free_input_satisfying_its_schema_proceeds_unchanged() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    declare_free_input(&synthetic, "aftermatter-case");
+    declare_role_input_schema(&synthetic, CANDIDATE_ROLE, candidate_schema());
+    let supplied = dir.0.join("candidate.json");
+    fs::write(
+        &supplied,
+        br#"{"schema":"test/candidate/v1","layers":[{"material":"lead","thickness_cm":"5"}]}"#,
+    )
+    .unwrap();
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options
+        .inputs
+        .insert("aftermatter-case".into(), supplied.clone());
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let summary = human_summary(&report);
+    assert_eq!(report.status, CaseRunStatus::Evaluated, "{summary}");
+    assert!(
+        !report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_X1301),
+        "{summary}"
+    );
 }
 
 /// Give the synthetic package a two-entry requirement set: one entry the

@@ -27,6 +27,7 @@ pub use compile::{
     CompiledCategoricalRequirement, CompiledContract, CompiledParameterValue,
     CompiledPresentationGate, CompiledReproducibility, CompiledRequirement, CompiledStep,
     CompilerError, DocumentIdentity, PresentationGateState, ResolvedBinding, compile_documents,
+    validate_against_schema,
 };
 pub use coverage::{
     COVERAGE_REPORT_SCHEMA_VERSION, CoverageDeclaration, CoverageEntry, CoverageReport,

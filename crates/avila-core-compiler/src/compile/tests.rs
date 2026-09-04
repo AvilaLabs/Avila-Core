@@ -265,6 +265,56 @@ fn source_layer_findings_name_the_offending_value() {
 }
 
 #[test]
+fn role_input_schema_outside_supported_subset_is_refused() {
+    let source = contract();
+
+    let mut unknown_keyword = registry();
+    unknown_keyword.roles[0].input_schema = Some(serde_json::json!({
+        "type": "object",
+        "minLength": 3
+    }));
+    assert!(codes(&compile_with_registry(&source, &unknown_keyword)).contains(CORE_R3501));
+
+    let mut bad_pattern = registry();
+    bad_pattern.roles[0].input_schema = Some(serde_json::json!({
+        "type": "object",
+        "properties": { "thickness_cm": { "type": "string", "pattern": "^[0-9]+$" } }
+    }));
+    assert!(codes(&compile_with_registry(&source, &bad_pattern)).contains(CORE_R3501));
+
+    let mut disallowed_ref = registry();
+    disallowed_ref.roles[0].input_schema = Some(serde_json::json!({ "$ref": "#/$defs/thing" }));
+    assert!(codes(&compile_with_registry(&source, &disallowed_ref)).contains(CORE_R3501));
+
+    let mut supported = registry();
+    supported.roles[0].input_schema = Some(serde_json::json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "layers"],
+        "properties": {
+            "candidate_id": { "type": "string" },
+            "description": { "type": "string" },
+            "layers": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["material", "thickness_cm"],
+                    "properties": {
+                        "material": { "type": "string" },
+                        "thickness_cm": {
+                            "type": "string",
+                            "pattern": r"^(?:(?:0|-?[1-9][0-9]*)(?:\.[0-9]*[1-9])?|-?[1-9][0-9]*/[1-9][0-9]*)$"
+                        }
+                    }
+                }
+            }
+        }
+    }));
+    assert!(!codes(&compile_with_registry(&source, &supported)).contains(CORE_R3501));
+}
+
+#[test]
 fn invalid_parameter_declarations_fail_as_registry_findings() {
     let source = parameter_contract();
 

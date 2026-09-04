@@ -261,6 +261,18 @@ pub struct RoleDefinition {
     pub role: VersionedRef,
     pub owner: String,
     pub validator: String,
+    /// An embedded JSON Schema for the documents that fill this role as a
+    /// free input, in the restricted subset the compiler's embedded shape
+    /// validator supports (`type`, `properties`, `required`,
+    /// `additionalProperties`, `items`, `enum`, `const`, `oneOf`, the
+    /// canonical-decimal `pattern`, and `description`). `validator` stays a
+    /// free-text identifier of the role's owner-named checker; this is the
+    /// separate, structural, compiler-checkable half. The runner refuses a
+    /// supplied free input that fails it before staging or execution
+    /// (CORE-X1301); the compiler refuses a schema outside the subset at
+    /// registry compile time (CORE-R3501).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input_schema: Option<Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub quantity_kind: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

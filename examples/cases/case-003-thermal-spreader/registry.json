@@ -111,6 +111,31 @@
       },
       "owner": "avila-labs.thermal",
       "validator": "thermal.validate.candidate@1",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["schema", "layers"],
+        "properties": {
+          "schema": { "const": "avila.thermal/candidate/v1" },
+          "candidate_id": { "type": "string" },
+          "description": { "type": "string" },
+          "layers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["material", "thickness_mm"],
+              "properties": {
+                "material": { "type": "string" },
+                "thickness_mm": {
+                  "type": "string",
+                  "pattern": "^(?:(?:0|-?[1-9][0-9]*)(?:\\.[0-9]*[1-9])?|-?[1-9][0-9]*/[1-9][0-9]*)$"
+                }
+              }
+            }
+          }
+        }
+      },
       "accepted_media_types": [
         "application/vnd.avila.thermal-candidate+json"
       ],

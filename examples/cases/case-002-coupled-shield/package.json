@@ -13,13 +13,13 @@
       "document_id": "case-002-registry",
       "role": "registry",
       "path": "registry.json",
-      "sha256": "sha256:cd729afcc4fb987d7bee395b8792f202f496c84d516e34bfd8115d49f0c08e7a"
+      "sha256": "sha256:c226a9e38aa446feff4f1badfadd8903ceef68185b6e52cab9f9e6043ec73865"
     },
     {
       "document_id": "case-002-claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:cdc24a3138c5bc6df59667ec7f79bcc188073a545809fea44c428ec996172410"
+      "sha256": "sha256:17dd360658b0b755e7f3fded1772b0883199075a80177c937ac113d6a951b878"
     },
     {
       "document_id": "case-002-requirement-set",
@@ -49,7 +49,7 @@
       "role": "expected_campaign_report",
       "document_id": "case-002-expected-campaign",
       "path": "campaign-report.json",
-      "sha256": "sha256:43db17a767c2fa1bcd810015ff29289797fa658726cb7cce2a57ed8d0efea6ce"
+      "sha256": "sha256:54a339274befa0b11940dfe717c96db0cb2425a8263fb79c32d223c6d24772a5"
     },
     {
       "role": "execution_receipt",

@@ -22,8 +22,8 @@ use serde_json::Value;
 use super::findings::{escape_pointer_token, owner_for};
 use super::values::compiler_repair;
 use crate::diagnostic::{
-    CORE_S1101, CORE_S1102, CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability,
-    RepairEdit, SourceLocation,
+    CORE_R3501, CORE_S1101, CORE_S1102, CoreDiagnostic, DiagnosticRepair, FindingClass,
+    RepairApplicability, RepairEdit, SourceLocation,
 };
 
 const CONTRACT_SCHEMA: &str =
@@ -80,6 +80,155 @@ pub(super) fn validate_shape(
         findings,
     };
     validator.check(root, instance, String::new());
+}
+
+/// Reports every violation of `instance` against an externally supplied
+/// schema value: a registry role's declared `input_schema`, validated at the
+/// package boundary rather than against one of the three embedded documents.
+/// The schema must already have passed [`validate_role_schema_definition`];
+/// this reuses the same `Validator` the embedded documents use, so its
+/// findings carry the same codes (`CORE-S1101` for an unknown key,
+/// `CORE-S1102` for every other shape or canonical-value violation) and the
+/// caller is free to attribute them under a different code and owner.
+pub fn validate_against_schema(
+    schema: &Value,
+    document: &str,
+    owner: &'static str,
+    instance: &CanonicalJsonValue,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    let mut validator = Validator {
+        root: schema,
+        document,
+        owner,
+        findings,
+    };
+    validator.check(schema, instance, String::new());
+}
+
+/// Keywords a registry role's `input_schema` may use: exactly the restricted
+/// subset [`Validator`] understands, plus `description` for documentation.
+/// `$ref`/`$defs` (no cross-references are needed for a self-contained role
+/// schema) and every keyword the embedded schemas route to a semantic pass
+/// (`minItems`, `minimum`, ...) are outside it.
+const ROLE_SCHEMA_KEYWORDS: &[&str] = &[
+    "type",
+    "properties",
+    "required",
+    "additionalProperties",
+    "items",
+    "enum",
+    "const",
+    "oneOf",
+    "pattern",
+    "description",
+];
+
+/// Refuses a registry role's declared `input_schema` for any keyword outside
+/// [`ROLE_SCHEMA_KEYWORDS`], an `additionalProperties` that is neither a
+/// boolean nor a schema object, or a `pattern` other than the canonical
+/// decimal rule. Findings are reported as `CORE-R3501`, owned by the
+/// registry owner, at the exact pointer within the registry document.
+/// Returns whether the definition is entirely within the supported subset.
+pub(crate) fn validate_role_schema_definition(
+    schema: &Value,
+    pointer: &str,
+    findings: &mut Vec<CoreDiagnostic>,
+) -> bool {
+    let mut ok = true;
+    walk_role_schema(schema, pointer, &mut ok, findings);
+    ok
+}
+
+fn walk_role_schema(
+    node: &Value,
+    pointer: &str,
+    ok: &mut bool,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    let Some(object) = node.as_object() else {
+        role_schema_invalid(pointer, "a schema node must be a JSON object", ok, findings);
+        return;
+    };
+    for (key, value) in object {
+        let child = format!("{pointer}/{}", escape_pointer_token(key));
+        if !ROLE_SCHEMA_KEYWORDS.contains(&key.as_str()) {
+            role_schema_invalid(
+                &child,
+                format!(
+                    "role schema keyword `{key}` is outside the supported subset ({})",
+                    ROLE_SCHEMA_KEYWORDS.join(", ")
+                ),
+                ok,
+                findings,
+            );
+            continue;
+        }
+        match key.as_str() {
+            "pattern" if value.as_str() != Some(EXACT_NUMBER_PATTERN) => {
+                role_schema_invalid(
+                    &child,
+                    "role schema `pattern` is supported only for the canonical decimal rule",
+                    ok,
+                    findings,
+                );
+            }
+            "properties" => {
+                for (name, child_schema) in value.as_object().into_iter().flatten() {
+                    walk_role_schema(
+                        child_schema,
+                        &format!("{child}/{}", escape_pointer_token(name)),
+                        ok,
+                        findings,
+                    );
+                }
+            }
+            "items" => walk_role_schema(value, &child, ok, findings),
+            "additionalProperties" => {
+                if value.is_object() {
+                    walk_role_schema(value, &child, ok, findings);
+                } else if !value.is_boolean() {
+                    role_schema_invalid(
+                        &child,
+                        "role schema `additionalProperties` must be a boolean or a schema object",
+                        ok,
+                        findings,
+                    );
+                }
+            }
+            "oneOf" => {
+                if let Some(branches) = value.as_array() {
+                    for (index, branch) in branches.iter().enumerate() {
+                        walk_role_schema(branch, &format!("{child}/{index}"), ok, findings);
+                    }
+                } else {
+                    role_schema_invalid(
+                        &child,
+                        "role schema `oneOf` must be an array",
+                        ok,
+                        findings,
+                    );
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+fn role_schema_invalid(
+    pointer: &str,
+    message: impl Into<String>,
+    ok: &mut bool,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    *ok = false;
+    findings.push(CoreDiagnostic::new(
+        CORE_R3501,
+        FindingClass::Invalid,
+        "registry_owner",
+        SourceLocation::new("registry", pointer),
+        message,
+    ));
 }
 
 struct Validator<'a> {

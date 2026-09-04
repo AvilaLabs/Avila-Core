@@ -150,8 +150,8 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         code: "CORE-R3501",
         title: "Registry snapshot incomplete",
         rule: "SC-1, SC-4, and SC-5",
-        meaning: "The registry snapshot is internally inconsistent: a duplicate purpose; a role with no media type or claim model, or whose unit class does not match its kind; a slot naming an unknown role or a media type outside its role; an output claim model outside its role; an empty or non-comparable parameter or factor domain; an unknown quantity kind; or an excluded purpose that is unknown or repeated.",
-        next_action: "Correct the snapshot at the reported pointer. The owner is the registry owner.",
+        meaning: "The registry snapshot is internally inconsistent: a duplicate purpose; a role with no media type or claim model, or whose unit class does not match its kind; a slot naming an unknown role or a media type outside its role; an output claim model outside its role; an empty or non-comparable parameter or factor domain; an unknown quantity kind; an excluded purpose that is unknown or repeated; or a role's declared `input_schema` that uses a keyword outside the compiler's embedded-schema-validator subset, a `pattern` other than the canonical decimal rule, or an `additionalProperties` that is neither boolean nor a schema object.",
+        next_action: "Correct the snapshot at the reported pointer. For an `input_schema`, keep to `type`, `properties`, `required`, `additionalProperties`, `items`, `enum`, `const`, `oneOf`, the canonical-decimal `pattern`, and `description`. The owner is the registry owner.",
     },
     DiagnosticExplanation {
         code: "CORE-R3601",

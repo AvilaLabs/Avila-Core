@@ -28,6 +28,19 @@ output slots with roles and media types, permitted output claim models, typed
 parameters and domains, determinism class and material execution factors,
 optional presentation semantics, governed-purpose exclusions, non-claims, and owner.
 
+An evidence role two of those slots share also carries two independent,
+optional statements of what fills it: `validator`, a free-text identifier of
+the owner-named checker (documentation only, never invoked), and
+`input_schema`, an embedded JSON Schema in the exact restricted subset the
+compiler's shape validator supports (`type`, `properties`, `required`,
+`additionalProperties`, `items`, `enum`, `const`, `oneOf`, the
+canonical-decimal `pattern`, and `description`; no `$ref`). A role's
+`input_schema` is checked for that subset at registry compile time
+(`CORE-R3501`); a free input filling the role is checked against it at run
+time, before staging (`CORE-X1301`, see [Stage](#stage)). Material vocabulary
+(which strings a `material` field accepts) stays the capability's own job,
+never the schema's.
+
 Package manifests return under SC-5 and must identify the exact implementation
 and declare at least:
 
@@ -86,6 +99,13 @@ requested permissions before unpacking or executing.
 The runner creates a fresh workspace with read-only input objects, a writable
 output directory, an invocation document, and only the declared credentials or
 licenses. Paths are runner-assigned; adapters cannot choose host paths.
+
+Before anything is staged, every free input the operator supplied
+(`run --input NAME=PATH`) is checked against its role's declared
+`input_schema`, when the role declares one (see [Manifest
+identity](#manifest-identity)). A designer's malformed candidate is refused
+with `CORE-X1301` at the exact JSON Pointer, rather than surfacing later as an
+adapter traceback or a silently defaulted qualification fact.
 
 ### Preflight and approval
 

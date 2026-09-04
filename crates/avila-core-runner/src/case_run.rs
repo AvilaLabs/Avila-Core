@@ -20,10 +20,10 @@ use avila_core_compiler::{
     CompilationStatus, CompileReport, CompiledContract, CompiledStep, CoverageDeclaration,
     CoverageReport, CoverageState, CoverageStatus, DeclaredOmission, EnvelopeAssessment,
     EnvelopeState, FindingClass, ImmutablePolicyRef, PresentationGateState, QualificationRecord,
-    ResolvedBinding, ReviewDisposition, ReviewIndependence, ReviewerRole, SourceLocation,
-    SourceRef, assess_coverage, compile_documents, evaluate_campaign, evaluate_envelope,
-    parse_qualification, parse_requirement_set, registry_kinds, render_campaign_report,
-    render_compile_report,
+    RegistrySnapshot, ResolvedBinding, ReviewDisposition, ReviewIndependence, ReviewerRole,
+    SourceLocation, SourceRef, assess_coverage, compile_documents, evaluate_campaign,
+    evaluate_envelope, locate, parse_qualification, parse_requirement_set, registry_kinds,
+    render_campaign_report, render_compile_report, validate_against_schema,
 };
 use avila_core_evidence::PackageArtifact;
 use avila_core_evidence::{
@@ -34,7 +34,10 @@ use avila_core_evidence::{
     load_hash_cache, parse_receipt, save_hash_cache, sha256_file, verify_case_package,
     verify_receipt,
 };
-use avila_core_kernel::{ExactNumber, KindRegistry, TruthValue, VerdictStatus};
+use avila_core_kernel::{
+    ExactNumber, KindRegistry, TruthValue, VerdictStatus, diagnose_authoritative_json,
+    read_authoritative_json,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -47,7 +50,7 @@ use crate::attempt::{
     revalidate_before_append,
 };
 use crate::diagnostic::{
-    CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1101, CORE_X1201, CORE_X2001, CORE_X2101, CORE_X2201,
+    CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1101, CORE_X1201, CORE_X1301, CORE_X2001, CORE_X2101, CORE_X2201,
     CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001,
     CORE_X3101, CORE_X3201, CORE_X3301, CORE_X9001, RunFinding, RunStage,
 };
@@ -782,6 +785,19 @@ fn execute_case_inner(
     let invalidated_steps = steps_reached_by_inputs(compiled, &supplied_inputs);
     report.invalidated_steps = invalidated_steps.iter().cloned().collect();
 
+    // Every supplied free input is validated against its role's declared
+    // schema before anything is staged or executed. A role with no declared
+    // schema is unaffected: this is a structural check, not a general
+    // input-format contract, and material vocabulary stays the capability's
+    // job.
+    let free_input_findings = validate_free_inputs(compiled, registry, &supplied_inputs)?;
+    if !free_input_findings.is_empty() {
+        report.notice = "a supplied free input violates its role's declared schema; the run is refused before anything is staged or executed".into();
+        report.findings.extend(free_input_findings);
+        report.compile = Some(compile.clone());
+        return Ok(report);
+    }
+
     // Coverage against the library requirement set, when declared. A search
     // optimizes exactly what is written; an unstated omission is refused
     // before any evaluation is spent on it.
@@ -1163,6 +1179,94 @@ fn supply_free_inputs(
         });
     }
     Ok(supplied)
+}
+
+/// Validates every supplied free input against the embedded JSON Schema its
+/// role declares, before anything is staged or executed. A role with no
+/// declared `input_schema` is unaffected. The shared compiler shape
+/// validator produces the per-pointer findings; every one is reported here
+/// under `CORE-X1301` so a designer's malformed candidate is refused before
+/// it can surface as an adapter traceback or a silently defaulted fact.
+fn validate_free_inputs(
+    compiled: &CompiledContract,
+    registry_bytes: &[u8],
+    supplied: &[SuppliedInput],
+) -> Result<Vec<RunFinding>, Box<dyn Error>> {
+    if supplied.is_empty() {
+        return Ok(Vec::new());
+    }
+    let registry: RegistrySnapshot = serde_json::from_slice(registry_bytes)?;
+    let mut findings = Vec::new();
+    for input in supplied {
+        let Some(contract_input) = compiled
+            .inputs
+            .iter()
+            .find(|candidate| candidate.input_id == input.input_id)
+        else {
+            continue;
+        };
+        let Some(role) = registry
+            .roles
+            .iter()
+            .find(|role| role.role == contract_input.role)
+        else {
+            continue;
+        };
+        let Some(schema) = &role.input_schema else {
+            continue;
+        };
+        let bytes = fs::read(&input.path).map_err(|error| {
+            format!(
+                "free input `{}` at `{}`: {error}",
+                input.input_id, input.path
+            )
+        })?;
+        let document = format!("input:{}", input.input_id);
+        match read_authoritative_json(&bytes) {
+            Ok(value) => {
+                let mut diagnostics = Vec::new();
+                validate_against_schema(schema, &document, "requester", &value, &mut diagnostics);
+                for diagnostic in diagnostics {
+                    let message =
+                        locate_message(&bytes, &diagnostic.primary.pointer, &diagnostic.message);
+                    findings.push(RunFinding::runtime(
+                        CORE_X1301,
+                        diagnostic.class,
+                        RunStage::FreeInputValidation,
+                        diagnostic.owner,
+                        diagnostic.primary,
+                        message,
+                    ));
+                }
+            }
+            Err(_) => {
+                let (_, refusals) = diagnose_authoritative_json(&bytes);
+                for refusal in refusals {
+                    let pointer = refusal.pointer().unwrap_or_default().to_owned();
+                    let message = locate_message(&bytes, &pointer, refusal.detail());
+                    findings.push(RunFinding::runtime(
+                        CORE_X1301,
+                        FindingClass::Invalid,
+                        RunStage::FreeInputValidation,
+                        "requester",
+                        SourceLocation::new(document.clone(), pointer),
+                        message,
+                    ));
+                }
+            }
+        }
+    }
+    Ok(findings)
+}
+
+/// Appends the located `document:line:column` of `pointer` in `source` to a
+/// finding message, when the bytes are locatable JSON. Presentation only:
+/// consumers keep matching the code and pointer, never this text.
+fn locate_message(source: &[u8], pointer: &str, message: &str) -> String {
+    match locate(source, pointer) {
+        Some(span) => format!("{message} (line {}, column {})", span.line, span.column),
+        None => message.to_owned(),
+    }
 }
 
 /// Every step a supplied input reaches through the compiled bindings, so
@@ -4705,6 +4809,7 @@ fn run_stage_label(stage: RunStage) -> &'static str {
     match stage {
         RunStage::PackageIntegrity => "package_integrity",
         RunStage::Compilation => "compilation",
+        RunStage::FreeInputValidation => "free_input_validation",
         RunStage::Coverage => "coverage",
         RunStage::AttemptPlanning => "attempt_planning",
         RunStage::ExecutionPlanning => "execution_planning",
@@ -4923,7 +5028,7 @@ mod tests {
         assert_eq!(stage.readiness, PresentationGateReadiness::ReadyForAgent);
         assert_eq!(
             stage.request_sha256,
-            "sha256:a9dca90f778dfa7b0cc1682d4e30111312eba55cd4cbaadb3f920b15c59e0249"
+            "sha256:f5c42c12e270bcf683656bf19cf7ff71b640d63322c5fc61ad8ab10b610887aa"
         );
         assert_eq!(
             stage

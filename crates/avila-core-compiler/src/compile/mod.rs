@@ -42,6 +42,7 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 
+pub use self::schema::validate_against_schema;
 pub use ir::{
     COMPILE_NOTICE, CanonicalTypedQuantity, CompilationStatus, CompileReport,
     CompiledCategoricalRequirement, CompiledContract, CompiledParameterValue,

@@ -170,6 +170,10 @@
         "validator": {
           "$ref": "#/$defs/nonemptyString"
         },
+        "input_schema": {
+          "description": "An embedded JSON Schema for documents that fill this role as a free input, in the restricted subset the compiler's shape validator supports. Its own keywords are checked by the registry compile pass (CORE-R3501), not by this document's shape validator.",
+          "type": "object"
+        },
         "quantity_kind": {
           "$ref": "#/$defs/nonemptyString"
         },

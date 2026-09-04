@@ -175,6 +175,31 @@
       },
       "owner": "avila-labs.shielding",
       "validator": "shielding.validate.candidate@1",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["schema", "candidate_id", "layers"],
+        "properties": {
+          "schema": { "const": "avila.shielding/candidate/v1" },
+          "candidate_id": { "type": "string" },
+          "description": { "type": "string" },
+          "layers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["material", "thickness_cm"],
+              "properties": {
+                "material": { "type": "string" },
+                "thickness_cm": {
+                  "type": "string",
+                  "pattern": "^(?:(?:0|-?[1-9][0-9]*)(?:\\.[0-9]*[1-9])?|-?[1-9][0-9]*/[1-9][0-9]*)$"
+                }
+              }
+            }
+          }
+        }
+      },
       "accepted_media_types": [
         "application/vnd.avila.shield-candidate+json"
       ],

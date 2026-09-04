@@ -312,7 +312,10 @@ are byte-identical to what its receipt recorded stays reused.
 **Free input.** A contract input the case package declares may vary without
 re-freezing the package. Supplying one hashes and attests it, invalidates
 every step it reaches, and makes replay against committed expectations not
-applicable.
+applicable. When the input's role declares an `input_schema`, the runner
+validates the supplied document against it before anything is staged or
+executed; a violation refuses the run with `CORE-X1301` rather than
+surfacing later as an adapter failure or a silently defaulted fact.
 
 **Withheld evidence.** Committed claims of a step a supplied free input
 reaches that did not run: absent by design, because the reference input's

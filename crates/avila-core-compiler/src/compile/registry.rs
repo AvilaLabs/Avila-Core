@@ -4,6 +4,7 @@ use super::findings::{
     invalid_value, registry_incomplete, registry_location, require_nonempty, review_incomplete,
     validate_versioned_ref,
 };
+use super::schema::validate_role_schema_definition;
 use super::values::NOT_DEFINED_PLACEHOLDER;
 use crate::diagnostic::{CoreDiagnostic, FindingClass};
 use crate::document::{
@@ -150,6 +151,13 @@ impl<'a> RegistryIndex<'a> {
                 "registry_owner",
                 findings,
             );
+            if let Some(input_schema) = &role.input_schema {
+                validate_role_schema_definition(
+                    input_schema,
+                    &format!("{pointer}/input_schema"),
+                    findings,
+                );
+            }
             if role.accepted_media_types.is_empty() {
                 registry_incomplete(
                     registry_location(format!("{pointer}/accepted_media_types")),

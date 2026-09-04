@@ -78,7 +78,7 @@ avila-core-kernel            (first canonical-value semantic slice)
     ├── avila-core-evidence  (record model, hashing, case-package integrity,
     │                         and execution receipts)
     └── avila-core-runner    (the case workflow: staging, execution, receipts,
-        │                     reuse, claim generation, case-specific adapters)
+        │                     reuse, claim generation, built-in and declared adapters)
         ├── avila-core-cli   (canonicalize, compile, evaluate, explain, run)
         └── avila-core-app   (thin egui workbench over the runner and compiler)
 ```
@@ -140,8 +140,8 @@ lineage validator, or independent verifier yet.
 
 The only crate that performs I/O beyond reading documents: it re-hashes bytes
 at explicitly supplied roots, stages verified inputs into a fresh workspace,
-runs exact executables through named case-specific adapters, writes and
-verifies execution receipts, reuses steps whose committed receipts still
+runs exact executables through named built-in or hash-bound package-declared
+checker adapters, writes and verifies execution receipts, reuses steps whose committed receipts still
 describe the planned invocation and names every change by class, generates
 the claims document, hands evaluation to the compiler and kernel, and—only when
 configured—materializes an exact content-identified post-campaign presentation
@@ -235,9 +235,10 @@ construct admissions and verdicts.
     abstains. This routing record remains outside steps 11 and 13.
 
 Steps 9 to 11 and 13 have first executable slices: for the steps a committed
-case declares, a case-specific runner stages verified bytes, invokes the bound
-executable, and writes a receipt verified from bytes; adapters extract claims
-from declared outputs; type-level admission over the generated claims and
+case declares, the runner stages verified bytes, invokes the bound executable,
+and writes a receipt verified from bytes; built-in or narrowly declarative
+external-checker adapters extract claims from declared outputs; type-level
+admission over the generated claims and
 review-independent kernel verdicts follow. Optional presentation requests are
 materialized after evaluation. Steps 4 to 8, generic output
 validators, and step 14 do not exist yet. Any failure before step 13 yields

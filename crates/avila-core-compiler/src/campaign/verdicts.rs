@@ -241,7 +241,7 @@ fn evidence_claim(evidence_id: &str, state: EvidenceState, claim: &ClaimValue) -
             nominal.as_ref(),
             None,
         ),
-        ClaimValue::Unquantified { nominal } => (
+        ClaimValue::Unquantified { nominal, .. } => (
             EvidenceModel::Unquantified,
             None,
             None,

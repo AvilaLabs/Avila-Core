@@ -1,9 +1,11 @@
 # Capability protocol
 
 **Status:** early design; the registry snapshot's capability types are
-executable, and a case-specific invocation with execution receipts exists for
-the steps a committed case declares (ADR-0007). Package manifests, selection,
-and a generic adapter protocol are not implemented.
+executable, and a case invocation with execution receipts exists for the steps
+a committed case declares (ADR-0007). In addition to built-in adapters, a
+package may now bind the narrow external-checker descriptor in ADR-0011.
+Signed capability manifests, selection, sandboxing, and the broader adapter
+lifecycle described below are not implemented.
 
 ## Purpose
 
@@ -115,10 +117,24 @@ The implemented slice of this lifecycle is deliberately narrow: a case package
 binds an exact executable by digest and declares which compiled step runs
 through which named adapter; the runner stages verified bytes at
 package-declared workspace paths, runs with a cleared environment and a
-timeout (plus any locator keys the adapter requires, which are identity by
-name and provenance by value), collects only declared outputs, writes the receipt, and verifies it
-from bytes; the adapter extracts claims. Resolve, package verification beyond
-the digest, preflight, approval, and generic validators are not implemented.
+timeout (plus any locator keys a built-in adapter requires, which are identity
+by name and provenance by value), collects only declared regular-file outputs,
+writes the receipt, and verifies it from bytes. An adapter extracts claims.
+
+For a conventional command-line checker, the package may supply a separately
+hashed `external_checker_adapter` document. Its document id and internal
+`adapter_id` must equal the execution's adapter id. The descriptor fixes the
+capability type, complete input-slot set, literal/input/output argument vector,
+output paths and media types, timeout, limitations, and JSON Pointer mappings
+to exact or closed-set categorical claims. Its raw-byte digest enters the
+invocation and memoization identity. Core invokes the executable directly
+without a shell, accepts only authoritative JSON for extraction, and never
+interprets the checker-specific category. The executable remains the domain
+validator; the descriptor is only a transport boundary.
+
+Resolve beyond these local declarations, package verification beyond content
+digests, preflight, approval, resource isolation, signatures, network policy,
+and generic validators are not implemented.
 
 ## Proposed invocation document
 

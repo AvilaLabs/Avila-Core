@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/external-checker-adapter/v0.1-draft.schema.json",
+  "title": "Avila Core external checker adapter v0.1 draft",
+  "description": "A package-bound mapping from typed Core slots to one exact command-line invocation and from authoritative JSON outputs back to exact or categorical claims. The runner invokes the executable directly with no shell.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "adapter_id",
+    "capability_type",
+    "input_slots",
+    "arguments",
+    "outputs",
+    "claims",
+    "timeout_ms"
+  ],
+  "properties": {
+    "schema_version": { "const": "avila.core/external-checker-adapter/v0.1-draft" },
+    "adapter_id": { "$ref": "#/$defs/nonemptyString" },
+    "capability_type": { "$ref": "#/$defs/versionedRef" },
+    "input_slots": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonemptyString" }
+    },
+    "arguments": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/argument" }
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/output" }
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/claim" }
+    },
+    "timeout_ms": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 86400000
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonemptyString" },
+      "default": []
+    }
+  },
+  "$defs": {
+    "nonemptyString": { "type": "string", "minLength": 1 },
+    "versionedRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "major"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonemptyString" },
+        "major": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "relativePath": {
+      "allOf": [
+        { "type": "string", "pattern": "^[^/\\\\]+(?:/[^/\\\\]+)*$" },
+        { "not": { "pattern": "(^|/)\\.\\.?($|/)" } }
+      ]
+    },
+    "jsonPointer": {
+      "type": "string",
+      "pattern": "^/(?:[^~]|~[01])*$"
+    },
+    "argument": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": { "const": "literal" },
+            "value": { "$ref": "#/$defs/nonemptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "input_slot"],
+          "properties": {
+            "kind": { "const": "input_path" },
+            "input_slot": { "$ref": "#/$defs/nonemptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "output_id"],
+          "properties": {
+            "kind": { "const": "output_path" },
+            "output_id": { "$ref": "#/$defs/nonemptyString" }
+          }
+        }
+      ]
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["output_id", "workspace_path", "media_type"],
+      "properties": {
+        "output_id": { "$ref": "#/$defs/nonemptyString" },
+        "workspace_path": { "$ref": "#/$defs/relativePath" },
+        "media_type": { "$ref": "#/$defs/nonemptyString" }
+      }
+    },
+    "claim": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["model", "output_slot", "output_id", "pointer", "unit"],
+          "properties": {
+            "model": { "const": "exact" },
+            "output_slot": { "$ref": "#/$defs/nonemptyString" },
+            "output_id": { "$ref": "#/$defs/nonemptyString" },
+            "pointer": { "$ref": "#/$defs/jsonPointer" },
+            "unit": { "$ref": "#/$defs/nonemptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["model", "output_slot", "output_id", "pointer", "allowed_values"],
+          "properties": {
+            "model": { "const": "categorical" },
+            "output_slot": { "$ref": "#/$defs/nonemptyString" },
+            "output_id": { "$ref": "#/$defs/nonemptyString" },
+            "pointer": { "$ref": "#/$defs/jsonPointer" },
+            "allowed_values": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/nonemptyString" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

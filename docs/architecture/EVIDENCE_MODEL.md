@@ -1,9 +1,9 @@
 # Evidence model
 
 **Status:** conceptual model plus minimal draft Rust records, an offline
-case-package integrity slice, and an execution-receipt record verified from
-bytes (ADR-0007), plus an unsigned optional agent presentation-routing record
-(ADR-0010).
+case-package integrity slice, an execution-receipt record verified from bytes
+(ADR-0007), a narrow package-declared external-checker boundary (ADR-0011), and
+an unsigned optional agent presentation-routing record (ADR-0010).
 
 ## Principle
 
@@ -110,6 +110,17 @@ a locator names is bound as a staged input. A package may declare free
 inputs; a supplied one is hashed and attested, the steps it reaches have
 their committed claims withheld and bind fresh outputs by receipt, and
 replay is reported not applicable.
+
+An unquantified claim for a non-quantity role may carry a nonempty categorical
+`value`. Package-declared external checkers may extract that value only from a
+closed set fixed in their hashed descriptor. Core preserves the category in
+the claims document, case report, human summary, and attempt log, but does not
+coerce it into a number or feed it to the numeric verdict kernel. Quantitative
+roles reject categorical values. A contract that needs a technical verdict
+must bind a separate reducible claim to an explicit requirement. The adapter
+descriptor's raw-byte digest is part of the invocation identity, so changing
+the extraction map invalidates receipt reuse even when the executable and
+inputs are unchanged.
 
 After campaign evaluation the runner also realizes each configured presentation
 dossier from those exact claims. It content-identifies a request containing

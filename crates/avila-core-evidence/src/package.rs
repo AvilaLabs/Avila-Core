@@ -108,7 +108,7 @@ pub struct PackageCapability {
     pub executable_sha256: String,
 }
 
-/// One step the runner executes with a named case-specific adapter.
+/// One step the runner executes with a named built-in or package-declared adapter.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PackageExecution {

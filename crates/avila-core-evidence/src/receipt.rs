@@ -88,6 +88,11 @@ pub struct Invocation {
     pub program: String,
     pub arguments: Vec<String>,
     pub working_directory: String,
+    /// Raw-byte identity of a package-declared adapter descriptor. Built-in
+    /// adapters omit this field. When present it enters invocation identity,
+    /// so extraction or mapping changes cannot reuse an older receipt.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adapter_sha256: Option<String>,
     #[serde(default)]
     pub environment: BTreeMap<String, String>,
     /// Keys the adapter requires the operator to value (for example the
@@ -192,6 +197,8 @@ pub fn invocation_identity(
     struct InvocationBody<'a> {
         arguments: &'a [String],
         working_directory: &'a str,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        adapter_sha256: Option<&'a str>,
         environment: &'a BTreeMap<String, String>,
         #[serde(skip_serializing_if = "<[String]>::is_empty")]
         required_environment: &'a [String],
@@ -213,6 +220,7 @@ pub fn invocation_identity(
         invocation: InvocationBody {
             arguments: &invocation.arguments,
             working_directory: &invocation.working_directory,
+            adapter_sha256: invocation.adapter_sha256.as_deref(),
             environment: &invocation.environment,
             required_environment: &invocation.required_environment,
             timeout_ms: invocation.timeout_ms,
@@ -240,6 +248,9 @@ pub struct ReceiptExpectations {
     pub step_id: String,
     pub capability_type: CapabilityTypeRef,
     pub adapter: String,
+    /// Expected package-declared adapter descriptor identity, absent for a
+    /// built-in adapter.
+    pub adapter_sha256: Option<String>,
     pub capability: CapabilityIdentity,
     /// Expected staged inputs by input slot.
     pub inputs: BTreeMap<String, ExpectedInput>,
@@ -322,6 +333,12 @@ pub fn verify_receipt(
         ));
     }
     expect_equal(&mut issues, "adapter", &receipt.adapter, &expected.adapter);
+    if receipt.invocation.adapter_sha256 != expected.adapter_sha256 {
+        issues.push(format!(
+            "receipt adapter descriptor identity {:?} differs from the package's {:?}",
+            receipt.invocation.adapter_sha256, expected.adapter_sha256
+        ));
+    }
     if receipt.capability != expected.capability {
         issues.push(format!(
             "receipt capability `{}` ({}, {}) differs from the package's `{}` ({}, {})",
@@ -606,6 +623,7 @@ mod tests {
             program: "stub".into(),
             arguments: vec!["--output".into(), "outputs/result.json".into()],
             working_directory: ".".into(),
+            adapter_sha256: None,
             environment: BTreeMap::new(),
             required_environment: Vec::new(),
             supplied_environment: BTreeMap::new(),
@@ -669,6 +687,7 @@ mod tests {
                 major: 1,
             },
             adapter: "test/adapter@1".into(),
+            adapter_sha256: None,
             capability: capability(),
             inputs: BTreeMap::from([(
                 "a".to_string(),
@@ -699,6 +718,22 @@ mod tests {
 
         let bytes = serde_json::to_vec(&receipt).unwrap();
         assert_eq!(parse_receipt(&bytes).unwrap(), receipt);
+    }
+
+    #[test]
+    fn adapter_descriptor_identity_participates_in_execution_identity() {
+        let root = TestDir::new();
+        let (receipt, _) = fixture(&root.0);
+        let mut changed = receipt.invocation.clone();
+        changed.adapter_sha256 = Some(digest(b"adapter-descriptor"));
+        let changed_identity = invocation_identity(
+            &receipt.capability,
+            &receipt.parameters,
+            &receipt.inputs,
+            &changed,
+        )
+        .unwrap();
+        assert_ne!(changed_identity, receipt.invocation_sha256);
     }
 
     #[test]

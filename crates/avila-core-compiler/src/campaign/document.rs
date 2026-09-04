@@ -86,6 +86,11 @@ pub enum ClaimValue {
         nominal: Option<QuantityValue>,
     },
     Unquantified {
+        /// An optional categorical value for a non-quantity evidence role.
+        /// It is preserved as evidence but is not lowered into the numeric
+        /// verdict kernel.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        value: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         nominal: Option<QuantityValue>,
     },

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.avilalabs.com/core/case-package/v0.1-draft.schema.json",
   "title": "Avila Core Case Package v0.1 draft",
-  "description": "The manifest of a composed case: its hashed documents, the external artifacts bound to evidence records under named source roots, the exact executables it binds, and the steps the runner executes through case-specific adapters. Integrity checks byte identity; execution declarations bind what may run and what identities its outputs must carry.",
+  "description": "The manifest of a composed case: its hashed documents, the external artifacts bound to evidence records under named source roots, the exact executables it binds, and the steps the runner executes through named adapters. Integrity checks byte identity; execution declarations bind what may run and what identities its outputs must carry.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "case_id", "title", "documents"],
@@ -12,7 +12,7 @@
     "title": { "$ref": "#/$defs/nonemptyString" },
     "documents": {
       "type": "array",
-      "description": "Package documents hashed by raw bytes. Exactly one each of contract, registry, and claims; at most one expected_campaign_report; execution_receipt documents name their step.",
+      "description": "Package documents hashed by raw bytes. Exactly one each of contract, registry, and claims; at most one expected_campaign_report; execution_receipt documents name their step. A package-declared checker uses role external_checker_adapter and a document_id equal to its adapter_id.",
       "items": { "$ref": "#/$defs/document" }
     },
     "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
@@ -92,7 +92,7 @@
     },
     "execution": {
       "type": "object",
-      "description": "One compiled step the runner executes with a named case-specific adapter. Every produced output claim must bind to a declared artifact identity.",
+      "description": "One compiled step the runner executes with a named built-in or verified package-declared adapter. Every produced output claim must bind to a declared artifact identity.",
       "additionalProperties": false,
       "required": ["step_id", "adapter", "capability_id", "inputs", "outputs"],
       "properties": {

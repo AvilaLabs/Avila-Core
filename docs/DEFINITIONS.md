@@ -188,10 +188,12 @@ plus source coordinates as annotations; eventually a signed manifest with
 environment, validators, preflight facts, permissions, maturity, and
 qualification evidence roots.
 
-**Adapter.** The case-specific code that maps a compiled step's slots onto a
-program's command line and layout, collects its declared outputs, and
-extracts claims from them. An adapter maps and extracts; it does not
-interpret results scientifically.
+**Adapter.** A named mapping from a compiled step's slots onto a program's
+command line and layout, and from declared outputs back to evidence claims.
+Core includes purpose-built adapters for richer cases. A package can also bind
+a hashed external-checker descriptor for direct command-line invocation and
+closed exact or categorical extraction (ADR-0011). An adapter maps and
+extracts; it does not interpret results scientifically.
 
 **Registry snapshot.** The immutable set of kinds, purposes, roles, and
 capability types a contract is compiled against. Compilation and admission

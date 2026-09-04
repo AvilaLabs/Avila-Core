@@ -387,10 +387,17 @@ fn validate_claim(
             all.extend(nominal.iter().map(|nominal| ("nominal", nominal)));
             all
         }
-        ClaimValue::Unquantified { nominal } => {
+        ClaimValue::Unquantified { nominal, .. } => {
             nominal.iter().map(|nominal| ("nominal", nominal)).collect()
         }
     };
+    if let ClaimValue::Unquantified {
+        value: Some(value), ..
+    } = &claim.claim
+        && value.trim().is_empty()
+    {
+        problems.push("an unquantified categorical value must not be empty".into());
+    }
     match kind {
         Some(kind) => {
             let mut canonical = BTreeMap::new();
@@ -405,9 +412,13 @@ fn validate_claim(
                     Err(error) => problems.push(format!("`{field}`: {}", error.detail())),
                 }
             }
-            if matches!(claim.claim, ClaimValue::Unquantified { nominal: None }) {
+            if matches!(claim.claim, ClaimValue::Unquantified { nominal: None, .. }) {
                 problems
                     .push("a quantity role requires a nominal value even when unquantified".into());
+            }
+            if matches!(claim.claim, ClaimValue::Unquantified { value: Some(_), .. }) {
+                problems
+                    .push("a quantity role cannot carry an unquantified categorical value".into());
             }
             if let (Some(lower), Some(upper)) = (canonical.get("lower"), canonical.get("upper"))
                 && lower

@@ -55,6 +55,8 @@ regulatory review. It makes their boundaries explicit and inspectable.
   bounded next actions.
 - Controlled local execution over staged inputs with cleared environments,
   content hashes, receipts, replay checks, and selective reuse.
+- Hash-bound, package-declared command-line checkers with closed numeric and
+  categorical claim extraction.
 - End-to-end case reports for integrity, compilation, execution, evidence
   binding, coverage, and verdicts.
 - Scripted agent campaigns and several unqualified engineering specimens used
@@ -103,7 +105,7 @@ The CLI also provides `evaluate`, `run`, and `canonicalize`; use
   vectors and negative compiler cases.
 - [Architecture](docs/architecture/ARCHITECTURE.md) explains the component and
   trust boundaries.
-- [Diagnostics](docs/architecture/DIAGNOSTICS.md) documents the compiler's
+- [Diagnostics](docs/architecture/DIAGNOSTICS.md) documents the compiler and runtime
   finding contract.
 - [Contributing](CONTRIBUTING.md), [security](SECURITY.md), and the
   [research disclaimer](DISCLAIMER.md) define the current participation and

@@ -1464,6 +1464,16 @@ fn show_claims(ui: &mut egui::Ui, report: &CaseRunReport) {
             "Recorded claims carried",
             &claims.recorded_claims.to_string(),
         );
+        for claim in &claims.evidence_claims {
+            if let (Some(slot), Some(value)) = (
+                claim.get("output_slot").and_then(serde_json::Value::as_str),
+                claim
+                    .pointer("/claim/value")
+                    .and_then(serde_json::Value::as_str),
+            ) {
+                key_value(ui, &format!("Category · {slot}"), value);
+            }
+        }
     });
     if let Some(bindings) = &report.bindings {
         ui.add_space(8.0);

@@ -1,4 +1,4 @@
-//! The composed case workflow and its case-specific runner.
+//! The composed case workflow and controlled runner.
 //!
 //! This crate performs I/O: it re-hashes bytes at explicitly supplied roots,
 //! stages verified inputs into a fresh workspace, runs exact executables
@@ -29,5 +29,9 @@ pub use diagnostic::{
     CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101, CORE_X3201,
     CORE_X3301, CORE_X9001, RUNTIME_DIAGNOSTIC_CATALOG, RUNTIME_FINDING_CODES, RunFinding,
     RunStage, explain_runtime,
+};
+pub use execute::external_checker::{
+    EXTERNAL_CHECKER_ADAPTER_SCHEMA_VERSION, EXTERNAL_CHECKER_DOCUMENT_ROLE, ExternalArgument,
+    ExternalCheckerAdapter, ExternalClaim, ExternalOutput,
 };
 pub use execute::{Adapter, AdapterOutput, ExtractedClaim, RUNNER_ID, StepContext};

@@ -45,6 +45,7 @@ use crate::diagnostic::{
 use crate::execute::claims::{
     GeneratedClaim, canonical_decimal, canonical_identity, generate_claims,
 };
+use crate::execute::external_checker::{EXTERNAL_CHECKER_DOCUMENT_ROLE, ExternalCheckerAdapter};
 use crate::execute::{
     Adapter, ExecutionRequest, ExtractedClaim, PlannedInvocation, StagedInput, StepContext,
     execute_step, plan_invocation, rfc3339_now,
@@ -388,6 +389,11 @@ pub struct ClaimsReport {
     pub recorded_claims: usize,
     /// Committed claims not carried because a supplied input reaches their step.
     pub invalidated_claims: usize,
+    /// The generated output claims, including categorical values. Artifact
+    /// payloads remain separate; this is the compact semantic result surface
+    /// available to reports and attempt logs.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence_claims: Vec<Value>,
 }
 
 /// Whether the exact evidence dossier for a compiled presentation gate is present.
@@ -765,6 +771,12 @@ fn execute_case_inner(
     )?;
     let committed_sha256 = canonical_identity(committed_claims_bytes)?;
     let claims_match = generated.canonical_sha256 == committed_sha256;
+    let evidence_claims = generated
+        .value
+        .get("claims")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
     report.claims = Some(ClaimsReport {
         generated_sha256: generated.canonical_sha256.clone(),
         committed_sha256,
@@ -774,6 +786,7 @@ fn execute_case_inner(
         reused_claims: generated.reused_claims,
         recorded_claims: generated.recorded_claims,
         invalidated_claims: generated.invalidated_claims,
+        evidence_claims,
     });
     if let Some(workspace) = workspace.as_deref() {
         let _ = fs::write(workspace.join("claims.json"), &generated.bytes);
@@ -1414,6 +1427,7 @@ fn append_log(
         supplied_inputs: &'a [SuppliedInput],
         steps: Vec<StepLog<'a>>,
         findings: &'a [RunFinding],
+        claims: &'a [Value],
         verdicts: &'a [VerdictMargin],
         presentation_gates: Vec<PresentationGateLog<'a>>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -1496,6 +1510,10 @@ fn append_log(
             })
             .unwrap_or_default(),
         findings: &report.findings,
+        claims: report
+            .claims
+            .as_ref()
+            .map_or(&[], |claims| claims.evidence_claims.as_slice()),
         verdicts: &report.margins,
         presentation_gates: report
             .presentation_gates
@@ -1788,6 +1806,41 @@ impl<'a> Runner<'a> {
         }
     }
 
+    fn resolve_adapter(&self, adapter_id: &str) -> Result<Adapter, String> {
+        let document = self.package.manifest.documents.iter().find(|document| {
+            document.role == EXTERNAL_CHECKER_DOCUMENT_ROLE && document.document_id == adapter_id
+        });
+        if let Some(adapter) = Adapter::by_id(adapter_id) {
+            if document.is_some() {
+                return Err(format!(
+                    "adapter `{adapter_id}` is built into this runner and cannot be shadowed by an `{EXTERNAL_CHECKER_DOCUMENT_ROLE}` document"
+                ));
+            }
+            return Ok(adapter);
+        }
+        let document = document.ok_or_else(|| {
+            format!(
+                "adapter `{adapter_id}` is neither built into this runner nor declared by a verified `{EXTERNAL_CHECKER_DOCUMENT_ROLE}` document whose document_id matches the adapter id"
+            )
+        })?;
+        let bytes = self
+            .package
+            .document_by_id(&document.document_id)
+            .ok_or_else(|| format!("adapter document `{adapter_id}` has no verified bytes"))?;
+        let adapter = ExternalCheckerAdapter::from_bytes(bytes)
+            .map_err(|error| format!("adapter document `{adapter_id}`: {error}"))?;
+        if adapter.adapter_id != adapter_id {
+            return Err(format!(
+                "adapter document `{adapter_id}` declares adapter_id `{}`",
+                adapter.adapter_id
+            ));
+        }
+        Ok(Adapter::ExternalChecker {
+            adapter: Box::new(adapter),
+            descriptor_sha256: document.sha256.clone(),
+        })
+    }
+
     fn run_all(&mut self) -> Result<ExecutionReport, Box<dyn Error>> {
         let executions: BTreeMap<&str, &PackageExecution> = self
             .package
@@ -1943,19 +1996,19 @@ impl<'a> Runner<'a> {
             actual_sha256: None,
             state: CapabilityCheckState::NotSupplied,
         };
-        let Some(adapter) = Adapter::by_id(&execution.adapter) else {
-            report.add_finding(
-                CORE_X2001,
-                FindingClass::Invalid,
-                RunStage::ExecutionPlanning,
-                "case_author",
-                SourceLocation::new("case-package", "/executions"),
-                format!(
-                    "adapter `{}` is not known to this runner",
-                    execution.adapter
-                ),
-            );
-            return Ok(report);
+        let adapter = match self.resolve_adapter(&execution.adapter) {
+            Ok(adapter) => adapter,
+            Err(issue) => {
+                report.add_finding(
+                    CORE_X2001,
+                    FindingClass::Invalid,
+                    RunStage::ExecutionPlanning,
+                    "case_author",
+                    SourceLocation::new("case-package", "/executions"),
+                    issue,
+                );
+                return Ok(report);
+            }
         };
         let expected_type = adapter.capability_type();
         if step.capability_type.id != expected_type.id
@@ -2031,7 +2084,7 @@ impl<'a> Runner<'a> {
                 );
                 continue;
             };
-            if !adapter.input_slots().contains(&binding.input_slot.as_str()) {
+            if !adapter.accepts_input(&binding.input_slot) {
                 report.add_finding(
                     CORE_X2001,
                     FindingClass::Invalid,
@@ -2079,12 +2132,32 @@ impl<'a> Runner<'a> {
                 ),
             }
         }
+        let adapter_outputs = adapter.outputs();
+        for output in &adapter_outputs {
+            if staging
+                .values()
+                .any(|input_path| *input_path == output.workspace_path.as_str())
+            {
+                report.add_finding(
+                    CORE_X2001,
+                    FindingClass::Invalid,
+                    RunStage::ExecutionPlanning,
+                    "case_author",
+                    SourceLocation::new("case-package", "/executions"),
+                    format!(
+                        "adapter output `{}` collides with staged input path `{}`",
+                        output.output_id, output.workspace_path
+                    ),
+                );
+            }
+        }
         let declared_slots: BTreeSet<&str> = execution
             .outputs
             .iter()
             .map(|output| output.output_slot.as_str())
             .collect();
-        let adapter_slots: BTreeSet<&str> = adapter.output_slots().iter().copied().collect();
+        let adapter_output_slots = adapter.output_slots();
+        let adapter_slots: BTreeSet<&str> = adapter_output_slots.iter().copied().collect();
         if declared_slots != adapter_slots {
             report.add_finding(
                 CORE_X2801,
@@ -2177,7 +2250,7 @@ impl<'a> Runner<'a> {
             .map(|name| name.to_string_lossy().into_owned())
             .unwrap_or_else(|| declared.capability_id.clone());
         let plan = match plan_invocation(
-            adapter,
+            &adapter,
             &identity,
             &program,
             &context,
@@ -2425,7 +2498,7 @@ impl<'a> Runner<'a> {
             case_id: self.package.manifest.case_id.clone(),
             compiled_snapshot_sha256: self.compiled.snapshot_sha256.clone(),
             step_id: step.step_id.clone(),
-            adapter,
+            adapter: adapter.clone(),
             capability: identity.clone(),
             executable: executable.clone(),
             context: context.clone(),
@@ -2481,6 +2554,7 @@ impl<'a> Runner<'a> {
             step_id: step.step_id.clone(),
             capability_type: expected_type,
             adapter: adapter.id().into(),
+            adapter_sha256: adapter.descriptor_sha256().map(str::to_owned),
             capability: identity.clone(),
             inputs: staged
                 .iter()
@@ -2495,8 +2569,7 @@ impl<'a> Runner<'a> {
                     )
                 })
                 .collect(),
-            outputs: adapter
-                .outputs()
+            outputs: adapter_outputs
                 .iter()
                 .map(|output| output.output_id.to_string())
                 .collect(),
@@ -3559,6 +3632,14 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                 claims.reused_claims,
                 claims.recorded_claims
             );
+            for claim in &claims.evidence_claims {
+                if let (Some(slot), Some(value)) = (
+                    claim.get("output_slot").and_then(Value::as_str),
+                    claim.pointer("/claim/value").and_then(Value::as_str),
+                ) {
+                    let _ = writeln!(out, "   category {slot}: {value}");
+                }
+            }
             if claims.invalidated_claims > 0 {
                 let _ = writeln!(
                     out,

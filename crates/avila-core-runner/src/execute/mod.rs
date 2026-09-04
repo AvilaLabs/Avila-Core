@@ -10,6 +10,7 @@ pub mod activation;
 mod adversarial_tests;
 pub mod aftermatter;
 pub mod claims;
+pub mod external_checker;
 pub mod shielding;
 pub mod shielding_coupled;
 pub mod thermal;
@@ -39,6 +40,16 @@ pub struct AdapterOutput {
     pub media_type: &'static str,
 }
 
+/// An adapter output resolved for one execution. Built-in declarations are
+/// copied into this owned form; external checker declarations already own
+/// their strings.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResolvedAdapterOutput {
+    pub output_id: String,
+    pub workspace_path: String,
+    pub media_type: String,
+}
+
 /// What a compiled step hands an adapter besides its inputs: the compiled
 /// parameters in tagged form and the bound seed, if the type is seeded.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -55,9 +66,9 @@ pub struct ExtractedClaim {
     pub claim: Value,
 }
 
-/// The case-specific adapters the runner can drive, selected by the adapter
-/// identifier a package execution names.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The adapters the runner can drive, selected by the adapter identifier a
+/// package execution names.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Adapter {
     AftermatterEvaluate,
     ActinvBuild,
@@ -67,6 +78,10 @@ pub enum Adapter {
     ShieldingTransportCoupled,
     ThermalScreen,
     ThermalSpreaderFe,
+    ExternalChecker {
+        adapter: Box<external_checker::ExternalCheckerAdapter>,
+        descriptor_sha256: String,
+    },
 }
 
 impl Adapter {
@@ -84,7 +99,7 @@ impl Adapter {
         }
     }
 
-    pub const fn id(self) -> &'static str {
+    pub fn id(&self) -> &str {
         match self {
             Self::AftermatterEvaluate => aftermatter::ADAPTER_ID,
             Self::ActinvBuild => actinv_build::ADAPTER_ID,
@@ -94,10 +109,11 @@ impl Adapter {
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_ADAPTER_ID,
             Self::ThermalScreen => thermal::SCREEN_ADAPTER_ID,
             Self::ThermalSpreaderFe => thermal::FE_ADAPTER_ID,
+            Self::ExternalChecker { adapter, .. } => &adapter.adapter_id,
         }
     }
 
-    pub fn capability_type(self) -> CapabilityTypeRef {
+    pub fn capability_type(&self) -> CapabilityTypeRef {
         match self {
             Self::AftermatterEvaluate => CapabilityTypeRef {
                 id: aftermatter::CAPABILITY_TYPE_ID.into(),
@@ -131,24 +147,30 @@ impl Adapter {
                 id: thermal::FE_TYPE_ID.into(),
                 major: 1,
             },
+            Self::ExternalChecker { adapter, .. } => adapter.capability_type.clone(),
         }
     }
 
-    pub const fn input_slots(self) -> &'static [&'static str] {
+    pub fn accepts_input(&self, input_slot: &str) -> bool {
         match self {
-            Self::AftermatterEvaluate => aftermatter::INPUT_SLOTS,
-            Self::ActinvBuild => actinv_build::INPUT_SLOTS,
-            Self::ShieldingScreen => shielding::SCREEN_INPUT_SLOTS,
-            Self::ShieldingTransport => shielding::TRANSPORT_INPUT_SLOTS,
-            Self::ShieldingActivation => activation::INPUT_SLOTS,
-            Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_INPUT_SLOTS,
-            Self::ThermalScreen => thermal::SCREEN_INPUT_SLOTS,
-            Self::ThermalSpreaderFe => thermal::FE_INPUT_SLOTS,
+            Self::AftermatterEvaluate => aftermatter::INPUT_SLOTS.contains(&input_slot),
+            Self::ActinvBuild => actinv_build::INPUT_SLOTS.contains(&input_slot),
+            Self::ShieldingScreen => shielding::SCREEN_INPUT_SLOTS.contains(&input_slot),
+            Self::ShieldingTransport => shielding::TRANSPORT_INPUT_SLOTS.contains(&input_slot),
+            Self::ShieldingActivation => activation::INPUT_SLOTS.contains(&input_slot),
+            Self::ShieldingTransportCoupled => {
+                shielding_coupled::TRANSPORT_INPUT_SLOTS.contains(&input_slot)
+            }
+            Self::ThermalScreen => thermal::SCREEN_INPUT_SLOTS.contains(&input_slot),
+            Self::ThermalSpreaderFe => thermal::FE_INPUT_SLOTS.contains(&input_slot),
+            Self::ExternalChecker { adapter, .. } => {
+                adapter.input_slots.iter().any(|slot| slot == input_slot)
+            }
         }
     }
 
-    pub const fn outputs(self) -> &'static [AdapterOutput] {
-        match self {
+    pub fn outputs(&self) -> Vec<ResolvedAdapterOutput> {
+        let built_in = match self {
             Self::AftermatterEvaluate => aftermatter::OUTPUTS,
             Self::ActinvBuild => actinv_build::OUTPUTS,
             Self::ShieldingScreen => shielding::SCREEN_OUTPUTS,
@@ -157,23 +179,33 @@ impl Adapter {
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_OUTPUTS,
             Self::ThermalScreen => thermal::SCREEN_OUTPUTS,
             Self::ThermalSpreaderFe => thermal::FE_OUTPUTS,
-        }
+            Self::ExternalChecker { adapter, .. } => return adapter.output_specs(),
+        };
+        built_in
+            .iter()
+            .map(|output| ResolvedAdapterOutput {
+                output_id: output.output_id.into(),
+                workspace_path: output.workspace_path.into(),
+                media_type: output.media_type.into(),
+            })
+            .collect()
     }
 
-    pub const fn output_slots(self) -> &'static [&'static str] {
+    pub fn output_slots(&self) -> Vec<&str> {
         match self {
-            Self::AftermatterEvaluate => aftermatter::OUTPUT_SLOTS,
-            Self::ActinvBuild => actinv_build::OUTPUT_SLOTS,
-            Self::ShieldingScreen => shielding::SCREEN_OUTPUT_SLOTS,
-            Self::ShieldingTransport => shielding::TRANSPORT_OUTPUT_SLOTS,
-            Self::ShieldingActivation => activation::OUTPUT_SLOTS,
-            Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_OUTPUT_SLOTS,
-            Self::ThermalScreen => thermal::SCREEN_OUTPUT_SLOTS,
-            Self::ThermalSpreaderFe => thermal::FE_OUTPUT_SLOTS,
+            Self::AftermatterEvaluate => aftermatter::OUTPUT_SLOTS.to_vec(),
+            Self::ActinvBuild => actinv_build::OUTPUT_SLOTS.to_vec(),
+            Self::ShieldingScreen => shielding::SCREEN_OUTPUT_SLOTS.to_vec(),
+            Self::ShieldingTransport => shielding::TRANSPORT_OUTPUT_SLOTS.to_vec(),
+            Self::ShieldingActivation => activation::OUTPUT_SLOTS.to_vec(),
+            Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_OUTPUT_SLOTS.to_vec(),
+            Self::ThermalScreen => thermal::SCREEN_OUTPUT_SLOTS.to_vec(),
+            Self::ThermalSpreaderFe => thermal::FE_OUTPUT_SLOTS.to_vec(),
+            Self::ExternalChecker { adapter, .. } => adapter.output_slots(),
         }
     }
 
-    pub const fn timeout(self) -> Duration {
+    pub fn timeout(&self) -> Duration {
         match self {
             Self::AftermatterEvaluate => aftermatter::TIMEOUT,
             Self::ActinvBuild => actinv_build::TIMEOUT,
@@ -183,12 +215,13 @@ impl Adapter {
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_TIMEOUT,
             Self::ThermalScreen => thermal::SCREEN_TIMEOUT,
             Self::ThermalSpreaderFe => thermal::FE_TIMEOUT,
+            Self::ExternalChecker { adapter, .. } => adapter.timeout(),
         }
     }
 
     /// Environment keys the package must supply values for. They are named
     /// by the adapter, valued by the operator, and recorded in the receipt.
-    pub const fn required_environment(self) -> &'static [&'static str] {
+    pub fn required_environment(&self) -> &'static [&'static str] {
         match self {
             Self::AftermatterEvaluate
             | Self::ActinvBuild
@@ -198,12 +231,13 @@ impl Adapter {
             | Self::ThermalSpreaderFe => &[],
             Self::ShieldingTransport => shielding::TRANSPORT_ENVIRONMENT_KEYS,
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_ENVIRONMENT_KEYS,
+            Self::ExternalChecker { .. } => &[],
         }
     }
 
     /// The environment passed to the program. The runner clears everything
     /// else; whatever an adapter needs is declared here and recorded.
-    pub fn environment(self) -> BTreeMap<String, String> {
+    pub fn environment(&self) -> BTreeMap<String, String> {
         match self {
             Self::AftermatterEvaluate
             | Self::ShieldingScreen
@@ -213,6 +247,7 @@ impl Adapter {
             Self::ShieldingTransport => shielding::transport_environment(),
             Self::ShieldingActivation => activation::environment(),
             Self::ShieldingTransportCoupled => shielding_coupled::transport_environment(),
+            Self::ExternalChecker { .. } => BTreeMap::new(),
         }
     }
 
@@ -222,7 +257,7 @@ impl Adapter {
     /// what it reads from the source and candidate documents. Facts carry
     /// the input's identity as provenance and the adapter as validator.
     pub fn applicability(
-        self,
+        &self,
         staged: &[(String, String, String, Vec<u8>)],
         invocation_sha256: &str,
     ) -> Result<serde_json::Value, String> {
@@ -242,13 +277,13 @@ impl Adapter {
                             "validator": self.id(), "receipt": format!("plan:{invocation_sha256}") }
             }),
         );
-        if self == Self::ShieldingTransport {
+        if matches!(self, Self::ShieldingTransport) {
             shielding::transport_facts(staged, invocation_sha256, &mut facts, &mut inputs)?;
         }
-        if self == Self::ShieldingActivation {
+        if matches!(self, Self::ShieldingActivation) {
             activation::activation_facts(staged, invocation_sha256, &mut facts, &mut inputs)?;
         }
-        if self == Self::ShieldingTransportCoupled {
+        if matches!(self, Self::ShieldingTransportCoupled) {
             shielding_coupled::transport_facts_coupled(
                 staged,
                 invocation_sha256,
@@ -256,7 +291,7 @@ impl Adapter {
                 &mut inputs,
             )?;
         }
-        if self == Self::ThermalSpreaderFe {
+        if matches!(self, Self::ThermalSpreaderFe) {
             thermal::thermal_facts(staged, invocation_sha256, &mut facts, &mut inputs)?;
         }
         Ok(serde_json::json!({ "facts": facts, "inputs": inputs }))
@@ -264,7 +299,7 @@ impl Adapter {
 
     /// The portable argument list: relative workspace paths only.
     pub fn arguments(
-        self,
+        &self,
         staged: &BTreeMap<String, String>,
         context: &StepContext,
     ) -> Result<Vec<String>, String> {
@@ -279,11 +314,12 @@ impl Adapter {
             }
             Self::ThermalScreen => thermal::screen_arguments(staged, context),
             Self::ThermalSpreaderFe => thermal::fe_arguments(staged, context),
+            Self::ExternalChecker { adapter, .. } => adapter.arguments(staged),
         }
     }
 
     pub fn extract_claims(
-        self,
+        &self,
         outputs: &BTreeMap<String, Vec<u8>>,
         context: &StepContext,
     ) -> Result<Vec<ExtractedClaim>, String> {
@@ -298,6 +334,25 @@ impl Adapter {
             }
             Self::ThermalScreen => thermal::screen_claims(outputs, context),
             Self::ThermalSpreaderFe => thermal::fe_claims(outputs, context),
+            Self::ExternalChecker { adapter, .. } => adapter.extract_claims(outputs, context),
+        }
+    }
+
+    pub fn limitations(&self) -> Vec<String> {
+        match self {
+            Self::ExternalChecker { adapter, .. } => adapter.limitations.clone(),
+            _ => Vec::new(),
+        }
+    }
+
+    /// Raw-byte identity of a package-declared descriptor. Built-in adapters
+    /// are identified by the runner build and have no separate document.
+    pub fn descriptor_sha256(&self) -> Option<&str> {
+        match self {
+            Self::ExternalChecker {
+                descriptor_sha256, ..
+            } => Some(descriptor_sha256),
+            _ => None,
         }
     }
 }
@@ -343,7 +398,7 @@ pub struct PlannedInvocation {
 }
 
 pub fn plan_invocation(
-    adapter: Adapter,
+    adapter: &Adapter,
     capability: &CapabilityIdentity,
     program: &str,
     context: &StepContext,
@@ -384,6 +439,7 @@ pub fn plan_invocation(
         program: program.into(),
         arguments: adapter.arguments(&staged_paths, context)?,
         working_directory: ".".into(),
+        adapter_sha256: adapter.descriptor_sha256().map(str::to_owned),
         environment,
         required_environment: required_environment.to_vec(),
         supplied_environment: supplied,
@@ -425,7 +481,7 @@ pub fn execute_step(
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_else(|| request.capability.capability_id.clone());
     let plan = plan_invocation(
-        request.adapter,
+        &request.adapter,
         &request.capability,
         &program,
         &request.context,
@@ -453,8 +509,9 @@ pub fn execute_step(
             .into());
         }
     }
-    for output in request.adapter.outputs() {
-        if let Some(parent) = step_dir.join(output.workspace_path).parent() {
+    let declared_outputs = request.adapter.outputs();
+    for output in &declared_outputs {
+        if let Some(parent) = step_dir.join(&output.workspace_path).parent() {
             fs::create_dir_all(parent)?;
         }
     }
@@ -512,15 +569,22 @@ pub fn execute_step(
     // Collect only declared outputs.
     let mut outputs = Vec::new();
     let mut all_collected = true;
-    for output in request.adapter.outputs() {
-        let path = step_dir.join(output.workspace_path);
-        let record = match fs::metadata(&path) {
+    for output in &declared_outputs {
+        let path = step_dir.join(&output.workspace_path);
+        let record = match fs::symlink_metadata(&path) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(format!(
+                    "declared output `{}` is a symbolic link; outputs must be regular files inside the workspace",
+                    output.output_id
+                )
+                .into());
+            }
             Ok(metadata) if metadata.is_file() => {
                 let (sha256, bytes) = sha256_file(&path)?;
                 ReceiptOutput {
-                    output_id: output.output_id.into(),
-                    workspace_path: output.workspace_path.into(),
-                    media_type: output.media_type.into(),
+                    output_id: output.output_id.clone(),
+                    workspace_path: output.workspace_path.clone(),
+                    media_type: output.media_type.clone(),
                     state: OutputState::Collected,
                     sha256: Some(sha256),
                     bytes: Some(bytes),
@@ -568,11 +632,14 @@ pub fn execute_step(
             arch: std::env::consts::ARCH.into(),
         },
         status,
-        limitations: vec![
+        limitations: [
             "Exit status and output digests are process evidence, not scientific success.".into(),
             "The executable digest identifies the bytes that ran; it does not qualify the method.".into(),
             "No sandbox, resource accounting, or signature was applied; the environment was cleared and the working directory confined to the workspace.".into(),
-        ],
+        ]
+        .into_iter()
+        .chain(request.adapter.limitations())
+        .collect(),
         notice: RECEIPT_NOTICE.into(),
     };
     let receipt_path = step_dir.join("receipt.json");
@@ -585,11 +652,11 @@ pub fn execute_step(
     })
 }
 
-fn missing_output(output: &AdapterOutput) -> ReceiptOutput {
+fn missing_output(output: &ResolvedAdapterOutput) -> ReceiptOutput {
     ReceiptOutput {
-        output_id: output.output_id.into(),
-        workspace_path: output.workspace_path.into(),
-        media_type: output.media_type.into(),
+        output_id: output.output_id.clone(),
+        workspace_path: output.workspace_path.clone(),
+        media_type: output.media_type.clone(),
         state: OutputState::Missing,
         sha256: None,
         bytes: None,

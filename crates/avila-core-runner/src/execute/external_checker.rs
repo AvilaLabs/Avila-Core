@@ -827,6 +827,7 @@ mod tests {
                 log: Some(log.clone()),
                 expected_manifest_sha256: None,
                 attempt: None,
+                hash_cache: None,
             },
         )
         .unwrap();

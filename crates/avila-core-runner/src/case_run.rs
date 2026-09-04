@@ -28,10 +28,11 @@ use avila_core_compiler::{
 use avila_core_evidence::PackageArtifact;
 use avila_core_evidence::{
     ArtifactCheck, CapabilityIdentity, CasePackageManifest, ExecutionReceipt, ExpectedInput,
-    IntegrityCheckState, OutputState, PackageExecution, PackageIntegrityReport,
-    PackageIntegrityStatus, ReceiptCheck, ReceiptCheckState, ReceiptExpectations, ReceiptInput,
-    ReceiptOutput, ReceiptStatus, VerifiedCasePackage, parse_receipt, sha256_file,
-    verify_case_package, verify_receipt,
+    HashCache, HashCacheContext, IntegrityCheckState, OutputState, PackageExecution,
+    PackageIntegrityReport, PackageIntegrityStatus, ReceiptCheck, ReceiptCheckState,
+    ReceiptExpectations, ReceiptInput, ReceiptOutput, ReceiptStatus, VerifiedCasePackage,
+    load_hash_cache, parse_receipt, save_hash_cache, sha256_file, verify_case_package,
+    verify_receipt,
 };
 use avila_core_kernel::{ExactNumber, KindRegistry, TruthValue, VerdictStatus};
 use serde::{Deserialize, Serialize};
@@ -46,9 +47,9 @@ use crate::attempt::{
     revalidate_before_append,
 };
 use crate::diagnostic::{
-    CORE_X1001, CORE_X1002, CORE_X1101, CORE_X1201, CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301,
-    CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101,
-    CORE_X3201, CORE_X3301, CORE_X9001, RunFinding, RunStage,
+    CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1101, CORE_X1201, CORE_X2001, CORE_X2101, CORE_X2201,
+    CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001,
+    CORE_X3101, CORE_X3201, CORE_X3301, CORE_X9001, RunFinding, RunStage,
 };
 use crate::execute::claims::{
     GeneratedClaim, canonical_decimal, canonical_identity, generate_claims,
@@ -106,6 +107,13 @@ pub struct CaseRunOptions {
     pub expected_manifest_sha256: Option<String>,
     /// Optional identity-bound placement of this run in a candidate lineage.
     pub attempt: Option<AttemptLineageRequest>,
+    /// An operator-owned JSON file caching verified digests of large,
+    /// unchanging artifacts resolved under a `--source-root`, keyed by exact
+    /// path, size, and modification time (S-038). Off unless supplied.
+    /// Package documents and anything resolved from inside the case
+    /// directory are always re-hashed regardless of this setting. See
+    /// `avila_core_evidence::hash_cache` for the trust this accepts.
+    pub hash_cache: Option<PathBuf>,
 }
 
 impl Default for CaseRunOptions {
@@ -121,6 +129,7 @@ impl Default for CaseRunOptions {
             log: None,
             expected_manifest_sha256: None,
             attempt: None,
+            hash_cache: None,
         }
     }
 }
@@ -650,7 +659,55 @@ fn execute_case_inner(
         .parent()
         .filter(|path| !path.as_os_str().is_empty())
         .unwrap_or_else(|| Path::new("."));
-    let mut package = verify_case_package(&manifest_bytes, package_root, &options.source_roots)?;
+
+    // The hash cache is opt-in and off by default (S-038). A corrupt or
+    // unwritable cache file never fails the run: it is ignored, a notice
+    // finding says so, and every artifact is hashed fresh as if no cache had
+    // been supplied.
+    let (mut hash_cache, cache_load_finding) = match &options.hash_cache {
+        Some(path) => match load_hash_cache(path) {
+            Ok(cache) => (Some(cache), None),
+            Err(error) => (
+                Some(HashCache::new()),
+                Some(RunFinding::runtime(
+                    CORE_X1003,
+                    FindingClass::Notice,
+                    RunStage::PackageIntegrity,
+                    "operator",
+                    SourceLocation::new(path.display().to_string(), ""),
+                    format!(
+                        "hash cache ignored, every artifact under a source root is hashed fresh this run: {error}"
+                    ),
+                )),
+            ),
+        },
+        None => (None, None),
+    };
+    let hash_cache_verified_at = rfc3339_now();
+    let mut package = verify_case_package(
+        &manifest_bytes,
+        package_root,
+        &options.source_roots,
+        hash_cache.as_mut().map(|cache| HashCacheContext {
+            cache,
+            verified_at: &hash_cache_verified_at,
+        }),
+    )?;
+    let cache_save_finding = match (&options.hash_cache, &hash_cache) {
+        (Some(path), Some(cache)) => save_hash_cache(path, cache).err().map(|error| {
+            RunFinding::runtime(
+                CORE_X1003,
+                FindingClass::Notice,
+                RunStage::PackageIntegrity,
+                "operator",
+                SourceLocation::new(path.display().to_string(), ""),
+                format!(
+                    "freshly hashed digests could not be written back to the hash cache: {error}"
+                ),
+            )
+        }),
+        _ => None,
+    };
     let supplied_inputs = supply_free_inputs(&mut package, options)?;
     let replay_applicable = supplied_inputs.is_empty();
 
@@ -678,6 +735,8 @@ fn execute_case_inner(
         replay: None,
         notice: CASE_RUN_NOTICE.into(),
     };
+    report.findings.extend(cache_load_finding);
+    report.findings.extend(cache_save_finding);
     if let Some(expected) = &options.expected_manifest_sha256
         && expected != &report.integrity.manifest_sha256
     {
@@ -1506,7 +1565,9 @@ fn collect_run_findings(report: &mut CaseRunReport) {
         let (class, state) = match document.state {
             IntegrityCheckState::Missing => (FindingClass::Missing, "missing"),
             IntegrityCheckState::Mismatch => (FindingClass::Inadmissible, "does not match"),
-            IntegrityCheckState::Verified | IntegrityCheckState::NotChecked => continue,
+            IntegrityCheckState::Verified
+            | IntegrityCheckState::VerifiedCached
+            | IntegrityCheckState::NotChecked => continue,
         };
         report.findings.push(RunFinding::runtime(
             CORE_X1001,
@@ -1530,7 +1591,9 @@ fn collect_run_findings(report: &mut CaseRunReport) {
         let (class, state) = match artifact.state {
             IntegrityCheckState::Missing => (FindingClass::Missing, "missing"),
             IntegrityCheckState::Mismatch => (FindingClass::Inadmissible, "does not match"),
-            IntegrityCheckState::Verified | IntegrityCheckState::NotChecked => continue,
+            IntegrityCheckState::Verified
+            | IntegrityCheckState::VerifiedCached
+            | IntegrityCheckState::NotChecked => continue,
         };
         report.findings.push(RunFinding::runtime(
             CORE_X1001,
@@ -2568,7 +2631,10 @@ impl<'a> Runner<'a> {
             }
             match self.resolve_source(&binding.source) {
                 Ok(artifact) => {
-                    if artifact.integrity != IntegrityCheckState::Verified {
+                    if !matches!(
+                        artifact.integrity,
+                        IntegrityCheckState::Verified | IntegrityCheckState::VerifiedCached
+                    ) {
                         unverified.push(format!(
                             "input slot `{}` bytes (`{}`) were not verified: {:?}; the runner neither executes over nor reuses unchecked bytes",
                             binding.input_slot, artifact.evidence_id, artifact.integrity
@@ -3313,7 +3379,10 @@ impl<'a> Runner<'a> {
                 return Err(format!("output `{}` carries no digest", output.output_id));
             };
             let located = self.package.integrity.artifacts.iter().find(|check| {
-                check.state == IntegrityCheckState::Verified && check.expected_sha256 == sha256
+                matches!(
+                    check.state,
+                    IntegrityCheckState::Verified | IntegrityCheckState::VerifiedCached
+                ) && check.expected_sha256 == sha256
             });
             let Some(check) = located else {
                 return Err(format!(
@@ -3941,8 +4010,19 @@ pub fn human_summary(report: &CaseRunReport) -> String {
         .integrity
         .artifacts
         .iter()
-        .filter(|check| check.state == IntegrityCheckState::Verified)
+        .filter(|check| {
+            matches!(
+                check.state,
+                IntegrityCheckState::Verified | IntegrityCheckState::VerifiedCached
+            )
+        })
         .collect();
+    let cached_artifacts = report
+        .integrity
+        .artifacts
+        .iter()
+        .filter(|check| check.state == IntegrityCheckState::VerifiedCached)
+        .count();
     let verified_evidence: usize = verified_artifacts
         .iter()
         .map(|check| check.evidence_ids.len())
@@ -3974,10 +4054,15 @@ pub fn human_summary(report: &CaseRunReport) -> String {
     );
     let _ = writeln!(
         out,
-        "   [{}] {}/{} external artifacts re-hashed ({verified_evidence}/{total_evidence} evidence records)",
+        "   [{}] {}/{} external artifacts verified{} ({verified_evidence}/{total_evidence} evidence records)",
         integrity_label(report.integrity.status),
         verified_artifacts.len(),
-        report.integrity.artifacts.len()
+        report.integrity.artifacts.len(),
+        if cached_artifacts > 0 {
+            format!(", {cached_artifacts} from --hash-cache")
+        } else {
+            String::new()
+        }
     );
     if !unchecked_roots.is_empty() {
         let _ = writeln!(
@@ -4085,7 +4170,13 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                         let verified_inputs = step
                             .inputs
                             .iter()
-                            .filter(|input| input.integrity == IntegrityCheckState::Verified)
+                            .filter(|input| {
+                                matches!(
+                                    input.integrity,
+                                    IntegrityCheckState::Verified
+                                        | IntegrityCheckState::VerifiedCached
+                                )
+                            })
                             .count();
                         if let Some(receipt) = &step.receipt {
                             let _ = writeln!(
@@ -4893,6 +4984,126 @@ mod tests {
         );
     }
 
+    fn shielding_root() -> BTreeMap<String, PathBuf> {
+        BTreeMap::from([(
+            "shielding".to_string(),
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/capabilities/shielding"),
+        )])
+    }
+
+    /// S-038: `--hash-cache` is opt-in, never changes a verdict, and reports
+    /// a hit as a state distinct from a fresh hash.
+    #[test]
+    fn hash_cache_cold_run_populates_and_warm_run_reports_the_cached_state() {
+        let cache_path = std::env::temp_dir().join(format!(
+            "avila-core-hash-cache-runner-{}.json",
+            std::process::id()
+        ));
+        let _ = fs::remove_file(&cache_path);
+
+        let options = CaseRunOptions {
+            source_roots: shielding_root(),
+            hash_cache: Some(cache_path.clone()),
+            ..CaseRunOptions::default()
+        };
+
+        let cold = execute_case(&case_001(), &options).unwrap();
+        assert_eq!(cold.status, CaseRunStatus::Evaluated, "{cold:?}");
+        assert!(cold.replay.as_ref().unwrap().matches);
+        let shielding_checks: Vec<_> = cold
+            .integrity
+            .artifacts
+            .iter()
+            .filter(|check| check.source_root == "shielding")
+            .collect();
+        assert_eq!(
+            shielding_checks.len(),
+            4,
+            "the shielding root has four artifacts"
+        );
+        assert!(
+            shielding_checks
+                .iter()
+                .all(|check| check.state == IntegrityCheckState::Verified),
+            "a cold cache must not fabricate a hit: {shielding_checks:?}"
+        );
+        assert!(
+            cold.findings
+                .iter()
+                .all(|finding| finding.code != CORE_X1003),
+            "a cold run with no prior file must not report a cache problem"
+        );
+        assert!(
+            cache_path.is_file(),
+            "the cold run must create the cache file"
+        );
+
+        let warm = execute_case(&case_001(), &options).unwrap();
+        assert_eq!(warm.status, CaseRunStatus::Evaluated, "{warm:?}");
+        assert!(warm.replay.as_ref().unwrap().matches);
+        let warm_shielding: Vec<_> = warm
+            .integrity
+            .artifacts
+            .iter()
+            .filter(|check| check.source_root == "shielding")
+            .collect();
+        assert!(
+            warm_shielding
+                .iter()
+                .all(|check| check.state == IntegrityCheckState::VerifiedCached),
+            "a warm run must report the cached state, never plain verified: {warm_shielding:?}"
+        );
+        for (cold_check, warm_check) in shielding_checks.iter().zip(&warm_shielding) {
+            assert_eq!(cold_check.actual_sha256, warm_check.actual_sha256);
+        }
+        // The cache changes only which state an already-passing artifact
+        // reports; it never touches a verdict.
+        assert_eq!(cold.margins, warm.margins);
+
+        let _ = fs::remove_file(&cache_path);
+    }
+
+    /// A corrupt cache file is a notice, not a crash, and the run heals it.
+    #[test]
+    fn hash_cache_corrupt_file_is_ignored_with_a_finding_and_self_heals() {
+        let cache_path = std::env::temp_dir().join(format!(
+            "avila-core-hash-cache-corrupt-{}.json",
+            std::process::id()
+        ));
+        fs::write(&cache_path, b"{ this is not json").unwrap();
+
+        let options = CaseRunOptions {
+            source_roots: shielding_root(),
+            hash_cache: Some(cache_path.clone()),
+            ..CaseRunOptions::default()
+        };
+        let report = execute_case(&case_001(), &options).unwrap();
+        assert_eq!(report.status, CaseRunStatus::Evaluated, "{report:?}");
+        assert!(
+            report
+                .findings
+                .iter()
+                .any(|finding| finding.code == CORE_X1003 && finding.class == FindingClass::Notice),
+            "a corrupt cache file must be a visible notice: {:?}",
+            report.findings
+        );
+        assert!(
+            report
+                .integrity
+                .artifacts
+                .iter()
+                .filter(|check| check.source_root == "shielding")
+                .all(|check| check.state == IntegrityCheckState::Verified),
+            "every artifact must still be hashed fresh when the cache is ignored"
+        );
+
+        // The run heals the file: it is valid and populated afterward.
+        let healed = load_hash_cache(&cache_path).unwrap();
+        assert_eq!(healed.entries.len(), 4);
+
+        let _ = fs::remove_file(&cache_path);
+    }
+
     #[test]
     fn case_000_runs_without_external_roots_and_names_every_gap() {
         let report = execute_case(&case_000(), &CaseRunOptions::default()).unwrap();
@@ -4977,6 +5188,7 @@ mod tests {
             log: None,
             expected_manifest_sha256: None,
             attempt: None,
+            hash_cache: None,
         };
         let report = execute_case(&case_000(), &options).unwrap();
         let summary = human_summary(&report);

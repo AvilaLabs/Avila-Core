@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 pub const CORE_X1001: &str = "CORE-X1001";
 pub const CORE_X1002: &str = "CORE-X1002";
+pub const CORE_X1003: &str = "CORE-X1003";
 pub const CORE_X1101: &str = "CORE-X1101";
 pub const CORE_X1201: &str = "CORE-X1201";
 pub const CORE_X2001: &str = "CORE-X2001";
@@ -31,9 +32,9 @@ pub const CORE_X3301: &str = "CORE-X3301";
 pub const CORE_X9001: &str = "CORE-X9001";
 
 pub const RUNTIME_FINDING_CODES: &[&str] = &[
-    CORE_X1001, CORE_X1002, CORE_X1101, CORE_X1201, CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301,
-    CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101,
-    CORE_X3201, CORE_X3301, CORE_X9001,
+    CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1101, CORE_X1201, CORE_X2001, CORE_X2101, CORE_X2201,
+    CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001,
+    CORE_X3101, CORE_X3201, CORE_X3301, CORE_X9001,
 ];
 
 /// Explanations are served by `avila-core explain` alongside compiler codes.
@@ -51,6 +52,13 @@ pub const RUNTIME_DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         rule: "requester manifest pin",
         meaning: "The package manifest does not have the identity the requester authorized for this run.",
         next_action: "Inspect the manifest change. Run only after the requester pins the intended manifest digest; do not bypass the pin.",
+    },
+    DiagnosticExplanation {
+        code: CORE_X1003,
+        title: "Hash cache could not be used or updated",
+        rule: "opt-in verified-hash cache (S-038)",
+        meaning: "The `--hash-cache` file could not be read as this schema's JSON, or a fresh entry could not be written back to it. Every artifact this run needed was still hashed from bytes as if no cache were supplied; nothing about package integrity is weakened by this notice.",
+        next_action: "Inspect the named cache file. Delete it to let Core rebuild it from a clean state, or repair the path's permissions; the run's verdicts do not depend on this file.",
     },
     DiagnosticExplanation {
         code: CORE_X1101,

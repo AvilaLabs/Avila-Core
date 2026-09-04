@@ -1808,8 +1808,9 @@ fn append_log(
             )
             .into());
         }
-        revalidate_before_append(path, attempt)
-            .map_err(|issue| format!("attempt lineage changed before append: {issue}"))?;
+        // Lineage revalidation happens inside `append_log_line`, under the
+        // same lock as the write, so a concurrent writer cannot slip a
+        // conflicting attempt in between the check and the append.
     }
     #[derive(Serialize)]
     struct LogEntry<'a> {
@@ -1989,7 +1990,11 @@ fn append_log(
             })
             .unwrap_or_default(),
     };
-    append_log_line(path, &serde_json::to_string(&entry)?)
+    append_log_line(
+        path,
+        report.attempt.as_ref(),
+        &serde_json::to_string(&entry)?,
+    )
 }
 
 fn append_error_log(
@@ -2018,10 +2023,26 @@ fn append_error_log(
         attempt_request: options.attempt.as_ref(),
         findings: [finding],
     };
-    append_log_line(path, &serde_json::to_string(&entry)?)
+    // An infrastructure error before a case report exists has no resolved
+    // `AttemptRecord` to revalidate; only `attempt_request` (the caller's
+    // unvalidated ask) is available, and it is already carried in `entry`.
+    append_log_line(path, None, &serde_json::to_string(&entry)?)
 }
 
-fn append_log_line(path: &Path, line: &str) -> Result<(), Box<dyn Error>> {
+/// Append one line to the run-attempt log as a single write, holding an
+/// exclusive lock across lineage revalidation and the write itself.
+///
+/// `append_log`'s candidate lineage otherwise reads history to revalidate a
+/// parent, releases nothing, and only then appends: two processes racing a
+/// campaign can each pass that check against the same parent and both
+/// append a child bound to it before either write lands. Locking here makes
+/// "revalidate, then append" one critical section instead of two operations
+/// with a gap between them.
+fn append_log_line(
+    path: &Path,
+    attempt: Option<&AttemptRecord>,
+    line: &str,
+) -> Result<(), Box<dyn Error>> {
     if let Some(parent) = path
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
@@ -2032,9 +2053,37 @@ fn append_log_line(path: &Path, line: &str) -> Result<(), Box<dyn Error>> {
         .create(true)
         .append(true)
         .open(path)?;
-    std::io::Write::write_all(&mut file, line.as_bytes())?;
-    std::io::Write::write_all(&mut file, b"\n")?;
+    // A duplicated handle carries the lock so it can be released by a Drop
+    // guard without fighting the borrow checker over the original handle,
+    // which the write below still needs mutably. Unix `flock`/Windows
+    // `LockFileEx` semantics attach to the open file description a `dup`
+    // shares, not to either individual handle, so locking one and unlocking
+    // the other is exactly one lock over the file's lifetime.
+    let lock_handle = file.try_clone()?;
+    lock_handle.lock()?;
+    let _lock = LogFileLock(lock_handle);
+
+    if let Some(attempt) = attempt {
+        revalidate_before_append(path, attempt)
+            .map_err(|issue| format!("attempt lineage changed before append: {issue}"))?;
+    }
+
+    let mut buffer = Vec::with_capacity(line.len() + 1);
+    buffer.extend_from_slice(line.as_bytes());
+    buffer.push(b'\n');
+    std::io::Write::write_all(&mut file, &buffer)?;
     Ok(())
+}
+
+/// Releases the advisory lock when dropped, including on an early `?`
+/// return or a panic unwind, so a failed append never wedges the log for
+/// the rest of the process's life.
+struct LogFileLock(fs::File);
+
+impl Drop for LogFileLock {
+    fn drop(&mut self) {
+        let _ = self.0.unlock();
+    }
 }
 
 fn write_run_report(
@@ -4969,5 +5018,117 @@ mod tests {
         assert!(execution.workspace.is_none());
         assert_eq!(report.claims.as_ref().unwrap().reused_claims, 6);
         assert!(report.claims.as_ref().unwrap().matches_committed);
+    }
+
+    fn log_test_dir(label: &str) -> PathBuf {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let sequence = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!(
+            "avila-core-runner-log-{label}-{}-{sequence}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn append_log_line_writes_the_row_and_newline_in_one_call() {
+        let dir = log_test_dir("single-write");
+        let path = dir.join("attempts.jsonl");
+        append_log_line(&path, None, r#"{"a":1}"#).unwrap();
+        append_log_line(&path, None, r#"{"b":2}"#).unwrap();
+        let bytes = fs::read(&path).unwrap();
+        assert_eq!(bytes, b"{\"a\":1}\n{\"b\":2}\n".to_vec());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// Eight threads race to claim the same root attempt id on one shared
+    /// log file. Locking the revalidate-before-append check together with
+    /// the write (rather than reading unlocked and appending separately,
+    /// the pre-fix sequence) must admit exactly one of them and reject the
+    /// rest with the log showing the duplicate, never two racers both
+    /// believing they claimed it.
+    #[test]
+    fn concurrent_appends_racing_one_attempt_id_admit_exactly_one() {
+        let dir = log_test_dir("race-one-id");
+        let log_path = dir.join("attempts.jsonl");
+        let candidate_path = dir.join("candidate.json");
+        fs::write(&candidate_path, b"{}\n").unwrap();
+        let (candidate_sha256, _) = sha256_file(&candidate_path).unwrap();
+        let manifest_sha256 = format!("sha256:{}", "a".repeat(64));
+        let snapshot_sha256 = format!("sha256:{}", "b".repeat(64));
+
+        const RACERS: usize = 8;
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(RACERS));
+        let handles: Vec<_> = (0..RACERS)
+            .map(|_| {
+                let barrier = std::sync::Arc::clone(&barrier);
+                let log_path = log_path.clone();
+                let candidate_path = candidate_path.clone();
+                let candidate_sha256 = candidate_sha256.clone();
+                let manifest_sha256 = manifest_sha256.clone();
+                let snapshot_sha256 = snapshot_sha256.clone();
+                std::thread::spawn(move || -> Result<(), String> {
+                    let request = AttemptLineageRequest {
+                        attempt_id: "contested-root".into(),
+                        parent_attempt_id: None,
+                        candidate_input: "candidate".into(),
+                    };
+                    barrier.wait();
+                    let attempt = prepare_attempt(
+                        &request,
+                        Some(&log_path),
+                        Some(&candidate_path),
+                        Some(&candidate_sha256),
+                        &manifest_sha256,
+                        &snapshot_sha256,
+                    )?;
+                    let line = serde_json::json!({
+                        "attempt": &attempt,
+                        "manifest_sha256": manifest_sha256,
+                        "compiled_snapshot_sha256": snapshot_sha256,
+                    })
+                    .to_string();
+                    append_log_line(&log_path, Some(&attempt), &line)
+                        .map_err(|error| error.to_string())
+                })
+            })
+            .collect();
+
+        let mut successes = 0;
+        let mut rejections = 0;
+        for handle in handles {
+            match handle.join().unwrap() {
+                Ok(()) => successes += 1,
+                Err(message) => {
+                    assert!(
+                        message.contains("already exists") || message.contains("appeared in"),
+                        "a racer should fail only on the duplicate id, not some other error: {message}"
+                    );
+                    rejections += 1;
+                }
+            }
+        }
+        assert_eq!(
+            successes, 1,
+            "exactly one racer should claim the contested attempt id"
+        );
+        assert_eq!(rejections, RACERS - 1);
+
+        let content = fs::read_to_string(&log_path).unwrap();
+        let lines: Vec<&str> = content
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .collect();
+        assert_eq!(
+            lines.len(),
+            1,
+            "the log must carry exactly the one winner's line"
+        );
+        let value: Value = serde_json::from_str(lines[0])
+            .expect("the single appended line must be intact, unsplit JSON");
+        assert_eq!(value["attempt"]["attempt_id"], "contested-root");
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }

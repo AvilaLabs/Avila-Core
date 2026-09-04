@@ -61,10 +61,20 @@ memory.
 
 Lineage records what was tried; it does not choose the parent, candidate, or
 next action. The optimizer remains outside Core and cannot construct a verdict.
-The JSONL chain is digest-linked but unsigned, and the current local appender
-assumes one writer. It detects prior-record changes when history is read and
-rechecks the selected parent immediately before append, but it is not a
-transactional multi-process database.
+The JSONL chain is digest-linked but unsigned. The appender holds an exclusive
+advisory lock (`std::fs::File::lock`) on the log file across the immediate
+pre-append revalidation and the write itself, and writes the row and its
+newline as one buffered call, so two local processes or threads racing to
+append can no longer both pass revalidation against the same stale parent, or
+tear each other's line mid-write, before either commits: exactly one of a set
+of writers contesting the same attempt id is admitted, and every committed
+line is intact JSON. This guarantee is single-host and process-local: it
+serializes writers that can see and lock the same file, nothing more. It does
+not span hosts, survive the file moving to a different filesystem mid-append,
+or make the log a transactional multi-process database — there is still no
+signature, no durability guarantee beyond the local filesystem's own write
+semantics, and no defense against a writer that bypasses the lock by opening
+the file through a different path or losing the underlying inode.
 
 Candidate state is intentionally visible in the log. Secret or very large
 inputs must not be nominated; their artifact identities can remain in the

@@ -53,7 +53,7 @@ fn campaign_fixtures_are_executable() {
     assert_eq!(suite.fixture_set, "campaign-evaluation");
     assert_eq!(suite.version, 1);
     assert_eq!(suite.semantic_profile, SEMANTIC_PROFILE);
-    assert_eq!(suite.fixtures.len(), 12);
+    assert_eq!(suite.fixtures.len(), 15);
 
     for case in suite.fixtures {
         assert!(!case.clause.is_empty(), "{} has no clause", case.fixture_id);

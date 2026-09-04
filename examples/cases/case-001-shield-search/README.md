@@ -158,7 +158,7 @@ Core emits the realized request only after campaign evaluation and identifies
 it canonically:
 
 ```text
-[READY FOR AGENT] practical-review — optional agent practicality gate; 4/4 dossier artifacts present; request sha256:3c998b6c…
+[READY FOR AGENT] practical-review — optional agent practicality gate; 4/4 dossier artifacts present; request sha256:a9dca90f…
   instruction: Use Core's recorded requirement statuses and rules; never derive, edit, or override a technical verdict.
   instruction: Request changes unless every compiled requirement is PASS.
 ```

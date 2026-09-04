@@ -43,13 +43,13 @@
       "document_id": "case-001-reference-staged-review",
       "role": "staged_review_record",
       "path": "reviews/reference.json",
-      "sha256": "sha256:4b953f08107d802de10b67dd8f2f2d49de4921f89c7f0982b465c96277c95bc2"
+      "sha256": "sha256:04ae4163e3d3d405f1e067d715f9e9630c4beec31eb994f32da237cb9412caa4"
     },
     {
       "role": "expected_campaign_report",
       "document_id": "case-001-expected-campaign",
       "path": "campaign-report.json",
-      "sha256": "sha256:76b136163dfbea6d0e86dab6a5d7dc4c4d34b470455e30a69762f35231accf5f"
+      "sha256": "sha256:f65e0cace2a8737f4bb6d3be0d4d6421ce93e0f60d96fae6322a39cc272d3cca"
     },
     {
       "role": "execution_receipt",

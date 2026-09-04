@@ -13,7 +13,7 @@ use super::document::{ClaimValue, ClaimsDocument};
 use super::{AdmissionRecord, AdmissionState, VerdictBoundary, VerdictRecord};
 use crate::compile::registry::RegistryIndex;
 use crate::compile::{CanonicalTypedQuantity, CompiledContract};
-use crate::diagnostic::CORE_A4401;
+use crate::diagnostic::{CORE_A4401, CORE_A4402, CORE_A4403};
 use crate::document::{BasisKind, CategoricalPredicate, Comparison, QuantityValue, SourceRef};
 use crate::qualification::{ClaimQualification, EnvelopeState};
 
@@ -82,10 +82,26 @@ pub(super) fn evaluate(
             };
             // A claim from outside its producer's qualification envelope, or
             // of unknown position, cannot establish a bounded requirement.
+            // Nominal-basis requirements are unaffected by any of this
+            // (ADR-0008 clause 4).
+            let applies_qualification = requirement.basis.kind != BasisKind::Nominal;
             let quarantined = quarantined_by_qualification(&requirement.metric, claims, admissions);
-            let verdict = if !quarantined.is_empty() && requirement.basis.kind != BasisKind::Nominal
-            {
+            let unqualified = if applies_qualification {
+                unqualified_claims(&requirement.metric, claims, admissions)
+            } else {
+                Vec::new()
+            };
+            let verdict = if applies_qualification && !quarantined.is_empty() {
                 qualification_verdict(&quarantined)
+            } else if applies_qualification
+                && compiled.execution_policy.require_qualification
+                && !unqualified.is_empty()
+            {
+                // The profile requires a qualification assessment on every
+                // bounded or enclosure requirement's evidence, and none is
+                // present at all (as opposed to present but not `inside`,
+                // handled above).
+                unqualified_verdict(&unqualified)
             } else {
                 let mut output = evaluator
                     .evaluate(&case)
@@ -110,8 +126,18 @@ pub(super) fn evaluate(
                         }],
                         display_upper_text: None,
                     });
-                if !quarantined.is_empty() && requirement.basis.kind != BasisKind::Nominal {
-                    output.reasons.extend(qualification_reasons(&quarantined));
+                // Legacy profile: unqualified evidence still evaluates, but
+                // the gap must stay visible rather than reading as silently
+                // validated.
+                if applies_qualification
+                    && !compiled.execution_policy.require_qualification
+                    && !unqualified.is_empty()
+                {
+                    output.reasons.extend(unqualified_reasons(
+                        CORE_A4403,
+                        "policy_owner",
+                        &unqualified,
+                    ));
                 }
                 output
             };
@@ -235,6 +261,70 @@ fn quarantined_by_qualification(
                 .map(|qualification| (record.evidence_id.clone(), qualification))
         })
         .collect()
+}
+
+/// Admitted claims for the requirement's metric that carry no qualification
+/// assessment at all. Distinct from `quarantined_by_qualification`, which
+/// finds claims that carry one whose state is not `inside`.
+fn unqualified_claims(
+    metric: &SourceRef,
+    claims: &ClaimsDocument,
+    admissions: &[AdmissionRecord],
+) -> Vec<String> {
+    admissions
+        .iter()
+        .filter(|record| &record.source == metric)
+        .filter(|record| record.state == AdmissionState::Admitted)
+        .filter_map(|record| {
+            let claim = claims
+                .claims
+                .iter()
+                .find(|claim| claim.claim_id == record.evidence_id)?;
+            claim
+                .qualification
+                .is_none()
+                .then(|| record.evidence_id.clone())
+        })
+        .collect()
+}
+
+/// `CORE-A4402`: the profile requires a qualification assessment on this
+/// requirement's evidence, and none is present.
+fn unqualified_verdict(evidence_ids: &[String]) -> VerdictOutput {
+    VerdictOutput {
+        status: VerdictStatus::NotEvaluated,
+        rule: "not_evaluated.unqualified".into(),
+        aggregation: None,
+        canonical_unit: None,
+        limit_canonical: None,
+        lower_canonical: None,
+        upper_canonical: None,
+        nominal_canonical: None,
+        tolerance_canonical: None,
+        coverage: None,
+        basis_visible: None,
+        numbers_present: Some(false),
+        observed_category: None,
+        accepted_categories: None,
+        reasons: unqualified_reasons(CORE_A4402, "method_owner", evidence_ids),
+        display_upper_text: None,
+    }
+}
+
+fn unqualified_reasons(code: &str, owner: &str, evidence_ids: &[String]) -> Vec<VerdictReason> {
+    let mut reasons = vec![VerdictReason::CodeOwner {
+        code: code.into(),
+        owner: owner.into(),
+    }];
+    reasons.extend(
+        evidence_ids
+            .iter()
+            .map(|evidence_id| VerdictReason::EvidenceState {
+                evidence_id: evidence_id.clone(),
+                state: "unqualified".into(),
+            }),
+    );
+    reasons
 }
 
 fn qualification_reasons(quarantined: &[(String, ClaimQualification)]) -> Vec<VerdictReason> {

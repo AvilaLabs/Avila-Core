@@ -42,6 +42,20 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         next_action: "Bring the case inside the envelope, extend the qualification with validation evidence for the new range, or supply the missing fact from an admissible source. The owner is the method owner.",
     },
     DiagnosticExplanation {
+        code: "CORE-A4402",
+        title: "Unqualified evidence not permitted",
+        rule: "SC-10 A7; ADR-0008 clause 5",
+        meaning: "The contract's execution policy requires a qualification assessment on every bounded or enclosure requirement's evidence, and an admitted claim for this requirement's metric carries no qualification assessment at all. The calculation may be fine; nothing states where it may be trusted, so the requirement is not evaluated on it. A claim outside its stated envelope is `CORE-A4401` instead; this code is for evidence with no envelope statement whatsoever.",
+        next_action: "Bind a qualification record for the producing capability, or supply evidence from a capability that already carries one. The owner is the method owner.",
+    },
+    DiagnosticExplanation {
+        code: "CORE-A4403",
+        title: "Unqualified evidence admitted",
+        rule: "SC-10 A7; ADR-0008 clause 5",
+        meaning: "A bounded or enclosure requirement's verdict was derived from admitted evidence that carries no qualification assessment, and the contract's execution policy does not require one. The verdict stands, but the report makes visible that the profile permitted unqualified evidence rather than silently treating it as validated.",
+        next_action: "This is informational and does not block the verdict. Set `require_qualification` to true in the execution policy once the method owner has bound a qualification record, so the same gap would instead be refused. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
         code: "CORE-E7001",
         title: "Claims bind a different snapshot",
         rule: "SC-11",

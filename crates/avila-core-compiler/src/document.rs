@@ -34,6 +34,15 @@ pub struct ExecutionPolicy {
     /// value and use no uncertainty. The weakening must be explicit here.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub permit_nominal_basis: bool,
+    /// Requires a qualification assessment on the admitted evidence of every
+    /// `bounded` or `enclosure` requirement. When true, evidence with no
+    /// qualification assessment leaves the requirement `NOT_EVALUATED`
+    /// (`CORE-A4402`) instead of being evaluated as if it were qualified.
+    /// When false or absent, such evidence is still evaluated, but the
+    /// verdict carries an informational reason (`CORE-A4403`) naming the
+    /// gap. Nominal-basis requirements are unaffected either way.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub require_qualification: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

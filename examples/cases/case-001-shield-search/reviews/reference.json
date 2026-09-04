@@ -1,9 +1,9 @@
 {
   "schema_version": "avila.core/staged-review-record/v0.1-draft",
   "review_request": {
-    "request_sha256": "sha256:3c998b6cf03fea23e9fc6cf37366aa21969899e69c5aae1805bc976cfa7a8445",
+    "request_sha256": "sha256:a9dca90f778dfa7b0cc1682d4e30111312eba55cd4cbaadb3f920b15c59e0249",
     "compiled_snapshot_sha256": "sha256:337791fe28da1e5dd298e7426a5df15ea8ca542c0335aa226479b1ede4dee6ee",
-    "campaign_sha256": "sha256:f34862f9fa930883d74ea6efe54ac78dc045bb915685491e368c4c61fa67aafa",
+    "campaign_sha256": "sha256:a3e972172e5a1caaa20f5f33b6048f2dc0d94ace70d03a6d6f615dd04654d27e",
     "step_id": "practical-review",
     "gate_state": "awaiting_agent",
     "reviewer_role": "agent",

@@ -49,7 +49,7 @@
       "role": "expected_campaign_report",
       "document_id": "case-002-expected-campaign",
       "path": "campaign-report.json",
-      "sha256": "sha256:3dcf6daa8334d24b9339b644a1cb8ed59f05b450da5e7a275535fa8cf7f70549"
+      "sha256": "sha256:43db17a767c2fa1bcd810015ff29289797fa658726cb7cce2a57ed8d0efea6ce"
     },
     {
       "role": "execution_receipt",

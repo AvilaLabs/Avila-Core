@@ -4923,7 +4923,7 @@ mod tests {
         assert_eq!(stage.readiness, PresentationGateReadiness::ReadyForAgent);
         assert_eq!(
             stage.request_sha256,
-            "sha256:3c998b6cf03fea23e9fc6cf37366aa21969899e69c5aae1805bc976cfa7a8445"
+            "sha256:a9dca90f778dfa7b0cc1682d4e30111312eba55cd4cbaadb3f920b15c59e0249"
         );
         assert_eq!(
             stage

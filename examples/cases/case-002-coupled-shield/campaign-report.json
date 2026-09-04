@@ -327,7 +327,17 @@
         "limit_canonical": "2000",
         "lower_canonical": "2639/2",
         "upper_canonical": "2639/2",
-        "nominal_canonical": "2639/2"
+        "nominal_canonical": "2639/2",
+        "reasons": [
+          {
+            "code": "CORE-A4403",
+            "owner": "policy_owner"
+          },
+          {
+            "evidence_id": "screen-mass",
+            "state": "unqualified"
+          }
+        ]
       },
       "boundary": {
         "semantic_profile": "avila.core/semantic/0.2-draft",
@@ -355,7 +365,17 @@
         "limit_canonical": "120",
         "lower_canonical": "85",
         "upper_canonical": "85",
-        "nominal_canonical": "85"
+        "nominal_canonical": "85",
+        "reasons": [
+          {
+            "code": "CORE-A4403",
+            "owner": "policy_owner"
+          },
+          {
+            "evidence_id": "screen-thickness",
+            "state": "unqualified"
+          }
+        ]
       },
       "boundary": {
         "semantic_profile": "avila.core/semantic/0.2-draft",
@@ -393,6 +413,6 @@
       }
     }
   ],
-  "campaign_sha256": "sha256:9938ae951777386bc66c8954064dd0b1c1b0830641c6be812209812b8658a068",
+  "campaign_sha256": "sha256:f1d18dc6f27fec52ee0d490a8953412089be254770a6b1d29822eda5378fce31",
   "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
 }

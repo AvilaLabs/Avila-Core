@@ -41,7 +41,12 @@ A claims document carries:
   capability's evaluated qualification envelope; a bounded or enclosure
   requirement whose admitted evidence is outside its envelope, or of
   unknown position, is `NOT_EVALUATED` under `CORE-A4401` before the kernel
-  is asked, see ADR-0008): `exact`, `interval`, `coverage_interval`,
+  is asked, see ADR-0008; a claim that carries no qualification assessment at
+  all, on a contract whose execution policy sets `require_qualification`, is
+  `NOT_EVALUATED` under `CORE-A4402` instead — with the policy left at its
+  default, the same claim is still evaluated but the verdict carries an
+  informational `CORE-A4403` reason so the gap stays visible): `exact`,
+  `interval`, `coverage_interval`,
   `worst_case`, or `unquantified`. An unquantified non-quantity claim may
   preserve a categorical value as evidence. It is never lowered into the
   numeric verdict kernel; when its role declares a complete vocabulary, it may
@@ -78,6 +83,20 @@ missing claim yields `NOT_EVALUATED` with the reason. Admitted claims are
 reduced under SC-3, scaled exactly, and compared under the SC-10 tables:
 `bounded.le.within`, `bounded.le.crossing`, `bounded.le.exceeds`, and the
 rest.
+
+A `bounded` or `enclosure` requirement's admitted evidence may carry no
+qualification assessment at all, as opposed to one whose state is not
+`inside` (`CORE-A4401`, above). The execution policy's
+`require_qualification` decides what that means: when true, the requirement
+is `NOT_EVALUATED` with rule `not_evaluated.unqualified` and reason
+`CORE-A4402`, naming the unqualified claim ids, and the kernel is never
+asked; when false or absent — the default, unchanged from before this
+policy existed — the claim is still reduced and compared as usual, but the
+verdict carries an additional informational reason `CORE-A4403` naming the
+same claim ids, so a profile that permits unqualified evidence never does so
+silently. A `nominal`-basis requirement is exempt either way (ADR-0008
+clause 4); the rule does not reach categorical requirements, which have no
+basis and are covered only by `CORE-A4401`.
 
 Categorical requirements use a registry-owned closed vocabulary and an
 `equals` or `in_set` predicate. An admitted matching category is `PASS`; an
@@ -123,11 +142,15 @@ produce the same report and the same identity.
 
 ## Fixtures
 
-`fixtures/semantic-core/campaigns/campaign-cases.v1.json` pins twelve cases:
+`fixtures/semantic-core/campaigns/campaign-cases.v1.json` pins fifteen cases:
 the three bounded outcomes, exact unit scaling, a missing parent, a model the
 output does not permit, inverted bounds, a duplicate claim, a snapshot
-mismatch, qualification outside the envelope, and two cases proving that an
-optional presentation gate cannot alter PASS or FAIL. The harness in
+mismatch, qualification outside the envelope, two cases proving that an
+optional presentation gate cannot alter PASS or FAIL, and three cases for
+`require_qualification`: unqualified evidence refused when the policy
+requires qualification (`CORE-A4402`), the same evidence still evaluated with
+an informational reason when it does not (`CORE-A4403`), and a qualified
+`inside` claim unaffected by the policy either way. The harness in
 `crates/avila-core-compiler/tests/campaign_fixtures.rs` executes them and
 pins every campaign identity.
 

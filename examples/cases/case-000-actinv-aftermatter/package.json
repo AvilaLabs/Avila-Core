@@ -25,7 +25,7 @@
       "document_id": "case-000-expected-campaign",
       "role": "expected_campaign_report",
       "path": "campaign-report.json",
-      "sha256": "sha256:9b8520d3dd05ae6e008cf40347af4cb550cf9707dc32ad01736c6fbdc77a1c2a"
+      "sha256": "sha256:0055f7a56df121bef5c4fdacc7d3eebfebd35955164a5d8e7c637f296675634f"
     },
     {
       "document_id": "case-000-provenance",

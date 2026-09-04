@@ -36,7 +36,7 @@
             "rule": "bounded.le.within"
           }
         ],
-        "campaign_sha256": "sha256:155af9a250982301dcaceb93061159530ea5fe8ee06a3f7b1ac6fb31d25de988"
+        "campaign_sha256": "sha256:2ba7e525f4f55c8c437b387311eaf94a505bde1d14532eb431b30a703dea43ed"
       }
     },
     {
@@ -72,7 +72,7 @@
             "rule": "bounded.le.crossing"
           }
         ],
-        "campaign_sha256": "sha256:acda398b85f48d853b4e60c366341ea661eebf5de0a34c06027b2d2296e91135"
+        "campaign_sha256": "sha256:de579015d1e5c574ef16f54ad3868d1531c39f913770b215c5bac4bcf732c8e0"
       }
     },
     {
@@ -108,7 +108,7 @@
             "rule": "bounded.le.exceeds"
           }
         ],
-        "campaign_sha256": "sha256:5d90f93d1733137ccea46b5a6c73f6de05d9463df69f6e04236d6ba74157e4e0"
+        "campaign_sha256": "sha256:d5ec3c816ad2ebdb81cc48dd48c8229e5540885c3ec9b6f842d59bcbc13214b9"
       }
     },
     {
@@ -144,7 +144,7 @@
             "rule": "bounded.le.within"
           }
         ],
-        "campaign_sha256": "sha256:45ca165e9a63ce3568c66a6c1b00fb850afa02bf26f07fbc7606aa805dd3e050"
+        "campaign_sha256": "sha256:0005336b3831942c40bd458ba6719742f7890e04b637b1260f115dfee135880c"
       }
     },
     {
@@ -428,7 +428,7 @@
             "rule": "bounded.le.within"
           }
         ],
-        "campaign_sha256": "sha256:a9c749fc639605088608b67321ffa43e96edd41af4438f2914b78195d7b33135"
+        "campaign_sha256": "sha256:0a25f2393bec748327d5e4d9c9b6f8fc5bdf5d6a50f12349dcd8c4529abecf28"
       }
     },
     {
@@ -459,7 +459,7 @@
             "rule": "bounded.le.exceeds"
           }
         ],
-        "campaign_sha256": "sha256:3ba9e41d1f56850b2fddf11674f806df08d9ea8d6483d5ee3adc59955f843adc"
+        "campaign_sha256": "sha256:e3b95af45275dce70951b0745acabc0871fd6bc78fd68414ca83edfe84fd08ff"
       }
     },
     {
@@ -496,6 +496,114 @@
           }
         ],
         "campaign_sha256": "sha256:30b00ad18d236eba32ac9296d2626120ac208604325d4fefe20962003ce5a1a6"
+      }
+    },
+    {
+      "fixture_id": "campaign.require-qualification.unqualified.not_evaluated",
+      "clause": "ADR-0008 clause 5",
+      "contract": "../types/types.R1.resolved.require-qualification.contract.json",
+      "registry": "../types/compiler.registry.v1.json",
+      "claims": "campaign.require-qualification.unqualified.not_evaluated.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [],
+        "admissions": [
+          {
+            "evidence_id": "input:case",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "calculated",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "bounded",
+            "state": "admitted",
+            "reasons": []
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "not_evaluated",
+            "rule": "not_evaluated.unqualified"
+          }
+        ],
+        "campaign_sha256": "sha256:93d7296da86525e2176b805170303117f2da475e4b84a39892a0bea068b1848d"
+      }
+    },
+    {
+      "fixture_id": "campaign.require-qualification.unqualified.permitted.pass",
+      "clause": "ADR-0008 clause 5",
+      "contract": "../types/types.R1.resolved.pass.contract.json",
+      "registry": "../types/compiler.registry.v1.json",
+      "claims": "campaign.le.within.pass.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [],
+        "admissions": [
+          {
+            "evidence_id": "input:case",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "calculated",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "bounded",
+            "state": "admitted",
+            "reasons": []
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "pass",
+            "rule": "bounded.le.within"
+          }
+        ],
+        "campaign_sha256": "sha256:2ba7e525f4f55c8c437b387311eaf94a505bde1d14532eb431b30a703dea43ed"
+      }
+    },
+    {
+      "fixture_id": "campaign.require-qualification.qualified-inside.pass",
+      "clause": "ADR-0008 clause 5",
+      "contract": "../types/types.R1.resolved.require-qualification.contract.json",
+      "registry": "../types/compiler.registry.v1.json",
+      "claims": "campaign.require-qualification.qualified-inside.pass.claims.json",
+      "expected": {
+        "status": "evaluated",
+        "findings": [],
+        "admissions": [
+          {
+            "evidence_id": "input:case",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "calculated",
+            "state": "admitted",
+            "reasons": []
+          },
+          {
+            "evidence_id": "bounded",
+            "state": "admitted",
+            "reasons": []
+          }
+        ],
+        "verdicts": [
+          {
+            "requirement_id": "R-001",
+            "status": "pass",
+            "rule": "bounded.le.within"
+          }
+        ],
+        "campaign_sha256": "sha256:91a5e128364cc3a3ac6dd1487825d1515afded9f44ef45db4958951bff41439d"
       }
     }
   ]

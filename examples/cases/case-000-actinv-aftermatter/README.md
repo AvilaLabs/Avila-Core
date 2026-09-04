@@ -71,8 +71,8 @@ current type-level rules. Both source intervals have upper bounds below their
 frozen limits, while the Clive route is `unresolved` rather than `feasible`:
 
 ```text
-PASS — CASE-000-R1 — bounded.lt.within
-PASS — CASE-000-R2 — bounded.lt.within
+PASS — CASE-000-R1 — bounded.lt.within — CORE-A4403 (unqualified evidence admitted)
+PASS — CASE-000-R2 — bounded.lt.within — CORE-A4403 (unqualified evidence admitted)
 FAIL — CASE-000-R3 — categorical.equals.mismatch
        observed: unresolved
        accepted: feasible
@@ -83,7 +83,11 @@ is useful feedback, not an execution error: the numerical classification
 screen clears while the chosen route is not yet resolved. None of the verdicts
 qualifies ACTINV, Aftermatter, the nuclear data, or the case for regulatory or
 operational use, and Aftermatter's `feasible` state would still not mean
-facility acceptance.
+facility acceptance. Neither bounded requirement's evidence carries a
+qualification assessment (ADR-0008), and the contract does not set
+`execution_policy.require_qualification`, so both `PASS` verdicts carry the
+informational `CORE-A4403` reason rather than silently reading as validated;
+CASE-000 remains an unqualified specimen exactly as before.
 
 ## Files
 

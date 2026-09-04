@@ -191,7 +191,17 @@
         "limit_canonical": "1",
         "lower_canonical": "4087797275991635917280885867/5000000000000000000000000000",
         "upper_canonical": "4087797275991635917280948683/5000000000000000000000000000",
-        "nominal_canonical": "163511891039665436691236691/200000000000000000000000000"
+        "nominal_canonical": "163511891039665436691236691/200000000000000000000000000",
+        "reasons": [
+          {
+            "code": "CORE-A4403",
+            "owner": "policy_owner"
+          },
+          {
+            "evidence_id": "aftermatter-r0-table-1-class-a-fraction",
+            "state": "unqualified"
+          }
+        ]
       },
       "boundary": {
         "semantic_profile": "avila.core/semantic/0.2-draft",
@@ -219,7 +229,17 @@
         "limit_canonical": "1",
         "lower_canonical": "444749880957701847845906437/1000000000000000000000000000",
         "upper_canonical": "2223749404788509239229544743/5000000000000000000000000000",
-        "nominal_canonical": "69492168899640913725923077/156250000000000000000000000"
+        "nominal_canonical": "69492168899640913725923077/156250000000000000000000000",
+        "reasons": [
+          {
+            "code": "CORE-A4403",
+            "owner": "policy_owner"
+          },
+          {
+            "evidence_id": "aftermatter-r0-table-2-class-a-fraction",
+            "state": "unqualified"
+          }
+        ]
       },
       "boundary": {
         "semantic_profile": "avila.core/semantic/0.2-draft",
@@ -258,6 +278,6 @@
       }
     }
   ],
-  "campaign_sha256": "sha256:e4e77105b91b9df8774917e226b119bcd49c3765b094d7bbaf967d5782abf43e",
+  "campaign_sha256": "sha256:5a58e7b6c960a510b9788b978ea47d619b546c893bd732ab550d20fd590c2be0",
   "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
 }

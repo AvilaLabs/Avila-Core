@@ -13,7 +13,7 @@ use avila_core_compiler::{
 use avila_core_evidence::sha256_hex;
 use avila_core_kernel::{SEMANTIC_PROFILE, canonicalize_json};
 use avila_core_runner::{RUNTIME_DIAGNOSTIC_CATALOG, explain_runtime};
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -68,58 +68,10 @@ enum Command {
     /// Run a composed case package through integrity checks, compilation,
     /// controlled execution with receipts, claim generation, evidence
     /// binding, campaign evaluation, and deterministic replay.
-    Run {
-        /// Case directory containing package.json, or the manifest path itself.
-        case: PathBuf,
-        /// Resolve an external artifact root as NAME=PATH. Repeat as needed.
-        #[arg(long = "source-root", value_name = "NAME=PATH")]
-        source_roots: Vec<String>,
-        /// Supply the executable for a package capability as NAME=PATH. Its
-        /// bytes must hash to the identity the package binds. Repeat as needed.
-        #[arg(long = "capability", value_name = "NAME=PATH")]
-        capabilities: Vec<String>,
-        /// Fresh directory for staged inputs, outputs, logs, receipts, and the
-        /// generated documents. Defaults to workspaces/<case>/<run> under the
-        /// current directory when something is executed.
-        #[arg(long, value_name = "DIR")]
-        workspace: Option<PathBuf>,
-        /// Execute every declared step afresh instead of reusing a step whose
-        /// committed receipt matches the planned invocation and whose outputs
-        /// still verify.
-        #[arg(long = "no-reuse")]
-        no_reuse: bool,
-        /// Report what would be reused or rerun, and why, without executing.
-        #[arg(long)]
-        plan: bool,
-        /// Supply a free contract input for this run as NAME=PATH. The bytes
-        /// are hashed and attested; committed expectations are not replayed.
-        #[arg(long = "input", value_name = "NAME=PATH")]
-        inputs: Vec<String>,
-        /// Supply a value for an environment key an execution declares.
-        #[arg(long = "env", value_name = "KEY=VALUE")]
-        environment: Vec<String>,
-        /// Refuse the run unless the package manifest's sha256 equals this
-        /// pinned value, so a campaign cannot evaluate a rewritten package.
-        #[arg(long = "expect-manifest", value_name = "SHA256")]
-        expect_manifest: Option<String>,
-        /// Append one JSON line describing this run to FILE.
-        #[arg(long, value_name = "FILE")]
-        log: Option<PathBuf>,
-        /// Place this run in an identity-bound candidate lineage. Requires
-        /// --log and a supplied canonical-profile JSON candidate input.
-        #[arg(long = "attempt", value_name = "ID")]
-        attempt_id: Option<String>,
-        /// Name an earlier attempt in the same log as this attempt's parent.
-        #[arg(long = "parent-attempt", value_name = "ID")]
-        parent_attempt_id: Option<String>,
-        /// The supplied input Core should snapshot and diff for lineage.
-        /// Defaults to `candidate` when --attempt is present.
-        #[arg(long = "candidate-input", value_name = "NAME")]
-        candidate_input: Option<String>,
-        /// Emit the complete machine-readable run report instead of the concise view.
-        #[arg(long)]
-        json: bool,
-    },
+    ///
+    /// Boxed only to keep this enum's variants close in size; `RunArgs`
+    /// carries the actual argument set.
+    Run(Box<RunArgs>),
     /// Explain a stable finding code from the diagnostic catalog.
     Explain {
         /// A code such as `CORE-R3102`. Omit it and pass `--all` for the whole catalog.
@@ -128,6 +80,67 @@ enum Command {
         #[arg(long)]
         all: bool,
     },
+}
+
+#[derive(Debug, Args)]
+struct RunArgs {
+    /// Case directory containing package.json, or the manifest path itself.
+    case: PathBuf,
+    /// Resolve an external artifact root as NAME=PATH. Repeat as needed.
+    #[arg(long = "source-root", value_name = "NAME=PATH")]
+    source_roots: Vec<String>,
+    /// Supply the executable for a package capability as NAME=PATH. Its
+    /// bytes must hash to the identity the package binds. Repeat as needed.
+    #[arg(long = "capability", value_name = "NAME=PATH")]
+    capabilities: Vec<String>,
+    /// Fresh directory for staged inputs, outputs, logs, receipts, and the
+    /// generated documents. Defaults to workspaces/<case>/<run> under the
+    /// current directory when something is executed.
+    #[arg(long, value_name = "DIR")]
+    workspace: Option<PathBuf>,
+    /// Execute every declared step afresh instead of reusing a step whose
+    /// committed receipt matches the planned invocation and whose outputs
+    /// still verify.
+    #[arg(long = "no-reuse")]
+    no_reuse: bool,
+    /// Report what would be reused or rerun, and why, without executing.
+    #[arg(long)]
+    plan: bool,
+    /// Supply a free contract input for this run as NAME=PATH. The bytes
+    /// are hashed and attested; committed expectations are not replayed.
+    #[arg(long = "input", value_name = "NAME=PATH")]
+    inputs: Vec<String>,
+    /// Supply a value for an environment key an execution declares.
+    #[arg(long = "env", value_name = "KEY=VALUE")]
+    environment: Vec<String>,
+    /// Refuse the run unless the package manifest's sha256 equals this
+    /// pinned value, so a campaign cannot evaluate a rewritten package.
+    #[arg(long = "expect-manifest", value_name = "SHA256")]
+    expect_manifest: Option<String>,
+    /// Append one JSON line describing this run to FILE.
+    #[arg(long, value_name = "FILE")]
+    log: Option<PathBuf>,
+    /// Cache verified digests of large, unchanging artifacts resolved
+    /// under a --source-root in this operator-owned JSON file, keyed by
+    /// exact path, size, and modification time. Off unless supplied;
+    /// package documents and anything inside the case directory are
+    /// always re-hashed. See SECURITY.md for the trust this accepts.
+    #[arg(long = "hash-cache", value_name = "FILE")]
+    hash_cache: Option<PathBuf>,
+    /// Place this run in an identity-bound candidate lineage. Requires
+    /// --log and a supplied canonical-profile JSON candidate input.
+    #[arg(long = "attempt", value_name = "ID")]
+    attempt_id: Option<String>,
+    /// Name an earlier attempt in the same log as this attempt's parent.
+    #[arg(long = "parent-attempt", value_name = "ID")]
+    parent_attempt_id: Option<String>,
+    /// The supplied input Core should snapshot and diff for lineage.
+    /// Defaults to `candidate` when --attempt is present.
+    #[arg(long = "candidate-input", value_name = "NAME")]
+    candidate_input: Option<String>,
+    /// Emit the complete machine-readable run report instead of the concise view.
+    #[arg(long)]
+    json: bool,
 }
 
 fn main() -> ExitCode {
@@ -207,22 +220,24 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 return Ok(ExitCode::from(1));
             }
         }
-        Command::Run {
-            case,
-            source_roots,
-            capabilities,
-            workspace,
-            no_reuse,
-            expect_manifest,
-            plan,
-            inputs,
-            environment,
-            log,
-            attempt_id,
-            parent_attempt_id,
-            candidate_input,
-            json,
-        } => {
+        Command::Run(args) => {
+            let RunArgs {
+                case,
+                source_roots,
+                capabilities,
+                workspace,
+                no_reuse,
+                expect_manifest,
+                plan,
+                inputs,
+                environment,
+                log,
+                hash_cache,
+                attempt_id,
+                parent_attempt_id,
+                candidate_input,
+                json,
+            } = *args;
             let attempt = attempt_request(attempt_id, parent_attempt_id, candidate_input)?;
             let options = avila_core_runner::CaseRunOptions {
                 source_roots: avila_core_runner::parse_source_roots(&source_roots)?,
@@ -235,6 +250,7 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 log,
                 expected_manifest_sha256: expect_manifest,
                 attempt,
+                hash_cache,
             };
             let report = avila_core_runner::execute_case(&case, &options)?;
             if json {

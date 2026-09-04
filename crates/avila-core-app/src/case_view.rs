@@ -112,6 +112,9 @@ pub struct CaseSetup {
     pub environment: Vec<NamedPath>,
     pub workspace: String,
     pub reuse: bool,
+    /// Operator-owned JSON file caching verified digests of large artifacts
+    /// resolved under a source root. Empty means off, the default.
+    pub hash_cache: String,
     /// Start a run (or a plan) as soon as the window opens.
     pub auto_run: Option<bool>,
     /// Save a PNG of the window once the automatic run has rendered, then
@@ -146,6 +149,7 @@ impl CaseSetup {
             match flag.as_str() {
                 "--case" => setup.case_dir = value()?,
                 "--workspace" => setup.workspace = value()?,
+                "--hash-cache" => setup.hash_cache = value()?,
                 "--source-root" => setup.source_roots.push(named_path(&value()?)?),
                 "--capability" => setup.capabilities.push(named_path(&value()?)?),
                 "--input" => setup.free_inputs.push(named_path(&value()?)?),
@@ -234,6 +238,8 @@ impl CaseSetup {
                 .then(|| PathBuf::from(self.workspace.trim())),
             reuse: self.reuse,
             plan_only,
+            hash_cache: (!self.hash_cache.trim().is_empty())
+                .then(|| PathBuf::from(self.hash_cache.trim())),
             ..CaseRunOptions::default()
         }
     }
@@ -582,6 +588,14 @@ impl CaseView {
                         .desired_width(f32::INFINITY),
                 );
             });
+            ui.horizontal(|ui| {
+                ui.label("Hash cache");
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.setup.hash_cache)
+                        .hint_text("off by default; a JSON file to cache large artifact digests in")
+                        .desired_width(f32::INFINITY),
+                );
+            });
         });
         targets.set(TourTarget::Options, options.response.rect);
 
@@ -798,6 +812,7 @@ fn outcome_badge(ui: &mut egui::Ui, status: CaseRunStatus) {
 fn integrity_badge(ui: &mut egui::Ui, state: IntegrityCheckState) {
     match state {
         IntegrityCheckState::Verified => badge(ui, "VERIFIED", GREEN),
+        IntegrityCheckState::VerifiedCached => badge(ui, "VERIFIED (CACHED)", BLUE),
         IntegrityCheckState::NotChecked => badge(ui, "NOT CHECKED", muted(ui)),
         IntegrityCheckState::Missing => badge(ui, "MISSING", RED),
         IntegrityCheckState::Mismatch => badge(ui, "MISMATCH", RED),
@@ -849,7 +864,12 @@ fn show_overview(
         let verified_artifacts = integrity
             .artifacts
             .iter()
-            .filter(|check| check.state == IntegrityCheckState::Verified)
+            .filter(|check| {
+                matches!(
+                    check.state,
+                    IntegrityCheckState::Verified | IntegrityCheckState::VerifiedCached
+                )
+            })
             .count();
         let (label, color) = match integrity.status {
             PackageIntegrityStatus::Complete => ("COMPLETE", GREEN),

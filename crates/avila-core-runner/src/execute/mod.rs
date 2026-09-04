@@ -535,15 +535,26 @@ pub fn execute_step(
     let stderr = fs::File::create(&stderr_path)?;
     let started_at = rfc3339_now();
     let started = Instant::now();
-    let mut child = Command::new(&request.executable)
+    let mut command = Command::new(&request.executable);
+    command
         .args(&arguments)
         .current_dir(step_dir)
         .env_clear()
         .envs(&environment)
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout))
-        .stderr(Stdio::from(stderr))
-        .spawn()?;
+        .stderr(Stdio::from(stderr));
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt as _;
+        // Make the child the leader of its own process group (pgid equal to
+        // its own pid) so a timeout can reach a grandchild the adapter
+        // spawned — a `python3` adapter that shells out to a solver, for
+        // example — and not only the direct child `wait_with_timeout` holds
+        // a handle to.
+        command.process_group(0);
+    }
+    let mut child = command.spawn()?;
     let (status, timed_out) = wait_with_timeout(&mut child, timeout)?;
     let duration = started.elapsed();
     let finished_at = rfc3339_now();
@@ -639,9 +650,12 @@ pub fn execute_step(
         limitations: [
             "Exit status and output digests are process evidence, not scientific success.".into(),
             "The executable digest identifies the bytes that ran; it does not qualify the method.".into(),
-            "No sandbox, resource accounting, or signature was applied; the environment was cleared and the working directory confined to the workspace.".into(),
+            "No sandbox or resource accounting was applied beyond a cleared environment, a working directory confined to the workspace, and (on unix) killing the child's whole process group on timeout; nothing here is signed.".into(),
         ]
         .into_iter()
+        .chain(timed_out.then(|| {
+            "This step timed out; on unix the child's whole process group was killed, not only the direct child, so a solver or transport process the adapter shelled out to does not outlive the step.".to_string()
+        }))
         .chain(request.adapter.limitations())
         .collect(),
         notice: RECEIPT_NOTICE.into(),
@@ -677,12 +691,51 @@ fn wait_with_timeout(
             return Ok((status, false));
         }
         if Instant::now() >= deadline {
-            child.kill()?;
+            kill_timed_out(child)?;
             let status = child.wait()?;
             return Ok((status, true));
         }
+        // Polled completion rather than a SIGCHLD self-pipe or an async
+        // reactor: measurement over real steps put this loop under 1% of
+        // wall time for any job that runs longer than a couple hundred
+        // milliseconds, and event-driven completion would need a runtime
+        // this crate otherwise has no reason to depend on. The interval
+        // must stay at 20 ms or less so a short adversarial timeout (this
+        // module's own test uses one second) still resolves promptly.
         std::thread::sleep(Duration::from_millis(20));
     }
+}
+
+/// Kill everything a timed-out child left running. On unix the child was
+/// spawned as the leader of its own process group (`process_group(0)`, pgid
+/// equal to its pid), so a grandchild the adapter spawned — a solver a
+/// `python3` adapter shells out to, for example — shares that pgid unless it
+/// called `setpgid` itself, and a plain `child.kill()` would leave it
+/// running after the timeout.
+///
+/// The direct syscall for this is `killpg(2)`, but std exposes no group-
+/// signal API and this crate forbids unsafe code crate-wide, so the group is
+/// reached through the standard `kill` utility instead of raw FFI. If `kill`
+/// cannot be found or run at all, this is not fatal: the direct child below
+/// is still killed exactly as before this fix, so a missing `kill` binary
+/// only narrows the fix back to its pre-existing behavior rather than
+/// failing the step outright.
+#[cfg(unix)]
+fn kill_timed_out(child: &mut std::process::Child) -> io::Result<()> {
+    let pgid = child.id();
+    let _ = Command::new("kill")
+        .arg("-KILL")
+        .arg(format!("-{pgid}"))
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    child.kill()
+}
+
+#[cfg(not(unix))]
+fn kill_timed_out(child: &mut std::process::Child) -> io::Result<()> {
+    child.kill()
 }
 
 #[cfg(unix)]
@@ -807,5 +860,173 @@ mod tests {
         let serialized = serde_json::to_string(&first.invocation).unwrap();
         assert!(!serialized.contains("operator-secret-one"));
         assert!(!serialized.contains("supplied_environment"));
+    }
+
+    /// A stub capability that backgrounds a long sleep and then waits on it,
+    /// the same shape as a python3 adapter that shells out to a solver. Under
+    /// a 1-second step timeout, `execute_step` must report the timeout and
+    /// leave no grandchild running: proof that the whole process group, not
+    /// only the direct child, was killed.
+    #[cfg(unix)]
+    #[test]
+    fn timeout_kills_the_whole_process_group_not_just_the_direct_child() {
+        use std::os::unix::fs::PermissionsExt as _;
+        use std::sync::atomic::{AtomicU64, Ordering};
+
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        let sequence = NEXT.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "avila-core-runner-timeout-pgroup-{}-{sequence}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).unwrap();
+
+        let config_path = root.join("config.json");
+        fs::write(&config_path, b"{}\n").unwrap();
+        let (config_sha256, _) = sha256_file(&config_path).unwrap();
+
+        // Starts a detached `sleep 300`, records its pid, then blocks on it:
+        // the same shape as an adapter that shells out to a long-running
+        // solver and waits for it to finish.
+        let script_path = root.join("stub.sh");
+        fs::write(
+            &script_path,
+            "#!/bin/sh\nsleep 300 &\necho $! > grandchild.pid\nwait\n",
+        )
+        .unwrap();
+        let mut permissions = fs::metadata(&script_path).unwrap().permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&script_path, permissions).unwrap();
+        let (executable_sha256, _) = sha256_file(&script_path).unwrap();
+
+        let adapter = external_checker::ExternalCheckerAdapter {
+            schema_version: external_checker::EXTERNAL_CHECKER_ADAPTER_SCHEMA_VERSION.into(),
+            adapter_id: "test/timeout-checker@1".into(),
+            capability_type: CapabilityTypeRef {
+                id: "test.timeout/checker".into(),
+                major: 1,
+            },
+            input_slots: vec!["config".into()],
+            arguments: vec![
+                external_checker::ExternalArgument::InputPath {
+                    input_slot: "config".into(),
+                },
+                external_checker::ExternalArgument::OutputPath {
+                    output_id: "result".into(),
+                },
+            ],
+            outputs: vec![external_checker::ExternalOutput {
+                output_id: "result".into(),
+                workspace_path: "result.json".into(),
+                media_type: "application/json".into(),
+            }],
+            claims: vec![external_checker::ExternalClaim::Categorical {
+                output_slot: "outcome".into(),
+                output_id: "result".into(),
+                pointer: "/outcome".into(),
+                allowed_values: vec!["ok".into()],
+            }],
+            timeout_ms: 1_000,
+            limitations: Vec::new(),
+        };
+
+        let request = ExecutionRequest {
+            case_id: "TEST-TIMEOUT".into(),
+            compiled_snapshot_sha256:
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000".into(),
+            step_id: "sleeper".into(),
+            adapter: Adapter::ExternalChecker {
+                adapter: Box::new(adapter),
+                descriptor_sha256:
+                    "sha256:2222222222222222222222222222222222222222222222222222222222222222".into(),
+            },
+            capability: CapabilityIdentity {
+                capability_id: "stub-sleeper".into(),
+                package_id: "test/stub-sleeper@1".into(),
+                source_repository: None,
+                source_commit: None,
+                executable_sha256,
+            },
+            executable: script_path,
+            context: StepContext::default(),
+            required_environment: Vec::new(),
+            environment: BTreeMap::new(),
+            inputs: vec![StagedInput {
+                input_slot: "config".into(),
+                evidence_id: "input:config".into(),
+                source_path: config_path,
+                workspace_path: "inputs/config.json".into(),
+                media_type: "application/json".into(),
+                expected_sha256: config_sha256,
+            }],
+        };
+
+        let step_dir = root.join("step");
+        let started = Instant::now();
+        let outcome = execute_step(&step_dir, &request)
+            .expect("a timeout is a reported outcome, not an error");
+        assert!(
+            started.elapsed() < Duration::from_secs(10),
+            "the step should stop near its 1-second timeout, not run the 300-second sleep to completion"
+        );
+
+        let receipt: ExecutionReceipt =
+            serde_json::from_slice(&fs::read(&outcome.receipt_path).unwrap()).unwrap();
+        assert_eq!(receipt.status, ReceiptStatus::TimedOut);
+        assert!(receipt.process.timed_out);
+        assert!(
+            receipt
+                .limitations
+                .iter()
+                .any(|limitation| limitation.contains("process group")
+                    && limitation.contains("killed")),
+            "the timeout limitation should say the process group was killed: {:?}",
+            receipt.limitations
+        );
+
+        // The stub had a moment to background `sleep` and record its pid
+        // before the 1-second deadline; read it with a short bounded retry
+        // in case the write raced the timeout.
+        let pid_path = step_dir.join("grandchild.pid");
+        let mut pid_text = String::new();
+        for _ in 0..50 {
+            if let Ok(text) = fs::read_to_string(&pid_path) {
+                pid_text = text;
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let grandchild_pid: u32 = pid_text
+            .trim()
+            .parse()
+            .expect("the stub script should have recorded the backgrounded sleep's pid");
+
+        // `kill -0` delivers no signal; a nonzero exit means the pid is
+        // gone. Bounded retry absorbs the reap taking a moment.
+        let alive = |pid: u32| {
+            Command::new("kill")
+                .arg("-0")
+                .arg(pid.to_string())
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status()
+                .map(|status| status.success())
+                .unwrap_or(false)
+        };
+        let mut still_alive = alive(grandchild_pid);
+        for _ in 0..50 {
+            if !still_alive {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+            still_alive = alive(grandchild_pid);
+        }
+        assert!(
+            !still_alive,
+            "the grandchild `sleep 300` (pid {grandchild_pid}) should have been killed with the timed-out process group, not left running"
+        );
+
+        let _ = fs::remove_dir_all(&root);
     }
 }

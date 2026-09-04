@@ -30,8 +30,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common  # noqa: E402
 import scoring  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import shield_llm_tools as core_tools  # noqa: E402 (arm A is this tool, unmodified; also reused to read its own log format)
+# Arm A's tool (shield_llm_tools.py) is launched only as a subprocess below,
+# exactly like the other two arms' tools -- this file does not import it.
+# `final_core_scoring` used to reuse its `transported()` helper to filter
+# arm A's own campaign-log.jsonl; that helper is written for the pre-v0.3
+# `steps` shape (a `[name, state]` pair) and always returns False against
+# Core's current dict-shaped steps, so this file now uses its own
+# `scoring.row_transported` instead (see that function's docstring).
 
 ABLATION_DIR = Path(__file__).resolve().parent
 AGENTS_DIR = ABLATION_DIR.parent
@@ -215,7 +220,10 @@ def final_core_scoring(arm, trial_dir, designer, paths):
 
     if arm == "A":
         rows = common.read_jsonl(designer / "campaign-log.jsonl")
-        final_rows = [r for r in rows if core_tools.transported(r)]
+        # scoring.row_transported, not core_tools.transported: see its
+        # docstring for the confirmed schema mismatch that makes the shared
+        # helper always return False against a freshly-produced log.
+        final_rows = [r for r in rows if scoring.row_transported(r)]
         for row in final_rows:
             common.append_jsonl(log_path, row)
         return final_rows

@@ -11,7 +11,7 @@ the results to this module.
 import json
 from fractions import Fraction
 
-FORBIDDEN_WORDS = ("verdict", "margin", "pass", "fail", "coverage", "envelope", "refus")
+FORBIDDEN_WORDS = ("verdict", "margin", "pass", "fail", "coverage", "envelope", "refus", "not_evaluated", "inconclusive")
 CORE_TIME_KEYS = ("started_at", "finished_at", "duration_ms")
 
 
@@ -42,6 +42,34 @@ def row_out_of_envelope(row):
 
 def row_inconclusive(row):
     return any(v.get("status") == "inconclusive" for v in row.get("verdicts", []))
+
+
+def row_transported(row):
+    """True when every step Core recorded for this candidate (arm A's own
+    live `campaign-log.jsonl`, one row per Bash call, screen-only rows
+    interleaved with fully-transported ones) actually ran or was reused,
+    i.e. the row is a *final* evaluation and not a screen-only probe.
+
+    This intentionally does not call the arm's own tool
+    (`shield_llm_tools.transported`), which was written for the pre-v0.3
+    `steps` shape -- a list of two-element `[step_name, state]` pairs, as
+    the frozen `campaign-1` prior log still uses (confirmed: its first row
+    has `"steps": [["fe", "not_run"], ["screen", "executed"]]`) -- and
+    still does `list(s)[1] in ("executed", "reused")` for each `s`. Core's
+    current `--log` schema (`avila.core/run-attempt/v0.3-draft`) instead
+    writes each step as a full object, e.g.
+    `{"step_id": "fe", "adapter": ..., "state": "executed", ...}`; `list()`
+    of a dict gives its *keys*, so `list(s)[1]` is always the literal
+    string `"adapter"` and the shared helper always returns `False` against
+    a fresh log. Confirmed empirically in this slice's own arm-A dry run: a
+    candidate whose live `transport` call reported all four requirements
+    PASS (`designer-notes.jsonl`, `status: "evaluated"`) was silently
+    scored as zero candidates by `harness.final_core_scoring` before this
+    fix. `shield_llm_tools.py` is unmodified by this slice (arm A's tool is
+    reused exactly as campaign-1 ran it); this is harness.py's own,
+    independent, schema-correct check over the same log."""
+    steps = row.get("steps", [])
+    return bool(steps) and all(s.get("state") in ("executed", "reused") for s in steps)
 
 
 def row_not_evaluated_other(row):

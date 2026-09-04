@@ -82,6 +82,53 @@ class QualificationEnvelopeTests(unittest.TestCase):
         self.assertTrue(common.exceeds_qualification_envelope(layers))
 
 
+class RowTransportedTests(unittest.TestCase):
+    """Regression coverage for the schema drift this slice found: the
+    frozen campaign-1 prior log's `steps` are two-element `[name, state]`
+    pairs, but Core's current `--log` output (`avila.core/run-attempt/
+    v0.3-draft`) writes each step as a full object with a `state` key.
+    `shield_llm_tools.transported()` (unmodified, out of scope here) still
+    assumes the old shape and always returns False against the new one;
+    `scoring.row_transported` is harness.py's own, schema-correct check."""
+
+    def test_true_when_every_dict_shaped_step_executed_or_reused(self):
+        row = {"steps": [{"step_id": "screen", "state": "executed"}, {"step_id": "fe", "state": "reused"}]}
+        self.assertTrue(scoring.row_transported(row))
+
+    def test_false_when_any_dict_shaped_step_not_run(self):
+        row = {"steps": [{"step_id": "screen", "state": "executed"}, {"step_id": "fe", "state": "not_run"}]}
+        self.assertFalse(scoring.row_transported(row))
+
+    def test_false_for_a_screen_only_row_confirmed_against_a_real_dry_run(self):
+        # The exact shape a screen-only propose call wrote to arm A's own
+        # campaign-log.jsonl in this slice's dry run: fe not_run, screen
+        # executed -- a real, non-final row that must not count as scored.
+        row = {
+            "steps": [
+                {"step_id": "fe", "adapter": "avila-labs.thermal/spreader-fe@1", "capability_id": "thermal-python", "state": "not_run"},
+                {"step_id": "screen", "adapter": "avila-labs.thermal/screen@1", "capability_id": "python3", "state": "executed"},
+            ]
+        }
+        self.assertFalse(scoring.row_transported(row))
+
+    def test_false_for_empty_steps(self):
+        self.assertFalse(scoring.row_transported({"steps": []}))
+        self.assertFalse(scoring.row_transported({}))
+
+    def test_the_shared_helper_this_replaces_is_confirmed_broken_on_the_new_shape(self):
+        # Documents *why* harness.py stopped calling shield_llm_tools.transported()
+        # for arm A: `list(dict)[1]` on a full step object is a key name, never a
+        # state, so the shared helper always returns False here -- the exact
+        # failure this slice's dry run hit (a live all-PASS transport scored as
+        # zero candidates). shield_llm_tools.py itself is not imported by this
+        # test file (it is not on this test's import path), so this is checked
+        # structurally rather than by calling the real function.
+        step = {"step_id": "fe", "adapter": "x", "capability_id": "y", "state": "executed"}
+        shared_helper_result = list(step)[1] in ("executed", "reused")
+        self.assertFalse(shared_helper_result)
+        self.assertTrue(scoring.row_transported({"steps": [step]}))
+
+
 class EvaluationLogMetricsTests(unittest.TestCase):
     def test_success_and_first_pass_index(self):
         rows = [

@@ -32,7 +32,11 @@ energy. Nothing here is qualified for any decision.
 
 The contract permits the nominal basis only for R1. A candidate that passes
 the screen and fails transport is the expected shape of a result, not an
-error: that is why the loop has two fidelities.
+error: that is why the loop has two fidelities. `execution_policy.require_qualification`
+is `true`: R2's, R3's, and R4's admitted evidence must each carry a satisfied
+qualification envelope or the requirement is refused outright rather than
+merely footnoted (see [Qualification envelope](#qualification-envelope)
+below).
 
 ## Reference candidate
 
@@ -120,32 +124,64 @@ does not ask about capture photons.
 
 ## Qualification envelope
 
-`qualification.json` is a qualification record for the transport capability:
-this exact interpreter and script, over a plane source of 0.1 to 20 MeV
-neutrons, through at most three layers of the listed materials, at most
-120 cm in total. It binds no validation evidence and says so in its
-limitations; it exists so that Core can refuse what lies beyond it and so a
-real qualification has a place to go. Before the transport step runs, the
-adapter reports the source energy and geometry, the slab's thickness and
-layer count, and each layer's material as facts with the input's identity as
-provenance, and the kernel evaluates the scope:
+Two qualification records are bound. `qualification.json` covers the
+transport capability: this exact interpreter and script, over a plane
+source of 0.1 to 20 MeV neutrons, through at most three layers of the listed
+materials, at most 120 cm in total. `qualification-screen.json` covers the
+screen's `mass` and `thickness` output slots only (not its `dose-rate`
+estimate, which stays an unqualified nominal guide, or its `screen-result`
+diagnostic): the same layer-count and material geometry, and the same
+120 cm bound, because the mass and thickness are exact arithmetic over the
+bound materials table and the case author states no wider a search box than
+transport's own. Neither record binds validation evidence and both say so in
+their limitations; they exist so that Core can refuse what lies beyond the
+stated geometry and so a real qualification has a place to go. Before each
+step runs, its adapter reports the source energy and geometry, the slab's
+thickness and layer count, and each layer's material as facts with the
+input's identity and its own adapter id as provenance (the screen and
+transport read the same candidate bytes independently, so each fact names
+which adapter read it), and the kernel evaluates each record's scope:
 
 ```text
+envelope avila-labs.shielding/screen-arithmetic rev 1: [INSIDE] 5/5 terms hold
 envelope avila-labs.shielding/slab-transport-openmc rev 1: [INSIDE] 8/8 terms hold
 ```
 
-`candidates/outside-envelope.json` is 150 cm of polyethylene in three layers.
-Planning it already reports `[OUTSIDE] 7/8 terms hold` and names the
-thickness term. Running it through transport produces a perfectly good
-interval that Core refuses to let establish the bounded requirement:
+`candidates/outside-envelope.json` is 150 cm of polyethylene in three layers,
+beyond both records' 120 cm bound. Running it (screen only; transport is
+reached but not supplied a capability here) now refuses every bounded
+requirement the screen's own output touches, not only transport's:
 
 ```text
 [PASS] SHIELD-R1-screen — nominal.le.within (nominal ~0.0128 uSv/h; …)
-[NOT_EVALUATED] SHIELD-R2-transport — not_evaluated.outside_qualification
-   because: CORE-A4401 (owner method_owner); transport-dose-rate: outside_qualification (avila-labs.shielding/slab-transport-openmc rev 1): {"fact":{"name":"slab.total_thickness","op":"le",…"value":{"unit":"cm","value":"120"}}} -> False
-[PASS] SHIELD-R3-mass — bounded.le.within ([1410, 1410] kg; limit 1500 kg; margin 90 kg)
-[FAIL] SHIELD-R4-thickness — bounded.le.exceeds ([150, 150] cm; limit 100 cm; margin -50 cm)
+[NOT_EVALUATED] SHIELD-R2-transport — not_evaluated.missing
+   because: CORE-R3301 (owner requester)
+[NOT_EVALUATED] SHIELD-R3-mass — not_evaluated.outside_qualification
+   because: CORE-A4401 (owner method_owner); screen-mass: outside_qualification (avila-labs.shielding/screen-arithmetic rev 1): {"fact":{"name":"slab.total_thickness","op":"le",…"value":{"unit":"cm","value":"120"}}} -> False
+[NOT_EVALUATED] SHIELD-R4-thickness — not_evaluated.outside_qualification
+   because: CORE-A4401 (owner method_owner); screen-thickness: outside_qualification (avila-labs.shielding/screen-arithmetic rev 1): {"fact":{"name":"slab.total_thickness","op":"le",…"value":{"unit":"cm","value":"120"}}} -> False
 ```
+
+(R2 is `not_evaluated.missing` here only because transport was not run for
+this supplied candidate; running transport as well reproduces the earlier
+`not_evaluated.outside_qualification` on R2 too, exactly as before.)
+
+`candidates/outside-envelope-four-layers.json` isolates the layer-count term
+from thickness: four 20 cm polyethylene layers, 80 cm total, well inside the
+120 cm bound. The screen still computes a mass and a thickness; the geometry
+envelope refuses both anyway because it counts four layers where the record
+states at most three:
+
+```text
+[FAIL] SHIELD-R1-screen — nominal.le.exceeds (nominal ~28.2172 uSv/h; …)
+[NOT_EVALUATED] SHIELD-R3-mass — not_evaluated.outside_qualification
+   because: CORE-A4401 (owner method_owner); screen-mass: outside_qualification (avila-labs.shielding/screen-arithmetic rev 1): {"fact":{"name":"slab.layer_count","op":"le",…"value":3}} -> False
+[NOT_EVALUATED] SHIELD-R4-thickness — not_evaluated.outside_qualification
+   because: CORE-A4401 (owner method_owner); screen-thickness: outside_qualification (avila-labs.shielding/screen-arithmetic rev 1): {"fact":{"name":"slab.layer_count","op":"le",…"value":3}} -> False
+```
+
+R1, the nominal screen guide, is unaffected either way: qualification only
+ever governs a bounded or enclosure requirement (ADR-0008 clause 4).
 
 ## Optional practicality presentation gate
 
@@ -177,9 +213,11 @@ and `unverified`; it is presentation-routing history, not technical evidence.
 
 - **Capabilities:** `python3` (the system interpreter, by digest) for the
   screen; `openmc-python` (the OpenMC virtual environment's interpreter, by
-  digest) for transport. Neither is a qualified package. The practical reviewer
-  is an input artifact identified by its own digest, not an executable granted
-  runner authority.
+  digest) for transport. Neither package is qualified by itself; each named
+  capability's mass/thickness or transport output carries a scoped
+  qualification record instead (`qualification-screen.json`,
+  `qualification.json`). The practical reviewer is an input artifact
+  identified by its own digest, not an executable granted runner authority.
 - **Artifacts:** the reference candidate, the material table, the source
   definition, both computational scripts, the reviewer script, the
   nuclear-data index (identity of the index

@@ -80,3 +80,66 @@ beyond 120 cm and so that a real qualification has a place to go.
 - Catalog code `CORE-A4401`, campaign fixture
   `campaign.outside-qualification.not_evaluated`, and adversarial runner
   tests for inside, outside, and a mismatched executable move with this ADR.
+
+## Refinement: output-slot scope (S-039)
+
+A capability step commonly produces more than one output from a single
+execution — the shielding and thermal screens each emit a nominal dose or
+hotspot estimate alongside exact areal-mass and thickness figures computed by
+arithmetic over the bound materials table, not by the estimate's model. Before
+this refinement a qualification record covered every output slot a step
+produced, or none; there was no way to state that the geometry arithmetic is
+qualified while the estimate it sits beside is not, other than binding no
+record at all and leaving both unqualified.
+
+1. **A record may name the output slots it covers.** The optional
+   `covered_output_slots` field lists them; omitting it covers every output
+   slot the bound capability produces, exactly as before this field existed.
+   The field is validated non-empty when present — an empty list would state
+   a record that covers nothing, which is never the intent.
+2. **The runner attaches the envelope only to a covered claim.** Before this
+   refinement every claim a step produced carried the same assessment. Now
+   `promote` checks each extracted claim's output slot against the bound
+   record's `covered_output_slots` (when named) before attaching the
+   evaluated `ClaimQualification`; an uncovered claim carries none at all,
+   indistinguishable from a step with no qualification bound. The envelope is
+   still evaluated once per step, from the same applicability facts, so a
+   covered and an uncovered claim from the same execution can differ only in
+   whether the assessment is attached, never in what it says.
+3. **An uncovered claim can still satisfy only a nominal-basis requirement.**
+   Nothing about admission or the campaign's qualification rules changes: a
+   bounded or enclosure requirement over an uncovered claim is `CORE-A4402`
+   under `require_qualification`, or carries the informational `CORE-A4403`
+   otherwise, exactly as if the capability had no qualification at all. A
+   nominal requirement over the same claim is unaffected, as always.
+4. **The screen adapters now report the facts their own envelopes need.**
+   CASE-001 and CASE-002's shielding screen reuses the slab-transport fact
+   extraction under its own adapter id (so a scope's `source_requirement`
+   validator selects between the screen and transport, which read the
+   identical candidate and source bytes independently); CASE-003's thermal
+   screen and finite-element adapters share a fact extraction that now also
+   reports the plate's total thickness, which the finite-element qualification
+   did not need but the screen's geometry envelope does.
+
+## Consequences of the refinement
+
+- Schema `qualification.v0.1-draft` gains `covered_output_slots`; the parser
+  refuses a present-but-empty list.
+- CASE-001, CASE-002, and CASE-003 each gain a qualification record for their
+  screen capability, scoped to the mass/areal-mass and thickness output
+  slots only, binding no validation evidence and declaring an envelope no
+  wider than the case's own search box (layer count, listed materials, and a
+  thickness bound at least as wide as the case's own requirement limit). Each
+  case's `execution_policy.require_qualification` is now `true`; every
+  bounded and enclosure requirement's evidence carries a satisfied envelope,
+  and `CORE-A4403` no longer appears in any of the three committed campaign
+  reports.
+- A candidate with four layers (`candidates/outside-envelope-four-layers.json`
+  in CASE-001) demonstrates the scope working the other way: the screen still
+  computes a mass and a thickness, but the layer count term is `false`, so
+  both bounded requirements are `NOT_EVALUATED` under `CORE-A4401` while the
+  nominal screen-dose requirement evaluates normally.
+- The unit test `covered_output_slots_scopes_which_claims_the_record_covers`
+  and the runner adversarial test
+  `a_qualification_scoped_to_one_output_slot_leaves_the_others_unqualified`
+  move with this refinement.

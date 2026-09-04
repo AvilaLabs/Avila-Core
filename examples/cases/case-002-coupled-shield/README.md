@@ -44,6 +44,10 @@ photons produced in the shield; Core evaluates each allocation and does not
 sum claims. The activation limit is the case author's allocation. It binds
 for iron placed in front of the moderator and not for iron or lead placed
 behind it, which is the ordering trade-off the case exists to exercise.
+`execution_policy.require_qualification` is `true`: R2, R3, R4, and R5's
+admitted evidence must each carry a satisfied qualification envelope or the
+requirement is refused outright (see [Qualification
+envelopes](#qualification-envelopes) below).
 
 ## Reference candidate and probe
 
@@ -83,7 +87,7 @@ is not evidence`. The refusal was aimed at the case author.
 
 ## Qualification envelopes
 
-Two records, both binding no validation evidence and saying so:
+Three records, all binding no validation evidence and saying so:
 
 - `qualification-transport.json` over the coupled transport adapter: plane
   source of 0.1 to 20 MeV, at most three layers of the listed materials, at
@@ -91,8 +95,14 @@ Two records, both binding no validation evidence and saying so:
 - `qualification-activation.json` over the activation adapter: at most three
   layers of the listed materials, irradiation at most one year, cooling at
   least one hour, with the schedule facts in seconds.
+- `qualification-screen.json` over the screen adapter, scoped to its `mass`
+  and `thickness` output slots only (not its `dose-rate` estimate, which
+  stays an unqualified nominal guide): the same geometry and 120 cm bound as
+  the coupled transport record, because mass and thickness are exact
+  arithmetic over the bound materials table and the case author states no
+  wider a search box than transport's own.
 
-The verify run reports both `[INSIDE]` for the reference candidate.
+The verify run reports all three `[INSIDE]` for the reference candidate.
 
 ## Running it
 
@@ -136,7 +146,9 @@ spectra, is then not reached.
 
 - **Capabilities:** `python3` (the system interpreter, by digest) for the
   screen and the activation driver; `openmc-python` (the OpenMC virtual
-  environment's interpreter, by digest) for transport.
+  environment's interpreter, by digest) for transport. None is a qualified
+  package by itself; each carries scoped qualification records instead (see
+  [Qualification envelopes](#qualification-envelopes)).
 - **Artifacts:** the reference candidate, the material table, the source
   definition, the FISPACT-709 group structure, the irradiation schedule, the
   three scripts, the reviewer script, the nuclear-data index (identity of
@@ -173,6 +185,13 @@ Four refusals, each of which became a rule or a fix rather than a workaround:
    validator, so the coupled qualification record saw every term as
    `unknown` and both transport requirements were `NOT_EVALUATED` although
    transport ran. The extraction now takes the validator id.
+5. **A qualification can cover some of a step's outputs and not others**
+   (S-039). The screen's `mass` and `thickness` are exact arithmetic over the
+   bound materials table; its `dose-rate` is a different, unqualified
+   estimate from the same execution. `qualification-screen.json`'s
+   `covered_output_slots` names only the first two, so the runner attaches
+   the envelope to those claims and leaves `dose-rate` exactly as
+   unqualified as before any record existed.
 
 Tooling added alongside the case: `examples/cases/tools/rehash.py`
 recomputes every digest a package declares from supplied roots, and

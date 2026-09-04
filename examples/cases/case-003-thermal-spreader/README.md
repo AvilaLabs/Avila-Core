@@ -33,6 +33,10 @@ The screen applies the strip's flux straight through the stack with no
 lateral spreading, so it is pessimistic: every design it passes, the
 finite-element step passes too, and many it fails are fine. That is the
 opposite polarity from the shielding screen, and the contract does not care.
+`execution_policy.require_qualification` is `true`: R2, R3, and R4's admitted
+evidence must each carry a satisfied qualification envelope or the
+requirement is refused outright (see [Qualification
+envelopes](#qualification-envelopes) below).
 
 ## Reference candidate and sentinels
 
@@ -51,7 +55,7 @@ fix the box: 30 mm of aluminium passes at 323.9 K and 81 kg/m²; the reference
 passes lighter and thinner; 10 mm of steel fails the hotspot at 360.3 K; 5 mm
 of epoxy fails it by more than a thousand kelvin.
 
-## Qualification with validation evidence
+## Qualification envelopes
 
 `qualification-fe.json` is the first record in this repository whose
 `validation_evidence` is not empty. It binds, by digest,
@@ -63,6 +67,15 @@ listed materials, a strip flux up to 100 kW/m², convection between 5 and
 5000 W/m²/K, and a strip up to 100 mm; its limitations say what the
 benchmark does not validate: the material data, the perfect interfaces, and
 the bracket's conservatism.
+
+`qualification-screen.json` covers the screen adapter, scoped to its
+`areal-mass` and `thickness` output slots only (not its `hotspot-temperature`
+estimate, which stays an unqualified nominal guide): at most three layers of
+the listed materials and a total thickness of at most 50 mm, because mass
+and thickness are exact arithmetic over the bound materials table and the
+case author states no wider a search box than that. It binds no validation
+evidence and says so in its limitations. Both records report `[INSIDE]` for
+the reference candidate.
 
 ## Coverage of the library requirement set
 
@@ -101,7 +114,9 @@ package version, and the package limitations say so.
 ## What the package binds
 
 - **Capabilities:** `python3` for the screen; `thermal-python` for the
-  finite-element step, both by digest.
+  finite-element step, both by digest. Each carries a scoped qualification
+  record instead of being a qualified package by itself (see [Qualification
+  envelopes](#qualification-envelopes)).
 - **Artifacts:** the reference candidate, the material table, the source
   definition, both scripts, and the reference candidate's expected outputs.
 - **Executions:** `screen` through `avila-labs.thermal/screen@1`; `fe`
@@ -119,3 +134,12 @@ package version, and the package limitations say so.
   `interval` claim under an `enclosure` requirement is how a discretisation
   bracket is evaluated, distinct from the statistical `coverage_interval`
   the shielding case uses.
+- **A qualification can cover some of a step's outputs and not others**
+  (S-039). The screen's `areal-mass` and `thickness` are exact arithmetic
+  over the bound materials table; its `hotspot-temperature` is a different,
+  unqualified estimate from the same execution. `qualification-screen.json`'s
+  `covered_output_slots` names only the first two, so `hotspot-temperature`
+  stays exactly as unqualified as before any record existed. The screen and
+  the finite-element adapter now share one fact extraction (candidate layer
+  count and materials, source heat flux, convection, and strip width, and a
+  new total-thickness sum), each reporting under its own adapter id.

@@ -45,8 +45,14 @@ A claims document carries:
   all, on a contract whose execution policy sets `require_qualification`, is
   `NOT_EVALUATED` under `CORE-A4402` instead — with the policy left at its
   default, the same claim is still evaluated but the verdict carries an
-  informational `CORE-A4403` reason so the gap stays visible): `exact`,
-  `interval`, `coverage_interval`,
+  informational `CORE-A4403` reason so the gap stays visible; a record may
+  name `covered_output_slots`, the subset of the capability's outputs it
+  qualifies, and the runner then attaches the envelope only to a claim on one
+  of those slots, so a step that produces both a qualified geometry claim and
+  an unqualified estimate from the same execution carries the assessment on
+  the first and none at all on the second, exactly as if no record were bound
+  for that output; omitting the field covers every output the capability
+  produces, unchanged from before the field existed): `exact`, `interval`, `coverage_interval`,
   `worst_case`, or `unquantified`. An unquantified non-quantity claim may
   preserve a categorical value as evidence. It is never lowered into the
   numeric verdict kernel; when its role declares a complete vocabulary, it may

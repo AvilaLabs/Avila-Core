@@ -236,8 +236,12 @@ record must state:
 - validation and benchmark evidence;
 - uncertainty and numerical limits;
 - known failure modes and exclusions;
-- owner, dates, expiration triggers, and validation refresh conditions; and
-- the policy or organization recognizing the qualification.
+- owner, dates, expiration triggers, and validation refresh conditions;
+- the policy or organization recognizing the qualification; and
+- the output roles it covers, when narrower than everything the capability
+  produces — a capability with several outputs may be qualified on some and
+  not others, and a claim on an uncovered output carries no qualification at
+  all, so it can still satisfy only a nominal-basis requirement (ADR-0008).
 
 Core can enforce and preserve this record. It cannot create domain credibility
 merely by storing it.

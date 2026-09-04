@@ -133,7 +133,19 @@ def transported(row):
     """A row counts as fully evaluated when every declared step ran or was
     reused; a screen-only run leaves its later steps `not_run`."""
     steps = row.get("steps", [])
-    return bool(steps) and all(list(s)[1] in ("executed", "reused") for s in steps)
+    return bool(steps) and all(step_state(s) in ("executed", "reused") for s in steps)
+
+
+def step_state(step):
+    """The state of one logged step, for both log shapes Core has written:
+    the v0.2 pair ``[step_id, state]`` and the v0.3 object with a ``state``
+    member. Anything else is reported as ``unknown`` rather than guessed."""
+    if isinstance(step, dict):
+        state = step.get("state")
+        return state if isinstance(state, str) else "unknown"
+    if isinstance(step, (list, tuple)) and len(step) >= 2 and isinstance(step[1], str):
+        return step[1]
+    return "unknown"
 
 
 def verdict_map(row):

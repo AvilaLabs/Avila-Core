@@ -59,7 +59,9 @@ regulatory review. It makes their boundaries explicit and inspectable.
   categorical claim extraction.
 - An execution policy that can require a qualification assessment behind
   every bounded or enclosure verdict, refusing unqualified evidence outright
-  or, at its default, evaluating it while visibly flagging the gap.
+  or, at its default, evaluating it while visibly flagging the gap. A qualification record may scope
+  itself to the output slots it covers, so an unqualified estimate produced
+  alongside a qualified quantity stays unqualified.
 - Registry-declared structural schemas for free inputs such as a search
   candidate, so a malformed one is refused before anything is staged.
 - An opt-in verified-hash cache for large, unchanging operator-supplied

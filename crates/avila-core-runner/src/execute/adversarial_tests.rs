@@ -2643,7 +2643,7 @@ fn a_qualification_edit_narrowing_the_envelope_leaves_a_reused_step_not_evaluate
     // Bind a qualification whose scope admits the case's actual media type:
     // the reused step's evidence sits inside the envelope, and both bounded
     // requirements pass.
-    declare_qualification(&synthetic, &[media_type.as_str()], None);
+    declare_qualification(&synthetic, &[media_type.as_str()], None, None);
     let report = execute_case(
         &synthetic.case_dir,
         &reuse_options(&synthetic, dir.workspace()),
@@ -2681,7 +2681,7 @@ fn a_qualification_edit_narrowing_the_envelope_leaves_a_reused_step_not_evaluate
     // about a qualification record touches invocation identity -- but the
     // envelope now excludes it and both bounded requirements retreat to
     // NOT_EVALUATED.
-    declare_qualification(&synthetic, &["text/plain"], None);
+    declare_qualification(&synthetic, &["text/plain"], None, None);
     let report = execute_case(
         &synthetic.case_dir,
         &reuse_options(&synthetic, dir.workspace()),

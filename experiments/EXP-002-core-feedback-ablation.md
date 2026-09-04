@@ -1,6 +1,6 @@
 # EXP-002 — Core feedback ablation
 
-**Status:** Draft; no scored runs  
+**Status:** Pre-registered 2026-09-04; harness at commit `ee25b71`; frozen by the commit that set this line, whose hash and this file's SHA-256 are recorded in `EXP-002.protocol_hash.txt`  
 **Priority:** P0  
 **Case:** Reuse CASE-003 initially  
 **Purpose:** Isolate what Core contributes to an otherwise matched agent search
@@ -163,15 +163,19 @@ scored run begins.
   shared tool, neither done in this slice. See
   `examples/agents/ablation/README.md`'s "Timing methodology" section for
   the exact method and its stated limits.
-- **Immutable harness and case commit.** This worktree's harness
-  (`examples/agents/ablation/`) at the commit the lead freezes; CASE-003
-  contract revision 2, package manifest
-  `sha256:af9667f6dcdcb23e369f04fa06e8a667c02b8703cece4468c45089b2df70bfd0`
+- **Immutable harness and case commit.** Frozen: the harness
+  (`examples/agents/ablation/`) at commit `ee25b71`; CASE-003 contract
+  revision 2 with `require_qualification` set and the scoped screen
+  qualification (S-039), package manifest
+  `sha256:33b78ae3993330049dcc2b27b7c7bdc62150efa869e77d88b2ca1c07cb0c520a`
   (enforced on every Core invocation, live or post-hoc, via
-  `--expect-manifest`); the `avila-core` CLI binary's own sha256 recorded
-  per trial in `config.json` (`core_binary_sha256`) — the lead should
-  confirm which build is frozen for the scored run rather than assuming the
-  commit this dry run used.
+  `--expect-manifest`); the `avila-core` CLI built from `ee25b71` and copied
+  to `workspaces/exp-002/avila-core-frozen`, sha256
+  `e7bb598656962c49f4fc24d9c318cb0472eb265b8ad61e63d2cf46555e1b1809`,
+  recorded per trial in `config.json` (`core_binary_sha256`). The dry runs
+  used manifest `af9667f6…` from before S-039; the re-bless changed only
+  the contract policy and added the screen qualification record, with every
+  verdict unchanged.
   **Correction to an earlier draft of this line:** this is *not* the
   manifest campaign-1 was blessed against, and is not "unchanged from
   campaign-1" as a previous draft of this section claimed. `package.json`'s
@@ -210,13 +214,18 @@ scored run begins.
   frozen (seed and `--max-budget-usd` chosen before viewing any scored
   result, per this document's own rule):
 
+  Frozen values: seed `20260904`, `--max-budget-usd 5.0` per designer
+  session, 5 trials per arm, scored run directory
+  `workspaces/exp-002/block-1` (archived to
+  `examples/cases/case-003-thermal-spreader/campaign-2-ablation/` at close).
+
   ```bash
   python3 examples/agents/ablation/harness.py run_block \
-    --trials 5 --seed <FROZEN_SEED> \
-    --out <SCORED_RUN_DIR> \
+    --trials 5 --seed 20260904 \
+    --out workspaces/exp-002/block-1 \
     --screen-budget 40 --eval-budget 12 --n-eval 12 \
-    --timeout-s 1800 --max-retries 1 --max-budget-usd <FROZEN_BUDGET_USD> \
-    --core /home/connoravila/Documents/Avila-Labs/project-north-star/target/debug/avila-core
+    --timeout-s 1800 --max-retries 1 --max-budget-usd 5.0 \
+    --core workspaces/exp-002/avila-core-frozen
   ```
 
   followed by `python3 examples/agents/ablation/harness.py score
@@ -231,4 +240,8 @@ scored run begins.
   with the same `--out`), so an interrupted scored block can be restarted
   with the identical command.
 
-No scored run should begin until those items are frozen.
+Those items are frozen as of the commit that set the status line above. Any later change is an amendment recorded below before its scored effect.
+
+## Amendments
+
+None.

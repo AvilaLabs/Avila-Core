@@ -18,7 +18,7 @@ A successful case does not automatically answer all three.
 | ID | Status | Priority | Question |
 | --- | --- | --- | --- |
 | [EXP-001](EXP-001-core-assisted-thermal-search.md) | Completed pilot | — | Can an agent team using Core beat a fixed control grid in a second engineering domain? |
-| [EXP-002](EXP-002-core-feedback-ablation.md) | Planned | P0 | Does Core's structured feedback improve an otherwise matched agent search? |
+| [EXP-002](EXP-002-core-feedback-ablation.md) | Pre-registered | P0 | Does Core's structured feedback improve an otherwise matched agent search? |
 | EXP-003 | Planned | P0 | Can an existing experiment be launched and completed quickly with no intervention after launch? |
 | EXP-004 | Planned | P1 | Does the agent result repeat across fresh runs with the same frozen protocol? |
 | EXP-005 | Planned | P1 | Does Core refuse known shortcuts during an otherwise successful search? |

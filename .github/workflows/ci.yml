@@ -48,3 +48,28 @@ jobs:
           while IFS= read -r -d '' file; do
             jq empty "$file"
           done < <(find schemas examples fixtures -type f -name '*.json' -print0)
+
+  verifier:
+    name: Independent verifier
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Run the verifier's own fixture-vector unit tests
+        working-directory: verifier
+        run: python3 -m unittest test_verifier -v
+
+      - name: Verify CASE-003 (thermal spreader, no external roots needed)
+        working-directory: verifier
+        run: |
+          python3 avila_core_verify.py verify-case ../examples/cases/case-003-thermal-spreader \
+            --source-root case=../examples/cases/case-003-thermal-spreader \
+            --source-root thermal=../examples/capabilities/thermal
+
+      - name: Verify CASE-008 (mode-selective quench, no external roots needed)
+        working-directory: verifier
+        run: |
+          python3 avila_core_verify.py verify-case ../examples/cases/case-008-mode-selective-quench \
+            --source-root case=../examples/cases/case-008-mode-selective-quench \
+            --source-root magnetic-compliance=../examples/capabilities/magnetic-compliance

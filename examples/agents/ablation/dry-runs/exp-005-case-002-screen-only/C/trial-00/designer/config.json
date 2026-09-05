@@ -1,0 +1,10 @@
+{
+  "arm": "C-no-iterative-feedback",
+  "case": "<repo>/examples/cases/case-002-coupled-shield",
+  "materials_path": "<repo>/examples/capabilities/shield-coupled/materials.json",
+  "manifest_sha256": "sha256:1942d21b46901ec717ea7d0753660898788a71ef9bfb6275bc3f408dadd50f82",
+  "prior_logs": [
+    "<repo>/examples/cases/case-002-coupled-shield/campaign-rev3/sweep/campaign-log.jsonl"
+  ],
+  "n_eval": 3
+}

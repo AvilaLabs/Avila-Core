@@ -248,7 +248,7 @@ def cmd_status(args):
     config = common.load_config(args.out)
     state = common.load_state(args.out)
     print(f"evaluations used {state['evals']}/{config['eval_budget']}; screens used {state['screens']}/{config['screen_budget']}")
-    print("evaluated this arm (raw numbers, no verdict):")
+    print("evaluated this arm so far -- raw numbers only; this tool decided nothing:")
     for row in _this_arm_rows(args.out):
         print(f"  {row['candidate_id']} | {common.layers_text(row['layers'])} | {json.dumps(row['raw'])}")
 

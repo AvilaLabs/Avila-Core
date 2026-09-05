@@ -1,0 +1,11 @@
+{
+  "screens": 4,
+  "evals": 0,
+  "next_index": 4,
+  "screened": {
+    "[[\"borated_polyethylene\", \"105\"], [\"lead\", \"5\"]]": "b-0000",
+    "[[\"borated_polyethylene\", \"110\"]]": "b-0001",
+    "[[\"borated_polyethylene\", \"105\"], [\"lead\", \"3\"]]": "b-0002",
+    "[[\"borated_polyethylene\", \"100\"], [\"lead\", \"3\"]]": "b-0003"
+  }
+}

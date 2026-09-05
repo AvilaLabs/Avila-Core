@@ -1,0 +1,37 @@
+{
+  "schema": "avila.shielding/screen-result/v1",
+  "method": "plane-source removal-cross-section attenuation; no buildup; screening only",
+  "candidate_id": "b-0003",
+  "layers": [
+    {
+      "material": "borated_polyethylene",
+      "thickness_cm": "100"
+    },
+    {
+      "material": "lead",
+      "thickness_cm": "3"
+    }
+  ],
+  "unshielded_dose_rate": {
+    "value": "187200",
+    "unit": "uSv/h"
+  },
+  "attenuation_factor": "1.1722505696933241e-05",
+  "dose_rate": {
+    "value": "2.1944530664659028",
+    "unit": "uSv/h"
+  },
+  "mass": {
+    "value": "1340.5",
+    "unit": "kg"
+  },
+  "thickness": {
+    "value": "103",
+    "unit": "cm"
+  },
+  "limitations": [
+    "Removal cross sections are approximate fission-spectrum values applied to a 14 MeV source; buildup and spectrum softening are ignored.",
+    "The dose coefficient is a single approximate value at the source energy.",
+    "This result cannot establish a bounded verdict; it guides a search."
+  ]
+}

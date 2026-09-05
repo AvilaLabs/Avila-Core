@@ -1,0 +1,119 @@
+{
+  "duration_api_ms": 126236,
+  "stop_reason": "end_turn",
+  "session_id": "b45283ad-481b-44fa-b27e-01ea8699b65d",
+  "total_cost_usd": 0.2344456,
+  "usage": {
+    "input_tokens": 22,
+    "cache_creation_input_tokens": 19777,
+    "cache_read_input_tokens": 203718,
+    "output_tokens": 11244,
+    "output_tokens_details": {
+      "thinking_tokens": 6873
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 19777,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 786,
+        "cache_read_input_tokens": 27261,
+        "cache_creation_input_tokens": 461,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 461
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 2000,
+      "outputTokens": 22,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.00211,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    },
+    "claude-sonnet-5": {
+      "inputTokens": 22,
+      "outputTokens": 11244,
+      "cacheReadInputTokens": 203718,
+      "cacheCreationInputTokens": 19777,
+      "webSearchRequests": 0,
+      "costUSD": 0.2323356,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 6873,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "permission_denials": [
+    {
+      "tool_name": "Bash",
+      "tool_use_id": "toolu_01WGts16yE1v34PWiwEGXHZH",
+      "tool_input": {
+        "command": "find <repo>/examples/agents/ablation/dry-runs/exp-005-case-002-screen-only -maxdepth 5 2>&1",
+        "description": "Explore the arm directory structure"
+      }
+    }
+  ],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "fast_mode_disabled_reason": "sdk_opt_in_required",
+  "subagent_stats": {
+    "spawned": 0,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+    },
+    "started_in_background": 0,
+    "max_depth": 0,
+    "spawned_by_subagents": 0,
+    "completed": 0,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {}
+  },
+  "is_error": false,
+  "num_turns": 11,
+  "subtype": "success",
+  "api_error_status": null,
+  "result": "## Final report\n\n**This trial's evaluation (transport) budget was 0/0** \u2014 I had 4 screening calls but zero coupled neutron-photon transports available, so Core never issued a real PASS verdict on any candidate here. Per the rules, I cannot claim any design passes without Core's transport report saying so, so **no design was confirmed all-PASS in this arm.**\n\n**Lightest all-PASS design on record (from the prior campaign constellation, not this arm):** 105 cm polyethylene + 5 cm lead \u2014 110 cm total thickness, ~1550 kg/m\u00b2, worst margin 0.369, PASS on all six requirements. The next-lighter prior candidate (100 cm PE + 5 cm lead) is inconclusive on R2-neutron (CI upper bound touches the 7 \u00b5Sv/h limit exactly), so it isn't a safe substitute.\n\n**What I did with the 4 available screens:** tested three variants around the champion \u2014 trimming PE by 1 cm, trimming lead by 1\u20132 cm (compensating with more PE), and reversing layer order. Key findings, all *nominal-screen only, unconfirmed*:\n- 106 cm PE + 4 cm lead screens at R1\u22481.01 (same as the champion's 1.0) at a lighter 1450 kg/m\u00b2 \u2014 the most promising lead-mass-reduction to prioritize once transport budget exists.\n- 105 cm PE + 4 cm lead is even lighter (1440 kg/m\u00b2) and screens similarly (R1\u22481.13), but the photon margin under a thinner lead layer is unconfirmed.\n- Reversing layer order (lead facing the source) gave an identical screen value, suggesting the screen doesn't distinguish order \u2014 real order effects (photon buildup, activation) would only show up under full transport.\n- 104 cm PE + 5 cm lead screens worse (R1\u22481.12) and, extrapolating the prior R1-vs-R2 trend, likely fails R2-neutron \u2014 not worth pursuing.\n\n**What I'd try next with more budget:** transport 106 cm PE + 4 cm lead first (best risk/reward), and if it passes, transport 105 cm PE + 4 cm lead to see if the photon margin still holds with less lead \u2014 these are the two candidates most likely to beat 1550 kg/m\u00b2 while keeping the neutron requirement's proven safety margin.",
+  "ttft_ms": 2957,
+  "type": "result",
+  "duration_ms": 127461,
+  "uuid": "e49ba238-feb1-4292-9e42-93e40671c509",
+  "ttft_stream_ms": 1111,
+  "time_to_request_ms": 32,
+  "first_content_frame_ms": 1757,
+  "queued_turn_count": 0
+}

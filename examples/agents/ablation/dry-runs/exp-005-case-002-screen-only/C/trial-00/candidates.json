@@ -1,0 +1,23 @@
+[
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 105},
+      {"material": "lead", "thickness_cm": 5}
+    ],
+    "rationale": "This design is identical to the lightest fully-passing configuration in the prior Core-scored constellation: mass 1554 kg/m^2, thickness 110 cm. Prior data show R1-screen=1 (pass), R2-neutron CI [2.97,6.63] (fully below the 7 uSv/h allocation), R3-photon CI [1.17,1.28] (fully below the 3 uSv/h allocation), R4-mass 1554 kg (below 2000 kg cap), R5-thickness 110 cm (below 120 cm cap), and R6-activation ~5.8e-5 Bq/g (far below 1 Bq/g). The next lighter tested point (100 cm PE + 5 cm Pb) went inconclusive on R2 (CI [6.57,10] straddling the limit), so 105+5 is the lightest point in the prior sweep with a confirmed clean pass on every requirement. This is my highest-confidence candidate and matches the prior record on mass (no regression, verified reliability)."
+  },
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 106},
+      {"material": "lead", "thickness_cm": 4}
+    ],
+    "rationale": "An attempt to trim below the prior record (1554 kg) to ~1450 kg (~6.7% lighter) by trading 1 cm of lead for 1 cm of polyethylene. Using the removal cross sections in the material table (PE 0.110/cm, Pb 0.118/cm), the total neutron removal exponent for 106 PE + 4 Pb (0.110*106+0.118*4=12.13) is essentially unchanged from the proven-pass 105 PE + 5 Pb baseline (exponent 12.14), so R2-neutron should remain comfortably passing near its prior CI of roughly [2.9,6.6]. For photon shielding, isolating the lead contribution from the 115-cm-PE prior rows (0 cm Pb vs 5 cm Pb, same PE thickness) implies an effective photon attenuation coefficient for lead of about 0.54/cm; losing 1 cm of lead would raise the photon dose by a factor of about e^0.54=1.7x from the baseline's ~1.22 midpoint, giving an estimated ~2.1 uSv/h, still under the 3 uSv/h R3 allocation with roughly 30% margin. Mass (~1450 kg) and thickness (110 cm) both remain well inside their caps, and activation is not a concern given the enormous margins seen across the whole prior sweep. This candidate is my best guess at the lightest design that still meets every requirement, but it extrapolates 1 cm beyond directly-tested prior points rather than resting on a directly confirmed data row."
+  },
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 110},
+      {"material": "lead", "thickness_cm": 5}
+    ],
+    "rationale": "A verified-pass fallback with the best overall margin in the entire prior constellation (reported worst margin = 1, the highest of any row): R2-neutron CI [1.85,3.44], R3-photon CI [1.02,1.1], mass 1600 kg, thickness 115 cm, activation ~3.5e-5 Bq/g. It is heavier than my other two candidates (about 3% above the prior record, about 10% above candidate 2), so it is not my lightest pick, but it is included as a high-confidence hedge in case the reasoning behind the more aggressive trims in candidates 1-2 proves overly optimistic, since it is directly Core-scored as an all-PASS design with the largest safety margin observed in the prior sweep."
+  }
+]

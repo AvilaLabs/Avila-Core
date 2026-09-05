@@ -1,0 +1,11 @@
+{
+  "screens": 4,
+  "transports": 0,
+  "next_index": 4,
+  "screened": {
+    "[[\"polyethylene\", \"104\"], [\"lead\", \"5\"]]": "l-0000",
+    "[[\"polyethylene\", \"106\"], [\"lead\", \"4\"]]": "l-0001",
+    "[[\"lead\", \"5\"], [\"polyethylene\", \"105\"]]": "l-0002",
+    "[[\"polyethylene\", \"105\"], [\"lead\", \"4\"]]": "l-0003"
+  }
+}

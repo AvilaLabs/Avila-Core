@@ -1,0 +1,29 @@
+{
+  "arm": "B-raw-solver",
+  "case": "examples/cases/case-002-coupled-shield",
+  "materials_path": "examples/capabilities/shield-coupled/materials.json",
+  "source_path": "examples/capabilities/shield-coupled/source.json",
+  "groups_path": "examples/capabilities/shield-coupled/fispact-709-groups.json",
+  "schedule_path": "examples/cases/case-002-coupled-shield/schedule.json",
+  "screen_script": "examples/capabilities/shielding/screen.py",
+  "transport_script": "examples/capabilities/shield-coupled/transport.py",
+  "activate_script": "examples/capabilities/shield-coupled/activate.py",
+  "python3": "/usr/bin/python3",
+  "openmc_python": "/home/connoravila/.venvs/w003env/bin/python3.12",
+  "cross_sections_index": "/home/connoravila/nuclear-data/endfb-vii.1-hdf5/cross_sections.xml",
+  "openmc_cross_sections": "/home/connoravila/nuclear-data/endfb-vii.1-hdf5/cross_sections.xml",
+  "actinv": "/home/connoravila/Documents/actinv/target/release/actinv",
+  "activation_library": "/home/connoravila/Documents/Avila-Labs/project-aftermatter/.data/actinv/v1.0.0/activation/tendl-2025-neutron-709g.npz",
+  "activation_index": "/home/connoravila/Documents/Avila-Labs/project-aftermatter/.data/actinv/v1.0.0/activation/tendl-2025-neutron-709g_index.json",
+  "decay_primary": "/home/connoravila/Documents/Avila-Labs/project-aftermatter/.data/actinv/v1.0.0/decay/endf-b-viii-0_decay.dat",
+  "decay_fallback": "/home/connoravila/Documents/Avila-Labs/project-aftermatter/.data/actinv/v1.0.0/decay/jeff-3-3_decay.dat",
+  "particles": 500000,
+  "batches": 10,
+  "seed": 1,
+  "manifest_sha256": "sha256:1942d21b46901ec717ea7d0753660898788a71ef9bfb6275bc3f408dadd50f82",
+  "prior_logs": [
+    "examples/cases/case-002-coupled-shield/campaign-rev3/sweep/campaign-log.jsonl"
+  ],
+  "screen_budget": 1,
+  "eval_budget": 1
+}

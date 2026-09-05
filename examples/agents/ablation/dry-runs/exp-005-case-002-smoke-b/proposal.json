@@ -1,0 +1,1 @@
+[{"layers": [{"material": "polyethylene", "thickness_cm": "105"}, {"material": "lead", "thickness_cm": "5"}], "rationale": "smoke test: the campaign-3 sweep bar design (105 cm polyethylene + 5 cm lead), reused for a byte-level raw-vs-post-hoc comparison"}]

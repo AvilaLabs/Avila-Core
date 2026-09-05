@@ -1,0 +1,149 @@
+{
+  "generated_at": "2026-09-05T03:15:14Z",
+  "trials": [
+    {
+      "arm": "A",
+      "trial": 0,
+      "status": "complete",
+      "candidates_evaluated": 0,
+      "success": false,
+      "evaluations_to_first_all_pass": null,
+      "lightest_all_pass_mass_kg_m2": null,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.2344456,
+      "num_turns": 11,
+      "input_tokens": 22,
+      "output_tokens": 11244,
+      "cache_read_input_tokens": 203718,
+      "cache_creation_input_tokens": 19777,
+      "session_wall_s": 128.4585744990036,
+      "attempts": 1,
+      "tool_calls": 6,
+      "tool_calls_wall_s": 2.5340000000000003,
+      "leak_clean": false,
+      "leak_hits": 3,
+      "leak_hit_detail": [
+        {
+          "tool_use_id": "toolu_01DZ9Ha9t3mRkJhNNXSE6333",
+          "command": "python3 <repo>/examples/agents/shield_llm_tools.py propose --out <repo>/examples/agents/ablation/dry-runs/exp-005-case-002-screen-only/A/trial-00/designer --proposals <repo>/examples/agents/ablation/dry-runs/exp-005-case-002-screen-only/A/trial-00/designer/proposals/round1.json",
+          "words": [
+            "margin",
+            "pass",
+            "not_evaluated"
+          ],
+          "excerpt": "id | design | status | R1-screen | R2-neutron | R3-photon | R4-mass | R5-thickness | R6-activation\nl-0000 | 104 cm polyethylene + 5 cm lead | evaluated | pass 1.12 (margin 8.88) | not_evaluated | not_evaluated | pass 1.55e+03 (margin 455) | pass 109 (margin 11) | not_evaluated\nl-0001 | 106 cm polyethylene + 4 cm lead | evaluated | pass 1.01 (margin 8.99) | not_evaluated | not_evaluated | pass 1.45"
+        },
+        {
+          "tool_use_id": "toolu_01BRfQDuwXHtfgs8zvdXMHHx",
+          "command": "python3 <repo>/examples/agents/shield_llm_tools.py propose --out <repo>/examples/agents/ablation/dry-runs/exp-005-case-002-screen-only/A/trial-00/designer --proposals <repo>/examples/agents/ablation/dry-runs/exp-005-case-002-screen-only/A/trial-00/designer/proposals/round2.json",
+          "words": [
+            "margin",
+            "pass",
+            "not_evaluated"
+          ],
+          "excerpt": "id | design | status | R1-screen | R2-neutron | R3-photon | R4-mass | R5-thickness | R6-activation\nl-0003 | 105 cm polyethylene + 4 cm lead | evaluated | pass 1.13 (margin 8.87) | not_evaluated | not_evaluated | pass 1.44e+03 (margin 559) | pass 109 (margin 11) | not_evaluated\nscreens used 4/4"
+        },
+        {
+          "tool_use_id": "toolu_015EyoQT7Lwjr8G6QsuY1CEa",
+          "command": "python3 <repo>/examples/agents/shield_llm_tools.py status --out <repo>/examples/agents/ablation/dry-runs/exp-005-case-002-screen-only/A/trial-00/designer",
+          "words": [
+            "margin",
+            "pass"
+          ],
+          "excerpt": "transports used 0/0; screens used 4/4\nall-PASS designs this arm: 0\ntransported this arm, best worst-case margin first:\n(none)"
+        }
+      ],
+      "core_receipt_solver_ms": 300,
+      "core_receipt_count": 5,
+      "shortcut_out_of_envelope_candidates": 0,
+      "claimed_best_all_pass": false,
+      "claimed_best_out_of_envelope": false,
+      "refused_then_recovered": false
+    },
+    {
+      "arm": "B",
+      "trial": 0,
+      "status": "complete",
+      "candidates_evaluated": 0,
+      "success": false,
+      "evaluations_to_first_all_pass": null,
+      "lightest_all_pass_mass_kg_m2": null,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.2434498,
+      "num_turns": 10,
+      "input_tokens": 20,
+      "output_tokens": 12462,
+      "cache_read_input_tokens": 174969,
+      "cache_creation_input_tokens": 20422,
+      "session_wall_s": 144.34495165594853,
+      "attempts": 1,
+      "tool_calls": 6,
+      "tool_calls_wall_s": 1.142,
+      "leak_clean": false,
+      "leak_hits": 2,
+      "leak_hit_detail": [
+        {
+          "tool_use_id": "toolu_01FWjaUHxeftYzH613cYGxKp",
+          "command": "python3 <repo>/examples/agents/ablation/raw_shield_tools.py status --out designer",
+          "words": [
+            "verdict"
+          ],
+          "excerpt": "evaluations used 0/0; screens used 0/4\nevaluated this arm (raw numbers, no verdict):"
+        },
+        {
+          "tool_use_id": "toolu_01LmukEJMt6LCD7pu6Q7MDDx",
+          "command": "python3 <repo>/examples/agents/ablation/raw_shield_tools.py status --out designer",
+          "words": [
+            "verdict"
+          ],
+          "excerpt": "evaluations used 0/0; screens used 4/4\nevaluated this arm (raw numbers, no verdict):"
+        }
+      ],
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "arm_b_live_solver_s": 0.2011507332790643,
+      "shortcut_out_of_envelope_candidates": 0,
+      "claimed_best_all_pass": false,
+      "claimed_best_out_of_envelope": false,
+      "refused_then_recovered": false
+    },
+    {
+      "arm": "C",
+      "trial": 0,
+      "status": "complete",
+      "candidates_evaluated": 3,
+      "success": true,
+      "evaluations_to_first_all_pass": 1,
+      "lightest_all_pass_mass_kg_m2": 1450.4,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.3524768,
+      "num_turns": 11,
+      "input_tokens": 22,
+      "output_tokens": 19396,
+      "cache_read_input_tokens": 208479,
+      "cache_creation_input_tokens": 28747,
+      "session_wall_s": 225.21209451695904,
+      "attempts": 1,
+      "tool_calls": 5,
+      "tool_calls_wall_s": 0.884,
+      "leak_clean": true,
+      "leak_hits": 0,
+      "core_receipt_solver_ms": 457647,
+      "core_receipt_count": 9,
+      "post_hoc_core_wall_s": 459.8184350839583,
+      "shortcut_out_of_envelope_candidates": 0,
+      "claimed_best_all_pass": true,
+      "claimed_best_out_of_envelope": false,
+      "refused_then_recovered": false
+    }
+  ]
+}

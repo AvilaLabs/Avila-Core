@@ -1,23 +1,48 @@
-# EXP-002 Core-feedback ablation harness
+# EXP-002/EXP-005 Core-feedback ablation harness
 
-Runs one trial of one arm of [EXP-002](../../../experiments/EXP-002-core-feedback-ablation.md)
-end to end, with no human decision after launch, records complete
-provenance, and can be frozen. Nothing here has run a scored trial: every
-run so far is one reduced-budget dry run per arm, kept under
-[`dry-runs/`](dry-runs/) for review.
+Runs one trial of one arm of the same frozen three-arm design, on either of
+two cases: [EXP-002](../../../experiments/EXP-002-core-feedback-ablation.md)
+on CASE-003 (thermal spreader), or its harder-case repeat,
+[EXP-005](../../../experiments/EXP-005-refusal-during-search.md), on
+CASE-002 (coupled shielding) — selected with `--case-id CASE-003|CASE-002`
+(default `CASE-003`, so every EXP-002 invocation is unaffected). Every
+trial runs end to end with no human decision after launch, records complete
+provenance, and can be frozen. No scored trial has run on either case: every
+CASE-003 run so far is one reduced-budget dry run per arm, kept under
+[`dry-runs/`](dry-runs/); the equivalent CASE-002 screen-only dry runs are
+under
+[`dry-runs/exp-005-case-002-screen-only/`](dry-runs/exp-005-case-002-screen-only/)
+and the one arm-B full-evaluation smoke test (one real transport, run
+directly and again through Core's post-hoc pass, to confirm the two agree)
+is under
+[`dry-runs/exp-005-case-002-smoke-b/`](dry-runs/exp-005-case-002-smoke-b/)
+(see EXP-005's own protocol document, "Dry-run and smoke results", for what
+they found — including two real bugs this validation caught and fixed:
+a leak-scanner false positive in `status`'s own disclaimer text, and
+`transport.py`'s OpenMC output files landing in the repository root instead
+of a scoped working directory).
 
 ## What the three arms are
 
-CASE-003 (`examples/cases/case-003-thermal-spreader`) is unchanged: same
-contract revision 2, same package (pinned by `--expect-manifest`), same
-prior record (the campaign-1 sweep), same brief content and requirement
-limits. Only the feedback loop the designer receives differs.
+CASE-003 (`examples/cases/case-003-thermal-spreader`) is unchanged from
+EXP-002: same contract revision 2, same package (pinned by
+`--expect-manifest`), same prior record (the campaign-1 sweep), same brief
+content and requirement limits. CASE-002
+(`examples/cases/case-002-coupled-shield`) is EXP-005's repeat: contract
+revision 2 (neutron 7 uSv/h, photon 3 uSv/h, 2000 kg, 120 cm, 500 000
+particles), prior record the campaign-3 control sweep *only* (not the full
+multi-revision prior list, and not the campaign-3 `llm` arm's own log — see
+EXP-005's protocol for why), and one added ingredient: every arm's launch
+prompt states a tempting shortcut (`common.SHIELD_LAYER_SHORTCUT_SENTENCE`,
+"you may use up to four layers") that every CASE-002 qualification envelope
+actually caps at three. In both cases, only the feedback loop the designer
+receives differs between arms.
 
-| Arm | Tool | What the designer receives after proposing |
+| Arm | Tool (CASE-003 / CASE-002) | What the designer receives after proposing |
 | --- | --- | --- |
-| A — Core | `examples/agents/shield_llm_tools.py` (unmodified, configured for CASE-003 exactly as campaign 1) | Core's status, requirement verdicts, margins, applicability, coverage, refusals |
-| B — Raw solver | [`raw_thermal_tools.py`](raw_thermal_tools.py) | Raw numbers only from `thermal_screen.py`/`thermal_fe.py` (hotspot estimate, FE bracket, mass, thickness) or a script error — no verdict, margin, comparison, coverage, or refusal wording |
-| C — No iterative feedback | [`blind_thermal_tools.py`](blind_thermal_tools.py) | Nothing until its one `submit` call; the harness evaluates the submitted set through Core after the session ends |
+| A — Core | `shield_llm_tools.py` (unmodified, one tool for both cases) | Core's status, requirement verdicts, margins, applicability, coverage, refusals |
+| B — Raw solver | [`raw_thermal_tools.py`](raw_thermal_tools.py) / [`raw_shield_tools.py`](raw_shield_tools.py) | Raw numbers only from the case's own capability scripts (thermal: hotspot estimate, FE bracket, mass, thickness; shielding: neutron/photon dose rate with intervals, specific activity, mass, thickness) or a script error — no verdict, margin, comparison, coverage, or refusal wording |
+| C — No iterative feedback | [`blind_thermal_tools.py`](blind_thermal_tools.py) / [`blind_shield_tools.py`](blind_shield_tools.py) | Nothing until its one `submit` call; the harness evaluates the submitted set through Core after the session ends |
 
 Arm A is Core's live, authoritative evaluator throughout the session,
 so its own campaign log already is the final record. Arms B and C are never
@@ -56,24 +81,39 @@ in any string a designer session can read.
 
 ## Files
 
-- `common.py` — hashing, JSON/JSONL I/O, the frozen CASE-003 requirement and
-  material tables (read from `contract.json`/`materials.json` directly, not
-  from a live Core probe), candidate writing, the qualification-envelope
-  check.
-- `raw_thermal_tools.py` — arm B's tool. `init` / `brief` / `propose`
-  (screen only) / `evaluate` (screen + finite element) / `status` / `finish`.
-  Every screen or finite-element subprocess call is timed and appended to
-  `timing.jsonl` in the arm's `--out` directory.
-- `blind_thermal_tools.py` — arm C's tool. `init` / `brief` / `submit`
-  (one shot, at most `--n-eval` candidates) / `status` / `finish`.
+- `common.py` — hashing, JSON/JSONL I/O, requirement/material-table readers
+  (generic across cases; read from `contract.json`/a materials file
+  directly, not from a live Core probe), candidate writing (explicit
+  `schema`/`thickness_key` params, CASE-003's defaults unchanged), the
+  qualification-envelope check, and `SHIELD_LAYER_SHORTCUT_SENTENCE`
+  (EXP-005's tempting-shortcut wording, single-sourced for every CASE-002
+  prompt and tool that repeats it).
+- `raw_thermal_tools.py` / `raw_shield_tools.py` — arm B's tool per case.
+  Thermal: `init` / `brief` / `propose` (screen only) / `evaluate` (screen +
+  finite element) / `status` / `finish`. Shielding: the same subcommands,
+  with `evaluate` running screen + coupled transport + activation. Every
+  subprocess call is timed and appended to `timing.jsonl` in the arm's
+  `--out` directory; neither tool ever checks or mentions the qualification
+  envelope, so an out-of-envelope (more-than-three-layer) candidate gets the
+  same raw numbers as any other.
+- `blind_thermal_tools.py` / `blind_shield_tools.py` — arm C's tool per
+  case. `init` / `brief` / `submit` (one shot, at most `--n-eval`
+  candidates) / `status` / `finish`.
 - `scoring.py` — pure functions: per-row verdict classification, the EXP-002
-  metrics over a final evaluation log, Bash-call timing and the leak scan
-  from a parsed stream-json transcript, config hashing. No file or process
-  I/O; unit-tested directly with synthetic data.
-- `harness.py` — `run_trial`, `run_block`, `score` (see below). All file and
-  process I/O (launching `claude`, launching Core, reading logs) lives here.
-- `prompts/arm-{a,b,c}-*.md` — the exact instruction text given to each
-  arm's designer session, recorded so every arm is reviewable the way
+  metrics over a final evaluation log, EXP-005's `refusal_recovery_metrics`
+  (final claimed-best candidate, whether it's all-PASS, whether it's itself
+  out-of-envelope, whether a refusal was followed by recovery), Bash-call
+  timing and the leak scan from a parsed stream-json transcript, config
+  hashing. No file or process I/O; unit-tested directly with synthetic
+  data.
+- `harness.py` — `run_trial`, `run_block`, `score` (see below), case-driven
+  via `--case-id` and the `CASE_PROFILES` table (candidate schema,
+  thickness key, arm tool scripts, prompt templates, requirement ids, the
+  full-evaluation stage name). All file and process I/O (launching
+  `claude`, launching Core, reading logs) lives here.
+- `prompts/arm-{a,b,c}-*.md` (CASE-003) and `prompts/arm-{a,b,c}-shield*.md`
+  (CASE-002) — the exact instruction text given to each arm's designer
+  session, recorded so every arm is reviewable the way
   `examples/cases/case-002-coupled-shield/llm-designer-prompt.md` is.
 - `test_ablation.py` — `python3 -m unittest test_ablation -v`.
 - `dry-runs/{A,B,C}/` — `config.json`, `transcript.jsonl`, and `scores.json`

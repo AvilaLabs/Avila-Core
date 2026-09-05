@@ -1,0 +1,23 @@
+[
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 104},
+      {"material": "lead", "thickness_cm": 5}
+    ],
+    "rationale": "Constellation shows 105cm PE + 5cm lead all-PASS (worst margin 0.369, R2 neutron CI [2.97,6.63] vs 7 limit) and 100cm PE + 5cm lead inconclusive on R2 (CI [6.57,10] touches the limit). Testing 1cm less PE to probe how close the neutron margin gets to failing before committing scarce transport budget, since mass scales with total thickness and this would be lighter than the current lightest confirmed all-PASS design."
+  },
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 106},
+      {"material": "lead", "thickness_cm": 4}
+    ],
+    "rationale": "Constellation shows photon dose is controlled almost entirely by the lead layer (120cm PE alone fails R3 at [10.5,10.9] vs 3 limit; adding 5cm lead brings it to [0.84,1.28] across the PE-thickness sweep, well under the 3 limit with headroom). Since lead is far denser (11.35 g/cm3) than PE (0.94 g/cm3), trading 1cm lead for 2cm PE tests whether the photon allocation has enough headroom to permit less lead while neutron moderation is preserved by extra PE, for a potential net mass reduction versus 105+5."
+  },
+  {
+    "layers": [
+      {"material": "lead", "thickness_cm": 5},
+      {"material": "polyethylene", "thickness_cm": 105}
+    ],
+    "rationale": "All prior all-PASS designs place lead outward (after PE, facing the detector) with PE upstream (facing the 14.1 MeV source). This candidate reverses that order to see if the screening estimate (which nominally only tracks neutron dose) is sensitive to layer order at all, as a check before spending transport budget on order effects; if the screen is order-insensitive it deprioritizes exploring reordering when budget becomes available."
+  }
+]

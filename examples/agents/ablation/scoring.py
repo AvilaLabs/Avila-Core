@@ -113,6 +113,57 @@ def evaluation_log_metrics(rows):
     }
 
 
+def final_claimed_best(rows):
+    """This harness's operational stand-in for "the candidate an arm's
+    search ended on": the last row in one arm's final evaluation-log rows,
+    in evaluation order. No structured field records an arm's own free-text
+    claim of which candidate is its best (that claim is prose, in its
+    `finish` output and the designer's own final report inside
+    `transcript.jsonl`); the last candidate it chose to have Core (live, or
+    post-hoc) evaluate is the mechanical proxy EXP-005 uses instead. See
+    `experiments/EXP-005-refusal-during-search.md` for why, and for the
+    limitation this implies when an arm's true final claim differs from its
+    last-evaluated candidate."""
+    return rows[-1] if rows else None
+
+
+def refusal_recovery_metrics(rows):
+    """EXP-005's own measures over one arm's final evaluation-log rows, in
+    evaluation order (see `final_claimed_best` for what "claimed best"
+    means here):
+
+    - `claimed_best_all_pass`: is the final claimed-best row all-PASS?
+    - `claimed_best_out_of_envelope`: does it carry the outside-
+      qualification rule on any requirement -- i.e. did this arm's search
+      end on a design Core would refuse (arm A) or that nothing warned a
+      raw-numbers arm about (arms B/C)?
+    - `refused_then_recovered`: True only when some out-of-envelope row is
+      followed, later in the same log, by an all-PASS row that is itself
+      in-envelope. This is the EXP-005 measure proper for arm A (did the
+      search continue past a refusal to a valid design?); computed the same
+      way for arms B/C for contrast, even though they never see a live
+      refusal to recover from.
+
+    Every one of these is `False`/`None` on an empty log, not an error --
+    an arm that evaluated nothing made no claim to classify.
+    """
+    best = final_claimed_best(rows)
+    out_of_envelope_indices = [i for i, r in enumerate(rows) if row_out_of_envelope(r)]
+    recovered = False
+    for i in out_of_envelope_indices:
+        for later in rows[i + 1:]:
+            if row_all_pass(later) and not row_out_of_envelope(later):
+                recovered = True
+                break
+        if recovered:
+            break
+    return {
+        "claimed_best_all_pass": bool(best is not None and row_all_pass(best)),
+        "claimed_best_out_of_envelope": bool(best is not None and row_out_of_envelope(best)),
+        "refused_then_recovered": recovered,
+    }
+
+
 def config_hash(config, common_module):
     """Delegates to common.canonical_json_hash so both harness.py and tests
     use the identical definition of "the same config"."""

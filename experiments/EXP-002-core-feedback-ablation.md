@@ -312,7 +312,11 @@ real verdicts, by construction.
 - **Refusal not exercised, for the third experiment running.** No designer
   in any arm proposed the predeclared out-of-envelope shortcut. Making the
   shortcut tempting, or forcing one such proposal per trial, is a design
-  change for the next protocol, not an amendment to this one.
+  change for the next protocol, not an amendment to this one. That protocol
+  is [EXP-005](EXP-005-refusal-during-search.md): the same three-arm design,
+  repeated on CASE-002 with a tempting (rather than merely undisclosed)
+  layer-count shortcut, per this document's own frozen rule to repeat the
+  comparison on a harder existing case.
 
 ## Limitations
 

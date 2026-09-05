@@ -1,0 +1,9 @@
+[
+  {
+    "layers": [
+      {"material": "polyethylene", "thickness_cm": 105},
+      {"material": "lead", "thickness_cm": 4}
+    ],
+    "rationale": "Round 1 showed 106cm PE + 4cm lead screens at R1=1.01, essentially identical to the confirmed all-PASS champion 105cm PE + 5cm lead (R1=1), while being 100 kg/m2 lighter (1.45e3 vs 1.55e3), since the screen tracks neutron dose which is governed mainly by total PE moderator thickness rather than lead thickness. This candidate trims 1 more cm of the dense lead layer (105 PE + 4 lead = 109cm total, 1.44e3 kg/m2) to see whether the neutron screen still holds near 1, which would flag it as the top candidate for transport once budget is available, subject to checking photon headroom (R3 was 0.84-1.28 vs a 3 limit across the 5cm-lead sweep, so a 1cm lead reduction has plausible but unconfirmed headroom)."
+  }
+]

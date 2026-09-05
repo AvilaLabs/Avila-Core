@@ -21,7 +21,7 @@ A successful case does not automatically answer all three.
 | [EXP-002](EXP-002-core-feedback-ablation.md) | Completed, non-discriminating on CASE-003 | P0 | Does Core's structured feedback improve an otherwise matched agent search? |
 | EXP-003 | Planned | P0 | Can an existing experiment be launched and completed quickly with no intervention after launch? |
 | EXP-004 | Planned | P1 | Does the agent result repeat across fresh runs with the same frozen protocol? |
-| EXP-005 | Planned | P1 | Does Core refuse known shortcuts during an otherwise successful search? |
+| [EXP-005](EXP-005-refusal-during-search.md) | Draft | P1 | Does Core refuse known shortcuts during an otherwise successful search? |
 | EXP-006 | Planned | P1 | How does the agent search compare with a conventional optimizer under the same evaluation budget? |
 | EXP-007 | Planned | P2 | Does the loop remain useful on a harder, coupled problem whose answer is not a monotonic boundary search? |
 | EXP-008 | Planned | P2 | Can an independent implementation reproduce package identity and verdicts? |

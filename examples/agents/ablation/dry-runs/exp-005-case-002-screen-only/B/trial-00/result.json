@@ -1,0 +1,119 @@
+{
+  "duration_api_ms": 143108,
+  "stop_reason": "end_turn",
+  "session_id": "95866240-424e-431d-b453-2fe18627f0f3",
+  "total_cost_usd": 0.2434498,
+  "usage": {
+    "input_tokens": 20,
+    "cache_creation_input_tokens": 20422,
+    "cache_read_input_tokens": 174969,
+    "output_tokens": 12462,
+    "output_tokens_details": {
+      "thinking_tokens": 8623
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 20422,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 928,
+        "cache_read_input_tokens": 27897,
+        "cache_creation_input_tokens": 470,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 470
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 2003,
+      "outputTokens": 21,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.002108,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    },
+    "claude-sonnet-5": {
+      "inputTokens": 20,
+      "outputTokens": 12462,
+      "cacheReadInputTokens": 174969,
+      "cacheCreationInputTokens": 20422,
+      "webSearchRequests": 0,
+      "costUSD": 0.2413418,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 8623,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "permission_denials": [
+    {
+      "tool_name": "Bash",
+      "tool_use_id": "toolu_01W5ku1PM8ESAF51c9toqw3S",
+      "tool_input": {
+        "command": "find <repo>/examples/agents/ablation/dry-runs/exp-005-case-002-screen-only -maxdepth 4",
+        "description": "List contents of the exp-005 case-002 screen-only directory tree"
+      }
+    }
+  ],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "fast_mode_disabled_reason": "sdk_opt_in_required",
+  "subagent_stats": {
+    "spawned": 0,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+    },
+    "started_in_background": 0,
+    "max_depth": 0,
+    "spawned_by_subagents": 0,
+    "completed": 0,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {}
+  },
+  "is_error": false,
+  "num_turns": 10,
+  "subtype": "success",
+  "api_error_status": null,
+  "result": "## Final report\n\n**Lightest design I believe meets every requirement:** 105 cm polyethylene + 5 cm lead (110 cm thick, 1550 kg/m\u00b2 areal mass). This is not from an evaluation I ran \u2014 my evaluate budget was 0/0, so I could run zero full evaluations this arm. It comes from the pre-existing **prior constellation** (Core-scored control sweep) given in `brief`: all six requirements pass \u2014\n- R1-screen 1.0 \u2264 10 \u2713\n- R2-neutron [2.97, 6.63] \u2264 7 \u2713 (tight, ~5% margin at the upper CI bound)\n- R3-photon [1.17, 1.28] \u2264 3 \u2713\n- R4-mass 1550 \u2264 2000 kg \u2713\n- R5-thickness 110 \u2264 120 cm \u2713\n- R6-activation 5.76e-05 \u2264 1 Bq/g \u2713\n\nThe next-lighter prior candidate (100 cm PE + 5 cm lead, 1510 kg/m\u00b2) fails: its R2-neutron upper CI bound hits exactly 10, over the 7 limit.\n\n**What I did this round:** used all 4 available screens to test whether substituting borated polyethylene (which suppresses neutron-capture gamma yield via B-10, versus H-capture's higher-energy 2.2 MeV gamma) could permit less lead and lower mass. Screening showed very low nominal neutron estimates for 110 cm borated_PE alone (1100 kg/m\u00b2) and 105 cm borated_PE + 3 cm lead (1390.5 kg/m\u00b2) \u2014 both notably lighter than 1550 kg/m\u00b2. But screening only reports the nominal R1 number, mass, and thickness; it says nothing about R2 (bounded MC neutron), R3 (bounded photon), or R6 (activation), which are exactly the requirements that killed lead-thin/lead-free designs in the prior data (e.g., 120 cm pure PE failed R3-photon at 10.5\u201310.9 vs the 3 limit). With 0 evaluate budget, I have no way to confirm these screened candidates actually satisfy R2/R3/R6, so I do not claim they pass.\n\n**What I'd try next with more budget:** spend the first 1\u20132 evaluates on the two lightest screened candidates \u2014 105 cm borated_PE + 3 cm lead (1390.5 kg/m\u00b2) and 110 cm borated_PE alone (1100 kg/m\u00b2) \u2014 to see if boron's reduced capture-gamma production lets a thinner (or absent) lead cap still satisfy R3-photon while R2/R6 stay in bounds. If the 3 cm-lead version holds up, it would beat the current best by roughly 10% in mass.",
+  "ttft_ms": 1968,
+  "type": "result",
+  "duration_ms": 143205,
+  "uuid": "2e2ed664-1e93-4981-8b20-5e6131125f45",
+  "ttft_stream_ms": 1242,
+  "time_to_request_ms": 38,
+  "first_content_frame_ms": 1724,
+  "queued_turn_count": 0
+}

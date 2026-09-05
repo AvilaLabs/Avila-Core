@@ -43,6 +43,16 @@ pub struct ExecutionPolicy {
     /// gap. Nominal-basis requirements are unaffected either way.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub require_qualification: bool,
+    /// Requires the case runner to refuse an unsigned package and unsigned
+    /// SC-12 reuse (ADR-0015): a run must be given `--trust-root`, the
+    /// package manifest's requester signature must verify, and every
+    /// declared execution step's operative receipt must carry a signature
+    /// verified against a listed runner key, or the run is refused. The
+    /// compiler itself only carries this flag through to the compiled
+    /// snapshot and notes it visibly (`CORE-A4404`); the refusal itself is
+    /// the case runner's, because only it can see receipts and signatures.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub require_signatures: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

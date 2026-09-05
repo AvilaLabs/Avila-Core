@@ -137,6 +137,20 @@ enum SignCommand {
         #[arg(long, value_name = "FILE")]
         key: PathBuf,
     },
+    /// Sign CASE's already-committed receipt for STEP with a runner seed
+    /// key, writing `signatures/<step>-receipt.sig.json` and binding it
+    /// into `package.json` as a `signature` document. Used to sign a
+    /// receipt that already exists (blessed by an earlier run) without
+    /// re-executing it; a fresh run's own receipt is instead signed inline
+    /// when `run` is given `--runner-key`.
+    Receipt {
+        /// Case directory containing package.json, or the manifest path itself.
+        case: PathBuf,
+        #[arg(long)]
+        step: String,
+        #[arg(long, value_name = "FILE")]
+        key: PathBuf,
+    },
 }
 
 /// `$XDG_CONFIG_HOME/avila-core/keys`, or `$HOME/.config/avila-core/keys`
@@ -209,6 +223,20 @@ struct RunArgs {
     /// Defaults to `candidate` when --attempt is present.
     #[arg(long = "candidate-input", value_name = "NAME")]
     candidate_input: Option<String>,
+    /// The requester and runner public keys this run accepts (ADR-0015).
+    /// With it, the manifest signature must verify against a listed
+    /// requester key or the run is refused before compilation, and a
+    /// committed receipt is reused under SC-12 only when its signature
+    /// verifies against a listed runner key. Without it, every signature is
+    /// reported `unsigned` or `signature not checked`, never `verified`.
+    #[arg(long = "trust-root", value_name = "FILE")]
+    trust_root: Option<PathBuf>,
+    /// A runner seed key (32 raw bytes, as written by `avila-core keys
+    /// generate`). When supplied, a freshly executed step's receipt is
+    /// signed in the workspace, and campaign log lines this run appends are
+    /// signed the same way. Never printed or logged.
+    #[arg(long = "runner-key", value_name = "FILE")]
+    runner_key: Option<PathBuf>,
     /// Emit the complete machine-readable run report instead of the concise view.
     #[arg(long)]
     json: bool,
@@ -307,6 +335,8 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 attempt_id,
                 parent_attempt_id,
                 candidate_input,
+                trust_root,
+                runner_key,
                 json,
             } = *args;
             let attempt = attempt_request(attempt_id, parent_attempt_id, candidate_input)?;
@@ -322,6 +352,8 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 expected_manifest_sha256: expect_manifest,
                 attempt,
                 hash_cache,
+                trust_root,
+                runner_key,
             };
             let report = avila_core_runner::execute_case(&case, &options)?;
             if json {
@@ -493,6 +525,88 @@ fn run_sign(command: SignCommand) -> Result<(), Box<dyn Error>> {
                 "{}",
                 serde_json::to_string_pretty(&serde_json::json!({
                     "case_id": manifest.case_id,
+                    "signed_document_sha256": document.signed_document.sha256,
+                    "key_id": document.key_id,
+                    "signature_path": signature_path.display().to_string(),
+                }))?
+            );
+        }
+        SignCommand::Receipt { case, step, key } => {
+            let manifest_path = if case.is_dir() {
+                case.join("package.json")
+            } else {
+                case.clone()
+            };
+            let case_dir = manifest_path
+                .parent()
+                .filter(|path| !path.as_os_str().is_empty())
+                .unwrap_or_else(|| Path::new("."))
+                .to_path_buf();
+            let manifest_bytes = fs::read(&manifest_path)?;
+            let mut manifest: avila_core_evidence::CasePackageManifest =
+                serde_json::from_slice(&manifest_bytes)?;
+            let seed = signature::parse_seed_bytes(&fs::read(&key)?)?;
+
+            let receipt_document = manifest
+                .documents
+                .iter()
+                .find(|document| {
+                    document.role == "execution_receipt"
+                        && document.step_id.as_deref() == Some(step.as_str())
+                })
+                .ok_or_else(|| {
+                    format!("no committed execution_receipt document names step `{step}`")
+                })?
+                .clone();
+            let receipt_bytes = fs::read(case_dir.join(&receipt_document.path))?;
+            let actual_sha256 = format!("sha256:{}", sha256_hex(&receipt_bytes));
+            if actual_sha256 != receipt_document.sha256 {
+                return Err(format!(
+                    "receipt `{}` on disk hashes to {actual_sha256}, but the manifest binds {}; rehash before signing",
+                    receipt_document.path, receipt_document.sha256
+                )
+                .into());
+            }
+            let digest = signature::digest_from_prefixed(&actual_sha256)?;
+            let document = signature::build_signature_document(
+                &seed,
+                "execution_receipt",
+                step.clone(),
+                actual_sha256,
+                &digest,
+            );
+            let mut document_bytes = serde_json::to_vec_pretty(&document)?;
+            document_bytes.push(b'\n');
+
+            let signatures_dir = case_dir.join("signatures");
+            fs::create_dir_all(&signatures_dir)?;
+            let signature_relative_path = format!("signatures/{step}-receipt.sig.json");
+            let signature_path = case_dir.join(&signature_relative_path);
+            fs::write(&signature_path, &document_bytes)?;
+            let signature_document_sha256 = format!("sha256:{}", sha256_hex(&document_bytes));
+
+            let signature_document_id = format!("signature-receipt-{step}");
+            manifest
+                .documents
+                .retain(|document| document.document_id != signature_document_id);
+            manifest
+                .documents
+                .push(avila_core_evidence::PackageDocument {
+                    document_id: signature_document_id,
+                    role: "signature".into(),
+                    path: signature_relative_path,
+                    sha256: signature_document_sha256,
+                    step_id: None,
+                });
+            let mut manifest_bytes_out = serde_json::to_vec_pretty(&manifest)?;
+            manifest_bytes_out.push(b'\n');
+            fs::write(&manifest_path, &manifest_bytes_out)?;
+
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "case_id": manifest.case_id,
+                    "step_id": step,
                     "signed_document_sha256": document.signed_document.sha256,
                     "key_id": document.key_id,
                     "signature_path": signature_path.display().to_string(),

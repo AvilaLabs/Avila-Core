@@ -56,6 +56,13 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         next_action: "This is informational and does not block the verdict. Set `require_qualification` to true in the execution policy once the method owner has bound a qualification record, so the same gap would instead be refused. The owner is the policy owner.",
     },
     DiagnosticExplanation {
+        code: "CORE-A4404",
+        title: "Signed execution required",
+        rule: "ADR-0015 clause 7",
+        meaning: "The contract's execution policy sets `require_signatures`, so the case runner will refuse this contract's package outright unless `run --trust-root` verifies the manifest's requester signature and every declared step's operative receipt carries a signature verified against a listed runner key. The compiler carries the flag through to the compiled snapshot; only the runner can see receipts and signatures, so the refusal itself happens there, not here.",
+        next_action: "This is informational and never blocks compilation. Sign the package with a requester key (`avila-core sign manifest`), sign every step's receipt with a runner key, and run with `--trust-root FILE` naming both.",
+    },
+    DiagnosticExplanation {
         code: "CORE-E7001",
         title: "Claims bind a different snapshot",
         rule: "SC-11",

@@ -22,6 +22,7 @@ use avila_core_compiler::{
     evaluate_envelope, parse_requirement_set, registry_kinds, render_campaign_report,
     render_compile_report,
 };
+use avila_core_evidence::signature::{self, TrustRoot};
 use avila_core_evidence::{
     ArtifactCheck, CapabilityIdentity, CasePackageManifest, ExecutionReceipt, ExpectedInput,
     HashCache, HashCacheContext, IntegrityCheckState, OutputState, PackageExecution,
@@ -40,9 +41,10 @@ use crate::attempt::{
 };
 use crate::attempt::{AttemptComparison, AttemptLineageRequest, AttemptRecord, prepare_attempt};
 use crate::diagnostic::{
-    CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1101, CORE_X1201, CORE_X1301, CORE_X2001, CORE_X2101,
-    CORE_X2201, CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801,
-    CORE_X3001, CORE_X3101, CORE_X3201, CORE_X3301, CORE_X9001, RunFinding, RunStage,
+    CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1004, CORE_X1005, CORE_X1101, CORE_X1201, CORE_X1301,
+    CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601,
+    CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101, CORE_X3201, CORE_X3301, CORE_X9001, RunFinding,
+    RunStage,
 };
 use crate::execute::claims::{GeneratedClaim, canonical_identity, generate_claims};
 use crate::execute::external_checker::{EXTERNAL_CHECKER_DOCUMENT_ROLE, ExternalCheckerAdapter};
@@ -61,6 +63,8 @@ mod qualification;
 #[allow(unused_imports)]
 use qualification::BoundQualification;
 use qualification::{Envelopes, load_qualifications};
+mod signing;
+use signing::SignatureStatus;
 mod inputs;
 use inputs::{steps_reached_by_inputs, supply_free_inputs, validate_free_inputs};
 mod compare;
@@ -127,6 +131,19 @@ pub struct CaseRunOptions {
     /// directory are always re-hashed regardless of this setting. See
     /// `avila_core_evidence::hash_cache` for the trust this accepts.
     pub hash_cache: Option<PathBuf>,
+    /// The requester and runner public keys this run accepts (ADR-0015).
+    /// With it, the manifest signature must verify against a listed
+    /// requester key or the run is refused before compilation, and a
+    /// committed receipt is reused under SC-12 only when its signature
+    /// verifies against a listed runner key. Without it, every signature is
+    /// checked for internal consistency only and reported `unsigned` or
+    /// `signature not checked`, never `verified`.
+    pub trust_root: Option<PathBuf>,
+    /// A runner seed key (32 raw bytes). When supplied, a freshly executed
+    /// step's receipt is signed and the signature is written next to it in
+    /// the workspace; campaign log lines this run appends are signed the
+    /// same way.
+    pub runner_key: Option<PathBuf>,
 }
 
 impl Default for CaseRunOptions {
@@ -143,6 +160,8 @@ impl Default for CaseRunOptions {
             expected_manifest_sha256: None,
             attempt: None,
             hash_cache: None,
+            trust_root: None,
+            runner_key: None,
         }
     }
 }
@@ -252,6 +271,13 @@ pub enum ChangeClass {
     NoCommittedReceipt,
     ReceiptNotCompleted,
     OutputsUnavailable,
+    /// A trust root was supplied and the committed receipt carries no
+    /// signature document verified against a listed runner key at all.
+    ReceiptUnsigned,
+    /// A trust root was supplied and the committed receipt's signature
+    /// document fails internal consistency, names an unlisted or
+    /// wrong-role key, or does not cryptographically verify.
+    ReceiptSignatureInvalid,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -353,6 +379,11 @@ pub struct StepExecutionReport {
     /// run's facts, when the package binds a qualification for it.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub qualification: Option<EnvelopeAssessment>,
+    /// The signature status of this step's operative receipt: the committed
+    /// one when reused or left `not_run`, or the one this run just produced
+    /// when executed fresh. Absent when no receipt exists to sign at all.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub receipt_signature: Option<SignatureStatus>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub receipt: Option<ReceiptSummary>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -483,6 +514,11 @@ pub struct CaseRunReport {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub findings: Vec<RunFinding>,
     pub integrity: PackageIntegrityReport,
+    /// The package manifest's requester-signature status (ADR-0015). Present
+    /// as soon as package integrity is checked, whether or not
+    /// `--trust-root` was supplied.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub manifest_signature: Option<SignatureStatus>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub compile: Option<CompileReport>,
     /// Coverage of the contract against the package's requirement set, when
@@ -591,11 +627,41 @@ pub fn parse_environment(values: &[String]) -> Result<BTreeMap<String, String>, 
     Ok(environment)
 }
 
+/// Load `--trust-root FILE`, if supplied. A missing, unreadable, or invalid
+/// trust root is a hard error: unlike the hash cache, degrading it to
+/// "unchecked" would weaken exactly the check the operator asked for, so
+/// this never falls back silently.
+fn load_trust_root(options: &CaseRunOptions) -> Result<Option<TrustRoot>, Box<dyn Error>> {
+    let Some(path) = &options.trust_root else {
+        return Ok(None);
+    };
+    let bytes =
+        fs::read(path).map_err(|error| format!("trust root `{}`: {error}", path.display()))?;
+    let trust_root = TrustRoot::parse(&bytes)
+        .map_err(|error| format!("trust root `{}`: {error}", path.display()))?;
+    Ok(Some(trust_root))
+}
+
+/// Load `--runner-key FILE`, if supplied: a raw 32-byte seed. Never printed
+/// or logged; held only in memory for the life of this run.
+fn load_runner_key(options: &CaseRunOptions) -> Result<Option<[u8; 32]>, Box<dyn Error>> {
+    let Some(path) = &options.runner_key else {
+        return Ok(None);
+    };
+    let bytes =
+        fs::read(path).map_err(|error| format!("runner key `{}`: {error}", path.display()))?;
+    let seed = signature::parse_seed_bytes(&bytes)
+        .map_err(|error| format!("runner key `{}`: {error}", path.display()))?;
+    Ok(Some(seed))
+}
+
 pub fn execute_case(
     case_or_manifest: &Path,
     options: &CaseRunOptions,
 ) -> Result<CaseRunReport, Box<dyn Error>> {
-    match execute_case_inner(case_or_manifest, options) {
+    let trust_root = load_trust_root(options)?;
+    let runner_key = load_runner_key(options)?;
+    match execute_case_inner(case_or_manifest, options, trust_root.as_ref(), runner_key) {
         Ok(mut report) => {
             collect_run_findings(&mut report);
             report.attempt_comparison = compare_attempt_to_parent(options, &report)?;
@@ -605,7 +671,13 @@ pub fn execute_case(
                 .and_then(|execution| execution.workspace.as_deref())
                 .map(Path::new);
             write_run_report(workspace, &report)?;
-            append_log(options, case_or_manifest, &report)?;
+            append_log(
+                options,
+                case_or_manifest,
+                &report,
+                trust_root.as_ref(),
+                runner_key,
+            )?;
             Ok(report)
         }
         Err(error) => {
@@ -617,7 +689,13 @@ pub fn execute_case(
                 SourceLocation::new("case-run", ""),
                 error.to_string(),
             );
-            if let Err(log_error) = append_error_log(options, case_or_manifest, &finding) {
+            if let Err(log_error) = append_error_log(
+                options,
+                case_or_manifest,
+                &finding,
+                trust_root.as_ref(),
+                runner_key,
+            ) {
                 return Err(format!(
                     "{error}; additionally, the run attempt could not be logged: {log_error}"
                 )
@@ -631,6 +709,8 @@ pub fn execute_case(
 fn execute_case_inner(
     case_or_manifest: &Path,
     options: &CaseRunOptions,
+    trust_root: Option<&TrustRoot>,
+    runner_key: Option<[u8; 32]>,
 ) -> Result<CaseRunReport, Box<dyn Error>> {
     let manifest_path = if case_or_manifest.is_dir() {
         case_or_manifest.join("package.json")
@@ -703,6 +783,7 @@ fn execute_case_inner(
         attempt_comparison: None,
         findings: Vec::new(),
         integrity: package.integrity.clone(),
+        manifest_signature: None,
         compile: None,
         coverage: None,
         rendered_findings: None,
@@ -738,6 +819,30 @@ fn execute_case_inner(
         return Ok(report);
     }
 
+    // The manifest's requester signature (ADR-0015). Reported whether or not
+    // a trust root was supplied; refused before anything is compiled only
+    // when a trust root was supplied and it did not verify against a listed
+    // requester key, exactly where the requester's manifest pin refuses
+    // today.
+    let manifest_signature_status =
+        signing::manifest_signature_status(&package, &manifest_bytes, trust_root);
+    report.manifest_signature = Some(manifest_signature_status.clone());
+    if trust_root.is_some() && !manifest_signature_status.is_verified() {
+        report.notice = format!(
+            "package manifest signature is not verified against a listed requester key: {}",
+            manifest_signature_status.describe()
+        );
+        report.findings.push(RunFinding::runtime(
+            CORE_X1004,
+            FindingClass::Inadmissible,
+            RunStage::PackageIntegrity,
+            "requester",
+            SourceLocation::new("case-package", "/documents"),
+            report.notice.clone(),
+        ));
+        return Ok(report);
+    }
+
     // A missing root is an explicit partial check. A supplied-but-missing or
     // different artifact is a failed integrity gate and nothing else runs.
     if package.integrity.status == PackageIntegrityStatus::Failed {
@@ -764,6 +869,23 @@ fn execute_case_inner(
         .ok_or("compiler reported `compiled` without a compiled snapshot")?;
     let invalidated_steps = steps_reached_by_inputs(compiled, &supplied_inputs);
     report.invalidated_steps = invalidated_steps.iter().cloned().collect();
+
+    // A contract that requires signed execution cannot be run at all without
+    // a trust root to check against: falling back to the default "reused or
+    // rerun, visibly" behavior would defeat the policy silently.
+    if compiled.execution_policy.require_signatures && trust_root.is_none() {
+        report.notice = "the contract's execution policy sets require_signatures, but no --trust-root was supplied to verify against".into();
+        report.findings.push(RunFinding::runtime(
+            CORE_X1005,
+            FindingClass::Inadmissible,
+            RunStage::Compilation,
+            "requester_or_operator",
+            SourceLocation::new("contract", "/execution_policy/require_signatures"),
+            report.notice.clone(),
+        ));
+        report.compile = Some(compile.clone());
+        return Ok(report);
+    }
 
     // Every supplied free input is validated against its role's declared
     // schema before anything is staged or executed. A role with no declared
@@ -830,6 +952,7 @@ fn execute_case_inner(
             supplied_candidate_sha256,
             &report.integrity.manifest_sha256,
             &compiled.snapshot_sha256,
+            trust_root,
         ) {
             Ok(attempt) => report.attempt = Some(attempt),
             Err(issue) => {
@@ -869,15 +992,65 @@ fn execute_case_inner(
             &supplied_inputs,
             replay_applicable,
             &envelopes,
+            trust_root,
+            runner_key,
         );
         let execution = runner.run_all()?;
         executed_claims = runner.claims;
         workspace = runner.workspace;
+
+        // execution_policy.require_signatures makes an unsigned outcome a
+        // refusal rather than the default's visible fallback to a rerun or
+        // `not_run`. By this point require_signatures already implies
+        // trust_root is Some (refused earlier otherwise), so every status
+        // here is Unsigned, Invalid, or Verified, never NotChecked.
+        if compiled.execution_policy.require_signatures && !options.plan_only {
+            for step in &execution.steps {
+                if !matches!(
+                    step.state,
+                    StepExecutionState::Reused
+                        | StepExecutionState::Executed
+                        | StepExecutionState::NotRun
+                ) {
+                    continue;
+                }
+                let signed = step
+                    .receipt_signature
+                    .as_ref()
+                    .is_some_and(SignatureStatus::is_verified);
+                if !signed {
+                    report.findings.push(
+                        RunFinding::runtime(
+                            CORE_X1005,
+                            FindingClass::Inadmissible,
+                            RunStage::ReceiptVerification,
+                            "requester_or_operator",
+                            SourceLocation::new("execution-receipt", ""),
+                            format!(
+                                "step `{}` evidence is {}, and the contract's execution policy requires signed execution",
+                                step.step_id,
+                                step.receipt_signature
+                                    .as_ref()
+                                    .map_or_else(|| "unsigned".to_string(), SignatureStatus::describe)
+                            ),
+                        )
+                        .for_step(&step.step_id),
+                    );
+                }
+            }
+        }
+        let signature_policy_violation = compiled.execution_policy.require_signatures
+            && !options.plan_only
+            && report
+                .findings
+                .iter()
+                .any(|finding| finding.code == CORE_X1005);
         let stop = options.plan_only
             || matches!(
                 execution.status,
                 ExecutionStatus::Refused | ExecutionStatus::Failed | ExecutionStatus::Planned
-            );
+            )
+            || signature_policy_violation;
         if options.plan_only
             && !matches!(
                 execution.status,
@@ -1434,9 +1607,18 @@ struct Runner<'a> {
     /// `promote` so a claim on an uncovered output slot never carries
     /// `current_qualification`, even though the step's other outputs do.
     current_qualification_covered_slots: Option<Vec<String>>,
+    /// The requester and runner public keys this run accepts (ADR-0015).
+    trust_root: Option<&'a TrustRoot>,
+    /// A runner seed key, when `--runner-key` was supplied: a freshly
+    /// executed step's receipt is signed with it.
+    runner_key: Option<[u8; 32]>,
+    /// `runner_key`'s key id, derived once, so reporting never re-derives it
+    /// (and never needs to touch the seed again after this).
+    runner_key_id: Option<String>,
 }
 
 impl<'a> Runner<'a> {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         package: &'a VerifiedCasePackage,
         compiled: &'a CompiledContract,
@@ -1445,6 +1627,8 @@ impl<'a> Runner<'a> {
         supplied_inputs: &[SuppliedInput],
         replay_applicable: bool,
         envelopes: &'a Envelopes,
+        trust_root: Option<&'a TrustRoot>,
+        runner_key: Option<[u8; 32]>,
     ) -> Self {
         let artifact_checks = package
             .integrity
@@ -1466,6 +1650,10 @@ impl<'a> Runner<'a> {
                     .map(|canonical| (name.clone(), canonical))
             })
             .collect();
+        let runner_key_id = runner_key.map(|seed| {
+            signature::key_id_from_public_hex(&signature::public_key_hex_from_seed(&seed))
+                .expect("a derived public key hex is always well-formed")
+        });
         Self {
             package,
             compiled,
@@ -1484,6 +1672,9 @@ impl<'a> Runner<'a> {
             envelopes,
             current_qualification: None,
             current_qualification_covered_slots: None,
+            trust_root,
+            runner_key,
+            runner_key_id,
         }
     }
 
@@ -1565,6 +1756,7 @@ impl<'a> Runner<'a> {
                     changes: Vec::new(),
                     reused_receipt: None,
                     qualification: None,
+                    receipt_signature: None,
                     receipt: None,
                     outputs: Vec::new(),
                     verification: None,
@@ -1639,6 +1831,7 @@ impl<'a> Runner<'a> {
             changes: Vec::new(),
             reused_receipt: None,
             qualification: None,
+            receipt_signature: None,
             receipt: None,
             outputs: Vec::new(),
             verification: None,
@@ -2012,6 +2205,38 @@ impl<'a> Runner<'a> {
             }],
         };
 
+        // The committed receipt's runner-signature status (ADR-0015),
+        // reported whether or not a trust root was supplied. When one was,
+        // reuse requires it to verify: an unsigned or invalid signature is
+        // exactly as disqualifying as any other SC-12 change class, so it
+        // is folded into `report.changes` here and never reused below.
+        if let Some((document_id, _)) = &committed {
+            let receipt_document_sha256 = self.document_sha256(document_id);
+            let status = signing::receipt_signature_status(
+                self.package,
+                &step.step_id,
+                &receipt_document_sha256,
+                self.trust_root,
+            );
+            if self.trust_root.is_some() {
+                match &status {
+                    SignatureStatus::Verified { .. } => {}
+                    SignatureStatus::Unsigned => report.changes.push(ChangeRecord {
+                        class: ChangeClass::ReceiptUnsigned,
+                        detail: "the committed receipt has no signature document verified against a listed runner key".into(),
+                    }),
+                    SignatureStatus::Invalid { reason } => report.changes.push(ChangeRecord {
+                        class: ChangeClass::ReceiptSignatureInvalid,
+                        detail: reason.clone(),
+                    }),
+                    SignatureStatus::NotChecked => unreachable!(
+                        "receipt_signature_status never returns NotChecked when a trust root is supplied"
+                    ),
+                }
+            }
+            report.receipt_signature = Some(status);
+        }
+
         // Reuse: same invocation identity, a completed receipt, and every
         // recorded output verifiable at a bound identity (SC-12 memoization).
         if self.options.reuse
@@ -2216,7 +2441,7 @@ impl<'a> Runner<'a> {
         let (receipt_sha256, _) = sha256_file(&outcome.receipt_path)?;
         report.receipt = Some(ReceiptSummary {
             workspace_path: format!("{}/receipt.json", step.step_id),
-            sha256: receipt_sha256,
+            sha256: receipt_sha256.clone(),
             invocation_sha256: receipt.invocation_sha256.clone(),
             status: receipt.status,
             exit_status: receipt.process.exit_status,
@@ -2332,6 +2557,42 @@ impl<'a> Runner<'a> {
             );
         }
         report.verification = Some(verification);
+
+        // Sign the fresh receipt when a runner key was supplied (ADR-0015).
+        // The signature is written next to the receipt in the workspace,
+        // not bound into any package here: blessing (or `avila-core sign
+        // receipt`) is what binds a signature into a committed package.
+        if verified {
+            report.receipt_signature = Some(signing::fresh_signature_status(
+                self.runner_key_id.as_deref(),
+                self.trust_root,
+            ));
+            if let Some(seed) = self.runner_key {
+                match signature::digest_from_prefixed(&receipt_sha256) {
+                    Ok(digest) => {
+                        let document = signature::build_signature_document(
+                            &seed,
+                            "execution_receipt",
+                            step.step_id.clone(),
+                            receipt_sha256.clone(),
+                            &digest,
+                        );
+                        if let Ok(mut bytes) = serde_json::to_vec_pretty(&document) {
+                            bytes.push(b'\n');
+                            let _ = fs::write(outcome.step_dir.join("receipt.sig.json"), &bytes);
+                        }
+                    }
+                    Err(error) => report.add_finding(
+                        CORE_X2601,
+                        FindingClass::Invalid,
+                        RunStage::ReceiptVerification,
+                        "runner",
+                        SourceLocation::new("execution-receipt", ""),
+                        format!("fresh receipt could not be signed: {error}"),
+                    ),
+                }
+            }
+        }
 
         let mut extracted = Vec::new();
         if verified {
@@ -3502,6 +3763,8 @@ mod tests {
             expected_manifest_sha256: None,
             attempt: None,
             hash_cache: None,
+            trust_root: None,
+            runner_key: None,
         };
         let report = execute_case(&case_000(), &options).unwrap();
         let summary = human_summary(&report);
@@ -3560,8 +3823,8 @@ mod tests {
     fn append_log_line_writes_the_row_and_newline_in_one_call() {
         let dir = log_test_dir("single-write");
         let path = dir.join("attempts.jsonl");
-        append_log_line(&path, None, r#"{"a":1}"#).unwrap();
-        append_log_line(&path, None, r#"{"b":2}"#).unwrap();
+        append_log_line(&path, None, r#"{"a":1}"#, None).unwrap();
+        append_log_line(&path, None, r#"{"b":2}"#, None).unwrap();
         let bytes = fs::read(&path).unwrap();
         assert_eq!(bytes, b"{\"a\":1}\n{\"b\":2}\n".to_vec());
         let _ = fs::remove_dir_all(&dir);
@@ -3607,6 +3870,7 @@ mod tests {
                         Some(&candidate_sha256),
                         &manifest_sha256,
                         &snapshot_sha256,
+                        None,
                     )?;
                     let line = serde_json::json!({
                         "attempt": &attempt,
@@ -3614,7 +3878,7 @@ mod tests {
                         "compiled_snapshot_sha256": snapshot_sha256,
                     })
                     .to_string();
-                    append_log_line(&log_path, Some(&attempt), &line)
+                    append_log_line(&log_path, Some(&attempt), &line, None)
                         .map_err(|error| error.to_string())
                 })
             })

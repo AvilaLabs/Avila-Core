@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 pub const CORE_X1001: &str = "CORE-X1001";
 pub const CORE_X1002: &str = "CORE-X1002";
 pub const CORE_X1003: &str = "CORE-X1003";
+pub const CORE_X1004: &str = "CORE-X1004";
+pub const CORE_X1005: &str = "CORE-X1005";
 pub const CORE_X1101: &str = "CORE-X1101";
 pub const CORE_X1201: &str = "CORE-X1201";
 pub const CORE_X1301: &str = "CORE-X1301";
@@ -33,9 +35,9 @@ pub const CORE_X3301: &str = "CORE-X3301";
 pub const CORE_X9001: &str = "CORE-X9001";
 
 pub const RUNTIME_FINDING_CODES: &[&str] = &[
-    CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1101, CORE_X1201, CORE_X1301, CORE_X2001, CORE_X2101,
-    CORE_X2201, CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801,
-    CORE_X3001, CORE_X3101, CORE_X3201, CORE_X3301, CORE_X9001,
+    CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1004, CORE_X1005, CORE_X1101, CORE_X1201, CORE_X1301,
+    CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601,
+    CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101, CORE_X3201, CORE_X3301, CORE_X9001,
 ];
 
 /// Explanations are served by `avila-core explain` alongside compiler codes.
@@ -60,6 +62,20 @@ pub const RUNTIME_DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         rule: "opt-in verified-hash cache (S-038)",
         meaning: "The `--hash-cache` file could not be read as this schema's JSON, or a fresh entry could not be written back to it. Every artifact this run needed was still hashed from bytes as if no cache were supplied; nothing about package integrity is weakened by this notice.",
         next_action: "Inspect the named cache file. Delete it to let Core rebuild it from a clean state, or repair the path's permissions; the run's verdicts do not depend on this file.",
+    },
+    DiagnosticExplanation {
+        code: CORE_X1004,
+        title: "Package manifest signature not verified",
+        rule: "ADR-0015 clause 3: signed manifests",
+        meaning: "`run --trust-root FILE` was supplied and the package manifest's bound `signature` document (role `manifest`) is missing, internally inconsistent, made with a key not listed under the `requester` role in the supplied trust root, or does not cryptographically verify. A package whose manifest signature does not verify against a listed requester key is refused before compilation, exactly where the requester's manifest pin (S-030, `CORE-X1002`) refuses today.",
+        next_action: "Sign the manifest with a requester key listed in the trust root (`avila-core sign manifest`), or supply the correct trust root. Never bypass this by omitting `--trust-root`.",
+    },
+    DiagnosticExplanation {
+        code: CORE_X1005,
+        title: "Signed execution required",
+        rule: "ADR-0015 clause 7: execution_policy.require_signatures",
+        meaning: "The compiled contract's `execution_policy.require_signatures` is true, and either no `--trust-root` was supplied at all, or a declared execution step's operative evidence (a reused, freshly executed, or not-run receipt) carries no signature verified against a listed runner key. The default, permissive behavior of falling back to a rerun or a visible `not_run` step is not available for a contract that requires signed execution: the whole run is refused instead.",
+        next_action: "Supply `--trust-root FILE` naming the requester and runner keys this contract requires, and produce every step's receipt through a run signed with `--runner-key FILE`, or set `require_signatures` to false only with the policy owner's deliberate agreement to accept unsigned evidence.",
     },
     DiagnosticExplanation {
         code: CORE_X1101,

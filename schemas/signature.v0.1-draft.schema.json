@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/signature/v0.1-draft.schema.json",
+  "title": "Avila Core Signature v0.1 draft",
+  "description": "A detached Ed25519 signature over one other document's digest (ADR-0015). Bound into a case package like any other document, with role `signature`. A signature proves possession of a key at signing time; it does not establish the correctness of what was signed, qualification, review, or regulatory suitability.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "signed_document", "key_id", "algorithm", "signature_hex", "notice"],
+  "properties": {
+    "schema_version": { "const": "avila.core/signature/v0.1-draft" },
+    "signed_document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "document_id", "sha256"],
+      "description": "What was signed: a role (`manifest`, `execution_receipt`, or a log line's own role), an identifier within that role's namespace (the case id for a manifest, the receipt's document_id for a receipt), and the exact digest the signature covers.",
+      "properties": {
+        "role": { "$ref": "#/$defs/nonemptyString" },
+        "document_id": { "$ref": "#/$defs/nonemptyString" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "key_id": {
+      "description": "The SHA-256 of the signing key's public key bytes, hex encoded (no `sha256:` prefix, distinguishing a key identifier from a content digest).",
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "algorithm": { "const": "ed25519" },
+    "signature_hex": {
+      "description": "The 64-byte Ed25519 signature over the raw digest bytes named by signed_document.sha256, hex encoded.",
+      "type": "string",
+      "pattern": "^[a-f0-9]{128}$"
+    },
+    "notice": { "$ref": "#/$defs/nonemptyString" }
+  },
+  "$defs": {
+    "nonemptyString": { "type": "string", "minLength": 1 },
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  }
+}

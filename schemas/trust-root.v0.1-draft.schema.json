@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/trust-root/v0.1-draft.schema.json",
+  "title": "Avila Core Trust Root v0.1 draft",
+  "description": "The requester and runner public keys one `avila-core run --trust-root FILE` invocation accepts (ADR-0015). Supplied from outside the case package; a package cannot extend or replace its own trust root. A key id is listed only under the role(s) it is trusted for: a key present only as `runner` never satisfies a check that requires `requester`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "keys"],
+  "properties": {
+    "schema_version": { "const": "avila.core/trust-root/v0.1-draft" },
+    "keys": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key_id", "public_key_hex", "role"],
+        "properties": {
+          "key_id": {
+            "description": "The SHA-256 of the public key bytes, hex encoded.",
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "public_key_hex": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "role": { "enum": ["requester", "runner"] }
+        }
+      }
+    }
+  }
+}

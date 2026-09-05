@@ -7,9 +7,12 @@ use std::fs;
 use std::path::Path;
 
 use avila_core_compiler::{CampaignStatus, CompilationStatus, ReviewerRole};
+use avila_core_evidence::signature::{SignatureDocument, TrustRoot, build_signature_document};
 use avila_core_evidence::{PackageIntegrityStatus, sha256_file};
+use avila_core_kernel::canonicalize_json;
 use serde::Serialize;
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 
 use super::{
     BindingStatus, CaseRunOptions, CaseRunReport, CaseRunStatus, ChangeRecord, CoverageStatus,
@@ -24,6 +27,8 @@ pub(crate) fn append_log(
     options: &CaseRunOptions,
     case_or_manifest: &Path,
     report: &CaseRunReport,
+    trust_root: Option<&TrustRoot>,
+    runner_key: Option<[u8; 32]>,
 ) -> Result<(), Box<dyn Error>> {
     let Some(path) = &options.log else {
         return Ok(());
@@ -93,6 +98,15 @@ pub(crate) fn append_log(
         documents: Vec<DocumentLog<'a>>,
         #[serde(skip_serializing_if = "Vec::is_empty")]
         reused_from: Vec<(&'a str, &'a str)>,
+        /// The package manifest's requester-signature status (ADR-0015),
+        /// present whether or not `--trust-root` was supplied.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        manifest_signature: Option<&'a super::SignatureStatus>,
+        /// This line's own runner signature, appended last. Computed over
+        /// the canonical form of every field above with this member absent;
+        /// never present while that digest is being computed.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        signature: Option<SignatureDocument>,
     }
     #[derive(Serialize)]
     struct StepLog<'a> {
@@ -105,6 +119,10 @@ pub(crate) fn append_log(
         changes: &'a [ChangeRecord],
         #[serde(skip_serializing_if = "Option::is_none")]
         receipt: Option<&'a ReceiptSummary>,
+        /// This step's operative receipt's runner-signature status
+        /// (ADR-0015): `signed_by` a key id, or `unsigned`.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        receipt_signature: Option<&'a super::SignatureStatus>,
         outputs: &'a [OutputReport],
     }
     #[derive(Serialize)]
@@ -160,6 +178,7 @@ pub(crate) fn append_log(
                         planned_invocation_sha256: step.planned_invocation_sha256.as_deref(),
                         changes: &step.changes,
                         receipt: step.receipt.as_ref(),
+                        receipt_signature: step.receipt_signature.as_ref(),
                         outputs: &step.outputs,
                     })
                     .collect()
@@ -228,18 +247,55 @@ pub(crate) fn append_log(
                     .collect()
             })
             .unwrap_or_default(),
+        manifest_signature: report.manifest_signature.as_ref(),
+        signature: None,
     };
-    append_log_line(
-        path,
-        report.attempt.as_ref(),
-        &serde_json::to_string(&entry)?,
-    )
+    let line = sign_log_line(serde_json::to_string(&entry)?, runner_key)?;
+    append_log_line(path, report.attempt.as_ref(), &line, trust_root)
+}
+
+/// Sign a JSON-object log line already serialized with its trailing
+/// `signature` member absent (via `skip_serializing_if`): compute the
+/// digest of its canonical form, sign it when a runner key is supplied, and
+/// splice the `signature` member into the same JSON text without disturbing
+/// any other field's literal representation.
+fn sign_log_line(
+    unsigned_line: String,
+    runner_key: Option<[u8; 32]>,
+) -> Result<String, Box<dyn Error>> {
+    let Some(seed) = runner_key else {
+        return Ok(unsigned_line);
+    };
+    let canonical = canonicalize_json(unsigned_line.as_bytes())?;
+    let digest: [u8; 32] = Sha256::digest(&canonical).into();
+    let signed_document_sha256 = format!("sha256:{:x}", Sha256::digest(&canonical));
+    let mut value: Value = serde_json::from_str(&unsigned_line)?;
+    let document_id = value
+        .pointer("/attempt/attempt_id")
+        .and_then(Value::as_str)
+        .or_else(|| value.get("case_id").and_then(Value::as_str))
+        .unwrap_or("log-line")
+        .to_string();
+    let document = build_signature_document(
+        &seed,
+        "log_line",
+        document_id,
+        signed_document_sha256,
+        &digest,
+    );
+    let object = value
+        .as_object_mut()
+        .ok_or("log line did not serialize as a JSON object")?;
+    object.insert("signature".into(), serde_json::to_value(&document)?);
+    Ok(serde_json::to_string(&value)?)
 }
 
 pub(crate) fn append_error_log(
     options: &CaseRunOptions,
     case_or_manifest: &Path,
     finding: &RunFinding,
+    trust_root: Option<&TrustRoot>,
+    runner_key: Option<[u8; 32]>,
 ) -> Result<(), Box<dyn Error>> {
     let Some(path) = &options.log else {
         return Ok(());
@@ -265,7 +321,8 @@ pub(crate) fn append_error_log(
     // An infrastructure error before a case report exists has no resolved
     // `AttemptRecord` to revalidate; only `attempt_request` (the caller's
     // unvalidated ask) is available, and it is already carried in `entry`.
-    append_log_line(path, None, &serde_json::to_string(&entry)?)
+    let line = sign_log_line(serde_json::to_string(&entry)?, runner_key)?;
+    append_log_line(path, None, &line, trust_root)
 }
 
 /// Append one line to the run-attempt log as a single write, holding an
@@ -276,11 +333,14 @@ pub(crate) fn append_error_log(
 /// campaign can each pass that check against the same parent and both
 /// append a child bound to it before either write lands. Locking here makes
 /// "revalidate, then append" one critical section instead of two operations
-/// with a gap between them.
+/// with a gap between them. `trust_root`, when supplied, additionally makes
+/// that revalidation verify the parent line's own signature (ADR-0015
+/// clause 6): a child is refused if its exact parent line does not verify.
 pub(crate) fn append_log_line(
     path: &Path,
     attempt: Option<&AttemptRecord>,
     line: &str,
+    trust_root: Option<&TrustRoot>,
 ) -> Result<(), Box<dyn Error>> {
     if let Some(parent) = path
         .parent()
@@ -303,7 +363,7 @@ pub(crate) fn append_log_line(
     let _lock = LogFileLock(lock_handle);
 
     if let Some(attempt) = attempt {
-        crate::attempt::revalidate_before_append(path, attempt)
+        crate::attempt::revalidate_before_append(path, attempt, trust_root)
             .map_err(|issue| format!("attempt lineage changed before append: {issue}"))?;
     }
 

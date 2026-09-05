@@ -294,16 +294,20 @@ pub fn parse_signature_document(bytes: &[u8]) -> Result<SignatureDocument, Signa
     Ok(serde_json::from_slice(bytes)?)
 }
 
-fn digest_bytes_from_prefixed(value: &str) -> Result<[u8; 32], SignatureError> {
+/// Decode a `sha256:`-prefixed hex digest, such as any package document's
+/// bound `sha256` field, into raw bytes. Public so a caller that already
+/// holds a document's bound identity can check or build a signature against
+/// it without re-deriving the digest from bytes.
+pub fn digest_from_prefixed(value: &str) -> Result<[u8; 32], SignatureError> {
     let hex = value
         .strip_prefix("sha256:")
         .ok_or_else(|| SignatureError::MissingDigestPrefix(value.into()))?;
-    hex_decode_32("signed_document.sha256", hex)
+    hex_decode_32("prefixed digest", hex)
 }
 
 /// The raw 32-byte digest a signature document's signature was made over.
 pub fn signed_target_digest(document: &SignatureDocument) -> Result<[u8; 32], SignatureError> {
-    digest_bytes_from_prefixed(&document.signed_document.sha256)
+    digest_from_prefixed(&document.signed_document.sha256)
 }
 
 /// Build and sign a detached signature document over an already-computed
@@ -409,6 +413,26 @@ pub fn manifest_signing_digest(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn published_schemas_name_the_runtime_versions() {
+        let signature_schema: Value = serde_json::from_str(include_str!(
+            "../../../schemas/signature.v0.1-draft.schema.json"
+        ))
+        .unwrap();
+        assert_eq!(
+            signature_schema["properties"]["schema_version"]["const"],
+            SIGNATURE_SCHEMA_VERSION
+        );
+        let trust_root_schema: Value = serde_json::from_str(include_str!(
+            "../../../schemas/trust-root.v0.1-draft.schema.json"
+        ))
+        .unwrap();
+        assert_eq!(
+            trust_root_schema["properties"]["schema_version"]["const"],
+            TRUST_ROOT_SCHEMA_VERSION
+        );
+    }
 
     #[test]
     fn generated_keypair_signs_and_verifies() {

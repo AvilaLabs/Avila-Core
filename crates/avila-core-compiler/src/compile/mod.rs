@@ -20,7 +20,7 @@ mod values;
 mod tests;
 
 use self::findings::contract_location;
-use self::notices::report_unconsumed_declarations;
+use self::notices::{report_require_signatures, report_unconsumed_declarations};
 use self::registry::RegistryIndex;
 use self::reproducibility::compile_reproducibility;
 use self::requirements::{compile_categorical_requirements, compile_requirements};
@@ -87,6 +87,7 @@ pub fn compile_documents(
 
     validate_document_headers(&contract, &registry, &mut findings);
     validate_contract_shape(&contract, &mut findings);
+    report_require_signatures(&contract, &mut findings);
     let registry_index = RegistryIndex::build(&registry, &mut findings);
     let invalid_sources =
         validate_contract_registry_refs(&contract, &registry_index, &mut findings);

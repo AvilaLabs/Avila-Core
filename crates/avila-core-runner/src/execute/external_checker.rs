@@ -828,6 +828,8 @@ mod tests {
                 expected_manifest_sha256: None,
                 attempt: None,
                 hash_cache: None,
+                trust_root: None,
+                runner_key: None,
             },
         )
         .unwrap();

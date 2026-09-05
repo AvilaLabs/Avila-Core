@@ -4,10 +4,31 @@ use super::findings::contract_location;
 use super::ir::ResolvedBinding;
 use super::registry::RegistryIndex;
 use crate::diagnostic::{
-    CORE_R3601, CORE_R3602, CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability,
+    CORE_A4404, CORE_R3601, CORE_R3602, CoreDiagnostic, DiagnosticRepair, FindingClass,
+    RepairApplicability,
 };
 use crate::document::{ContractSource, SourceRef};
 use std::collections::{BTreeMap, BTreeSet};
+
+/// A visible, non-blocking notice that this contract's execution policy
+/// requires signed manifests and receipts (ADR-0015). The compiler cannot
+/// itself check or refuse a signature; it has no receipts to look at. This
+/// only makes the policy's presence impossible to miss in the compiled
+/// report. The case runner performs the actual refusal.
+pub(super) fn report_require_signatures(
+    contract: &ContractSource,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    if contract.execution_policy.require_signatures {
+        findings.push(CoreDiagnostic::new(
+            CORE_A4404,
+            FindingClass::Notice,
+            "policy_owner",
+            contract_location("/execution_policy/require_signatures"),
+            "this contract's execution policy requires signed manifests and receipts; `avila-core run` for this contract must be given `--trust-root` and will refuse an unsigned package or unsigned reuse",
+        ));
+    }
+}
 
 /// Notices for declarations that would never enter the campaign: a contract
 /// input no step binds, or a non-review step whose outputs feed neither

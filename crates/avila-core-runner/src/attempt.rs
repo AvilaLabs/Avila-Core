@@ -9,10 +9,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
+use avila_core_evidence::signature::{
+    KeyRole, SignatureDocument, TrustRoot, check_internal_consistency, verify_signature_document,
+};
 use avila_core_evidence::{sha256_file, sha256_hex};
 use avila_core_kernel::{VerdictStatus, canonicalize_json};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 
 pub const ATTEMPT_LINEAGE_SCHEMA_VERSION: &str = "avila.core/attempt-lineage/v0.1-draft";
 pub const ATTEMPT_COMPARISON_SCHEMA_VERSION: &str = "avila.core/attempt-comparison/v0.1-draft";
@@ -169,6 +173,10 @@ struct PriorAttempt {
     top_level_manifest_sha256: Option<String>,
     top_level_compiled_snapshot_sha256: Option<String>,
     verdicts: Option<Value>,
+    /// The complete raw JSON of this line, retained so a parent's own
+    /// `signature` member can be verified (ADR-0015 clause 6) without
+    /// re-reading the log file.
+    full_line: Value,
 }
 
 pub(crate) fn prepare_attempt(
@@ -178,6 +186,7 @@ pub(crate) fn prepare_attempt(
     supplied_candidate_sha256: Option<&str>,
     manifest_sha256: &str,
     compiled_snapshot_sha256: &str,
+    trust_root: Option<&TrustRoot>,
 ) -> Result<AttemptRecord, String> {
     validate_identifier("attempt", &request.attempt_id)?;
     validate_identifier("candidate input", &request.candidate_input)?;
@@ -232,7 +241,7 @@ pub(crate) fn prepare_attempt(
     let candidate_state_sha256 = digest(&canonical);
 
     let attempts = read_attempts(log_path)?;
-    validate_history(&attempts)?;
+    validate_history(&attempts, trust_root)?;
     if attempts.contains_key(&request.attempt_id) {
         return Err(format!(
             "attempt id `{}` already exists in `{}`",
@@ -303,9 +312,10 @@ pub(crate) fn prepare_attempt(
 pub(crate) fn revalidate_before_append(
     log_path: &Path,
     attempt: &AttemptRecord,
+    trust_root: Option<&TrustRoot>,
 ) -> Result<(), String> {
     let attempts = read_attempts(log_path)?;
-    validate_history(&attempts)?;
+    validate_history(&attempts, trust_root)?;
     if attempts.contains_key(&attempt.attempt_id) {
         return Err(format!(
             "attempt id `{}` appeared in `{}` while this run was in progress",
@@ -351,7 +361,10 @@ pub(crate) fn parent_verdict_values(
         .as_deref()
         .ok_or("a child attempt is missing its parent record identity")?;
     let attempts = read_attempts(log_path)?;
-    validate_history(&attempts)?;
+    // Read-only comparison rendering, not an admission gate: signatures are
+    // not re-verified here (they already were, when this lineage was
+    // admitted or last revalidated under a trust root).
+    validate_history(&attempts, None)?;
     let parent = attempts.get(parent_id).ok_or_else(|| {
         format!(
             "parent attempt `{parent_id}` disappeared from `{}` before comparison",
@@ -426,6 +439,7 @@ fn read_attempts(path: &Path) -> Result<BTreeMap<String, PriorAttempt>, String> 
                 .and_then(Value::as_str)
                 .map(str::to_owned),
             verdicts: entry.get("verdicts").cloned(),
+            full_line: entry,
         };
         if let Some(first) = attempts.insert(attempt_id.clone(), prior) {
             return Err(format!(
@@ -438,7 +452,10 @@ fn read_attempts(path: &Path) -> Result<BTreeMap<String, PriorAttempt>, String> 
     Ok(attempts)
 }
 
-fn validate_history(attempts: &BTreeMap<String, PriorAttempt>) -> Result<(), String> {
+fn validate_history(
+    attempts: &BTreeMap<String, PriorAttempt>,
+    trust_root: Option<&TrustRoot>,
+) -> Result<(), String> {
     for (attempt_id, attempt) in attempts {
         validate_identifier("attempt", attempt_id)?;
         let record = &attempt.record;
@@ -505,6 +522,14 @@ fn validate_history(attempts: &BTreeMap<String, PriorAttempt>) -> Result<(), Str
                         parent.record_sha256
                     ));
                 }
+                if let Some(trust_root) = trust_root {
+                    verify_log_line_signature(&parent.full_line, trust_root).map_err(|issue| {
+                        format!(
+                            "attempt `{attempt_id}` binds parent `{parent_id}` on line {}, whose log line does not verify: {issue}",
+                            parent.line
+                        )
+                    })?;
+                }
                 let expected_generation =
                     parent.record.generation.checked_add(1).ok_or_else(|| {
                         format!("parent attempt `{parent_id}` generation overflows u64")
@@ -556,6 +581,31 @@ fn candidate_state_identity(state: &Value) -> Result<String, String> {
 
 fn digest(bytes: impl AsRef<[u8]>) -> String {
     format!("sha256:{}", sha256_hex(bytes))
+}
+
+/// Verify one campaign log line's own runner signature against a trust
+/// root (ADR-0015 clause 6): the canonical form of the line with its
+/// `signature` member removed must reproduce the digest that member names,
+/// and the signature must verify against a listed runner key.
+fn verify_log_line_signature(line: &Value, trust_root: &TrustRoot) -> Result<String, String> {
+    let mut without_signature = line.clone();
+    let object = without_signature
+        .as_object_mut()
+        .ok_or("log line is not a JSON object")?;
+    let signature_value = object
+        .remove("signature")
+        .ok_or("log line carries no signature")?;
+    let document: SignatureDocument = serde_json::from_value(signature_value)
+        .map_err(|error| format!("log line signature is malformed: {error}"))?;
+    let bytes = serde_json::to_vec(&without_signature)
+        .map_err(|error| format!("log line could not be re-serialized: {error}"))?;
+    let canonical = canonicalize_json(&bytes)
+        .map_err(|error| format!("log line is outside the canonical profile: {error}"))?;
+    let expected_digest: [u8; 32] = Sha256::digest(&canonical).into();
+    check_internal_consistency(&document, &expected_digest)
+        .map_err(|error| format!("log line signature is inconsistent: {error}"))?;
+    verify_signature_document(&document, trust_root, KeyRole::Runner)
+        .map_err(|error| format!("log line signature does not verify: {error}"))
 }
 
 fn validate_identifier(kind: &str, value: &str) -> Result<(), String> {

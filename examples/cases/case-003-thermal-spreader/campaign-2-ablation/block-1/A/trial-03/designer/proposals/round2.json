@@ -1,0 +1,3 @@
+[
+  {"layers": [{"material": "aluminium", "thickness_mm": 1}], "rationale": "2mm aluminium just passed THERM-R2-hotspot at 332K (margin 7.79K) with mass 5.4 kg/m2, far lighter than 5mm graphite's 9 kg/m2 despite similar hotspot margin. Testing whether 1mm aluminium (mass 2.7 kg/m2) still clears 340K, since the density/conductivity linear model was clearly too pessimistic for aluminium."}
+]

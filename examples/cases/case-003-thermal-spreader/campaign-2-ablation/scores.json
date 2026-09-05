@@ -1,0 +1,648 @@
+{
+  "generated_at": "2026-09-05T02:22:04Z",
+  "trials": [
+    {
+      "arm": "A",
+      "trial": 0,
+      "status": "complete",
+      "candidates_evaluated": 7,
+      "success": true,
+      "evaluations_to_first_all_pass": 2,
+      "lightest_all_pass_mass_kg_m2": 3.6,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.3028634,
+      "num_turns": 15,
+      "input_tokens": 30,
+      "output_tokens": 14486,
+      "cache_read_input_tokens": 296117,
+      "cache_creation_input_tokens": 24180,
+      "session_wall_s": 179.23449686996173,
+      "attempts": 1,
+      "tool_calls": 10,
+      "tool_calls_wall_s": 6.131,
+      "leak_clean": false,
+      "leak_hits": 3,
+      "leak_hit_detail": [
+        {
+          "tool_use_id": "toolu_01Em11egUSQor9uiTrSt8sJo",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py propose --out designer --proposals designer/proposals/round1_graphite_thin.json",
+          "words": [
+            "margin",
+            "pass",
+            "not_evaluated"
+          ],
+          "excerpt": "id | design | status | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness\nl-0000 | 1 mm graphite | evaluated | pass 400 (margin 19.7) | not_evaluated | pass 1.8 (margin 98.2) | pass 0.1 (margin 3.9)\nl-0001 | 2 mm graphite | evaluated | pass 401 (margin 19.3) | not_evaluated | pass 3.6 (margin 96.4) | pass 0.2 (margin 3.8)\nl-0002 | 3 mm graphite | evaluated | pass 401 (margin 1"
+        },
+        {
+          "tool_use_id": "toolu_01MYdZC29JACE2y9w87v1DUf",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py propose --out designer --proposals designer/proposals/round2_thin_materials.json",
+          "words": [
+            "margin",
+            "pass",
+            "not_evaluated"
+          ],
+          "excerpt": "id | design | status | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness\nl-0009 | 1 mm aluminium | evaluated | pass 400 (margin 19.8) | not_evaluated | pass 2.7 (margin 97.3) | pass 0.1 (margin 3.9)\nl-0010 | 1 mm copper | evaluated | pass 400 (margin 19.9) | not_evaluated | pass 8.96 (margin 91) | pass 0.1 (margin 3.9)\nl-0011 | 1 mm aluminium_nitride | evaluated | pass 400 (m"
+        },
+        {
+          "tool_use_id": "toolu_01NBiBdnrzT5sNB1BXCGiyva",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py status --out designer",
+          "words": [
+            "margin",
+            "pass",
+            "fail"
+          ],
+          "excerpt": "transports used 7/12; screens used 12/40\nall-PASS designs this arm: 4\n  3.6 kg  2 mm graphite\n  5.4 kg  3 mm graphite\n  7.2 kg  4 mm graphite\n  12.6 kg  7 mm graphite\ntransported this arm, best worst-case margin first:\norigin | design | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness | worst margin | all PASS\nthis arm | 2 mm graphite | 401 pass | [335, 335] pass | [3.6, 3.6"
+        }
+      ],
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "A",
+      "trial": 1,
+      "status": "complete",
+      "candidates_evaluated": 4,
+      "success": true,
+      "evaluations_to_first_all_pass": 3,
+      "lightest_all_pass_mass_kg_m2": 8.96,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.3002496,
+      "num_turns": 13,
+      "input_tokens": 26,
+      "output_tokens": 15255,
+      "cache_read_input_tokens": 251463,
+      "cache_creation_input_tokens": 23845,
+      "session_wall_s": 199.92960842698812,
+      "attempts": 1,
+      "tool_calls": 8,
+      "tool_calls_wall_s": 5.821,
+      "leak_clean": false,
+      "leak_hits": 3,
+      "leak_hit_detail": [
+        {
+          "tool_use_id": "toolu_01TUyvTnwRh1uxEuoC8i8ERf",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py propose --out designer --proposals designer/proposals/round1.json",
+          "words": [
+            "margin",
+            "pass",
+            "not_evaluated"
+          ],
+          "excerpt": "id | design | status | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness\nl-0000 | 1 mm graphite | evaluated | pass 400 (margin 19.7) | not_evaluated | pass 1.8 (margin 98.2) | pass 0.1 (margin 3.9)\nl-0001 | 2 mm graphite | evaluated | pass 401 (margin 19.3) | not_evaluated | pass 3.6 (margin 96.4) | pass 0.2 (margin 3.8)\nl-0002 | 3 mm graphite | evaluated | pass 401 (margin 1"
+        },
+        {
+          "tool_use_id": "toolu_01W13yxJt3V9cZ6qaxfWCm3V",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py propose --out designer --proposals designer/proposals/round2.json",
+          "words": [
+            "margin",
+            "pass",
+            "not_evaluated"
+          ],
+          "excerpt": "id | design | status | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness\nl-0009 | 1 mm aluminium_nitride | evaluated | pass 400 (margin 19.7) | not_evaluated | pass 3.26 (margin 96.7) | pass 0.1 (margin 3.9)\nscreens used 10/40"
+        },
+        {
+          "tool_use_id": "toolu_01HRkJHFJnCBRhjWBruHdtqy",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py status --out designer",
+          "words": [
+            "margin",
+            "pass",
+            "fail"
+          ],
+          "excerpt": "transports used 4/12; screens used 10/40\nall-PASS designs this arm: 1\n  9.0 kg  1 mm copper\ntransported this arm, best worst-case margin first:\norigin | design | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness | worst margin | all PASS\nthis arm | 1 mm copper | 400 pass | [332, 332] pass | [8.96, 8.96] pass | [0.1, 0.1] pass | 3.9 | yes\nthis arm | 1 mm aluminium | 400 pass |"
+        }
+      ],
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "A",
+      "trial": 2,
+      "status": "complete",
+      "candidates_evaluated": 7,
+      "success": true,
+      "evaluations_to_first_all_pass": 2,
+      "lightest_all_pass_mass_kg_m2": 3.6,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.309041,
+      "num_turns": 17,
+      "input_tokens": 34,
+      "output_tokens": 14429,
+      "cache_read_input_tokens": 324660,
+      "cache_creation_input_tokens": 24444,
+      "session_wall_s": 180.83334765397012,
+      "attempts": 1,
+      "tool_calls": 9,
+      "tool_calls_wall_s": 6.074,
+      "leak_clean": false,
+      "leak_hits": 3,
+      "leak_hit_detail": [
+        {
+          "tool_use_id": "toolu_0172QW1g8rStFL1VoLbVY5MH",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py propose --out designer --proposals designer/proposals/round1_thin_graphite.json",
+          "words": [
+            "margin",
+            "pass",
+            "not_evaluated"
+          ],
+          "excerpt": "id | design | status | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness\nl-0000 | 1 mm graphite | evaluated | pass 400 (margin 19.7) | not_evaluated | pass 1.8 (margin 98.2) | pass 0.1 (margin 3.9)\nl-0001 | 2 mm graphite | evaluated | pass 401 (margin 19.3) | not_evaluated | pass 3.6 (margin 96.4) | pass 0.2 (margin 3.8)\nl-0002 | 3 mm graphite | evaluated | pass 401 (margin 1"
+        },
+        {
+          "tool_use_id": "toolu_018cVzmH5Tie8VYguacwLA2R",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py propose --out designer --proposals designer/proposals/round2_1mm_alternatives.json",
+          "words": [
+            "margin",
+            "pass",
+            "not_evaluated"
+          ],
+          "excerpt": "id | design | status | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness\nl-0008 | 1 mm aluminium | evaluated | pass 400 (margin 19.8) | not_evaluated | pass 2.7 (margin 97.3) | pass 0.1 (margin 3.9)\nl-0009 | 1 mm aluminium_nitride | evaluated | pass 400 (margin 19.7) | not_evaluated | pass 3.26 (margin 96.7) | pass 0.1 (margin 3.9)\nscreens used 10/40"
+        },
+        {
+          "tool_use_id": "toolu_013SCeemfS3iDwA1Dvcw9Rb3",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py status --out designer",
+          "words": [
+            "margin",
+            "pass",
+            "fail"
+          ],
+          "excerpt": "transports used 7/12; screens used 10/40\nall-PASS designs this arm: 4\n  3.6 kg  2 mm graphite\n  5.4 kg  3 mm graphite\n  9.0 kg  5 mm graphite\n  14.4 kg  8 mm graphite\ntransported this arm, best worst-case margin first:\norigin | design | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness | worst margin | all PASS\nthis arm | 2 mm graphite | 401 pass | [335, 335] pass | [3.6, 3.6"
+        }
+      ],
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "A",
+      "trial": 3,
+      "status": "complete",
+      "candidates_evaluated": 7,
+      "success": true,
+      "evaluations_to_first_all_pass": 2,
+      "lightest_all_pass_mass_kg_m2": 3.6,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.3714092,
+      "num_turns": 15,
+      "input_tokens": 30,
+      "output_tokens": 19092,
+      "cache_read_input_tokens": 319551,
+      "cache_creation_input_tokens": 28636,
+      "session_wall_s": 227.98146205197554,
+      "attempts": 1,
+      "tool_calls": 9,
+      "tool_calls_wall_s": 6.352,
+      "leak_clean": false,
+      "leak_hits": 3,
+      "leak_hit_detail": [
+        {
+          "tool_use_id": "toolu_01L1FuWnoL1hCLqoDPnWkKNZ",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py propose --out designer --proposals designer/proposals/round1.json",
+          "words": [
+            "margin",
+            "pass",
+            "not_evaluated"
+          ],
+          "excerpt": "id | design | status | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness\nl-0000 | 1 mm graphite | evaluated | pass 400 (margin 19.7) | not_evaluated | pass 1.8 (margin 98.2) | pass 0.1 (margin 3.9)\nl-0001 | 2 mm graphite | evaluated | pass 401 (margin 19.3) | not_evaluated | pass 3.6 (margin 96.4) | pass 0.2 (margin 3.8)\nl-0002 | 3 mm graphite | evaluated | pass 401 (margin 1"
+        },
+        {
+          "tool_use_id": "toolu_01GBbWS8CJLaRBhuyxAHyifC",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py propose --out designer --proposals designer/proposals/round2.json",
+          "words": [
+            "margin",
+            "pass",
+            "not_evaluated"
+          ],
+          "excerpt": "id | design | status | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness\nl-0010 | 1 mm aluminium | evaluated | pass 400 (margin 19.8) | not_evaluated | pass 2.7 (margin 97.3) | pass 0.1 (margin 3.9)\nscreens used 11/40"
+        },
+        {
+          "tool_use_id": "toolu_0127eJPRKNkVqzWPYd8oDbc2",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py status --out designer",
+          "words": [
+            "margin",
+            "pass",
+            "fail"
+          ],
+          "excerpt": "transports used 7/12; screens used 11/40\nall-PASS designs this arm: 5\n  3.6 kg  2 mm graphite\n  5.4 kg  2 mm aluminium\n  5.4 kg  3 mm graphite\n  9.0 kg  1 mm copper\n  9.0 kg  5 mm graphite\ntransported this arm, best worst-case margin first:\norigin | design | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness | worst margin | all PASS\nthis arm | 1 mm copper | 400 pass | [332, 3"
+        }
+      ],
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "A",
+      "trial": 4,
+      "status": "complete",
+      "candidates_evaluated": 6,
+      "success": true,
+      "evaluations_to_first_all_pass": 2,
+      "lightest_all_pass_mass_kg_m2": 3.6,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.3475732,
+      "num_turns": 14,
+      "input_tokens": 28,
+      "output_tokens": 18042,
+      "cache_read_input_tokens": 283906,
+      "cache_creation_input_tokens": 27089,
+      "session_wall_s": 221.07111561798956,
+      "attempts": 1,
+      "tool_calls": 9,
+      "tool_calls_wall_s": 5.507,
+      "leak_clean": false,
+      "leak_hits": 3,
+      "leak_hit_detail": [
+        {
+          "tool_use_id": "toolu_01VWVfqU5x9fQkw5Mzf3vodH",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py propose --out designer --proposals designer/proposals/batch1_graphite_thin.json",
+          "words": [
+            "margin",
+            "pass",
+            "not_evaluated"
+          ],
+          "excerpt": "id | design | status | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness\nl-0000 | 1 mm graphite | evaluated | pass 400 (margin 19.7) | not_evaluated | pass 1.8 (margin 98.2) | pass 0.1 (margin 3.9)\nl-0001 | 2 mm graphite | evaluated | pass 401 (margin 19.3) | not_evaluated | pass 3.6 (margin 96.4) | pass 0.2 (margin 3.8)\nl-0002 | 3 mm graphite | evaluated | pass 401 (margin 1"
+        },
+        {
+          "tool_use_id": "toolu_01UU3BNMn8TSjGUR1fhyA5Dg",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py propose --out designer --proposals designer/proposals/batch2_thin_metals.json",
+          "words": [
+            "margin",
+            "pass",
+            "not_evaluated"
+          ],
+          "excerpt": "id | design | status | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness\nl-0009 | 1 mm aluminium | evaluated | pass 400 (margin 19.8) | not_evaluated | pass 2.7 (margin 97.3) | pass 0.1 (margin 3.9)\nl-0010 | 1 mm aluminium_nitride | evaluated | pass 400 (margin 19.7) | not_evaluated | pass 3.26 (margin 96.7) | pass 0.1 (margin 3.9)\nscreens used 11/40"
+        },
+        {
+          "tool_use_id": "toolu_01Lhs5hRnfpNCCbcjrbBccpq",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/shield_llm_tools.py status --out designer",
+          "words": [
+            "margin",
+            "pass",
+            "fail"
+          ],
+          "excerpt": "transports used 6/12; screens used 11/40\nall-PASS designs this arm: 3\n  3.6 kg  2 mm graphite\n  5.4 kg  3 mm graphite\n  9.0 kg  5 mm graphite\ntransported this arm, best worst-case margin first:\norigin | design | THERM-R1-screen | THERM-R2-hotspot | THERM-R3-mass | THERM-R4-thickness | worst margin | all PASS\nthis arm | 2 mm graphite | 401 pass | [335, 335] pass | [3.6, 3.6] pass | [0.2, 0.2] pass "
+        }
+      ],
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "B",
+      "trial": 0,
+      "status": "complete",
+      "candidates_evaluated": 6,
+      "success": true,
+      "evaluations_to_first_all_pass": 2,
+      "lightest_all_pass_mass_kg_m2": 3.6,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.2534156,
+      "num_turns": 12,
+      "input_tokens": 24,
+      "output_tokens": 12695,
+      "cache_read_input_tokens": 216768,
+      "cache_creation_input_tokens": 20278,
+      "session_wall_s": 149.6672660249751,
+      "attempts": 1,
+      "tool_calls": 8,
+      "tool_calls_wall_s": 5.542,
+      "leak_clean": false,
+      "leak_hits": 1,
+      "leak_hit_detail": [
+        {
+          "tool_use_id": "toolu_016CiFhQynijrhSGXdVMziW2",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/ablation/raw_thermal_tools.py status --out /home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/exp-002/block-1/B/trial-00/designer",
+          "words": [
+            "verdict"
+          ],
+          "excerpt": "evaluations used 6/12; screens used 11/40\nevaluated this arm (raw numbers, no verdict):\n  b-0000 | 1 mm graphite | {\"areal_mass_kg_m2\": \"1.8\", \"hotspot_temperature_fe_bracket_K\": [\"344.43309\", \"344.43594\"], \"hotspot_temperature_screen_K\": \"400.333333333\", \"thickness_mm\": \"1\"}\n  b-0002 | 3 mm graphite | {\"areal_mass_kg_m2\": \"5.4\", \"hotspot_temperature_fe_bracket_K\": [\"331.36773\", \"331.36794\"], \"hot"
+        }
+      ],
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "arm_b_live_solver_s": 4.475470702978782,
+      "post_hoc_core_wall_s": 3.393820059020072,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "B",
+      "trial": 1,
+      "status": "complete",
+      "candidates_evaluated": 6,
+      "success": true,
+      "evaluations_to_first_all_pass": 2,
+      "lightest_all_pass_mass_kg_m2": 3.6,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.3290702,
+      "num_turns": 15,
+      "input_tokens": 30,
+      "output_tokens": 16642,
+      "cache_read_input_tokens": 291086,
+      "cache_creation_input_tokens": 25599,
+      "session_wall_s": 204.56090106000192,
+      "attempts": 1,
+      "tool_calls": 8,
+      "tool_calls_wall_s": 4.602,
+      "leak_clean": true,
+      "leak_hits": 0,
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "arm_b_live_solver_s": 3.552921747905202,
+      "post_hoc_core_wall_s": 3.170156765030697,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "B",
+      "trial": 2,
+      "status": "complete",
+      "candidates_evaluated": 9,
+      "success": true,
+      "evaluations_to_first_all_pass": 1,
+      "lightest_all_pass_mass_kg_m2": 3.6,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.447961,
+      "num_turns": 23,
+      "input_tokens": 46,
+      "output_tokens": 20792,
+      "cache_read_input_tokens": 522665,
+      "cache_creation_input_tokens": 33361,
+      "session_wall_s": 248.55183604196645,
+      "attempts": 1,
+      "tool_calls": 12,
+      "tool_calls_wall_s": 6.798,
+      "leak_clean": false,
+      "leak_hits": 2,
+      "leak_hit_detail": [
+        {
+          "tool_use_id": "toolu_01QxK3Z6bE5M1K52nJTh8WYJ",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/ablation/raw_thermal_tools.py status --out designer",
+          "words": [
+            "verdict"
+          ],
+          "excerpt": "evaluations used 9/12; screens used 15/40\nevaluated this arm (raw numbers, no verdict):\n  b-0002 | 6 mm graphite | {\"areal_mass_kg_m2\": \"10.8\", \"hotspot_temperature_fe_bracket_K\": [\"326.94809\", \"326.94853\"], \"hotspot_temperature_screen_K\": \"402\", \"thickness_mm\": \"6\"}\n  b-0003 | 7 mm graphite | {\"areal_mass_kg_m2\": \"12.6\", \"hotspot_temperature_fe_bracket_K\": [\"326.32199\", \"326.32278\"], \"hotspot_tem"
+        },
+        {
+          "tool_use_id": "toolu_01ToYsERcz7NUAsMn4QVZrGC",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/ablation/raw_thermal_tools.py status --out designer",
+          "words": [
+            "verdict"
+          ],
+          "excerpt": "evaluations used 9/12; screens used 16/40\nevaluated this arm (raw numbers, no verdict):\n  b-0002 | 6 mm graphite | {\"areal_mass_kg_m2\": \"10.8\", \"hotspot_temperature_fe_bracket_K\": [\"326.94809\", \"326.94853\"], \"hotspot_temperature_screen_K\": \"402\", \"thickness_mm\": \"6\"}\n  b-0003 | 7 mm graphite | {\"areal_mass_kg_m2\": \"12.6\", \"hotspot_temperature_fe_bracket_K\": [\"326.32199\", \"326.32278\"], \"hotspot_tem"
+        }
+      ],
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "arm_b_live_solver_s": 5.353341500856914,
+      "post_hoc_core_wall_s": 5.001343822106719,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "B",
+      "trial": 3,
+      "status": "complete",
+      "candidates_evaluated": 7,
+      "success": true,
+      "evaluations_to_first_all_pass": 2,
+      "lightest_all_pass_mass_kg_m2": 3.6,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.31993699999999997,
+      "num_turns": 15,
+      "input_tokens": 30,
+      "output_tokens": 15748,
+      "cache_read_input_tokens": 290590,
+      "cache_creation_input_tokens": 25583,
+      "session_wall_s": 182.75715942203533,
+      "attempts": 1,
+      "tool_calls": 9,
+      "tool_calls_wall_s": 4.995,
+      "leak_clean": false,
+      "leak_hits": 1,
+      "leak_hit_detail": [
+        {
+          "tool_use_id": "toolu_01SE43GhdW2FxDh7U5K6Ww4W",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/ablation/raw_thermal_tools.py status --out designer",
+          "words": [
+            "verdict"
+          ],
+          "excerpt": "evaluations used 7/12; screens used 12/40\nevaluated this arm (raw numbers, no verdict):\n  b-0000 | 1 mm graphite | {\"areal_mass_kg_m2\": \"1.8\", \"hotspot_temperature_fe_bracket_K\": [\"344.43309\", \"344.43594\"], \"hotspot_temperature_screen_K\": \"400.333333333\", \"thickness_mm\": \"1\"}\n  b-0002 | 3 mm graphite | {\"areal_mass_kg_m2\": \"5.4\", \"hotspot_temperature_fe_bracket_K\": [\"331.36773\", \"331.36794\"], \"hot"
+        }
+      ],
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "arm_b_live_solver_s": 3.813643998815678,
+      "post_hoc_core_wall_s": 3.6899136749561876,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "B",
+      "trial": 4,
+      "status": "complete",
+      "candidates_evaluated": 8,
+      "success": true,
+      "evaluations_to_first_all_pass": 1,
+      "lightest_all_pass_mass_kg_m2": 3.6,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.2523476,
+      "num_turns": 16,
+      "input_tokens": 32,
+      "output_tokens": 10998,
+      "cache_read_input_tokens": 286058,
+      "cache_creation_input_tokens": 20785,
+      "session_wall_s": 137.19437907193787,
+      "attempts": 1,
+      "tool_calls": 10,
+      "tool_calls_wall_s": 5.853,
+      "leak_clean": false,
+      "leak_hits": 1,
+      "leak_hit_detail": [
+        {
+          "tool_use_id": "toolu_01ULMrQT6HwSMjcmxYKJ3fd9",
+          "command": "python3 /home/connoravila/Documents/Avila-Labs/project-north-star/examples/agents/ablation/raw_thermal_tools.py status --out designer",
+          "words": [
+            "verdict"
+          ],
+          "excerpt": "evaluations used 8/12; screens used 11/40\nevaluated this arm (raw numbers, no verdict):\n  b-0000 | 4 mm graphite | {\"areal_mass_kg_m2\": \"7.2\", \"hotspot_temperature_fe_bracket_K\": [\"329.19559\", \"329.19573\"], \"hotspot_temperature_screen_K\": \"401.333333333\", \"thickness_mm\": \"4\"}\n  b-0002 | 6 mm graphite | {\"areal_mass_kg_m2\": \"10.8\", \"hotspot_temperature_fe_bracket_K\": [\"326.94809\", \"326.94853\"], \"ho"
+        }
+      ],
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "arm_b_live_solver_s": 4.544818478869274,
+      "post_hoc_core_wall_s": 4.593617422156967,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "C",
+      "trial": 0,
+      "status": "complete",
+      "candidates_evaluated": 12,
+      "success": true,
+      "evaluations_to_first_all_pass": 1,
+      "lightest_all_pass_mass_kg_m2": 9.0,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.3986482,
+      "num_turns": 8,
+      "input_tokens": 16,
+      "output_tokens": 23928,
+      "cache_read_input_tokens": 143721,
+      "cache_creation_input_tokens": 32221,
+      "session_wall_s": 261.13558869902045,
+      "attempts": 1,
+      "tool_calls": 4,
+      "tool_calls_wall_s": 0.605,
+      "leak_clean": true,
+      "leak_hits": 0,
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "post_hoc_core_wall_s": 6.5795507992152125,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "C",
+      "trial": 1,
+      "status": "complete",
+      "candidates_evaluated": 12,
+      "success": true,
+      "evaluations_to_first_all_pass": 1,
+      "lightest_all_pass_mass_kg_m2": 3.6,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.39568020000000004,
+      "num_turns": 9,
+      "input_tokens": 18,
+      "output_tokens": 21184,
+      "cache_read_input_tokens": 149701,
+      "cache_creation_input_tokens": 38039,
+      "session_wall_s": 238.5978949610144,
+      "attempts": 1,
+      "tool_calls": 4,
+      "tool_calls_wall_s": 0.679,
+      "leak_clean": true,
+      "leak_hits": 0,
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "post_hoc_core_wall_s": 6.540770245133899,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "C",
+      "trial": 2,
+      "status": "complete",
+      "candidates_evaluated": 10,
+      "success": true,
+      "evaluations_to_first_all_pass": 1,
+      "lightest_all_pass_mass_kg_m2": 3.6,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.48377400000000004,
+      "num_turns": 10,
+      "input_tokens": 20,
+      "output_tokens": 28971,
+      "cache_read_input_tokens": 228440,
+      "cache_creation_input_tokens": 36657,
+      "session_wall_s": 316.9652687640628,
+      "attempts": 1,
+      "tool_calls": 4,
+      "tool_calls_wall_s": 0.66,
+      "leak_clean": true,
+      "leak_hits": 0,
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "post_hoc_core_wall_s": 5.621763985836878,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "C",
+      "trial": 3,
+      "status": "complete",
+      "candidates_evaluated": 12,
+      "success": true,
+      "evaluations_to_first_all_pass": 1,
+      "lightest_all_pass_mass_kg_m2": 3.6,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.31422920000000004,
+      "num_turns": 9,
+      "input_tokens": 18,
+      "output_tokens": 17785,
+      "cache_read_input_tokens": 160476,
+      "cache_creation_input_tokens": 25635,
+      "session_wall_s": 214.7751765140565,
+      "attempts": 1,
+      "tool_calls": 4,
+      "tool_calls_wall_s": 0.64,
+      "leak_clean": true,
+      "leak_hits": 0,
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "post_hoc_core_wall_s": 6.370826276834123,
+      "shortcut_out_of_envelope_candidates": 0
+    },
+    {
+      "arm": "C",
+      "trial": 4,
+      "status": "complete",
+      "candidates_evaluated": 12,
+      "success": true,
+      "evaluations_to_first_all_pass": 1,
+      "lightest_all_pass_mass_kg_m2": 3.6,
+      "invalid_or_refused": 0,
+      "out_of_envelope": 0,
+      "inconclusive": 0,
+      "not_evaluated_other": 0,
+      "total_cost_usd": 0.333082,
+      "num_turns": 8,
+      "input_tokens": 16,
+      "output_tokens": 19103,
+      "cache_read_input_tokens": 150775,
+      "cache_creation_input_tokens": 27538,
+      "session_wall_s": 218.64702788402792,
+      "attempts": 1,
+      "tool_calls": 4,
+      "tool_calls_wall_s": 0.63,
+      "leak_clean": true,
+      "leak_hits": 0,
+      "core_receipt_solver_ms": 0,
+      "core_receipt_count": 0,
+      "post_hoc_core_wall_s": 6.352182700065896,
+      "shortcut_out_of_envelope_candidates": 0
+    }
+  ]
+}

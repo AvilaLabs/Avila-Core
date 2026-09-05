@@ -1,0 +1,3 @@
+[
+  {"layers": [{"material": "aluminium_nitride", "thickness_mm": 1}], "rationale": "Aluminium nitride has higher conductivity than graphite (170 vs 150 W/mK); at 1mm its mass (3.26 kg/m2) would undercut 2mm graphite (3.6 kg/m2) if it clears the FE hotspot limit."}
+]

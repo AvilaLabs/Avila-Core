@@ -1,0 +1,4 @@
+[
+  {"layers": [{"material": "aluminium", "thickness_mm": 1}], "rationale": "Aluminium has higher conductivity than graphite (200 vs 150 W/mK) despite being denser; testing if 1mm alone spreads enough to beat 2mm graphite's 3.6 kg/m2 mass."},
+  {"layers": [{"material": "aluminium_nitride", "thickness_mm": 1}], "rationale": "Aluminium nitride has conductivity between graphite and copper; testing single 1mm layer as another lightweight alternative."}
+]

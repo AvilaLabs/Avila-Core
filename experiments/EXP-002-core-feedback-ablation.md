@@ -1,6 +1,6 @@
 # EXP-002 — Core feedback ablation
 
-**Status:** Pre-registered 2026-09-04; harness at commit `ee25b71`; frozen by the commit that set this line, whose hash and this file's SHA-256 are recorded in `EXP-002.protocol_hash.txt`  
+**Status:** Completed 2026-09-05; non-discriminating on CASE-003 (ceiling effect). Protocol frozen at `b872f15`, amended once (A1) before any scored result existed.  
 **Priority:** P0  
 **Case:** Reuse CASE-003 initially  
 **Purpose:** Isolate what Core contributes to an otherwise matched agent search
@@ -257,3 +257,75 @@ and binary. Limitation noted for the record: the harness's `DONE.json`
 `reason` field was empty for these failures; the reason is in each
 attempt's `transcript-attempt-N.jsonl`. The harness is not changed for the
 rerun.
+
+## Results, block 1 (2026-09-05, 01:27Z to 02:21Z)
+
+Fifteen trials, five per arm, in the seeded order, every one complete on
+its first attempt; designer `claude-sonnet-5` via Claude Code CLI 2.1.261;
+harness commit `ee25b71`; package manifest `33b78ae3…`; Core binary
+`e7bb5986…`; seed `20260904`; budgets 40 screens and 12 evaluations. Raw
+records: `examples/cases/case-003-thermal-spreader/campaign-2-ablation/`
+(`block-1/` scored, `block-1-limit-failed/` the A1 failure, `scores.json`
+and `scores.md` from `harness.py score`).
+
+| measure | A, Core feedback | B, raw solver | C, no iterative feedback |
+| --- | --- | --- | --- |
+| trials with an all-PASS candidate within budget | 5 of 5 | 5 of 5 | 5 of 5 |
+| full evaluations to first all-PASS, per trial | 2, 3, 2, 2, 2 | 2, 2, 1, 2, 1 | 1, 1, 1, 1, 1 (one-shot set, scored in submission order) |
+| lightest all-PASS mass, kg/m², per trial | 3.6, 8.96, 3.6, 3.6, 3.6 | 3.6 in all five | 9.0, 3.6, 3.6, 3.6, 3.6 |
+| candidates fully evaluated, per trial | 7, 4, 7, 7, 6 | 6, 6, 9, 7, 8 | 12, 12, 10, 12, 12 |
+| invalid, refused, out-of-envelope, inconclusive proposals | 0 | 0 | 0 |
+| predeclared shortcut (more than three layers) proposed | 0 of 5 | 0 of 5 | 0 of 5 |
+| tool calls per trial | 10, 8, 9, 9, 9 | 8, 8, 12, 9, 10 | 4 each |
+| mean session wall time, s | 202 | 185 | 250 |
+| mean session cost as reported by the stream, USD | 0.33 | 0.32 | 0.39 |
+| output tokens per trial | 14.5k to 19.1k | 11.0k to 20.8k | 17.8k to 29.0k |
+
+**Isolation check.** The leak scanner flagged four arm B trials. Every
+flagged occurrence of a forbidden word in arms B and C was classified by
+who wrote it: all are the designer's own reasoning and rationales (for
+example a designer computing its own margin against the 340 K limit given
+in every brief), the tool echoing those rationales back, or the tool's
+fixed disclaimer sentence. No tool output in arm B or C carried a Core
+verdict, margin, coverage, envelope or refusal. Arm A's flags are Core's
+real verdicts, by construction.
+
+## Interpretation, under the rules frozen above
+
+- **Non-discriminating.** Every arm reached the 3.6 kg/m² design (2 mm
+  graphite, the optimum campaign 1 found at its sixth evaluation) within
+  one to three full evaluations, with no invalid or refused proposals in
+  any arm. The pre-registered rule for this outcome applies: the block does
+  not distinguish "Core adds no measurable benefit here" from "the case is
+  too easy to separate the arms", and this record chooses neither. The
+  frozen comparison is to be repeated on a harder existing case, not on a
+  modified CASE-003.
+- **No optimization claim.** A did not beat B. The one arm A trial that
+  stopped at 8.96 kg/m² and the one arm C set whose lightest passing
+  candidate was 9.0 kg/m² are ordinary sampling variance, not an arm
+  effect, at five trials.
+- **Provenance is the only difference observed.** Arm A's searches left a
+  Core-evaluated, manifest-pinned record for every evaluation as they
+  happened; arms B and C have Core records only from the harness's
+  post-hoc pass. Per the frozen rule this supports a governance and
+  provenance benefit, not an optimization one, and it is not relabelled.
+- **Refusal not exercised, for the third experiment running.** No designer
+  in any arm proposed the predeclared out-of-envelope shortcut. Making the
+  shortcut tempting, or forcing one such proposal per trial, is a design
+  change for the next protocol, not an amendment to this one.
+
+## Limitations
+
+- One designer model, five trials per arm, one easy case whose prior (the
+  Core-scored campaign 1 sweep) already shows the hotspot's flatness with
+  thickness; the winning move follows from that prior in one step.
+- Arm C's evaluations-to-first-PASS is not comparable with A and B: its
+  set is scored in submission order without feedback.
+- The scorer reported zero Core receipts and zero solver milliseconds for
+  every trial; that is a scorer limitation (it looked in the wrong place),
+  not an absence. The receipts are in each trial's archived `workspaces/`
+  and `post-hoc-core/` directories.
+- The dry runs used the pre-S-039 manifest; the scored block used the
+  current one. Every verdict was unchanged by that re-bless.
+- The session limit that voided the first block (A1) is a property of the
+  operator's account, not of any arm; it cost 54 minutes, not evidence.

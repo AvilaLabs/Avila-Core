@@ -7,6 +7,13 @@ another domain is built.
 
 ### EXP-002: Core feedback ablation
 
+**Completed 2026-09-05 on CASE-003: non-discriminating.** All three arms
+reached the known optimum within one to three evaluations with no invalid
+or refused proposals; the frozen rule says to repeat the comparison on a
+harder existing case. The natural candidate is CASE-002, whose two
+campaigns showed designers failing for reasons a raw solver does not
+explain, at the cost of minutes per full evaluation.
+
 Run matched Fable/Sonnet arms with Core feedback, raw solver feedback, and no
 iterative feedback. This is the missing control needed to attribute any agent
 performance difference to Core.

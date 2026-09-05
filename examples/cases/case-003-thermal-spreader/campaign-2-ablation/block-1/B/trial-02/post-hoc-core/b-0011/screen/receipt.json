@@ -1,0 +1,112 @@
+{
+  "schema_version": "avila.core/execution-receipt/v0.1-draft",
+  "case_id": "CASE-003",
+  "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
+  "step_id": "screen",
+  "capability_type": {
+    "id": "thermal.spreader-screen",
+    "major": 1
+  },
+  "adapter": "avila-labs.thermal/screen@1",
+  "capability": {
+    "capability_id": "python3",
+    "package_id": "org.python/cpython@3.14.4",
+    "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+  },
+  "parameters": {},
+  "inputs": [
+    {
+      "input_slot": "candidate",
+      "evidence_id": "input:candidate",
+      "workspace_path": "inputs/candidate.json",
+      "media_type": "application/vnd.avila.thermal-candidate+json",
+      "sha256": "sha256:9dde9002fbbc98d58375c3c745691330b1dd63636da6782f884d2bd1cda715b2",
+      "bytes": 160
+    },
+    {
+      "input_slot": "materials",
+      "evidence_id": "input:materials",
+      "workspace_path": "inputs/materials.json",
+      "media_type": "application/vnd.avila.thermal-materials+json",
+      "sha256": "sha256:08cc8fb37c2d154f3dc0d032019b64b14a98b4a76124b44ac9128e8e762fb0f6",
+      "bytes": 1571
+    },
+    {
+      "input_slot": "script",
+      "evidence_id": "input:screen-script",
+      "workspace_path": "tools/thermal_screen.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:0c3259481b6e6ccf0ade84705d0def70a34bad4a2de27061713ece99af4834f7",
+      "bytes": 6449
+    },
+    {
+      "input_slot": "source",
+      "evidence_id": "input:source",
+      "workspace_path": "inputs/source.json",
+      "media_type": "application/vnd.avila.thermal-source+json",
+      "sha256": "sha256:749971e02a4872605082bf643f7bfcfbbb7be889bdcfe09af9a1fb81e4117f1f",
+      "bytes": 1291
+    }
+  ],
+  "invocation": {
+    "program": "python3.14",
+    "arguments": [
+      "tools/thermal_screen.py",
+      "--candidate",
+      "inputs/candidate.json",
+      "--materials",
+      "inputs/materials.json",
+      "--source",
+      "inputs/source.json",
+      "--output",
+      "outputs/screen-result.json"
+    ],
+    "working_directory": ".",
+    "environment": {},
+    "timeout_ms": 120000
+  },
+  "invocation_sha256": "sha256:3f8361e4edcf82cf34ceadb9d2c15b4079a0294c7b374b90cde323be44d181ad",
+  "process": {
+    "started_at": "2026-09-05T01:57:29.220Z",
+    "finished_at": "2026-09-05T01:57:29.281Z",
+    "duration_ms": 60,
+    "exit_status": 0,
+    "timed_out": false
+  },
+  "logs": [
+    {
+      "stream": "stdout",
+      "workspace_path": "logs/stdout.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "stream": "stderr",
+      "workspace_path": "logs/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "outputs": [
+    {
+      "output_id": "screen-result",
+      "workspace_path": "outputs/screen-result.json",
+      "media_type": "application/vnd.avila.thermal-screen+json",
+      "state": "collected",
+      "sha256": "sha256:ef711b2d8800225aa6b8748003ccc9dd7e2c8b864c69f5495f4c79d91a19efee",
+      "bytes": 2019
+    }
+  ],
+  "runner": {
+    "runner": "avila.core/cli-rust@0.1.0",
+    "os": "linux",
+    "arch": "x86_64"
+  },
+  "status": "completed",
+  "limitations": [
+    "Exit status and output digests are process evidence, not scientific success.",
+    "The executable digest identifies the bytes that ran; it does not qualify the method.",
+    "No sandbox or resource accounting was applied beyond a cleared environment, a working directory confined to the workspace, and (on unix) killing the child's whole process group on timeout; nothing here is signed."
+  ],
+  "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, practical suitability, or regulatory suitability."
+}

@@ -1,0 +1,12 @@
+[
+  {"layers": [{"material": "aluminium", "thickness_mm": 5}], "rationale": "Thin aluminium single layer to probe mass reduction below prior 10mm baseline."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 3}], "rationale": "Thinner aluminium to find knee where hotspot rises."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 2}], "rationale": "Very thin aluminium, aggressive mass cut."},
+  {"layers": [{"material": "graphite", "thickness_mm": 5}], "rationale": "Thin graphite, lowest density conductor candidate."},
+  {"layers": [{"material": "graphite", "thickness_mm": 3}], "rationale": "Thinner graphite to probe knee."},
+  {"layers": [{"material": "graphite", "thickness_mm": 2}], "rationale": "Very thin graphite, aggressive mass cut."},
+  {"layers": [{"material": "copper", "thickness_mm": 2}], "rationale": "Thin copper leveraging high conductivity spreading despite density."},
+  {"layers": [{"material": "copper", "thickness_mm": 1}], "rationale": "Minimal copper thickness, best-case spreader test."},
+  {"layers": [{"material": "aluminium_nitride", "thickness_mm": 3}], "rationale": "Alternative mid-density, mid-conductivity ceramic candidate."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 1}], "rationale": "Extreme thin aluminium to bound the knee from below."}
+]

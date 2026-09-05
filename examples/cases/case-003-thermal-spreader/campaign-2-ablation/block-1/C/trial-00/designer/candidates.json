@@ -1,0 +1,50 @@
+[
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 10}],
+    "rationale": "Reproduces the prior Core-scored 10mm graphite design exactly (measured 403K screen, 325K hotspot, 18 kg/m^2, 10mm). All four requirements pass with large margins (R1: 17K, R2: 15K, R3: 82 kg/m^2, R4: 37mm). This is my certainty anchor: it is not an extrapolation, it is the known lightest passing design in the prior record. Included to guarantee at least one confirmed-safe, already-lightest candidate is in the set."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 9}],
+    "rationale": "Predicted screen temp via T=399+60000*(t/k): 0.009/150=6.0e-5 -> ~403K, 17K margin under R1's 420K. R2: the prior shows graphite's hotspot value is identical (325K) at 10, 20, and 30mm, i.e. flat across a 3x thickness range, which indicates the plate is already deep in the saturated (thick-plate) spreading regime at 10mm. A 10% thickness cut is a very small step below that validated floor, so I expect the same ~325K, 15K margin. Mass = 1800*0.009 = 16.2 kg/m^2 (10% lighter than the 18 kg/m^2 prior best), well under 100. Thickness 9mm is far under the 40mm cap."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 8}],
+    "rationale": "Screen temp: 0.008/150=5.33e-5 -> ~402K, 18K margin. Same saturated-regime reasoning as the 9mm case applies with slightly more confidence-decay: this is a 20% cut below the validated 10mm floor. Given the prior's flatness held across a 300% thickness range (10->30mm) for graphite, aluminium and copper alike, I judge an 8mm plate is still very likely inside the saturated regime, keeping the hotspot near 325K (15K margin). Mass = 14.4 kg/m^2, 20% lighter than the prior best; thickness and mass margins are large."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 7}],
+    "rationale": "Screen temp: 0.007/150=4.67e-5 -> ~402K, margin 18K. This is a 30% cut below the validated floor, so my confidence in staying fully saturated for R2 is moderate rather than high, but the 15K observed margin at 10mm gives real headroom before 340K is at risk. Mass = 12.6 kg/m^2 (30% lighter than prior best). R3 and R4 margins remain very large."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 6}],
+    "rationale": "Screen temp: 0.006/150=4.0e-5 -> ~401K, margin 19K. A 40% cut below the validated 10mm floor. I include this as a moderate-confidence step in the sweep: if the saturation threshold sits anywhere below 6mm (plausible given how flat the 10-30mm band is), this should still land near 325K; if the threshold is between 6 and 10mm, this could start to show some rise, though the 15K buffer leaves room. Mass = 10.8 kg/m^2, R3/R4 margins remain enormous."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 5}],
+    "rationale": "Screen temp: 0.005/150=3.33e-5 -> ~401K, margin 19K. This is my best single-layer guess for 'lightest still-likely-pass': half the validated thickness. I believe this is more likely than not to remain inside or near the saturated regime given the very shallow thickness-sensitivity observed everywhere in the prior data, and the 15K R2 margin gives cushion even if some resistance increase occurs. Mass = 9.0 kg/m^2, half the prior best's mass. R3/R4 trivially satisfied."
+  },
+  {
+    "layers": [{"material": "copper", "thickness_mm": 1}, {"material": "graphite", "thickness_mm": 5}],
+    "rationale": "Same graphite thickness as the previous candidate (5mm) plus a 1mm copper face skin at the heated surface, mirroring the prior's own copper-clad-aluminium designs (e.g. 2mm copper + 10mm aluminium measured 323K, better than pure 10mm aluminium's 324K) where a thin high-conductivity skin improved lateral spreading. This is a hedge: if thinning the graphite body alone risks leaving the saturated regime, the copper skin should pre-spread the flux and reduce that risk, at a mass cost. Screen temp: coppper 0.001/400=2.5e-6 + graphite 3.33e-5 = 3.58e-5*60000=2.15K -> ~401K, large margin. Mass = 8.96+9.0 = 17.96 kg/m^2, essentially matching the prior best's mass at 18 kg/m^2 but with only 6mm total thickness instead of 10mm and an added spreading-skin safety factor on R2."
+  },
+  {
+    "layers": [{"material": "copper", "thickness_mm": 1}, {"material": "graphite", "thickness_mm": 4}],
+    "rationale": "1mm copper spreading skin over 4mm graphite (5mm total). Screen temp: copper 2.5e-6 + graphite 0.004/150=2.67e-5, sum 2.92e-5*60000=1.75K -> ~400.75K, 19K margin. For R2, the copper skin is expected to do most of the lateral spreading work (as in the prior's copper+aluminium data), so I expect a value close to or better than pure graphite's 325K despite the thinner overall stack, though confidence is moderate given no data at this thickness. Mass = 8.96+7.2 = 16.16 kg/m^2, 10% lighter than the prior best while carrying an explicit spreading-skin hedge."
+  },
+  {
+    "layers": [{"material": "copper", "thickness_mm": 1}, {"material": "graphite", "thickness_mm": 3}],
+    "rationale": "1mm copper skin over 3mm graphite (4mm total), the most aggressive copper-hedged candidate. Screen temp: copper 2.5e-6 + graphite 0.003/150=2.0e-5, sum 2.25e-5*60000=1.35K -> ~400.35K, 20K margin, so R1 is not a concern even here. R2 confidence is lower than the thicker hedges since the total stack is under half the validated 10mm floor, but the copper skin should still meaningfully outperform an unclad graphite layer of the same total thickness. Mass = 8.96+5.4 = 14.36 kg/m^2, 20% lighter than the prior best."
+  },
+  {
+    "layers": [{"material": "aluminium", "thickness_mm": 5}],
+    "rationale": "Parallel-family fallback to the 5mm graphite candidate, using aluminium instead. The prior shows aluminium's hotspot value is also flat (324K) from 10-30mm, so the same saturated-regime logic applies. Screen temp: 0.005/200=2.5e-5*60000=1.5K -> ~400.5K, 19.5K margin. This diversifies material risk: if graphite has some idiosyncratic thin-plate behavior that aluminium does not (or vice versa), having both families thinned to the same 5mm point increases the chance at least one behaves as predicted. Mass = 2700*0.005 = 13.5 kg/m^2, 25% lighter than the prior best."
+  },
+  {
+    "layers": [{"material": "aluminium", "thickness_mm": 4}],
+    "rationale": "More aggressive aluminium version, 4mm. Screen temp: 0.004/200=2.0e-5*60000=1.2K -> ~400.2K, 20K margin. Same saturated-regime reasoning as the 4mm/5mm graphite candidates: aluminium's flatness from 10-30mm suggests real headroom below 10mm too, though confidence decays with thickness. Mass = 2700*0.004 = 10.8 kg/m^2, 40% lighter than the prior best."
+  },
+  {
+    "layers": [{"material": "copper", "thickness_mm": 1}, {"material": "aluminium", "thickness_mm": 4}],
+    "rationale": "Copper-skin hedge on the aluminium track, mirroring the graphite hedges above and closely analogous to the prior's own 2mm copper + 10mm aluminium design (which measured 323K, better than unclad 10mm aluminium's 324K), just with a thinner aluminium base. Screen temp: copper 2.5e-6 + aluminium 0.004/200=2.0e-5, sum 2.25e-5*60000=1.35K -> ~400.35K, 20K margin. Mass = 8.96+10.8 = 19.76 kg/m^2, slightly heavier than the prior best but with a validated spreading-skin pattern and only 5mm total thickness, serving as the most conservative of the thin-aluminium hedges."
+  }
+]

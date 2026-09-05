@@ -1,0 +1,12 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 1}], "rationale": "Constellation shows 10/20/30mm graphite all give near-identical hotspot (~325K) with large margin to 340K limit, suggesting spreading is already saturated at 10mm (kt=1.5) and thickness can shrink to cut mass. Graphite has the best density/conductivity ratio (1800/150=12) of all tested materials, so testing the thinnest plausible plate first."},
+  {"layers": [{"material": "graphite", "thickness_mm": 2}], "rationale": "Same saturation evidence as above; bracketing 1mm with a slightly thicker option in case 1mm is below the spreading threshold."},
+  {"layers": [{"material": "graphite", "thickness_mm": 3}], "rationale": "Bracketing candidate between 2mm and 5mm to refine where hotspot departs from the ~325K saturated value seen at 10-30mm in the constellation."},
+  {"layers": [{"material": "graphite", "thickness_mm": 5}], "rationale": "Half the thickness of the cheapest known all-PASS design (10mm graphite, mass 18 kg/m2); tests whether the flat hotspot trend (325K at 10/20/30mm) extends down to 5mm."},
+  {"layers": [{"material": "graphite", "thickness_mm": 7}], "rationale": "Intermediate point between 5mm and the known-good 10mm graphite baseline, for bracketing the saturation/threshold boundary."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 2}], "rationale": "Aluminium's 10/20/30mm hotspots are also flat at ~324K; aluminium's density/conductivity ratio (13.5) is close to graphite's (12), so thin aluminium is a cross-check on whether the saturation behavior generalizes across materials rather than being graphite-specific."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 4}], "rationale": "Bracketing point above 2mm for aluminium, same saturation-boundary rationale as the graphite series."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 6}], "rationale": "Further bracketing point for aluminium approaching half of the known 10mm all-PASS design mass (27 kg/m2)."},
+  {"layers": [{"material": "copper", "thickness_mm": 1}], "rationale": "Copper's high conductivity (400 W/mK) means even 1mm gives kt=0.4, comparable to thin graphite/aluminium candidates, testing whether high-k thin copper is competitive on mass (density 8960) despite its poor density/conductivity ratio (22.4)."},
+  {"layers": [{"material": "copper", "thickness_mm": 2}], "rationale": "Bracketing point above 1mm copper to see the local trend for a high-conductivity, high-density material at low thickness."}
+]

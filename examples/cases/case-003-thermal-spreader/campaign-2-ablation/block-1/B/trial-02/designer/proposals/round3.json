@@ -1,0 +1,4 @@
+[
+  {"layers": [{"material": "aluminium", "thickness_mm": 1}], "rationale": "Aluminium's higher conductivity (200 vs graphite's 150) may let a 1mm sheet spread heat well enough to beat graphite's 2mm/3.6kg-m2 result, at a lower density-driven mass (2.7 kg/m2)."},
+  {"layers": [{"material": "aluminium_nitride", "thickness_mm": 1}], "rationale": "Aluminium nitride's conductivity (170) is close to graphite's and its density (3260) is still below the 3.6 kg/m2 mass bar set by 2mm graphite; testing if 1mm suffices."}
+]

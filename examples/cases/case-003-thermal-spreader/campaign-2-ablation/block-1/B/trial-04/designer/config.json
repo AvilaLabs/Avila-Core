@@ -1,0 +1,16 @@
+{
+  "arm": "B-raw-solver",
+  "case": "/home/connoravila/Documents/Avila-Labs/project-north-star/examples/cases/case-003-thermal-spreader",
+  "materials_path": "/home/connoravila/Documents/Avila-Labs/project-north-star/examples/capabilities/thermal/materials.json",
+  "source_path": "/home/connoravila/Documents/Avila-Labs/project-north-star/examples/capabilities/thermal/source.json",
+  "screen_script": "/home/connoravila/Documents/Avila-Labs/project-north-star/examples/capabilities/thermal/thermal_screen.py",
+  "fe_script": "/home/connoravila/Documents/Avila-Labs/project-north-star/examples/capabilities/thermal/thermal_fe.py",
+  "python3": "/usr/bin/python3",
+  "thermal_python": "/home/connoravila/.venvs/thermal/bin/python",
+  "manifest_sha256": "sha256:33b78ae3993330049dcc2b27b7c7bdc62150efa869e77d88b2ca1c07cb0c520a",
+  "prior_logs": [
+    "/home/connoravila/Documents/Avila-Labs/project-north-star/examples/cases/case-003-thermal-spreader/campaign-1/sweep/campaign-log.jsonl"
+  ],
+  "screen_budget": 40,
+  "eval_budget": 12
+}

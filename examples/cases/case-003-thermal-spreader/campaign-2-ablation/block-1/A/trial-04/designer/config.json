@@ -1,0 +1,25 @@
+{
+  "core": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/exp-002/avila-core-frozen",
+  "case": "/home/connoravila/Documents/Avila-Labs/project-north-star/examples/cases/case-003-thermal-spreader",
+  "source_roots": {
+    "case": "/home/connoravila/Documents/Avila-Labs/project-north-star/examples/cases/case-003-thermal-spreader",
+    "thermal": "/home/connoravila/Documents/Avila-Labs/project-north-star/examples/capabilities/thermal"
+  },
+  "manifest_sha256": "sha256:33b78ae3993330049dcc2b27b7c7bdc62150efa869e77d88b2ca1c07cb0c520a",
+  "screen_capabilities": {
+    "python3": "/usr/bin/python3"
+  },
+  "transport_capabilities": {
+    "thermal-python": "/home/connoravila/.venvs/thermal/bin/python"
+  },
+  "environment": {},
+  "prior_logs": [
+    "/home/connoravila/Documents/Avila-Labs/project-north-star/examples/cases/case-003-thermal-spreader/campaign-1/sweep/campaign-log.jsonl"
+  ],
+  "materials": "/home/connoravila/Documents/Avila-Labs/project-north-star/examples/capabilities/thermal",
+  "screen_budget": 40,
+  "transport_budget": 12,
+  "candidate_schema": "avila.thermal/candidate/v1",
+  "thickness_key": "thickness_mm",
+  "probe_thickness": "5"
+}

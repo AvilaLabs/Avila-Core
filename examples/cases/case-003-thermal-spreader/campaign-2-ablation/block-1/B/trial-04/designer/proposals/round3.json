@@ -1,0 +1,4 @@
+[
+  {"layers": [{"material": "aluminium", "thickness_mm": 1}], "rationale": "Aluminium has higher conductivity than graphite (200 vs 150 W/mK) but higher density (2700 vs 1800); at 1mm it would be 2.7 kg/m2, lighter than 2mm graphite (3.6 kg/m2), if it can still meet the FE hotspot limit."},
+  {"layers": [{"material": "aluminium_nitride", "thickness_mm": 1}], "rationale": "Aluminium nitride at 1mm gives 3.26 kg/m2, slightly lighter than 2mm graphite, with conductivity 170 W/mK."}
+]

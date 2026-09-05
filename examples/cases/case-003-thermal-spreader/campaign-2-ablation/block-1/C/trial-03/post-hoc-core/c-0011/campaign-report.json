@@ -1,0 +1,217 @@
+{
+  "schema_version": "avila.core/campaign-report/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "status": "evaluated",
+  "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
+  "claims_sha256": "sha256:5fd56f751fba1bca48324435c3df0dda934a608ce235ceb0f678bea6cb9c3247",
+  "admissions": [
+    {
+      "evidence_id": "input:candidate",
+      "source": {
+        "source": "contract_input",
+        "input_id": "candidate"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:fe-script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "fe-script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:materials",
+      "source": {
+        "source": "contract_input",
+        "input_id": "materials"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:screen-script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "screen-script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:source",
+      "source": {
+        "source": "contract_input",
+        "input_id": "source"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "fe-hotspot-temperature",
+      "source": {
+        "source": "step_output",
+        "step_id": "fe",
+        "output_slot": "hotspot-temperature"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "fe-result",
+      "source": {
+        "source": "step_output",
+        "step_id": "fe",
+        "output_slot": "fe-result"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "screen-hotspot-temperature",
+      "source": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "hotspot-temperature"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "screen-areal-mass",
+      "source": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "areal-mass"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "screen-thickness",
+      "source": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "thickness"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "screen-result",
+      "source": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "screen-result"
+      },
+      "state": "admitted"
+    }
+  ],
+  "verdicts": [
+    {
+      "requirement_id": "THERM-R1-screen",
+      "statement": "Screening estimate of the hotspot temperature is at or below 420 K (nominal basis; the estimate ignores spreading and is pessimistic, so this guide only excludes hopeless designs and establishes nothing).",
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "hotspot-temperature"
+      },
+      "evidence_ids": [
+        "screen-hotspot-temperature"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "nominal.le.within",
+        "canonical_unit": "K",
+        "limit_canonical": "420",
+        "nominal_canonical": "3205/8",
+        "basis_visible": "nominal"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
+        "claims_sha256": "sha256:5fd56f751fba1bca48324435c3df0dda934a608ce235ceb0f678bea6cb9c3247"
+      }
+    },
+    {
+      "requirement_id": "THERM-R2-hotspot",
+      "statement": "Finite-element hotspot temperature on the heated face is at or below 340 K within its discretisation bracket.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "fe",
+        "output_slot": "hotspot-temperature"
+      },
+      "evidence_ids": [
+        "fe-hotspot-temperature"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "enclosure.le.within",
+        "canonical_unit": "K",
+        "limit_canonical": "340",
+        "lower_canonical": "32314773/100000",
+        "upper_canonical": "16157389/50000"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
+        "claims_sha256": "sha256:5fd56f751fba1bca48324435c3df0dda934a608ce235ceb0f678bea6cb9c3247"
+      }
+    },
+    {
+      "requirement_id": "THERM-R3-mass",
+      "statement": "Areal mass of the plate is at or below 100 kg per square metre.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "areal-mass"
+      },
+      "evidence_ids": [
+        "screen-areal-mass"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "bounded.le.within",
+        "canonical_unit": "kg",
+        "limit_canonical": "100",
+        "lower_canonical": "224/5",
+        "upper_canonical": "224/5",
+        "nominal_canonical": "224/5"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
+        "claims_sha256": "sha256:5fd56f751fba1bca48324435c3df0dda934a608ce235ceb0f678bea6cb9c3247"
+      }
+    },
+    {
+      "requirement_id": "THERM-R4-thickness",
+      "statement": "Total plate thickness is at or below 40 mm.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "screen",
+        "output_slot": "thickness"
+      },
+      "evidence_ids": [
+        "screen-thickness"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "bounded.le.within",
+        "canonical_unit": "cm",
+        "limit_canonical": "4",
+        "lower_canonical": "1/2",
+        "upper_canonical": "1/2",
+        "nominal_canonical": "1/2"
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
+        "claims_sha256": "sha256:5fd56f751fba1bca48324435c3df0dda934a608ce235ceb0f678bea6cb9c3247"
+      }
+    }
+  ],
+  "campaign_sha256": "sha256:b996face3930d9bcaf3552e7cfbc45695cf8843de97a363327220860599f7a25",
+  "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
+}

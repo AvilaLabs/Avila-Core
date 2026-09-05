@@ -1,0 +1,8 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 4}], "rationale": "Graphite has best conductivity/density ratio in table; screen very thin plate to find lower thickness bound."},
+  {"layers": [{"material": "graphite", "thickness_mm": 5}], "rationale": "Screen 5mm graphite."},
+  {"layers": [{"material": "graphite", "thickness_mm": 6}], "rationale": "Screen 6mm graphite."},
+  {"layers": [{"material": "graphite", "thickness_mm": 7}], "rationale": "Screen 7mm graphite."},
+  {"layers": [{"material": "graphite", "thickness_mm": 8}], "rationale": "Screen 8mm graphite."},
+  {"layers": [{"material": "graphite", "thickness_mm": 9}], "rationale": "Screen 9mm graphite, just below known-good 10mm prior."}
+]

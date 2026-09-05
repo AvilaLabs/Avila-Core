@@ -1,0 +1,12 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 1}], "rationale": "Lightest possible single graphite layer; screen only, checking if 1D estimate stays under 420K limit."},
+  {"layers": [{"material": "graphite", "thickness_mm": 2}], "rationale": "Thin graphite plate; testing mass/thickness scaling vs prior 10mm graphite baseline."},
+  {"layers": [{"material": "graphite", "thickness_mm": 3}], "rationale": "Thin graphite plate candidate."},
+  {"layers": [{"material": "graphite", "thickness_mm": 4}], "rationale": "Thin graphite plate candidate."},
+  {"layers": [{"material": "graphite", "thickness_mm": 5}], "rationale": "Half of prior 10mm graphite baseline, to see if margin holds at half mass."},
+  {"layers": [{"material": "copper", "thickness_mm": 1}, {"material": "graphite", "thickness_mm": 2}], "rationale": "Thin high-conductivity copper cladding on heated face to aid spreading, backed by lightweight graphite."},
+  {"layers": [{"material": "copper", "thickness_mm": 1}, {"material": "graphite", "thickness_mm": 3}], "rationale": "Copper-clad graphite, slightly thicker graphite backing."},
+  {"layers": [{"material": "copper", "thickness_mm": 2}, {"material": "graphite", "thickness_mm": 2}], "rationale": "Heavier copper cladding to test if extra spreading capacity is worth the mass at this thickness."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 1}, {"material": "graphite", "thickness_mm": 2}], "rationale": "Cheaper/lighter cladding alternative to copper, testing if aluminium alone helps spreading enough."},
+  {"layers": [{"material": "graphite", "thickness_mm": 6}], "rationale": "Intermediate thickness graphite candidate between 5mm and prior 10mm baseline."}
+]

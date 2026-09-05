@@ -1,0 +1,114 @@
+{
+  "seed": 20260904,
+  "trials_per_arm": 5,
+  "execution_order": [
+    "C-1",
+    "A-4",
+    "B-3",
+    "C-3",
+    "C-0",
+    "A-0",
+    "C-4",
+    "B-2",
+    "A-3",
+    "B-4",
+    "C-2",
+    "B-1",
+    "A-2",
+    "A-1",
+    "B-0"
+  ],
+  "results": [
+    {
+      "arm": "C",
+      "trial": 1,
+      "status": "complete",
+      "candidates_scored": 12
+    },
+    {
+      "arm": "A",
+      "trial": 4,
+      "status": "complete",
+      "candidates_scored": 6
+    },
+    {
+      "arm": "B",
+      "trial": 3,
+      "status": "complete",
+      "candidates_scored": 7
+    },
+    {
+      "arm": "C",
+      "trial": 3,
+      "status": "complete",
+      "candidates_scored": 12
+    },
+    {
+      "arm": "C",
+      "trial": 0,
+      "status": "complete",
+      "candidates_scored": 12
+    },
+    {
+      "arm": "A",
+      "trial": 0,
+      "status": "complete",
+      "candidates_scored": 7
+    },
+    {
+      "arm": "C",
+      "trial": 4,
+      "status": "complete",
+      "candidates_scored": 12
+    },
+    {
+      "arm": "B",
+      "trial": 2,
+      "status": "complete",
+      "candidates_scored": 9
+    },
+    {
+      "arm": "A",
+      "trial": 3,
+      "status": "complete",
+      "candidates_scored": 7
+    },
+    {
+      "arm": "B",
+      "trial": 4,
+      "status": "complete",
+      "candidates_scored": 8
+    },
+    {
+      "arm": "C",
+      "trial": 2,
+      "status": "complete",
+      "candidates_scored": 10
+    },
+    {
+      "arm": "B",
+      "trial": 1,
+      "status": "complete",
+      "candidates_scored": 6
+    },
+    {
+      "arm": "A",
+      "trial": 2,
+      "status": "complete",
+      "candidates_scored": 7
+    },
+    {
+      "arm": "A",
+      "trial": 1,
+      "status": "complete",
+      "candidates_scored": 4
+    },
+    {
+      "arm": "B",
+      "trial": 0,
+      "status": "complete",
+      "candidates_scored": 6
+    }
+  ],
+  "generated_at": "2026-09-05T02:21:25Z"
+}

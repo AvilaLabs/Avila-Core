@@ -1,0 +1,17 @@
+| arm | trial | status | success | evals_to_first_pass | lightest_pass_mass_kg_m2 | invalid_or_refused | out_of_envelope | inconclusive | tool_calls | total_cost_usd | session_wall_s | leak_clean |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A | 0 | complete | True | 2 | 3.6 | 0 | 0 | 0 | 10 | 0.3028634 | 179.23449686996173 | False |
+| A | 1 | complete | True | 3 | 8.96 | 0 | 0 | 0 | 8 | 0.3002496 | 199.92960842698812 | False |
+| A | 2 | complete | True | 2 | 3.6 | 0 | 0 | 0 | 9 | 0.309041 | 180.83334765397012 | False |
+| A | 3 | complete | True | 2 | 3.6 | 0 | 0 | 0 | 9 | 0.3714092 | 227.98146205197554 | False |
+| A | 4 | complete | True | 2 | 3.6 | 0 | 0 | 0 | 9 | 0.3475732 | 221.07111561798956 | False |
+| B | 0 | complete | True | 2 | 3.6 | 0 | 0 | 0 | 8 | 0.2534156 | 149.6672660249751 | False |
+| B | 1 | complete | True | 2 | 3.6 | 0 | 0 | 0 | 8 | 0.3290702 | 204.56090106000192 | True |
+| B | 2 | complete | True | 1 | 3.6 | 0 | 0 | 0 | 12 | 0.447961 | 248.55183604196645 | False |
+| B | 3 | complete | True | 2 | 3.6 | 0 | 0 | 0 | 9 | 0.31993699999999997 | 182.75715942203533 | False |
+| B | 4 | complete | True | 1 | 3.6 | 0 | 0 | 0 | 10 | 0.2523476 | 137.19437907193787 | False |
+| C | 0 | complete | True | 1 | 9.0 | 0 | 0 | 0 | 4 | 0.3986482 | 261.13558869902045 | True |
+| C | 1 | complete | True | 1 | 3.6 | 0 | 0 | 0 | 4 | 0.39568020000000004 | 238.5978949610144 | True |
+| C | 2 | complete | True | 1 | 3.6 | 0 | 0 | 0 | 4 | 0.48377400000000004 | 316.9652687640628 | True |
+| C | 3 | complete | True | 1 | 3.6 | 0 | 0 | 0 | 4 | 0.31422920000000004 | 214.7751765140565 | True |
+| C | 4 | complete | True | 1 | 3.6 | 0 | 0 | 0 | 4 | 0.333082 | 218.64702788402792 | True |

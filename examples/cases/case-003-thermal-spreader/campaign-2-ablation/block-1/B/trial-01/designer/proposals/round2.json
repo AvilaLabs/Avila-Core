@@ -1,0 +1,3 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 1}], "rationale": "Push graphite to minimum whole-mm thickness to test if FE hotspot still clears 340K, since graphite has best conductivity-to-density ratio among candidates."}
+]

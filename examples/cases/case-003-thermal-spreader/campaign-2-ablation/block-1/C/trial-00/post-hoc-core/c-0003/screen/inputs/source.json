@@ -1,0 +1,15 @@
+{
+  "schema": "avila.thermal/source/v1",
+  "description": "A 100 mm wide plate cross-section, symmetric about the strip center, so the half-width (50 mm) is the modeled domain. A uniform heat flux is applied over a central strip of the heated face; the rest of that face is insulated. The far face is cooled by convection to ambient; the lateral faces (the symmetry plane and the plate edge) are insulated.",
+  "width_mm": "100",
+  "strip_width_mm": "20",
+  "heat_flux_W_m2": "50000",
+  "convection_W_m2K": "500",
+  "ambient_K": "300",
+  "notes": [
+    "heat_flux_W_m2 (5 W/cm2) is a modest, plausible areal power density for a spread-out electronics or power-module heat source; it is a design input chosen for this case, not a measurement.",
+    "convection_W_m2K (500) represents a moderate forced-air or heatsink-interface cooling condition, well above bare natural convection (order 5-25 W/m2K) and well below a liquid cold plate (order 1000+ W/m2K).",
+    "ambient_K (300, 26.85 C) is a round room-temperature nominal.",
+    "strip_width_mm (20) is one fifth of width_mm (100): narrow enough that lateral spreading through a high-conductivity layer materially lowers the hotspot relative to the one-dimensional screen, which is the physical effect this case exists to exercise."
+  ]
+}

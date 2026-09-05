@@ -1,0 +1,3 @@
+[
+  {"layers": [{"material": "aluminium_nitride", "thickness_mm": 1}], "rationale": "1mm copper (k=400, density 8960) passed R2 with margin 7.99K at mass 8.96 kg/m^2; 1mm aluminium (k=200, density 2700) failed by only 0.19K. Aluminium nitride (k=170, density 3260) sits between graphite and aluminium in conductivity, dominated by aluminium on both axes, so it is expected to fail, but its mass (3.26 kg/m^2) would be a big win over copper if it somehow passed. Cheap to rule out before finalizing copper as the answer."}
+]

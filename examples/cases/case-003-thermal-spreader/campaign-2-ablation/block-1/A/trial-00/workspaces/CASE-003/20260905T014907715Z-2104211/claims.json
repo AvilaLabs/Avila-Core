@@ -1,0 +1,296 @@
+{
+  "claims": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.thermal-fe+json",
+        "sha256": "sha256:6d447d025a570c260ae782ef46889d9e334da2998abacaae13caf3123be6ca9f"
+      },
+      "claim": {
+        "lower": {
+          "unit": "K",
+          "value": "342.53092"
+        },
+        "model": "interval",
+        "upper": {
+          "unit": "K",
+          "value": "342.53309"
+        }
+      },
+      "claim_id": "fe-hotspot-temperature",
+      "output_slot": "hotspot-temperature",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+scikit-fem-12.0.2",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "qualification": {
+        "qualification_id": "avila-labs.thermal/spreader-fe-skfem",
+        "revision": 1,
+        "sha256": "sha256:04b4298ba669a90624fff3e738aa039a502b824b7d74eb95712ad15ba580b623",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"plate.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.heat_flux\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":{\"unit\":\"W/m2\",\"value\":\"100000\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.convection\",\"op\":\"ge\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":{\"unit\":\"W/m2/K\",\"value\":\"5\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.convection\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":{\"unit\":\"W/m2/K\",\"value\":\"5000\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.strip_width\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":{\"unit\":\"mm\",\"value\":\"100\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
+      "step_id": "fe"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.thermal-fe+json",
+        "sha256": "sha256:6d447d025a570c260ae782ef46889d9e334da2998abacaae13caf3123be6ca9f"
+      },
+      "claim": {
+        "model": "unquantified"
+      },
+      "claim_id": "fe-result",
+      "output_slot": "fe-result",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4+scikit-fem-12.0.2",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "qualification": {
+        "qualification_id": "avila-labs.thermal/spreader-fe-skfem",
+        "revision": 1,
+        "sha256": "sha256:04b4298ba669a90624fff3e738aa039a502b824b7d74eb95712ad15ba580b623",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"plate.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.heat_flux\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":{\"unit\":\"W/m2\",\"value\":\"100000\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.convection\",\"op\":\"ge\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":{\"unit\":\"W/m2/K\",\"value\":\"5\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.convection\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":{\"unit\":\"W/m2/K\",\"value\":\"5000\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"source.strip_width\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":{\"unit\":\"mm\",\"value\":\"100\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
+      "step_id": "fe"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.thermal-screen+json",
+        "sha256": "sha256:db81fc08e5dbc6909c59aa1f0473f3d84d7303c58cef4afe8eb8d17c7daf2f8d"
+      },
+      "claim": {
+        "model": "unquantified",
+        "nominal": {
+          "unit": "K",
+          "value": "400.294117647"
+        }
+      },
+      "claim_id": "screen-hotspot-temperature",
+      "output_slot": "hotspot-temperature",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "screen"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.thermal-screen+json",
+        "sha256": "sha256:db81fc08e5dbc6909c59aa1f0473f3d84d7303c58cef4afe8eb8d17c7daf2f8d"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "kg",
+          "value": "3.26"
+        }
+      },
+      "claim_id": "screen-areal-mass",
+      "output_slot": "areal-mass",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "qualification": {
+        "qualification_id": "avila-labs.thermal/screen-arithmetic",
+        "revision": 1,
+        "sha256": "sha256:2ce64c7049d319c0b9d9772dbde71cf9cc51240bcebccffa56f61faca024cd91",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"plate.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/screen@1\"},\"value\":{\"unit\":\"mm\",\"value\":\"50\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"plate.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/screen@1\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
+      "step_id": "screen"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.thermal-screen+json",
+        "sha256": "sha256:db81fc08e5dbc6909c59aa1f0473f3d84d7303c58cef4afe8eb8d17c7daf2f8d"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "mm",
+          "value": "1"
+        }
+      },
+      "claim_id": "screen-thickness",
+      "output_slot": "thickness",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "qualification": {
+        "qualification_id": "avila-labs.thermal/screen-arithmetic",
+        "revision": 1,
+        "sha256": "sha256:2ce64c7049d319c0b9d9772dbde71cf9cc51240bcebccffa56f61faca024cd91",
+        "state": "inside",
+        "terms": [
+          {
+            "predicate": "{\"fact\":{\"name\":\"plate.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/screen@1\"},\"value\":{\"unit\":\"mm\",\"value\":\"50\"}}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"fact\":{\"name\":\"plate.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/screen@1\"},\"value\":3}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          },
+          {
+            "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+            "result": "true"
+          }
+        ]
+      },
+      "step_id": "screen"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.thermal-screen+json",
+        "sha256": "sha256:db81fc08e5dbc6909c59aa1f0473f3d84d7303c58cef4afe8eb8d17c7daf2f8d"
+      },
+      "claim": {
+        "model": "unquantified"
+      },
+      "claim_id": "screen-result",
+      "output_slot": "screen-result",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+      },
+      "step_id": "screen"
+    }
+  ],
+  "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
+  "inputs": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.thermal-candidate+json",
+        "sha256": "sha256:fb0ebecae77e3a8783cf9cfb5bb17cb99d730a3a476f5495a9032fa25cb54d89"
+      },
+      "input_id": "candidate"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:9a64eb0922b786bd50ece00e8b60206e23194f7566296ccd6ef900a71c491b63"
+      },
+      "input_id": "fe-script"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.thermal-materials+json",
+        "sha256": "sha256:08cc8fb37c2d154f3dc0d032019b64b14a98b4a76124b44ac9128e8e762fb0f6"
+      },
+      "input_id": "materials"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:0c3259481b6e6ccf0ade84705d0def70a34bad4a2de27061713ece99af4834f7"
+      },
+      "input_id": "screen-script"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.thermal-source+json",
+        "sha256": "sha256:749971e02a4872605082bf643f7bfcfbbb7be889bdcfe09af9a1fb81e4117f1f"
+      },
+      "input_id": "source"
+    }
+  ],
+  "schema_version": "avila.core/evidence-claims/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft"
+}

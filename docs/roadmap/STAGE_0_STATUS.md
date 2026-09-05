@@ -66,7 +66,7 @@ external product gate.
 | Technical verdict independent of review | Implemented | Kernel, campaign, claims, schemas, CASE-000, and regressions contain no review-gating path |
 | Fixed requirements during search | Implemented for native JSON attempt lineages | CASE-008 and CASE-009 each record two attempts under one manifest and compiled snapshot; Core refuses a child if its parent record, manifest, snapshot, candidate state, or derived diff cannot be revalidated. CASE-009 additionally demonstrates exact negative margin comparison and PASS→FAIL transitions. Signed package roots remain future work. |
 | Known shortcut refusal | Exercised | An adversarial designer arm (CASE-002 campaign 3, amendment A6) confirmed refusals for out-of-envelope candidates, a wrong interpreter digest, a particle count below its domain, and coverage on a weaker basis, and obtained undeserved verdicts only by rewriting the package; the identity log and the manifest pin (S-030) now make a rewritten package a refusal or a visibly different identity | Signed receipts and manifests |
-| Autonomous search outcome | Reached twice | CASE-002 campaign 3: a language-model designer found an all-PASS design 277 kg lighter than the sweep's best at its second transport and stopped by judgment; the seeded surrogate found one at its eleventh. CASE-003 campaign 1, under the manifest pin: the same designer found an all-PASS spreader five times lighter than the sweep's bar at its sixth evaluation; see each case's `RESULTS.md` | A matched-arm ablation (EXP-002) that isolates Core's contribution, with a predeclared shortcut refused during a successful search |
+| Autonomous search outcome | Reached twice | CASE-002 campaign 3: a language-model designer found an all-PASS design 277 kg lighter than the sweep's best at its second transport and stopped by judgment; the seeded surrogate found one at its eleventh. CASE-003 campaign 1, under the manifest pin: the same designer found an all-PASS spreader five times lighter than the sweep's bar at its sixth evaluation; see each case's `RESULTS.md` | EXP-002 ran on CASE-003 (2026-09-05, 15 trials, three arms): non-discriminating, every arm reached the optimum in one to three evaluations; Core's contribution must be isolated on a harder case (CASE-002). The predeclared shortcut was never proposed, so refusal during a successful search is still unexercised |
 | Optional practicality routing | Implemented for the slice | Exact instructed dossier exercises both `request_changes` and `present_to_user`; omission leaves Core fully usable |
 | Independent verification | Open | A separately implemented verifier reproduces package identity and verdicts |
 | Performance baseline | Measured once, debug build (2026-09-04) | Verify-only run of CASE-003: 10–40 ms. CASE-002 with every root supplied: 0.31 s per invocation, almost all of it re-hashing ~250 MB of static nuclear and ACTINV artifacts; a fresh screen adds ~30 ms; activation staging copy plus hash 1.1–1.5 s against a 12.4 s step; transport 4–6 min per candidate at 5e5 particles. Attempt lineage: 0.36 ms per log line plus 18 ms. See the [proposal review](reviews/2026-09-04-architecture-proposal-review.md) | A release-build baseline (EXP-003) with a frozen workload and machine, cold and warm separated, machine time separated from model time |
@@ -98,11 +98,11 @@ Order adopted 2026-09-04 (S-034) after checking the external architecture
 proposal against the code; see the
 [review](reviews/2026-09-04-architecture-proposal-review.md).
 
-1. EXP-002, the Core-feedback ablation, on CASE-003 with matched arms
-   (Core feedback, raw solver output, no iterative feedback), a predeclared
-   tempting shortcut so refusal during a successful search is exercised
-   (EXP-005 folded in), designer transcripts and model identities bound to
-   the record, and the protocol frozen and hashed before any scored trial.
+1. EXP-002 ran on CASE-003 and is recorded as non-discriminating: every
+   arm, with or without Core, reached the optimum within three evaluations.
+   Next: the same frozen three-arm design on CASE-002, where full
+   evaluations cost minutes and two campaigns of designers failed, with the
+   predeclared shortcut made tempting so refusal is actually exercised.
 2. Strict qualification is landed: mechanism (S-035), candidate validation
    at the design boundary (S-036), per-output-slot scope and the screen
    geometry records with `require_qualification` set on CASE-001, CASE-002

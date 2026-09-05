@@ -1,0 +1,5 @@
+[
+  {"layers": [{"material": "aluminium", "thickness_mm": 1}], "rationale": "1mm graphite (k=150) fails hotspot at 344K by only 4.44K. Aluminium has higher conductivity (200) and lower density (2700 vs graphite's 1800*? actually higher density but density/k ratio 13.5 vs graphite's 12) so testing whether it can pass at 1mm, which would give a lighter design (2.7 kg/m2) than 2mm graphite (3.6 kg/m2, already confirmed PASS)."},
+  {"layers": [{"material": "copper", "thickness_mm": 1}], "rationale": "Copper has the highest conductivity (400) in the table; testing whether the improved spreading at 1mm compensates for its high density (8960), to see if it beats 2mm graphite's 3.6 kg/m2 mass."},
+  {"layers": [{"material": "aluminium_nitride", "thickness_mm": 1}], "rationale": "Aluminium nitride (k=170, density 3260) sits between aluminium and copper in conductivity; testing it as another 1mm data point to map how hotspot depends on conductivity at fixed thin thickness."}
+]

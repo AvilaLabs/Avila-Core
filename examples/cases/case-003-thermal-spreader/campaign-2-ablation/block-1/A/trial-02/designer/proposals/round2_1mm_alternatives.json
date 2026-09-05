@@ -1,0 +1,4 @@
+[
+  {"layers": [{"material": "aluminium", "thickness_mm": 1}], "rationale": "1mm graphite failed hotspot at 344K (limit 340K, margin -4.44K). Aluminium has higher conductivity (200 vs 150 W/mK) which should improve lateral spreading at the same 1mm thickness, and even though aluminium is denser (2700 vs 1800 kg/m3), 1mm aluminium (2.7 kg/m2) would still be lighter than the 2mm graphite record (3.6 kg/m2) if it passes."},
+  {"layers": [{"material": "aluminium_nitride", "thickness_mm": 1}], "rationale": "Aluminium nitride has conductivity 170 W/mK, above graphite's 150, so may close the 4.44K gap that made 1mm graphite fail. At 1mm its mass is 3.26 kg/m2, still lighter than the current best (2mm graphite, 3.6 kg/m2), if it passes hotspot."}
+]

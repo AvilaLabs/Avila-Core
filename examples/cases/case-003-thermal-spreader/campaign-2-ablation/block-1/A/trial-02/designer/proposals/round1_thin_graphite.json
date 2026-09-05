@@ -1,0 +1,10 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 1}], "rationale": "Constellation shows 10/20/30mm graphite all give hotspot 325K (flat), while mass scales linearly with thickness (18/36/54 kg/m2). This suggests convective resistance dominates over lateral spreading resistance in the 10-30mm range, so thinner plates may retain similar hotspot performance while cutting mass far below the 18 kg/m2 record set by 10mm graphite. Testing the extreme low end first to bound the regime."},
+  {"layers": [{"material": "graphite", "thickness_mm": 2}], "rationale": "Same reasoning as 1mm graphite: probing whether hotspot stays near 325K as thickness drops well below the 10mm record, to find the lightest still-passing thickness."},
+  {"layers": [{"material": "graphite", "thickness_mm": 3}], "rationale": "Intermediate point between 1mm and the 10mm record to help locate where lateral-spreading resistance starts to raise the hotspot above the flat 325K seen at 10-30mm."},
+  {"layers": [{"material": "graphite", "thickness_mm": 4}], "rationale": "Intermediate point bracketing the thin-plate regime; graphite's screen values in the constellation (403-410K, well under 420K nominal limit and decreasing with thickness in the 1D pessimistic model) indicate no screen risk at these low thicknesses."},
+  {"layers": [{"material": "graphite", "thickness_mm": 5}], "rationale": "Halfway to the 10mm record (18 kg/m2, all PASS); used to bracket the mass/thickness sweep between 1mm and 10mm."},
+  {"layers": [{"material": "graphite", "thickness_mm": 6}], "rationale": "Further bracket point approaching the known-good 10mm design, to narrow down the lightest passing thickness."},
+  {"layers": [{"material": "graphite", "thickness_mm": 7}], "rationale": "Further bracket point approaching the known-good 10mm design."},
+  {"layers": [{"material": "graphite", "thickness_mm": 8}], "rationale": "Bracket point close to the 10mm record (18 kg/m2 all-PASS) to see if mass can still be shaved with minimal risk."}
+]

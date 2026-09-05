@@ -1,0 +1,3 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 1}, {"material": "epoxy", "thickness_mm": 1}], "rationale": "Epoxy (density 1200) is lighter than graphite (1800); testing if a thin conductive layer at the heated face plus an epoxy outer layer can beat pure 2mm graphite's 3.6 kg/m2, or whether epoxy's poor conductivity (0.2 W/mK) in the conduction path ruins the hotspot."}
+]

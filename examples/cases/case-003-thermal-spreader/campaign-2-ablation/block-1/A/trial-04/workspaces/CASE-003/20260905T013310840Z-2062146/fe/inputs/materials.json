@@ -1,0 +1,35 @@
+{
+  "schema": "avila.thermal/materials/v1",
+  "note": "Nominal literature values for isotropic thermal conductivity and density at approximately room temperature. None of these values is qualified: no source is cited per value, no temperature dependence is modeled, and no specific alloy, grade, or supplier is named. They are round, commonly cited textbook/datasheet figures suitable for a screening-level design search, not a materials-certification record.",
+  "materials": {
+    "aluminium": {
+      "conductivity_W_mK": "200",
+      "density_kg_m3": "2700"
+    },
+    "copper": {
+      "conductivity_W_mK": "400",
+      "density_kg_m3": "8960"
+    },
+    "stainless_steel": {
+      "conductivity_W_mK": "16",
+      "density_kg_m3": "8000"
+    },
+    "titanium": {
+      "conductivity_W_mK": "21.9",
+      "density_kg_m3": "4500"
+    },
+    "graphite": {
+      "conductivity_W_mK": "150",
+      "density_kg_m3": "1800",
+      "note": "Real graphite is strongly anisotropic: pyrolytic sheet can exceed 1000 W/m-K in-plane and run under 10 W/m-K through-plane, depending on grade and processing. This model treats every material as isotropic (materials.json states one conductivity, and the finite-element solver applies it in every direction), so 150 W/m-K is a single nominal value for bulk isostatic/isotropic graphite, not a claim about any anisotropic sheet product."
+    },
+    "aluminium_nitride": {
+      "conductivity_W_mK": "170",
+      "density_kg_m3": "3260"
+    },
+    "epoxy": {
+      "conductivity_W_mK": "0.2",
+      "density_kg_m3": "1200"
+    }
+  }
+}

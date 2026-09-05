@@ -1,0 +1,5 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 1}], "rationale": "Screen extremely thin graphite to probe lower thickness bound."},
+  {"layers": [{"material": "graphite", "thickness_mm": 2}], "rationale": "Screen 2mm graphite."},
+  {"layers": [{"material": "graphite", "thickness_mm": 3}], "rationale": "Screen 3mm graphite."}
+]

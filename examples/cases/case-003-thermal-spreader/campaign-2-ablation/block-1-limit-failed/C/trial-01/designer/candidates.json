@@ -1,0 +1,53 @@
+[
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 1}],
+    "rationale": "Prior data show FE hotspot for a homogeneous plate is essentially invariant to thickness within a material: aluminium reads 324K at 10/20/30mm, graphite reads 325K at 10/20/30mm, copper reads 322K at 10/20/30mm -- a 3x thickness range produces zero change to the reported digits for every material tested. This is strong evidence the FE hotspot in this model is set by conductivity, not thickness, over the tested range. Graphite has the best conductivity-to-density ratio of the table (150 W/mK at 1800 kg/m3, ratio 0.083, versus 0.074 for aluminium and 0.045 for copper), so it is the natural material to push thin. At 1mm, areal mass is 1.8 kg/m2, roughly 15x lighter than the 27 kg/m2 prior 10mm-aluminium record and 10x lighter than the 18 kg/m2 prior 10mm-graphite record -- itself already the lightest passing prior design. R4 (thickness) is trivially satisfied (1mm << 40mm). R1 screening is a pure 1D conduction estimate that gets easier as thickness drops (402->410K as aluminium thickness rose 10->30mm, i.e. ~0.4 K/mm); dropping to 1mm should reduce, not raise, the screening estimate, so R1 stays well under 420K. R3 mass is trivially satisfied. The one real uncertainty is whether the thickness-invariance of R2 extrapolates from the tested 10-30mm range down to 1mm without entering a thin-plate spreading regime; the flat trend across a 3x range gives me confidence the plate is already deep in the thickness-insensitive regime at 10mm, so I expect this to hold, but I am submitting several less aggressive graphite thicknesses alongside this one as a hedge given no thickness below 10mm has been Core-scored."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 2}],
+    "rationale": "Same reasoning as the 1mm graphite candidate (thickness-invariant hotspot inferred from the prior 10/20/30mm graphite/aluminium/copper data, graphite chosen for best conductivity/density ratio), but at double the thickness as a slightly more conservative hedge against the untested region below 10mm. Areal mass 3.6 kg/m2, far below the 100 kg/m2 cap and well below the 18 kg/m2 prior graphite record. Thickness 2mm << 40mm cap. Screening estimate should sit even further below the 403K seen at 10mm graphite since thinner sections lower the 1D conduction estimate, leaving large R1 margin."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 3}],
+    "rationale": "Further step in the graphite thickness hedge ladder. Mass 5.4 kg/m2. If the thin-plate spreading regime begins somewhere below 10mm, a slightly thicker section than 1-2mm gives more margin against any unmodelled rise in hotspot while still being roughly a third of the lightest prior passing design's mass. R1/R3/R4 satisfied with large margin for the same reasons as the thinner graphite candidates."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 4}],
+    "rationale": "Mass 7.2 kg/m2. Another rung on the graphite hedge ladder between the aggressive 1-3mm candidates and the better-supported 5-10mm candidates, in case the thickness-invariance of R2 only holds down to a few mm rather than all the way to 1mm."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 5}],
+    "rationale": "Mass 9 kg/m2, half the mass of the prior's lightest passing design (10mm graphite at 18 kg/m2). Chosen as a moderate-confidence point: it is still well outside the directly Core-scored range (10-30mm) but only a 2x extrapolation rather than 10x, so I have higher confidence this preserves the thickness-invariant hotspot behaviour than the 1-2mm candidates while still cutting mass substantially versus the prior."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 6}],
+    "rationale": "Mass 10.8 kg/m2. Continues the hedge ladder approaching the directly-tested 10mm point; a 1.7x extrapolation below the nearest Core-scored graphite data point, intended as a lower-risk alternative to the thinner graphite candidates if there is any real (if small) thickness sensitivity below 10mm."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 8}],
+    "rationale": "Mass 14.4 kg/m2. Closest hedge to the Core-validated 10mm graphite point (only 1.25x extrapolation), included as a near-safe fallback that still improves on the prior's lightest record (18 kg/m2 at 10mm) by 20%."
+  },
+  {
+    "layers": [{"material": "graphite", "thickness_mm": 10}],
+    "rationale": "Directly matches the Core-scored prior '10mm graphite' design, which passed all four requirements with hotspot 325K (15K of margin under the 340K limit), screening 403K (17K of margin under 420K), mass 18 kg/m2 (82 kg/m2 of margin under 100), and thickness 1mm equivalent margin under 40mm. Included as the anchor/reference design I am most confident passes, since it is already Core-scored rather than extrapolated, and it is also the lightest design in the entire prior constellation."
+  },
+  {
+    "layers": [{"material": "copper", "thickness_mm": 1}],
+    "rationale": "Hedge using the material with the best absolute hotspot margin in the prior data (copper read 322K at every tested thickness, 18K under the 340K limit, versus 15-16K for graphite/aluminium). If the thickness-invariance assumption breaks down for low-conductivity materials before high-conductivity ones as thickness drops, copper is the safest single-material bet at extreme thinness. Areal mass is 8.96 kg/m2 despite copper's high density, because 1mm is so thin -- still 2x lighter than the lightest prior passing design (18 kg/m2). R1/R3/R4 satisfied with large margin for the same 1D-conduction-improves-with-thinness argument as the graphite candidates."
+  },
+  {
+    "layers": [{"material": "copper", "thickness_mm": 2}],
+    "rationale": "A slightly thicker copper hedge (mass 17.92 kg/m2, still just under the lightest prior passing design's 18 kg/m2) in case 1mm is too thin for even the highest-margin material tested, while still meaningfully improving on the prior record via copper's largest hotspot margin (18K under 340K observed at every tested thickness)."
+  },
+  {
+    "layers": [{"material": "aluminium", "thickness_mm": 1}],
+    "rationale": "A middle-ground single-material hedge between the low-density/moderate-conductivity graphite candidates and the high-conductivity/high-density copper candidates, using the material from the prior's best-margin large design (10mm aluminium had a worst margin of 3, the best of any prior single-material design at that gauge). At 1mm, areal mass is only 2.7 kg/m2, and the same thinner-plate argument for R1 applies, leaving large expected margin on all four requirements if the thickness-invariance pattern holds for aluminium as it did across 10-30mm in the prior."
+  },
+  {
+    "layers": [
+      {"material": "copper", "thickness_mm": 1},
+      {"material": "graphite", "thickness_mm": 2}
+    ],
+    "rationale": "A layered hedge combining a thin high-conductivity copper cladding at the heated face (fastest local spreading, matching the mechanism the prior's copper-clad-aluminium composites used to shave a small amount off hotspot versus plain aluminium, e.g. 2mm copper+10mm aluminium read 323K vs 324K for 10mm aluminium alone) with a thin graphite backing for extra low-density bulk. Total mass is 8.96+3.6=12.56 kg/m2, still 30% lighter than the lightest prior passing design, while providing a second, structurally different candidate in case a single homogeneous thin plate has an unmodelled failure mode that a graded conductivity profile avoids. Thickness 3mm total, trivially inside the 40mm cap; mass trivially inside the 100 kg/m2 cap; screening estimate expected to be similarly favourable to the single-material thin candidates since total thickness is still small."
+  }
+]

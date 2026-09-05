@@ -1,0 +1,4 @@
+[
+  {"layers": [{"material": "aluminium", "thickness_mm": 1}], "rationale": "1mm graphite (k=150) failed R2 at 344K (over by 4.44K). Aluminium has higher conductivity (200 W/mK) but lower density (2700) than graphite's mass-normalized alternative, and FE hotspot depends on conductivity, not density. At 1mm, aluminium mass is 2.7kg/m2, less than the 2mm graphite pass (3.6kg/m2), so if its higher conductivity closes the 4.44K gap, this would be a lighter all-PASS design."},
+  {"layers": [{"material": "aluminium_nitride", "thickness_mm": 1}], "rationale": "Aluminium nitride (k=170) sits between graphite (150, failed at 1mm by 4.44K) and aluminium (200) in conductivity. At 1mm its mass is 3.26kg/m2, still less than the 2mm graphite pass (3.6kg/m2). Testing whether its higher conductivity than graphite is enough to pass R2 at a lower mass than the current best."}
+]

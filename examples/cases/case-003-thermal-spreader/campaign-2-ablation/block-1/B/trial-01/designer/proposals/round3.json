@@ -1,0 +1,3 @@
+[
+  {"layers": [{"material": "epoxy", "thickness_mm": 2}], "rationale": "Epoxy has lower density than graphite (1200 vs 1800 kg/m3); check via cheap screen whether its very low conductivity (0.2 W/mK) rules it out before spending eval budget."}
+]

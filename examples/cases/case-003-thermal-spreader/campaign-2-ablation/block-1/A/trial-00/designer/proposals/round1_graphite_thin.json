@@ -1,0 +1,11 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 1}], "rationale": "Constellation shows 10/20/30mm graphite all hold hotspot ~325K (nearly thickness-independent over that range), suggesting the plate is not conduction-limited in that regime. Testing far thinner graphite to find where hotspot starts rising, since graphite has the lowest density (1800) of the well-conducting materials and thinner graphite would be the lightest possible design if thermally sufficient."},
+  {"layers": [{"material": "graphite", "thickness_mm": 2}], "rationale": "Same reasoning as 1mm graphite: probing the thin-plate regime below the 10mm point already on record (18 kg/m2, 325K) to see how hotspot responds to reduced thickness."},
+  {"layers": [{"material": "graphite", "thickness_mm": 3}], "rationale": "Interpolation point between 1mm and 10mm graphite to map the hotspot-vs-thickness curve before committing transports."},
+  {"layers": [{"material": "graphite", "thickness_mm": 4}], "rationale": "Interpolation point between 1mm and 10mm graphite to map the hotspot-vs-thickness curve before committing transports."},
+  {"layers": [{"material": "graphite", "thickness_mm": 5}], "rationale": "Interpolation point between 1mm and 10mm graphite to map the hotspot-vs-thickness curve before committing transports."},
+  {"layers": [{"material": "graphite", "thickness_mm": 6}], "rationale": "Interpolation point between 1mm and 10mm graphite to map the hotspot-vs-thickness curve before committing transports."},
+  {"layers": [{"material": "graphite", "thickness_mm": 7}], "rationale": "Interpolation point between 1mm and 10mm graphite to map the hotspot-vs-thickness curve before committing transports."},
+  {"layers": [{"material": "graphite", "thickness_mm": 8}], "rationale": "Interpolation point between 1mm and 10mm graphite to map the hotspot-vs-thickness curve before committing transports."},
+  {"layers": [{"material": "graphite", "thickness_mm": 9}], "rationale": "Interpolation point just below the recorded 10mm graphite (18 kg/m2, 325K pass) to check how close to that thickness the margin starts shrinking."}
+]

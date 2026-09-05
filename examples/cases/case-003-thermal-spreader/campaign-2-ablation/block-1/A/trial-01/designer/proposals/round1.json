@@ -1,0 +1,11 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 1}], "rationale": "Constellation shows graphite hotspot is flat at 325K across 10/20/30mm, while the 1D screen (R1) rises with thickness (403->410). This implies thickness above some minimum barely matters for the FE hotspot, so a much thinner plate should stay near 325K while cutting mass far below the 18 kg/m^2 seen at 10mm. Testing the extreme low end to find where mass can go before hotspot or spreading resistance rises."},
+  {"layers": [{"material": "graphite", "thickness_mm": 2}], "rationale": "Same reasoning as 1mm graphite; bracket the thin end to see how hotspot trends as thickness drops from the known-good 10mm point."},
+  {"layers": [{"material": "graphite", "thickness_mm": 3}], "rationale": "Bracket point between 2mm and 5mm graphite to trace the hotspot-vs-thickness curve toward thinner, lighter designs."},
+  {"layers": [{"material": "graphite", "thickness_mm": 5}], "rationale": "Halfway to the known-good 10mm graphite (18 kg/m^2, 325K); checking if hotspot stays flat at half the mass."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 1}], "rationale": "Aluminium's higher conductivity (200 vs graphite's 150) may resist the spreading penalty of thinning better, even though it's denser (2700 vs 1800). Testing whether thin aluminium beats thin graphite on mass once both are FE-transported."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 2}], "rationale": "Bracket for aluminium thinning trend, same logic as graphite brackets."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 3}], "rationale": "Bracket for aluminium thinning trend."},
+  {"layers": [{"material": "copper", "thickness_mm": 1}], "rationale": "Copper's high conductivity (400) may allow the thinnest plate of all before hotspot rises, potentially offsetting its high density (8960) at very low thickness. Screening to see if 1mm copper mass (8.96 kg/m^2) undercuts thin aluminium/graphite."},
+  {"layers": [{"material": "copper", "thickness_mm": 2}], "rationale": "Bracket for copper thinning trend."}
+]

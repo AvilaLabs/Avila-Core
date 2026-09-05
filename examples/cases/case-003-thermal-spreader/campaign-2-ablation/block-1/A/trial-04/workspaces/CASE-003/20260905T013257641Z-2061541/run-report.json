@@ -1,0 +1,1183 @@
+{
+  "schema_version": "avila.core/case-run-report/v0.5-draft",
+  "case_id": "CASE-003",
+  "title": "Thermal spreader search: screen -> finite-element conduction -> Avila Core",
+  "status": "evaluated",
+  "integrity": {
+    "schema_version": "avila.core/package-integrity-report/v0.1-draft",
+    "case_id": "CASE-003",
+    "status": "complete",
+    "manifest_sha256": "sha256:33b78ae3993330049dcc2b27b7c7bdc62150efa869e77d88b2ca1c07cb0c520a",
+    "documents": [
+      {
+        "document_id": "case-003-contract",
+        "role": "contract",
+        "path": "contract.json",
+        "expected_sha256": "sha256:327b8e35d198144dffc452d3da51bbecd4ee772810842a3401c929fb47cfa992",
+        "actual_sha256": "sha256:327b8e35d198144dffc452d3da51bbecd4ee772810842a3401c929fb47cfa992",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-003-registry",
+        "role": "registry",
+        "path": "registry.json",
+        "expected_sha256": "sha256:247b0198ce2d10d0b1801de62f6b05e14033e9cc4cf6bb95ce69ae2b8f9db452",
+        "actual_sha256": "sha256:247b0198ce2d10d0b1801de62f6b05e14033e9cc4cf6bb95ce69ae2b8f9db452",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-003-claims",
+        "role": "claims",
+        "path": "claims.json",
+        "expected_sha256": "sha256:17aaf9132a06f10e5106fdede1dbcdda00fd24a11e3edd929f8b8d94d33b7d2e",
+        "actual_sha256": "sha256:17aaf9132a06f10e5106fdede1dbcdda00fd24a11e3edd929f8b8d94d33b7d2e",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-003-requirement-set",
+        "role": "requirement_set",
+        "path": "requirement-set.json",
+        "expected_sha256": "sha256:260f6ccbfe3d505af4b4fcc848662d0cc7e8a31d156b2381d1b8639c5a40c66f",
+        "actual_sha256": "sha256:260f6ccbfe3d505af4b4fcc848662d0cc7e8a31d156b2381d1b8639c5a40c66f",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-003-fe-qualification",
+        "role": "qualification",
+        "path": "qualification-fe.json",
+        "expected_sha256": "sha256:04b4298ba669a90624fff3e738aa039a502b824b7d74eb95712ad15ba580b623",
+        "actual_sha256": "sha256:04b4298ba669a90624fff3e738aa039a502b824b7d74eb95712ad15ba580b623",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-003-screen-qualification",
+        "role": "qualification",
+        "path": "qualification-screen.json",
+        "expected_sha256": "sha256:2ce64c7049d319c0b9d9772dbde71cf9cc51240bcebccffa56f61faca024cd91",
+        "actual_sha256": "sha256:2ce64c7049d319c0b9d9772dbde71cf9cc51240bcebccffa56f61faca024cd91",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-003-expected-campaign",
+        "role": "expected_campaign_report",
+        "path": "campaign-report.json",
+        "expected_sha256": "sha256:45b7070e73f1a48d6db8d73355e4deb3f72c9c75b3e117eb750edde8db509633",
+        "actual_sha256": "sha256:45b7070e73f1a48d6db8d73355e4deb3f72c9c75b3e117eb750edde8db509633",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-003-screen-receipt",
+        "role": "execution_receipt",
+        "path": "receipts/screen.json",
+        "expected_sha256": "sha256:962939298639eb44065619691acb1b49ff8cb7ac589c54a4f0e7694696b4bfa0",
+        "actual_sha256": "sha256:962939298639eb44065619691acb1b49ff8cb7ac589c54a4f0e7694696b4bfa0",
+        "state": "verified"
+      },
+      {
+        "document_id": "case-003-fe-receipt",
+        "role": "execution_receipt",
+        "path": "receipts/fe.json",
+        "expected_sha256": "sha256:678cdde5c64b0f14aced2f0673c8e116d4071b08a817bb8e451246d86c09451f",
+        "actual_sha256": "sha256:678cdde5c64b0f14aced2f0673c8e116d4071b08a817bb8e451246d86c09451f",
+        "state": "verified"
+      }
+    ],
+    "artifacts": [
+      {
+        "artifact_id": "reference-candidate",
+        "evidence_ids": [
+          "input:candidate"
+        ],
+        "source_root": "supplied",
+        "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/exp-002/block-1/A/trial-04/designer/candidates/l-0001.json",
+        "expected_sha256": "sha256:c5381d36b52d9e225b43bc9739ca1599729d9f772602f139ce53b3081fbc81d2",
+        "actual_sha256": "sha256:c5381d36b52d9e225b43bc9739ca1599729d9f772602f139ce53b3081fbc81d2",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "materials",
+        "evidence_ids": [
+          "input:materials"
+        ],
+        "source_root": "thermal",
+        "path": "materials.json",
+        "expected_sha256": "sha256:08cc8fb37c2d154f3dc0d032019b64b14a98b4a76124b44ac9128e8e762fb0f6",
+        "actual_sha256": "sha256:08cc8fb37c2d154f3dc0d032019b64b14a98b4a76124b44ac9128e8e762fb0f6",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "source",
+        "evidence_ids": [
+          "input:source"
+        ],
+        "source_root": "thermal",
+        "path": "source.json",
+        "expected_sha256": "sha256:749971e02a4872605082bf643f7bfcfbbb7be889bdcfe09af9a1fb81e4117f1f",
+        "actual_sha256": "sha256:749971e02a4872605082bf643f7bfcfbbb7be889bdcfe09af9a1fb81e4117f1f",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "screen-script",
+        "evidence_ids": [
+          "input:screen-script"
+        ],
+        "source_root": "thermal",
+        "path": "thermal_screen.py",
+        "expected_sha256": "sha256:0c3259481b6e6ccf0ade84705d0def70a34bad4a2de27061713ece99af4834f7",
+        "actual_sha256": "sha256:0c3259481b6e6ccf0ade84705d0def70a34bad4a2de27061713ece99af4834f7",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "fe-script",
+        "evidence_ids": [
+          "input:fe-script"
+        ],
+        "source_root": "thermal",
+        "path": "thermal_fe.py",
+        "expected_sha256": "sha256:9a64eb0922b786bd50ece00e8b60206e23194f7566296ccd6ef900a71c491b63",
+        "actual_sha256": "sha256:9a64eb0922b786bd50ece00e8b60206e23194f7566296ccd6ef900a71c491b63",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "reference-screen-result",
+        "evidence_ids": [
+          "screen-hotspot-temperature",
+          "screen-areal-mass",
+          "screen-thickness",
+          "screen-result"
+        ],
+        "source_root": "case",
+        "path": "expected/screen-result.json",
+        "expected_sha256": "sha256:9ac38e73f5f6e2b4c8d23a5d7e47dc7adf011092087f612da0dd87c3be8d1aa9",
+        "actual_sha256": "sha256:9ac38e73f5f6e2b4c8d23a5d7e47dc7adf011092087f612da0dd87c3be8d1aa9",
+        "state": "verified"
+      },
+      {
+        "artifact_id": "reference-fe-result",
+        "evidence_ids": [
+          "fe-hotspot-temperature",
+          "fe-result"
+        ],
+        "source_root": "case",
+        "path": "expected/fe-result.json",
+        "expected_sha256": "sha256:24b33977bd6f5d00aabe1d98865f2512d24b7890a23e8ba66156b29d54a80409",
+        "actual_sha256": "sha256:24b33977bd6f5d00aabe1d98865f2512d24b7890a23e8ba66156b29d54a80409",
+        "state": "verified"
+      }
+    ],
+    "limitations": [
+      "CASE-003 is a research-only design-search specimen over a synthetic strip-heated plate; no device, enclosure, or operating envelope is represented.",
+      "The screening capability is unqualified and evaluated on a nominal basis; the finite-element capability produces an enclosure claim whose interval brackets discretisation only, under a qualification record that binds one NAFEMS benchmark reproduction as validation evidence.",
+      "The finite-element interpreter is the system Python binary, identified by digest; the finite-element package beside it is identified only by the version the result records."
+    ],
+    "notice": "Package integrity checks byte identity only. It does not verify schemas, media semantics, execution receipts, signatures, qualification, practical suitability, or scientific correctness."
+  },
+  "compile": {
+    "schema_version": "avila.core/compile-report/v0.2-draft",
+    "semantic_profile": "avila.core/semantic/0.2-draft",
+    "status": "compiled",
+    "source_identities": [
+      {
+        "document": "contract",
+        "sha256": "sha256:78e3a7ac4cdfec11bae2357d993ffc76a9271b76a976f7af18bd9df50143cc39"
+      },
+      {
+        "document": "registry",
+        "sha256": "sha256:96c25467f1f8553bc9d0594cf604d5c89c885383bc7915b49b461a175f4cd262"
+      }
+    ],
+    "compiled": {
+      "schema_version": "avila.core/compiled-contract/v0.2-draft",
+      "semantic_profile": "avila.core/semantic/0.2-draft",
+      "compiler": "avila.core/compiler-rust@0.1.0",
+      "contract_id": "case-003.thermal-spreader-search",
+      "contract_revision": 2,
+      "contract_sha256": "sha256:78e3a7ac4cdfec11bae2357d993ffc76a9271b76a976f7af18bd9df50143cc39",
+      "question": "Does a candidate layered heat spreader keep the steady-state hotspot temperature on its heated face at or below the design limit for the declared strip heat flux and convective cooling, within the areal-mass and thickness limits, as established by two-dimensional finite-element conduction rather than by the one-dimensional screening estimate?",
+      "assumptions": [
+        "The spreader is a two-dimensional cross-section of a plate of declared width heated by a uniform flux over a central strip of its heated face, insulated elsewhere on that face and on its lateral faces, and cooled by convection to a fixed ambient on its far face; the model is steady state.",
+        "The heated strip is 20 mm wide on a 100 mm plate at 50 kW/m2, cooled by 500 W/m2/K convection to 300 K; the 340 K hotspot, 100 kg/m2, and 40 mm limits are the case author's allocations chosen so that a thick aluminium plate passes, a copper-on-aluminium spreader passes lighter, and steel or polymer alone fails.",
+        "Material conductivities are isotropic nominal literature values; interfaces are perfect; no material, script, or interpreter is qualified.",
+        "The screening estimate is a one-dimensional series resistance that ignores lateral spreading and is evaluated on a nominal basis only; the finite-element interval brackets discretisation only.",
+        "This contract is a research-only design-search specimen and excludes every safety, qualification, or operational purpose.",
+        "Revision 2 sets the screen guide at 420 K: revision 1's 340 K guide could not be met by any design because the no-spreading estimate exceeds the true hotspot by about 80 K for every plate in the box, which made the all-PASS criterion unreachable by construction; the finite-element limit is unchanged."
+      ],
+      "registry_id": "case-003.thermal-spreader-search.registry",
+      "registry_revision": 1,
+      "registry_sha256": "sha256:96c25467f1f8553bc9d0594cf604d5c89c885383bc7915b49b461a175f4cd262",
+      "execution_policy": {
+        "permitted_nondeterministic_roles": [],
+        "permit_nominal_basis": true,
+        "require_qualification": true
+      },
+      "inputs": [
+        {
+          "input_id": "candidate",
+          "role": {
+            "id": "thermal.candidate",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.thermal-candidate+json",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "fe-script",
+          "role": {
+            "id": "thermal.fe-script",
+            "major": 1
+          },
+          "media_type": "text/x-python",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "materials",
+          "role": {
+            "id": "thermal.material-table",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.thermal-materials+json",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "screen-script",
+          "role": {
+            "id": "thermal.screen-script",
+            "major": 1
+          },
+          "media_type": "text/x-python",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        },
+        {
+          "input_id": "source",
+          "role": {
+            "id": "thermal.source-spec",
+            "major": 1
+          },
+          "media_type": "application/vnd.avila.thermal-source+json",
+          "claim_model": {
+            "model": "unquantified"
+          }
+        }
+      ],
+      "workflow": [
+        {
+          "step_id": "fe",
+          "capability_type": {
+            "id": "thermal.spreader-fe",
+            "major": 1
+          },
+          "bindings": [
+            {
+              "input_slot": "candidate",
+              "source": {
+                "source": "contract_input",
+                "input_id": "candidate"
+              }
+            },
+            {
+              "input_slot": "materials",
+              "source": {
+                "source": "contract_input",
+                "input_id": "materials"
+              }
+            },
+            {
+              "input_slot": "script",
+              "source": {
+                "source": "contract_input",
+                "input_id": "fe-script"
+              }
+            },
+            {
+              "input_slot": "source",
+              "source": {
+                "source": "contract_input",
+                "input_id": "source"
+              }
+            }
+          ],
+          "parameters": {},
+          "reproducibility": {
+            "determinism": "deterministic",
+            "material_factors": {}
+          }
+        },
+        {
+          "step_id": "screen",
+          "capability_type": {
+            "id": "thermal.spreader-screen",
+            "major": 1
+          },
+          "bindings": [
+            {
+              "input_slot": "candidate",
+              "source": {
+                "source": "contract_input",
+                "input_id": "candidate"
+              }
+            },
+            {
+              "input_slot": "materials",
+              "source": {
+                "source": "contract_input",
+                "input_id": "materials"
+              }
+            },
+            {
+              "input_slot": "script",
+              "source": {
+                "source": "contract_input",
+                "input_id": "screen-script"
+              }
+            },
+            {
+              "input_slot": "source",
+              "source": {
+                "source": "contract_input",
+                "input_id": "source"
+              }
+            }
+          ],
+          "parameters": {},
+          "reproducibility": {
+            "determinism": "deterministic",
+            "material_factors": {}
+          }
+        }
+      ],
+      "requirements": [
+        {
+          "requirement_id": "THERM-R1-screen",
+          "statement": "Screening estimate of the hotspot temperature is at or below 420 K (nominal basis; the estimate ignores spreading and is pessimistic, so this guide only excludes hopeless designs and establishes nothing).",
+          "purpose": {
+            "id": "avila-labs.thermal.design-search",
+            "major": 1
+          },
+          "metric": {
+            "source": "step_output",
+            "step_id": "screen",
+            "output_slot": "hotspot-temperature"
+          },
+          "metric_role": {
+            "id": "thermal.hotspot-screen",
+            "major": 1
+          },
+          "comparison": "less_than_or_equal",
+          "limit": {
+            "kind": "core.temperature",
+            "value": "420",
+            "unit": "K"
+          },
+          "basis": {
+            "kind": "nominal"
+          }
+        },
+        {
+          "requirement_id": "THERM-R2-hotspot",
+          "statement": "Finite-element hotspot temperature on the heated face is at or below 340 K within its discretisation bracket.",
+          "purpose": {
+            "id": "avila-labs.thermal.design-search",
+            "major": 1
+          },
+          "metric": {
+            "source": "step_output",
+            "step_id": "fe",
+            "output_slot": "hotspot-temperature"
+          },
+          "metric_role": {
+            "id": "thermal.hotspot-enclosure",
+            "major": 1
+          },
+          "comparison": "less_than_or_equal",
+          "limit": {
+            "kind": "core.temperature",
+            "value": "340",
+            "unit": "K"
+          },
+          "basis": {
+            "kind": "enclosure"
+          }
+        },
+        {
+          "requirement_id": "THERM-R3-mass",
+          "statement": "Areal mass of the plate is at or below 100 kg per square metre.",
+          "purpose": {
+            "id": "avila-labs.thermal.design-search",
+            "major": 1
+          },
+          "metric": {
+            "source": "step_output",
+            "step_id": "screen",
+            "output_slot": "areal-mass"
+          },
+          "metric_role": {
+            "id": "thermal.areal-mass",
+            "major": 1
+          },
+          "comparison": "less_than_or_equal",
+          "limit": {
+            "kind": "core.mass",
+            "value": "100",
+            "unit": "kg"
+          },
+          "basis": {
+            "kind": "bounded"
+          }
+        },
+        {
+          "requirement_id": "THERM-R4-thickness",
+          "statement": "Total plate thickness is at or below 40 mm.",
+          "purpose": {
+            "id": "avila-labs.thermal.design-search",
+            "major": 1
+          },
+          "metric": {
+            "source": "step_output",
+            "step_id": "screen",
+            "output_slot": "thickness"
+          },
+          "metric_role": {
+            "id": "thermal.thickness",
+            "major": 1
+          },
+          "comparison": "less_than_or_equal",
+          "limit": {
+            "kind": "core.length",
+            "value": "4",
+            "unit": "cm"
+          },
+          "basis": {
+            "kind": "bounded"
+          }
+        }
+      ],
+      "snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd"
+    },
+    "notice": "Compilation establishes structural and semantic consistency under the named draft profile only. It performs no execution, optional presentation-gate run, agent-identity or trust evaluation, evidence admission, scientific qualification, or requirement verdict."
+  },
+  "coverage": {
+    "schema_version": "avila.core/coverage-report/v0.1-draft",
+    "set_id": "avila-labs.thermal/spreader",
+    "set_revision": 1,
+    "set_sha256": "sha256:260f6ccbfe3d505af4b4fcc848662d0cc7e8a31d156b2381d1b8639c5a40c66f",
+    "set_owner": "avila-labs.thermal",
+    "contract_id": "case-003.thermal-spreader-search",
+    "contract_revision": 2,
+    "status": "complete",
+    "entries": [
+      {
+        "set_requirement_id": "hotspot-temperature",
+        "statement": "Steady-state hotspot temperature on the heated face is at or below the design limit.",
+        "state": "covered",
+        "covered_by": [
+          {
+            "requirement_id": "THERM-R1-screen",
+            "basis": "nominal",
+            "adequate": false
+          },
+          {
+            "requirement_id": "THERM-R2-hotspot",
+            "basis": "enclosure",
+            "adequate": true
+          }
+        ]
+      },
+      {
+        "set_requirement_id": "areal-mass",
+        "statement": "Areal mass of the plate is at or below the structural limit.",
+        "state": "covered",
+        "covered_by": [
+          {
+            "requirement_id": "THERM-R3-mass",
+            "basis": "bounded",
+            "adequate": true
+          }
+        ]
+      },
+      {
+        "set_requirement_id": "total-thickness",
+        "statement": "Total plate thickness is at or below the space available.",
+        "state": "covered",
+        "covered_by": [
+          {
+            "requirement_id": "THERM-R4-thickness",
+            "basis": "bounded",
+            "adequate": true
+          }
+        ]
+      },
+      {
+        "set_requirement_id": "interface-temperature",
+        "statement": "Temperature at every material interface is at or below that interface's limit.",
+        "state": "omitted_stated",
+        "reason": "No interface limit is declared for these materials; every interface is modelled as perfect and no adhesive or solder is represented, so the entry cannot be evaluated in this specimen.",
+        "accepted_by": "Connor Avila, case author (research specimen; no design use)"
+      },
+      {
+        "set_requirement_id": "transient-overshoot",
+        "statement": "Peak temperature during the declared transient is at or below the design limit.",
+        "state": "omitted_stated",
+        "reason": "The model is steady state; no transient is declared and no transient capability is bound.",
+        "accepted_by": "Connor Avila, case author (research specimen; no design use)"
+      }
+    ]
+  },
+  "execution": {
+    "status": "partial",
+    "workspace": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/exp-002/block-1/A/trial-04/workspaces/CASE-003/20260905T013257641Z-2061541",
+    "steps": [
+      {
+        "step_id": "fe",
+        "adapter": "avila-labs.thermal/spreader-fe@1",
+        "capability_id": "thermal-python",
+        "state": "not_run",
+        "capability": {
+          "capability_id": "thermal-python",
+          "package_id": "org.python/cpython@3.14.4+scikit-fem-12.0.2",
+          "expected_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+          "state": "not_supplied"
+        },
+        "inputs": [
+          {
+            "input_slot": "candidate",
+            "evidence_id": "input:candidate",
+            "workspace_path": "inputs/candidate.json",
+            "sha256": "sha256:c5381d36b52d9e225b43bc9739ca1599729d9f772602f139ce53b3081fbc81d2",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "materials",
+            "evidence_id": "input:materials",
+            "workspace_path": "inputs/materials.json",
+            "sha256": "sha256:08cc8fb37c2d154f3dc0d032019b64b14a98b4a76124b44ac9128e8e762fb0f6",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "script",
+            "evidence_id": "input:fe-script",
+            "workspace_path": "tools/thermal_fe.py",
+            "sha256": "sha256:9a64eb0922b786bd50ece00e8b60206e23194f7566296ccd6ef900a71c491b63",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "source",
+            "evidence_id": "input:source",
+            "workspace_path": "inputs/source.json",
+            "sha256": "sha256:749971e02a4872605082bf643f7bfcfbbb7be889bdcfe09af9a1fb81e4117f1f",
+            "integrity": "verified"
+          }
+        ],
+        "planned_invocation_sha256": "sha256:a4e106c0f297599aa4a420a932208fe1a7a744973761440022d42f3ab3370a06",
+        "changes": [
+          {
+            "class": "input_bytes",
+            "detail": "slot `candidate` bytes sha256:4f90e6c3690930b4ed5ffe45fb9d4ee64bddbf7b2ac246d9d19cc4b98b92232e → sha256:c5381d36b52d9e225b43bc9739ca1599729d9f772602f139ce53b3081fbc81d2"
+          }
+        ],
+        "qualification": {
+          "qualification_id": "avila-labs.thermal/spreader-fe-skfem",
+          "revision": 1,
+          "sha256": "sha256:04b4298ba669a90624fff3e738aa039a502b824b7d74eb95712ad15ba580b623",
+          "state": "inside",
+          "terms": [
+            {
+              "predicate": "{\"fact\":{\"name\":\"plate.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":3}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"fact\":{\"name\":\"source.heat_flux\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":{\"unit\":\"W/m2\",\"value\":\"100000\"}}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"fact\":{\"name\":\"source.convection\",\"op\":\"ge\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":{\"unit\":\"W/m2/K\",\"value\":\"5\"}}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"fact\":{\"name\":\"source.convection\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":{\"unit\":\"W/m2/K\",\"value\":\"5000\"}}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"fact\":{\"name\":\"source.strip_width\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/spreader-fe@1\"},\"value\":{\"unit\":\"mm\",\"value\":\"100\"}}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+              "result": "true"
+            }
+          ]
+        }
+      },
+      {
+        "step_id": "screen",
+        "adapter": "avila-labs.thermal/screen@1",
+        "capability_id": "python3",
+        "state": "executed",
+        "capability": {
+          "capability_id": "python3",
+          "package_id": "org.python/cpython@3.14.4",
+          "expected_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+          "actual_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+          "state": "verified"
+        },
+        "inputs": [
+          {
+            "input_slot": "candidate",
+            "evidence_id": "input:candidate",
+            "workspace_path": "inputs/candidate.json",
+            "sha256": "sha256:c5381d36b52d9e225b43bc9739ca1599729d9f772602f139ce53b3081fbc81d2",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "materials",
+            "evidence_id": "input:materials",
+            "workspace_path": "inputs/materials.json",
+            "sha256": "sha256:08cc8fb37c2d154f3dc0d032019b64b14a98b4a76124b44ac9128e8e762fb0f6",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "script",
+            "evidence_id": "input:screen-script",
+            "workspace_path": "tools/thermal_screen.py",
+            "sha256": "sha256:0c3259481b6e6ccf0ade84705d0def70a34bad4a2de27061713ece99af4834f7",
+            "integrity": "verified"
+          },
+          {
+            "input_slot": "source",
+            "evidence_id": "input:source",
+            "workspace_path": "inputs/source.json",
+            "sha256": "sha256:749971e02a4872605082bf643f7bfcfbbb7be889bdcfe09af9a1fb81e4117f1f",
+            "integrity": "verified"
+          }
+        ],
+        "planned_invocation_sha256": "sha256:a65f9c18aec829f6085f2189e554e268063301f30f052e4295f1d10acc767c4d",
+        "changes": [
+          {
+            "class": "input_bytes",
+            "detail": "slot `candidate` bytes sha256:4f90e6c3690930b4ed5ffe45fb9d4ee64bddbf7b2ac246d9d19cc4b98b92232e → sha256:c5381d36b52d9e225b43bc9739ca1599729d9f772602f139ce53b3081fbc81d2"
+          }
+        ],
+        "qualification": {
+          "qualification_id": "avila-labs.thermal/screen-arithmetic",
+          "revision": 1,
+          "sha256": "sha256:2ce64c7049d319c0b9d9772dbde71cf9cc51240bcebccffa56f61faca024cd91",
+          "state": "inside",
+          "terms": [
+            {
+              "predicate": "{\"fact\":{\"name\":\"plate.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/screen@1\"},\"value\":{\"unit\":\"mm\",\"value\":\"50\"}}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"fact\":{\"name\":\"plate.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/screen@1\"},\"value\":3}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+              "result": "true"
+            }
+          ]
+        },
+        "receipt": {
+          "workspace_path": "screen/receipt.json",
+          "sha256": "sha256:862a44abe1d87dcd6bb47f21b3b283d6f164a3919f8f32226c1c59120082426d",
+          "invocation_sha256": "sha256:a65f9c18aec829f6085f2189e554e268063301f30f052e4295f1d10acc767c4d",
+          "status": "completed",
+          "exit_status": 0,
+          "duration_ms": 80
+        },
+        "outputs": [
+          {
+            "output_id": "screen-result",
+            "workspace_path": "outputs/screen-result.json",
+            "state": "collected",
+            "sha256": "sha256:e86b934746ab1589e65367cb81e0ad2488161175890202adcd0931deefd81195",
+            "bytes": 2019
+          }
+        ],
+        "verification": {
+          "state": "verified",
+          "invocation_sha256": "sha256:a65f9c18aec829f6085f2189e554e268063301f30f052e4295f1d10acc767c4d",
+          "invocation_identity_reproduced": true,
+          "files": [
+            {
+              "role": "input",
+              "workspace_path": "inputs/candidate.json",
+              "expected_sha256": "sha256:c5381d36b52d9e225b43bc9739ca1599729d9f772602f139ce53b3081fbc81d2",
+              "actual_sha256": "sha256:c5381d36b52d9e225b43bc9739ca1599729d9f772602f139ce53b3081fbc81d2",
+              "state": "verified"
+            },
+            {
+              "role": "input",
+              "workspace_path": "inputs/materials.json",
+              "expected_sha256": "sha256:08cc8fb37c2d154f3dc0d032019b64b14a98b4a76124b44ac9128e8e762fb0f6",
+              "actual_sha256": "sha256:08cc8fb37c2d154f3dc0d032019b64b14a98b4a76124b44ac9128e8e762fb0f6",
+              "state": "verified"
+            },
+            {
+              "role": "input",
+              "workspace_path": "tools/thermal_screen.py",
+              "expected_sha256": "sha256:0c3259481b6e6ccf0ade84705d0def70a34bad4a2de27061713ece99af4834f7",
+              "actual_sha256": "sha256:0c3259481b6e6ccf0ade84705d0def70a34bad4a2de27061713ece99af4834f7",
+              "state": "verified"
+            },
+            {
+              "role": "input",
+              "workspace_path": "inputs/source.json",
+              "expected_sha256": "sha256:749971e02a4872605082bf643f7bfcfbbb7be889bdcfe09af9a1fb81e4117f1f",
+              "actual_sha256": "sha256:749971e02a4872605082bf643f7bfcfbbb7be889bdcfe09af9a1fb81e4117f1f",
+              "state": "verified"
+            },
+            {
+              "role": "log",
+              "workspace_path": "logs/stdout.log",
+              "expected_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "actual_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "state": "verified"
+            },
+            {
+              "role": "log",
+              "workspace_path": "logs/stderr.log",
+              "expected_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "actual_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "state": "verified"
+            },
+            {
+              "role": "output",
+              "workspace_path": "outputs/screen-result.json",
+              "expected_sha256": "sha256:e86b934746ab1589e65367cb81e0ad2488161175890202adcd0931deefd81195",
+              "actual_sha256": "sha256:e86b934746ab1589e65367cb81e0ad2488161175890202adcd0931deefd81195",
+              "state": "verified"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "claims": {
+    "generated_sha256": "sha256:20709fa73cf50971a0e7752c0a5f499149aadbb33e3778522e652cb252b74b4d",
+    "committed_sha256": "sha256:7b84ce85fdbedd97d4fef8136a9b6832809a2eaa916350ec43ca5d0439959e1c",
+    "matches_committed": false,
+    "input_attestations": 5,
+    "executed_claims": 4,
+    "reused_claims": 0,
+    "recorded_claims": 0,
+    "invalidated_claims": 2,
+    "evidence_claims": [
+      {
+        "artifact": {
+          "media_type": "application/vnd.avila.thermal-screen+json",
+          "sha256": "sha256:e86b934746ab1589e65367cb81e0ad2488161175890202adcd0931deefd81195"
+        },
+        "claim": {
+          "model": "unquantified",
+          "nominal": {
+            "unit": "K",
+            "value": "400.666666667"
+          }
+        },
+        "claim_id": "screen-hotspot-temperature",
+        "output_slot": "hotspot-temperature",
+        "producer": {
+          "package_id": "org.python/cpython@3.14.4",
+          "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+        },
+        "step_id": "screen"
+      },
+      {
+        "artifact": {
+          "media_type": "application/vnd.avila.thermal-screen+json",
+          "sha256": "sha256:e86b934746ab1589e65367cb81e0ad2488161175890202adcd0931deefd81195"
+        },
+        "claim": {
+          "model": "exact",
+          "nominal": {
+            "unit": "kg",
+            "value": "3.6"
+          }
+        },
+        "claim_id": "screen-areal-mass",
+        "output_slot": "areal-mass",
+        "producer": {
+          "package_id": "org.python/cpython@3.14.4",
+          "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+        },
+        "qualification": {
+          "qualification_id": "avila-labs.thermal/screen-arithmetic",
+          "revision": 1,
+          "sha256": "sha256:2ce64c7049d319c0b9d9772dbde71cf9cc51240bcebccffa56f61faca024cd91",
+          "state": "inside",
+          "terms": [
+            {
+              "predicate": "{\"fact\":{\"name\":\"plate.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/screen@1\"},\"value\":{\"unit\":\"mm\",\"value\":\"50\"}}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"fact\":{\"name\":\"plate.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/screen@1\"},\"value\":3}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+              "result": "true"
+            }
+          ]
+        },
+        "step_id": "screen"
+      },
+      {
+        "artifact": {
+          "media_type": "application/vnd.avila.thermal-screen+json",
+          "sha256": "sha256:e86b934746ab1589e65367cb81e0ad2488161175890202adcd0931deefd81195"
+        },
+        "claim": {
+          "model": "exact",
+          "nominal": {
+            "unit": "mm",
+            "value": "2"
+          }
+        },
+        "claim_id": "screen-thickness",
+        "output_slot": "thickness",
+        "producer": {
+          "package_id": "org.python/cpython@3.14.4",
+          "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+        },
+        "qualification": {
+          "qualification_id": "avila-labs.thermal/screen-arithmetic",
+          "revision": 1,
+          "sha256": "sha256:2ce64c7049d319c0b9d9772dbde71cf9cc51240bcebccffa56f61faca024cd91",
+          "state": "inside",
+          "terms": [
+            {
+              "predicate": "{\"fact\":{\"name\":\"plate.total_thickness\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/screen@1\"},\"value\":{\"unit\":\"mm\",\"value\":\"50\"}}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"fact\":{\"name\":\"plate.layer_count\",\"op\":\"le\",\"source_requirement\":{\"class\":\"validated_input\",\"validator\":\"avila-labs.thermal/screen@1\"},\"value\":3}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.1.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.2.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+              "result": "true"
+            },
+            {
+              "predicate": "{\"input_attribute_in\":{\"attribute\":\"layer.3.material\",\"slot\":\"candidate\",\"values\":[\"aluminium\",\"copper\",\"stainless_steel\",\"titanium\",\"graphite\",\"aluminium_nitride\",\"epoxy\",\"none\"]}}",
+              "result": "true"
+            }
+          ]
+        },
+        "step_id": "screen"
+      },
+      {
+        "artifact": {
+          "media_type": "application/vnd.avila.thermal-screen+json",
+          "sha256": "sha256:e86b934746ab1589e65367cb81e0ad2488161175890202adcd0931deefd81195"
+        },
+        "claim": {
+          "model": "unquantified"
+        },
+        "claim_id": "screen-result",
+        "output_slot": "screen-result",
+        "producer": {
+          "package_id": "org.python/cpython@3.14.4",
+          "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+        },
+        "step_id": "screen"
+      }
+    ]
+  },
+  "bindings": {
+    "status": "verified",
+    "evidence_records": 9,
+    "bound_evidence_records": 5,
+    "receipted_evidence_records": 4,
+    "withheld_evidence_records": 2,
+    "required_presentation_policies": 0,
+    "bound_presentation_policies": 0
+  },
+  "campaign": {
+    "schema_version": "avila.core/campaign-report/v0.2-draft",
+    "semantic_profile": "avila.core/semantic/0.2-draft",
+    "status": "evaluated",
+    "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
+    "claims_sha256": "sha256:20709fa73cf50971a0e7752c0a5f499149aadbb33e3778522e652cb252b74b4d",
+    "admissions": [
+      {
+        "evidence_id": "input:candidate",
+        "source": {
+          "source": "contract_input",
+          "input_id": "candidate"
+        },
+        "state": "admitted"
+      },
+      {
+        "evidence_id": "input:fe-script",
+        "source": {
+          "source": "contract_input",
+          "input_id": "fe-script"
+        },
+        "state": "admitted"
+      },
+      {
+        "evidence_id": "input:materials",
+        "source": {
+          "source": "contract_input",
+          "input_id": "materials"
+        },
+        "state": "admitted"
+      },
+      {
+        "evidence_id": "input:screen-script",
+        "source": {
+          "source": "contract_input",
+          "input_id": "screen-script"
+        },
+        "state": "admitted"
+      },
+      {
+        "evidence_id": "input:source",
+        "source": {
+          "source": "contract_input",
+          "input_id": "source"
+        },
+        "state": "admitted"
+      },
+      {
+        "evidence_id": "screen-hotspot-temperature",
+        "source": {
+          "source": "step_output",
+          "step_id": "screen",
+          "output_slot": "hotspot-temperature"
+        },
+        "state": "admitted"
+      },
+      {
+        "evidence_id": "screen-areal-mass",
+        "source": {
+          "source": "step_output",
+          "step_id": "screen",
+          "output_slot": "areal-mass"
+        },
+        "state": "admitted"
+      },
+      {
+        "evidence_id": "screen-thickness",
+        "source": {
+          "source": "step_output",
+          "step_id": "screen",
+          "output_slot": "thickness"
+        },
+        "state": "admitted"
+      },
+      {
+        "evidence_id": "screen-result",
+        "source": {
+          "source": "step_output",
+          "step_id": "screen",
+          "output_slot": "screen-result"
+        },
+        "state": "admitted"
+      }
+    ],
+    "verdicts": [
+      {
+        "requirement_id": "THERM-R1-screen",
+        "statement": "Screening estimate of the hotspot temperature is at or below 420 K (nominal basis; the estimate ignores spreading and is pessimistic, so this guide only excludes hopeless designs and establishes nothing).",
+        "metric": {
+          "source": "step_output",
+          "step_id": "screen",
+          "output_slot": "hotspot-temperature"
+        },
+        "evidence_ids": [
+          "screen-hotspot-temperature"
+        ],
+        "verdict": {
+          "status": "pass",
+          "rule": "nominal.le.within",
+          "canonical_unit": "K",
+          "limit_canonical": "420",
+          "nominal_canonical": "400666666667/1000000000",
+          "basis_visible": "nominal"
+        },
+        "boundary": {
+          "semantic_profile": "avila.core/semantic/0.2-draft",
+          "compiler": "avila.core/compiler-rust@0.1.0",
+          "evaluator": "avila.core/kernel-rust@0.1.0",
+          "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
+          "claims_sha256": "sha256:20709fa73cf50971a0e7752c0a5f499149aadbb33e3778522e652cb252b74b4d"
+        }
+      },
+      {
+        "requirement_id": "THERM-R2-hotspot",
+        "statement": "Finite-element hotspot temperature on the heated face is at or below 340 K within its discretisation bracket.",
+        "metric": {
+          "source": "step_output",
+          "step_id": "fe",
+          "output_slot": "hotspot-temperature"
+        },
+        "verdict": {
+          "status": "not_evaluated",
+          "rule": "not_evaluated.missing",
+          "numbers_present": false,
+          "reasons": [
+            {
+              "code": "CORE-R3301",
+              "owner": "requester"
+            }
+          ]
+        },
+        "boundary": {
+          "semantic_profile": "avila.core/semantic/0.2-draft",
+          "compiler": "avila.core/compiler-rust@0.1.0",
+          "evaluator": "avila.core/kernel-rust@0.1.0",
+          "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
+          "claims_sha256": "sha256:20709fa73cf50971a0e7752c0a5f499149aadbb33e3778522e652cb252b74b4d"
+        }
+      },
+      {
+        "requirement_id": "THERM-R3-mass",
+        "statement": "Areal mass of the plate is at or below 100 kg per square metre.",
+        "metric": {
+          "source": "step_output",
+          "step_id": "screen",
+          "output_slot": "areal-mass"
+        },
+        "evidence_ids": [
+          "screen-areal-mass"
+        ],
+        "verdict": {
+          "status": "pass",
+          "rule": "bounded.le.within",
+          "canonical_unit": "kg",
+          "limit_canonical": "100",
+          "lower_canonical": "18/5",
+          "upper_canonical": "18/5",
+          "nominal_canonical": "18/5"
+        },
+        "boundary": {
+          "semantic_profile": "avila.core/semantic/0.2-draft",
+          "compiler": "avila.core/compiler-rust@0.1.0",
+          "evaluator": "avila.core/kernel-rust@0.1.0",
+          "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
+          "claims_sha256": "sha256:20709fa73cf50971a0e7752c0a5f499149aadbb33e3778522e652cb252b74b4d"
+        }
+      },
+      {
+        "requirement_id": "THERM-R4-thickness",
+        "statement": "Total plate thickness is at or below 40 mm.",
+        "metric": {
+          "source": "step_output",
+          "step_id": "screen",
+          "output_slot": "thickness"
+        },
+        "evidence_ids": [
+          "screen-thickness"
+        ],
+        "verdict": {
+          "status": "pass",
+          "rule": "bounded.le.within",
+          "canonical_unit": "cm",
+          "limit_canonical": "4",
+          "lower_canonical": "1/5",
+          "upper_canonical": "1/5",
+          "nominal_canonical": "1/5"
+        },
+        "boundary": {
+          "semantic_profile": "avila.core/semantic/0.2-draft",
+          "compiler": "avila.core/compiler-rust@0.1.0",
+          "evaluator": "avila.core/kernel-rust@0.1.0",
+          "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
+          "claims_sha256": "sha256:20709fa73cf50971a0e7752c0a5f499149aadbb33e3778522e652cb252b74b4d"
+        }
+      }
+    ],
+    "campaign_sha256": "sha256:6eba690421bd3b6e7d120636013247f719600afaba7ff75f9b91ad9d2a421728",
+    "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
+  },
+  "margins": [
+    {
+      "requirement_id": "THERM-R1-screen",
+      "status": "pass",
+      "rule": "nominal.le.within",
+      "unit": "K",
+      "limit": "420",
+      "nominal": "400666666667/1000000000",
+      "margin": "19.333333333"
+    },
+    {
+      "requirement_id": "THERM-R2-hotspot",
+      "status": "not_evaluated",
+      "rule": "not_evaluated.missing"
+    },
+    {
+      "requirement_id": "THERM-R3-mass",
+      "status": "pass",
+      "rule": "bounded.le.within",
+      "unit": "kg",
+      "limit": "100",
+      "lower": "18/5",
+      "upper": "18/5",
+      "nominal": "18/5",
+      "margin": "96.4"
+    },
+    {
+      "requirement_id": "THERM-R4-thickness",
+      "status": "pass",
+      "rule": "bounded.le.within",
+      "unit": "cm",
+      "limit": "4",
+      "lower": "1/5",
+      "upper": "1/5",
+      "nominal": "1/5",
+      "margin": "3.8"
+    }
+  ],
+  "supplied_inputs": [
+    {
+      "input_id": "candidate",
+      "evidence_id": "input:candidate",
+      "path": "/home/connoravila/Documents/Avila-Labs/project-north-star/workspaces/exp-002/block-1/A/trial-04/designer/candidates/l-0001.json",
+      "sha256": "sha256:c5381d36b52d9e225b43bc9739ca1599729d9f772602f139ce53b3081fbc81d2"
+    }
+  ],
+  "invalidated_steps": [
+    "fe",
+    "screen"
+  ],
+  "replay_applicable": false,
+  "notice": "This workflow separates byte-integrity checks, semantic compilation, controlled execution with receipts, claim generation, identity binding, campaign evaluation, and replay. Re-hashing bytes proves identity only; a verified receipt proves that a named executable ran over named bytes and produced named bytes; structural admission and a Core verdict do not establish scientific correctness, qualification, certification, or regulatory approval."
+}

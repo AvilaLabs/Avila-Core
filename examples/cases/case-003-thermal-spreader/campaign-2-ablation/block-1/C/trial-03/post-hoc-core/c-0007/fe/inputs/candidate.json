@@ -1,0 +1,10 @@
+{
+  "schema": "avila.thermal/candidate/v1",
+  "candidate_id": "c-0007",
+  "layers": [
+    {
+      "material": "aluminium",
+      "thickness_mm": "3"
+    }
+  ]
+}

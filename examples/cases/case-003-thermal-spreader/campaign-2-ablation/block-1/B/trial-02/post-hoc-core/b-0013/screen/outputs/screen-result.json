@@ -1,0 +1,29 @@
+{
+  "schema": "avila.thermal/screen-result/v1",
+  "method": "one-dimensional series thermal resistance under the strip's own flux density, with no credit for lateral spreading; pessimistic (an upper bound on the true hotspot) because any real lateral spreading can only relieve, never worsen, the peak temperature this estimate already assumes with no relief at all",
+  "candidate_id": "b-0013",
+  "layers": [
+    {
+      "material": "aluminium",
+      "thickness_mm": "1"
+    }
+  ],
+  "hotspot_temperature": {
+    "value": "400.25",
+    "unit": "K"
+  },
+  "areal_mass": {
+    "value": "2.7",
+    "unit": "kg"
+  },
+  "thickness": {
+    "value": "1",
+    "unit": "mm"
+  },
+  "limitations": [
+    "One-dimensional series resistance under the strip's own flux density, as if the strip's column ran straight through the stack to the cooled face with adiabatic walls at the strip's edges: no lateral spreading credit at all. Real conduction can only add a path for heat to leave sideways into cooler surrounding material; it cannot remove the straight-through path this estimate already counts. So this estimate is a conservative (pessimistic) upper bound on the true hotspot, not a best estimate, and the finite-element step's answer should never exceed it.",
+    "The bound is loosest exactly where lateral spreading matters most: a high-conductivity layer under a narrow strip on a much wider plate. It tightens toward the truth as the strip width approaches the full plate width (where spreading is geometrically impossible and this estimate is exact -- see the finite-element script's own full-face-flux reduction test) or as every layer's conductivity falls low enough that little lateral conduction would occur at this thickness scale regardless of geometry.",
+    "Convection is a single coefficient to a fixed ambient; no radiation, no layer-to-layer contact resistance, and no heat loss from the plate's cut edges is modeled.",
+    "This result cannot establish a bounded verdict; it guides a search."
+  ]
+}

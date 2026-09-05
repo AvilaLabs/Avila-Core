@@ -1,0 +1,12 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 1}], "rationale": "Test lower bound of thickness for lowest-density viable material (graphite)."},
+  {"layers": [{"material": "graphite", "thickness_mm": 2}], "rationale": "Step up from 1mm graphite to see hotspot trend."},
+  {"layers": [{"material": "graphite", "thickness_mm": 3}], "rationale": "Step up from 2mm graphite to see hotspot trend."},
+  {"layers": [{"material": "graphite", "thickness_mm": 4}], "rationale": "Step up from 3mm graphite to see hotspot trend."},
+  {"layers": [{"material": "graphite", "thickness_mm": 5}], "rationale": "Step up from 4mm graphite to see hotspot trend."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 1}], "rationale": "Test lower bound of thickness for aluminium as alternative low-density candidate."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 2}], "rationale": "Step up from 1mm aluminium to see hotspot trend."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 3}], "rationale": "Step up from 2mm aluminium to see hotspot trend."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 4}], "rationale": "Step up from 3mm aluminium to see hotspot trend."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 5}], "rationale": "Step up from 4mm aluminium to see hotspot trend."}
+]

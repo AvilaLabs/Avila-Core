@@ -1,0 +1,12 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 4}], "rationale": "Push graphite thinner than prior 10mm reference to see hotspot/mass trend."},
+  {"layers": [{"material": "graphite", "thickness_mm": 5}], "rationale": "Push graphite thinner than prior 10mm reference to see hotspot/mass trend."},
+  {"layers": [{"material": "graphite", "thickness_mm": 6}], "rationale": "Push graphite thinner than prior 10mm reference to see hotspot/mass trend."},
+  {"layers": [{"material": "graphite", "thickness_mm": 7}], "rationale": "Push graphite thinner than prior 10mm reference to see hotspot/mass trend."},
+  {"layers": [{"material": "graphite", "thickness_mm": 8}], "rationale": "Push graphite thinner than prior 10mm reference to see hotspot/mass trend."},
+  {"layers": [{"material": "graphite", "thickness_mm": 9}], "rationale": "Push graphite thinner than prior 10mm reference to see hotspot/mass trend."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 6}], "rationale": "Compare thinner aluminium against thinner graphite for mass/hotspot tradeoff."},
+  {"layers": [{"material": "aluminium", "thickness_mm": 8}], "rationale": "Compare thinner aluminium against thinner graphite for mass/hotspot tradeoff."},
+  {"layers": [{"material": "copper", "thickness_mm": 1}, {"material": "graphite", "thickness_mm": 4}], "rationale": "Test whether a thin copper spreader face lets a thinner graphite backing hold hotspot down, despite copper's mass cost."},
+  {"layers": [{"material": "copper", "thickness_mm": 1}, {"material": "graphite", "thickness_mm": 5}], "rationale": "Test whether a thin copper spreader face lets a thinner graphite backing hold hotspot down, despite copper's mass cost."}
+]

@@ -1,0 +1,10 @@
+{
+  "arm": "C-no-iterative-feedback",
+  "case": "/home/connoravila/Documents/Avila-Labs/project-north-star/examples/cases/case-003-thermal-spreader",
+  "materials_path": "/home/connoravila/Documents/Avila-Labs/project-north-star/examples/capabilities/thermal/materials.json",
+  "manifest_sha256": "sha256:33b78ae3993330049dcc2b27b7c7bdc62150efa869e77d88b2ca1c07cb0c520a",
+  "prior_logs": [
+    "/home/connoravila/Documents/Avila-Labs/project-north-star/examples/cases/case-003-thermal-spreader/campaign-1/sweep/campaign-log.jsonl"
+  ],
+  "n_eval": 12
+}

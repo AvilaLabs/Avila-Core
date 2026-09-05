@@ -1,0 +1,42 @@
+{
+  "schema": "avila.thermal/fe-result/v1",
+  "candidate_id": "l-0000",
+  "layers": [
+    {
+      "material": "graphite",
+      "thickness_mm": "1"
+    }
+  ],
+  "hotspot_temperature": {
+    "lower": "344.43309",
+    "upper": "344.43594",
+    "unit": "K",
+    "interpretation": "a discretisation bracket from two mesh levels (h and h/2) and their Richardson extrapolation (assuming second-order convergence), widened outward by the fine-minus-coarse gap; not a statistical or metrological coverage claim -- see limitations"
+  },
+  "mesh": {
+    "element": "P2 (quadratic) triangles",
+    "coarse": {
+      "level": "h",
+      "refinements": 1,
+      "elements": 64,
+      "dofs": 153
+    },
+    "fine": {
+      "level": "h/2",
+      "refinements": 2,
+      "elements": 256,
+      "dofs": 561
+    }
+  },
+  "engine": {
+    "name": "scikit-fem",
+    "version": "12.0.2",
+    "python": "3.14.4"
+  },
+  "limitations": [
+    "This is a discretisation bracket between two mesh levels, not a proof of mesh convergence and not a bound on modeling error: the material conductivities and densities are unqualified nominal values (see materials.json), the convection coefficient is a single fixed number with no uncertainty, and the problem is two-dimensional (uniform in the third direction) with no contact resistance between layers and no radiation.",
+    "The Richardson extrapolation assumes second-order convergence (p=2) of the P2 solution at the probe point; with only two mesh levels this order is assumed, not verified against a third level. In practice the outward widening by the full fine-minus-coarse gap is larger than the extrapolation correction itself for every candidate this case considers, so the reported bracket is not sensitive to this assumption.",
+    "The hotspot is probed at (0, 0): the strip's symmetry center on the heated face. With no internal heat generation, heat flows away from the source everywhere, so the maximum temperature lies on the heated boundary within the flux region; by the problem's mirror symmetry about x=0, any hotter off-center point would have an equally hot mirror image, which is inconsistent with a single interior (on-boundary) maximum for this elliptic problem, so the center is that maximum. This is a physical argument, not a proof, and this script does not itself search the mesh for a hotter point.",
+    "Not qualified for any decision."
+  ]
+}

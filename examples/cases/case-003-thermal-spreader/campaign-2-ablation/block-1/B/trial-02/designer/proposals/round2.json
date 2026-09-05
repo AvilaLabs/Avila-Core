@@ -1,0 +1,5 @@
+[
+  {"layers": [{"material": "graphite", "thickness_mm": 1}], "rationale": "FE hotspot fell only ~0.47K/mm from 9mm to 6mm graphite, far from the 340K limit; testing whether that gentle trend continues down to minimal thickness."},
+  {"layers": [{"material": "graphite", "thickness_mm": 2}], "rationale": "FE hotspot fell only ~0.47K/mm from 9mm to 6mm graphite, far from the 340K limit; testing whether that gentle trend continues down to minimal thickness."},
+  {"layers": [{"material": "graphite", "thickness_mm": 3}], "rationale": "FE hotspot fell only ~0.47K/mm from 9mm to 6mm graphite, far from the 340K limit; testing whether that gentle trend continues down to minimal thickness."}
+]

@@ -9,6 +9,13 @@ publish.workspace = true
 
 [dependencies]
 avila-core-kernel.workspace = true
+# The workspace's only cryptographic dependency (ADR-0015): pure-Rust Ed25519
+# signing and verification for manifests, receipts, and campaign log lines.
+# Pinned exactly; see THIRD_PARTY_NOTICES.md. Default features (`fast`,
+# `std`, `zeroize`) are used; no `rand_core` feature, because keys are seeded
+# from `getrandom` directly rather than through `SigningKey::generate`.
+ed25519-dalek = "=2.2.0"
+getrandom = "=0.3.4"
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

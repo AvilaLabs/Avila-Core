@@ -10,6 +10,7 @@
 mod hash_cache;
 mod package;
 mod receipt;
+pub mod signature;
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

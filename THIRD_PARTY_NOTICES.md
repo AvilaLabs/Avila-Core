@@ -95,10 +95,33 @@ content-identified by the case package but are not copied into this repository.
 The generated CASE-005 through CASE-008 results are not endorsed or validated by
 the SIMSOPT contributors or NCSX institutions.
 
+## ed25519-dalek (first cryptographic dependency)
+
+ADR-0015 adds the workspace's first cryptographic dependency, confined to
+`avila-core-evidence::signature`: pure-Rust Ed25519 signing and verification
+for manifests, receipts, and campaign log lines. `getrandom` supplies the
+random bytes for a freshly generated key seed; no other dependency uses it.
+
+- `ed25519-dalek` 2.2.0 — BSD-3-Clause — Copyright (c) 2017-2024 isis
+  lovecruft, Tony Arcieri, Michael Rosenberg
+  (<https://github.com/dalek-cryptography/curve25519-dalek/tree/main/ed25519-dalek>)
+- `curve25519-dalek` (pulled in by `ed25519-dalek`, pinned by `Cargo.lock`) —
+  BSD-3-Clause — Copyright (c) 2016-2024 Isis Agora Lovecruft, Henry de Valence
+  (<https://github.com/dalek-cryptography/curve25519-dalek>)
+- `subtle` (pulled in transitively) — BSD-3-Clause — Copyright (c) 2016-2024
+  isis lovecruft (<https://github.com/dalek-cryptography/subtle>)
+- `getrandom` 0.3.4 — MIT OR Apache-2.0 —
+  (<https://github.com/rust-random/getrandom>)
+
+License text for the BSD-3-Clause dependencies above:
+[`LICENSES/BSD-3-Clause.txt`](LICENSES/BSD-3-Clause.txt). The AGPL license for
+Avila Core does not relicense these dependencies.
+
 ## Rust dependencies and bundled fonts
 
 Rust dependencies are resolved by `Cargo.lock` and are not vendored in this
 repository. Their licenses remain their own. A distributed binary must carry
 the notices required by its resolved dependency set, including the OFL-1.1 and
-Ubuntu Font License material reported by `epaint_default_fonts`; the root AGPL
-file is not a substitute for those notices.
+Ubuntu Font License material reported by `epaint_default_fonts`, and the
+BSD-3-Clause and MIT/Apache-2.0 notices above for the cryptographic
+dependency set; the root AGPL file is not a substitute for those notices.

@@ -244,4 +244,16 @@ Those items are frozen as of the commit that set the status line above. Any late
 
 ## Amendments
 
-None.
+**A1 (2026-09-05, before any scored result existed).** The first scored
+block (`workspaces/exp-002/block-1`, started 2026-09-04T23:51Z) recorded
+every one of its 15 trials as `failed` after two attempts each, in under
+five minutes: every designer session was refused by the Claude account's
+session limit, which the transcripts record verbatim. This is an
+infrastructure failure outside every arm, not a designer or Core outcome.
+The block is preserved unscored as `block-1-limit-failed/` in the archive,
+and the identical frozen command is rerun as `block-1` after the limit
+reset, with the same seed, budgets, trial count, harness commit, manifest
+and binary. Limitation noted for the record: the harness's `DONE.json`
+`reason` field was empty for these failures; the reason is in each
+attempt's `transcript-attempt-N.jsonl`. The harness is not changed for the
+rerun.

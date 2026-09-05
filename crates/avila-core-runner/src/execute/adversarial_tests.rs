@@ -11,8 +11,13 @@ use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use avila_core_evidence::signature::{
+    self as signature, GeneratedKeyPair, KeyRole, SignatureDocument, SignedDocumentRef, TrustRoot,
+    TrustRootEntry,
+};
 use avila_core_evidence::{
-    IntegrityCheckState, PackageIntegrityStatus, ReceiptCheckState, sha256_file, sha256_hex,
+    CasePackageManifest, IntegrityCheckState, PackageDocument, PackageIntegrityStatus,
+    ReceiptCheckState, sha256_file, sha256_hex,
 };
 use avila_core_kernel::VerdictStatus;
 use serde_json::{Value, json};
@@ -22,7 +27,9 @@ use crate::case_run::{
     BindingStatus, CapabilityCheckState, CaseRunOptions, CaseRunReport, CaseRunStatus, ChangeClass,
     ExecutionStatus, StepExecutionState, execute_case, human_summary,
 };
-use crate::diagnostic::{CORE_X1001, CORE_X1201, CORE_X1301, CORE_X2501, CORE_X2601, CORE_X9001};
+use crate::diagnostic::{
+    CORE_X1001, CORE_X1004, CORE_X1005, CORE_X1201, CORE_X1301, CORE_X2501, CORE_X2601, CORE_X9001,
+};
 
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
 
@@ -2719,4 +2726,614 @@ fn a_qualification_edit_narrowing_the_envelope_leaves_a_reused_step_not_evaluate
         assert!(reasons.contains("CORE-A4401"), "{reasons}");
         assert!(reasons.contains("outside_qualification"), "{reasons}");
     }
+}
+
+// --- ADR-0015: signed manifests and receipts ------------------------------
+
+fn hex_encode(bytes: &[u8]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+fn read_manifest(case_dir: &Path) -> CasePackageManifest {
+    serde_json::from_slice(&fs::read(case_dir.join("package.json")).unwrap()).unwrap()
+}
+
+fn write_manifest(case_dir: &Path, manifest: &CasePackageManifest) {
+    let mut bytes = serde_json::to_vec_pretty(manifest).unwrap();
+    bytes.push(b'\n');
+    fs::write(case_dir.join("package.json"), bytes).unwrap();
+}
+
+fn trust_root(entries: &[(&GeneratedKeyPair, KeyRole)]) -> TrustRoot {
+    TrustRoot {
+        schema_version: signature::TRUST_ROOT_SCHEMA_VERSION.into(),
+        keys: entries
+            .iter()
+            .map(|(pair, role)| TrustRootEntry {
+                key_id: pair.key_id.clone(),
+                public_key_hex: pair.public_key_hex.clone(),
+                role: *role,
+            })
+            .collect(),
+    }
+}
+
+fn write_trust_root(path: &Path, root: &TrustRoot) {
+    fs::write(path, serde_json::to_vec_pretty(root).unwrap()).unwrap();
+}
+
+fn write_runner_key_file(path: &Path, pair: &GeneratedKeyPair) {
+    fs::write(path, pair.seed).unwrap();
+}
+
+fn write_signature_document(case_dir: &Path, relative_path: &str, document: &SignatureDocument) {
+    let full_path = case_dir.join(relative_path);
+    fs::create_dir_all(full_path.parent().unwrap()).unwrap();
+    let mut bytes = serde_json::to_vec_pretty(document).unwrap();
+    bytes.push(b'\n');
+    fs::write(full_path, bytes).unwrap();
+}
+
+/// Bind a `signature` document (built or hand-forged) into the manifest at
+/// `relative_path`, rehashing its own entry to match the bytes just
+/// written, replacing any prior entry with the same `document_id`.
+fn bind_signature_document(
+    case_dir: &Path,
+    document_id: &str,
+    relative_path: &str,
+    document: &SignatureDocument,
+) {
+    write_signature_document(case_dir, relative_path, document);
+    let mut manifest = read_manifest(case_dir);
+    let sha256 = format!(
+        "sha256:{}",
+        sha256_hex(fs::read(case_dir.join(relative_path)).unwrap())
+    );
+    manifest
+        .documents
+        .retain(|existing| existing.document_id != document_id);
+    manifest.documents.push(PackageDocument {
+        document_id: document_id.into(),
+        role: "signature".into(),
+        path: relative_path.into(),
+        sha256,
+        step_id: None,
+    });
+    write_manifest(case_dir, &manifest);
+}
+
+/// Sign a case package's manifest with `seed`, exactly as `avila-core sign
+/// manifest` does: digest the manifest with the not-yet-bound signature
+/// entry excluded, sign it, write `signatures/manifest.sig.json`, and bind
+/// it into `package.json`. Idempotent: signs whatever is currently on disk,
+/// including any other signature already bound (such as a receipt's).
+fn sign_manifest(case_dir: &Path, seed: &[u8; 32]) {
+    const DOCUMENT_ID: &str = "signature-manifest";
+    // Digest the manifest as its struct-based serialization will actually
+    // render it, not the raw file bytes, which may predate any struct
+    // round-trip and so omit fields the struct always writes (an empty
+    // `free_inputs`, for one). Verification always reads struct-normalized
+    // bytes back from disk, so signing must match that shape.
+    let manifest = read_manifest(case_dir);
+    let normalized_bytes = serde_json::to_vec(&manifest).unwrap();
+    let digest = signature::manifest_signing_digest(&normalized_bytes, DOCUMENT_ID).unwrap();
+    let signed_document_sha256 = format!("sha256:{}", hex_encode(&digest));
+    let document = signature::build_signature_document(
+        seed,
+        "manifest",
+        manifest.case_id,
+        signed_document_sha256,
+        &digest,
+    );
+    bind_signature_document(
+        case_dir,
+        DOCUMENT_ID,
+        "signatures/manifest.sig.json",
+        &document,
+    );
+}
+
+/// Sign a case package's already-committed receipt for `step_id` with
+/// `seed`, exactly as `avila-core sign receipt` does.
+fn sign_receipt(case_dir: &Path, step_id: &str, seed: &[u8; 32]) {
+    let manifest = read_manifest(case_dir);
+    let receipt_document = manifest
+        .documents
+        .iter()
+        .find(|document| {
+            document.role == "execution_receipt" && document.step_id.as_deref() == Some(step_id)
+        })
+        .unwrap()
+        .clone();
+    let receipt_bytes = fs::read(case_dir.join(&receipt_document.path)).unwrap();
+    let actual_sha256 = format!("sha256:{}", sha256_hex(&receipt_bytes));
+    assert_eq!(
+        actual_sha256, receipt_document.sha256,
+        "receipt bytes must already match the bound identity before signing"
+    );
+    let digest = signature::digest_from_prefixed(&actual_sha256).unwrap();
+    let document = signature::build_signature_document(
+        seed,
+        "execution_receipt",
+        step_id.to_string(),
+        actual_sha256,
+        &digest,
+    );
+    let document_id = format!("signature-receipt-{step_id}");
+    let relative_path = format!("signatures/{step_id}-receipt.sig.json");
+    bind_signature_document(case_dir, &document_id, &relative_path, &document);
+}
+
+fn set_require_signatures(synthetic: &Synthetic) {
+    let contract_path = synthetic.case_dir.join("contract.json");
+    let mut contract: Value = serde_json::from_slice(&fs::read(&contract_path).unwrap()).unwrap();
+    contract["execution_policy"]["require_signatures"] = json!(true);
+    fs::write(
+        &contract_path,
+        serde_json::to_vec_pretty(&contract).unwrap(),
+    )
+    .unwrap();
+    rehash_document(&synthetic.case_dir, "contract", "contract.json");
+}
+
+#[test]
+fn signed_manifest_and_receipt_verify_and_reuse_under_a_trust_root() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let requester = signature::generate_keypair(KeyRole::Requester).unwrap();
+    let runner = signature::generate_keypair(KeyRole::Runner).unwrap();
+    sign_receipt(&synthetic.case_dir, "classification", &runner.seed);
+    sign_manifest(&synthetic.case_dir, &requester.seed);
+
+    let root = trust_root(&[(&requester, KeyRole::Requester), (&runner, KeyRole::Runner)]);
+    let trust_root_path = dir.0.join("trust-root.json");
+    write_trust_root(&trust_root_path, &root);
+
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options.trust_root = Some(trust_root_path);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let summary = human_summary(&report);
+    assert_eq!(report.status, CaseRunStatus::Evaluated, "{summary}");
+    assert_eq!(
+        report.execution.as_ref().unwrap().status,
+        ExecutionStatus::Reused,
+        "{summary}"
+    );
+    assert!(
+        report.manifest_signature.as_ref().unwrap().is_verified(),
+        "{:?}",
+        report.manifest_signature
+    );
+    let executed = step(&report);
+    assert!(
+        executed.receipt_signature.as_ref().unwrap().is_verified(),
+        "{:?}",
+        executed.receipt_signature
+    );
+}
+
+#[test]
+fn without_a_trust_root_signatures_are_reported_but_never_verified() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let requester = signature::generate_keypair(KeyRole::Requester).unwrap();
+    let runner = signature::generate_keypair(KeyRole::Runner).unwrap();
+    sign_receipt(&synthetic.case_dir, "classification", &runner.seed);
+    sign_manifest(&synthetic.case_dir, &requester.seed);
+
+    let options = reuse_options(&synthetic, dir.workspace());
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(
+        report.status,
+        CaseRunStatus::Evaluated,
+        "{}",
+        human_summary(&report)
+    );
+    assert_eq!(
+        report.manifest_signature.as_ref().unwrap().describe(),
+        "signature not checked (no trust root supplied)"
+    );
+    assert_eq!(
+        step(&report).receipt_signature.as_ref().unwrap().describe(),
+        "signature not checked (no trust root supplied)"
+    );
+
+    // An entirely unsigned package is reported unsigned, not merely unchecked.
+    let plain_dir = TestDir::new();
+    let plain = blessed(&plain_dir);
+    let plain_report = execute_case(
+        &plain.case_dir,
+        &reuse_options(&plain, plain_dir.workspace()),
+    )
+    .unwrap();
+    assert_eq!(
+        plain_report.manifest_signature.as_ref().unwrap().describe(),
+        "unsigned"
+    );
+    assert_eq!(
+        step(&plain_report)
+            .receipt_signature
+            .as_ref()
+            .unwrap()
+            .describe(),
+        "unsigned"
+    );
+}
+
+#[test]
+fn a_rewritten_manifest_with_the_old_signature_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let requester = signature::generate_keypair(KeyRole::Requester).unwrap();
+    sign_manifest(&synthetic.case_dir, &requester.seed);
+    let root = trust_root(&[(&requester, KeyRole::Requester)]);
+    let trust_root_path = dir.0.join("trust-root.json");
+    write_trust_root(&trust_root_path, &root);
+
+    // Rewrite the manifest after signing, without re-signing it.
+    let mut manifest = read_manifest(&synthetic.case_dir);
+    manifest.title = "a rewritten title".into();
+    write_manifest(&synthetic.case_dir, &manifest);
+
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options.trust_root = Some(trust_root_path);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(report.status, CaseRunStatus::Rejected);
+    assert!(report.compile.is_none());
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_X1004),
+        "{:?}",
+        report.findings
+    );
+}
+
+#[test]
+fn a_hand_forged_receipt_signature_does_not_verify() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let requester = signature::generate_keypair(KeyRole::Requester).unwrap();
+    let runner = signature::generate_keypair(KeyRole::Runner).unwrap();
+
+    // The forged signature's target is the receipt's real, current digest
+    // (internally consistent); only the signature bytes themselves are
+    // fabricated, as an attacker without the runner's private key would do.
+    let manifest = read_manifest(&synthetic.case_dir);
+    let receipt_document = manifest
+        .documents
+        .iter()
+        .find(|document| document.step_id.as_deref() == Some("classification"))
+        .unwrap()
+        .clone();
+    let forged = SignatureDocument {
+        schema_version: signature::SIGNATURE_SCHEMA_VERSION.into(),
+        signed_document: SignedDocumentRef {
+            role: "execution_receipt".into(),
+            document_id: "classification".into(),
+            sha256: receipt_document.sha256.clone(),
+        },
+        key_id: runner.key_id.clone(),
+        algorithm: signature::ALGORITHM_ED25519.into(),
+        signature_hex: "00".repeat(64),
+        notice: signature::SIGNATURE_NOTICE.into(),
+    };
+    bind_signature_document(
+        &synthetic.case_dir,
+        "signature-receipt-classification",
+        "signatures/classification-receipt.sig.json",
+        &forged,
+    );
+    // The manifest is signed last, over the state including the forged
+    // receipt-signature entry, so only the receipt signature is under test.
+    sign_manifest(&synthetic.case_dir, &requester.seed);
+    let root = trust_root(&[(&requester, KeyRole::Requester), (&runner, KeyRole::Runner)]);
+    let trust_root_path = dir.0.join("trust-root.json");
+    write_trust_root(&trust_root_path, &root);
+
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options.trust_root = Some(trust_root_path);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let executed = step(&report);
+    assert_ne!(
+        executed.state,
+        StepExecutionState::Reused,
+        "{}",
+        human_summary(&report)
+    );
+    assert!(
+        executed
+            .changes
+            .iter()
+            .any(|change| change.class == ChangeClass::ReceiptSignatureInvalid),
+        "{:?}",
+        executed.changes
+    );
+}
+
+#[test]
+fn a_receipt_copied_from_a_donor_package_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let requester = signature::generate_keypair(KeyRole::Requester).unwrap();
+    let runner = signature::generate_keypair(KeyRole::Runner).unwrap();
+
+    // A "donor" receipt: byte-identical to the real committed one except for
+    // its case_id, as if it had been copied in from a different package that
+    // happened to run the same capability over the same input identities.
+    let mut donor_receipt: Value = serde_json::from_slice(
+        &fs::read(synthetic.case_dir.join("receipts/classification.json")).unwrap(),
+    )
+    .unwrap();
+    donor_receipt["case_id"] = json!("CASE-DONOR");
+    let donor_bytes = serde_json::to_vec_pretty(&donor_receipt).unwrap();
+    fs::write(
+        synthetic.case_dir.join("receipts/classification.json"),
+        &donor_bytes,
+    )
+    .unwrap();
+    let mut manifest = read_manifest(&synthetic.case_dir);
+    for document in &mut manifest.documents {
+        if document.step_id.as_deref() == Some("classification") {
+            document.sha256 = format!("sha256:{}", sha256_hex(&donor_bytes));
+        }
+    }
+    write_manifest(&synthetic.case_dir, &manifest);
+    sign_receipt(&synthetic.case_dir, "classification", &runner.seed);
+    sign_manifest(&synthetic.case_dir, &requester.seed);
+    let root = trust_root(&[(&requester, KeyRole::Requester), (&runner, KeyRole::Runner)]);
+    let trust_root_path = dir.0.join("trust-root.json");
+    write_trust_root(&trust_root_path, &root);
+    // The donor receipt's own signature is genuine and would verify; case
+    // identity is what refuses reuse here, not the signature. Supplying the
+    // same runner key for this run lets the step rerun signed too, so the
+    // final receipt_signature stays `verified` throughout and the assertion
+    // below isolates case identity as the cause.
+    let runner_key_path = dir.0.join("runner.seed");
+    write_runner_key_file(&runner_key_path, &runner);
+
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options.trust_root = Some(trust_root_path);
+    options.runner_key = Some(runner_key_path);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let executed = step(&report);
+    assert_ne!(
+        executed.state,
+        StepExecutionState::Reused,
+        "{}",
+        human_summary(&report)
+    );
+    assert!(
+        executed
+            .changes
+            .iter()
+            .any(|change| change.class == ChangeClass::DifferentCase),
+        "{:?}",
+        executed.changes
+    );
+    assert!(
+        executed.receipt_signature.as_ref().unwrap().is_verified(),
+        "{:?}",
+        executed.receipt_signature
+    );
+}
+
+#[test]
+fn a_signature_made_with_an_unlisted_key_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let signer = signature::generate_keypair(KeyRole::Requester).unwrap();
+    sign_manifest(&synthetic.case_dir, &signer.seed);
+
+    // The trust root lists a different requester key, never the one that
+    // actually signed this manifest.
+    let listed = signature::generate_keypair(KeyRole::Requester).unwrap();
+    let root = trust_root(&[(&listed, KeyRole::Requester)]);
+    let trust_root_path = dir.0.join("trust-root.json");
+    write_trust_root(&trust_root_path, &root);
+
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options.trust_root = Some(trust_root_path);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(report.status, CaseRunStatus::Rejected);
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_X1004),
+        "{:?}",
+        report.findings
+    );
+}
+
+#[test]
+fn a_manifest_signed_by_the_runner_key_instead_of_the_requester_key_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let runner = signature::generate_keypair(KeyRole::Runner).unwrap();
+    // The requester never signs this manifest; the runner key does instead.
+    sign_manifest(&synthetic.case_dir, &runner.seed);
+    let root = trust_root(&[(&runner, KeyRole::Runner)]);
+    let trust_root_path = dir.0.join("trust-root.json");
+    write_trust_root(&trust_root_path, &root);
+
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options.trust_root = Some(trust_root_path);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(report.status, CaseRunStatus::Rejected);
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_X1004),
+        "{:?}",
+        report.findings
+    );
+}
+
+#[test]
+fn a_log_line_edited_after_signing_fails_lineage_revalidation() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    enable_free_input(&synthetic, "aftermatter-case");
+    let requester = signature::generate_keypair(KeyRole::Requester).unwrap();
+    let runner = signature::generate_keypair(KeyRole::Runner).unwrap();
+    sign_manifest(&synthetic.case_dir, &requester.seed);
+    let root = trust_root(&[(&requester, KeyRole::Requester), (&runner, KeyRole::Runner)]);
+    let trust_root_path = dir.0.join("trust-root.json");
+    write_trust_root(&trust_root_path, &root);
+    let runner_key_path = dir.0.join("runner.seed");
+    write_runner_key_file(&runner_key_path, &runner);
+
+    let root_candidate = dir.0.join("root-candidate.json");
+    let child_candidate = dir.0.join("child-candidate.json");
+    write_lineage_candidate(&root_candidate, "root-design", "4", false);
+    write_lineage_candidate(&child_candidate, "child-design", "6", false);
+    let log = dir.0.join("lineage.jsonl");
+
+    let mut root_options = lineage_options(
+        &synthetic,
+        dir.workspace(),
+        log.clone(),
+        root_candidate,
+        "try-001",
+        None,
+    );
+    root_options.runner_key = Some(runner_key_path);
+    execute_case(&synthetic.case_dir, &root_options).unwrap();
+    let raw = fs::read_to_string(&log).unwrap();
+    assert!(raw.contains("\"signature\""), "{raw}");
+
+    // Edit the line's visible content after signing, before any child ever
+    // references it, leaving the stale signature untouched.
+    let mut root_entry: Value = serde_json::from_str(raw.trim()).unwrap();
+    root_entry["status"] = json!("evaluated_but_actually_tampered");
+    fs::write(
+        &log,
+        format!("{}\n", serde_json::to_string(&root_entry).unwrap()),
+    )
+    .unwrap();
+
+    let mut child_options = lineage_options(
+        &synthetic,
+        dir.workspace(),
+        log,
+        child_candidate,
+        "try-002",
+        Some("try-001"),
+    );
+    child_options.trust_root = Some(trust_root_path);
+    let child = execute_case(&synthetic.case_dir, &child_options).unwrap();
+    assert_eq!(child.status, CaseRunStatus::Rejected);
+    assert!(child.execution.is_none());
+    assert!(
+        child.findings.iter().any(|finding| {
+            finding.code == CORE_X1201 && finding.message.contains("does not verify")
+        }),
+        "{:?}",
+        child.findings
+    );
+}
+
+#[test]
+fn require_signatures_refuses_a_run_without_a_trust_root() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    set_require_signatures(&synthetic);
+
+    let options = reuse_options(&synthetic, dir.workspace());
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(report.status, CaseRunStatus::Rejected);
+    assert!(report.execution.is_none());
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_X1005),
+        "{:?}",
+        report.findings
+    );
+}
+
+#[test]
+fn require_signatures_refuses_unsigned_execution_even_with_a_verified_manifest() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    set_require_signatures(&synthetic);
+    let requester = signature::generate_keypair(KeyRole::Requester).unwrap();
+    // The receipt itself is never signed.
+    sign_manifest(&synthetic.case_dir, &requester.seed);
+    let root = trust_root(&[(&requester, KeyRole::Requester)]);
+    let trust_root_path = dir.0.join("trust-root.json");
+    write_trust_root(&trust_root_path, &root);
+
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options.trust_root = Some(trust_root_path);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(
+        report.status,
+        CaseRunStatus::Rejected,
+        "{}",
+        human_summary(&report)
+    );
+    assert!(
+        report.manifest_signature.as_ref().unwrap().is_verified(),
+        "{}",
+        report.manifest_signature.as_ref().unwrap().describe()
+    );
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_X1005),
+        "{:?}",
+        report.findings
+    );
+}
+
+#[test]
+fn require_signatures_evaluates_a_fully_signed_case() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    set_require_signatures(&synthetic);
+    let requester = signature::generate_keypair(KeyRole::Requester).unwrap();
+    let runner = signature::generate_keypair(KeyRole::Runner).unwrap();
+    sign_receipt(&synthetic.case_dir, "classification", &runner.seed);
+    sign_manifest(&synthetic.case_dir, &requester.seed);
+    let root = trust_root(&[(&requester, KeyRole::Requester), (&runner, KeyRole::Runner)]);
+    let trust_root_path = dir.0.join("trust-root.json");
+    write_trust_root(&trust_root_path, &root);
+
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options.trust_root = Some(trust_root_path);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let summary = human_summary(&report);
+    // Adding require_signatures to the contract legitimately changes the
+    // compiled snapshot identity, so the committed claims and campaign
+    // report (frozen before that edit, by `blessed`) no longer replay; that
+    // is an honest, unrelated consequence of editing the contract, not
+    // something this test re-blesses away. What this test establishes is
+    // narrower: fully signed evidence is not itself refused by the policy.
+    assert_eq!(
+        report.execution.as_ref().unwrap().status,
+        ExecutionStatus::Reused,
+        "{summary}"
+    );
+    assert!(
+        !report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_X1005),
+        "{:?}",
+        report.findings
+    );
+    assert!(
+        step(&report)
+            .receipt_signature
+            .as_ref()
+            .unwrap()
+            .is_verified(),
+        "{summary}"
+    );
 }

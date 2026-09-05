@@ -480,12 +480,18 @@ fn run_sign(command: SignCommand) -> Result<(), Box<dyn Error>> {
                 serde_json::from_slice(&manifest_bytes)?;
             let seed = signature::parse_seed_bytes(&fs::read(&key)?)?;
 
-            // The digest is computed with the not-yet-added (or, on a
-            // re-sign, the already-bound) signature entry removed, so
-            // signing is idempotent and the signature covers the manifest
-            // as the requester actually approved it (ADR-0015 clause 3).
+            // The digest is computed over the manifest as `write_manifest`'s
+            // struct-based serialization will actually render it (not the
+            // raw file bytes, which may predate any struct round-trip and
+            // so omit fields the struct always writes, such as an empty
+            // `free_inputs`), with the not-yet-added (or, on a re-sign, the
+            // already-bound) signature entry removed. This is what makes
+            // signing idempotent and later verification, which always reads
+            // the struct-normalized bytes back from disk, reproduce the
+            // identical digest (ADR-0015 clause 3).
+            let normalized_bytes = serde_json::to_vec(&manifest)?;
             let digest = signature::manifest_signing_digest(
-                &manifest_bytes,
+                &normalized_bytes,
                 MANIFEST_SIGNATURE_DOCUMENT_ID,
             )?;
             let signed_document_sha256 = format!("sha256:{}", hex_encode(&digest));

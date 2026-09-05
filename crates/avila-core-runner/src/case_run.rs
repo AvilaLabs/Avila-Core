@@ -64,7 +64,7 @@ mod qualification;
 use qualification::BoundQualification;
 use qualification::{Envelopes, load_qualifications};
 mod signing;
-use signing::SignatureStatus;
+pub use signing::SignatureStatus;
 mod inputs;
 use inputs::{steps_reached_by_inputs, supply_free_inputs, validate_free_inputs};
 mod compare;

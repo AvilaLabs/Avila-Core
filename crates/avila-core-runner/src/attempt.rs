@@ -277,6 +277,11 @@ pub(crate) fn prepare_attempt(
                 parent.record.candidate_input, request.candidate_input
             ));
         }
+        if let Some(trust_root) = trust_root {
+            verify_log_line_signature(&parent.full_line, trust_root).map_err(|issue| {
+                format!("parent attempt `{parent_id}` log line does not verify: {issue}")
+            })?;
+        }
         let generation = parent
             .record
             .generation
@@ -336,6 +341,11 @@ pub(crate) fn revalidate_before_append(
                     "parent attempt `{parent_id}` changed while this run was in progress: expected {expected_sha256}, observed {}",
                     parent.record_sha256
                 ));
+            }
+            if let Some(trust_root) = trust_root {
+                verify_log_line_signature(&parent.full_line, trust_root).map_err(|issue| {
+                    format!("parent attempt `{parent_id}` log line does not verify: {issue}")
+                })?;
             }
         }
         (None, None) => {}

@@ -188,6 +188,11 @@
           "description": "Requires a qualification assessment on the admitted evidence of every `bounded` or `enclosure` requirement. When true, evidence with no qualification assessment leaves the requirement NOT_EVALUATED (CORE-A4402). When false or absent, such evidence is still evaluated, but the verdict carries an informational reason (CORE-A4403). Nominal-basis requirements are unaffected either way.",
           "type": "boolean",
           "default": false
+        },
+        "require_signatures": {
+          "description": "Requires the case runner to refuse an unsigned package and unsigned SC-12 reuse (ADR-0015): a run must be given --trust-root, the package manifest's requester signature must verify, and every declared execution step's operative receipt must carry a signature verified against a listed runner key, or the run is refused. The compiler only carries this flag through to the compiled snapshot and notes it visibly (CORE-A4404); the refusal itself is the case runner's.",
+          "type": "boolean",
+          "default": false
         }
       }
     },

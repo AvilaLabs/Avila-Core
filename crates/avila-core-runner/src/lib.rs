@@ -27,15 +27,15 @@ pub use case_run::{
     CaseRunReport, CaseRunStatus, ChangeClass, ChangeRecord, ClaimsReport, ExecutionReport,
     ExecutionStatus, NotExecutedStep, OutputReport, PresentationGateReadiness,
     PresentationGateReport, PresentedEvidence, ReceiptReplayReport, ReceiptSummary, ReplayReport,
-    StagedInputReport, StepExecutionReport, StepExecutionState, SuppliedInput, VerdictMargin,
-    display_number, execute_case, human_summary, parse_capabilities, parse_environment,
-    parse_inputs, parse_named_paths, parse_source_roots,
+    SignatureStatus, StagedInputReport, StepExecutionReport, StepExecutionState, SuppliedInput,
+    VerdictMargin, display_number, execute_case, human_summary, parse_capabilities,
+    parse_environment, parse_inputs, parse_named_paths, parse_source_roots,
 };
 pub use diagnostic::{
-    CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1101, CORE_X1201, CORE_X2001, CORE_X2101, CORE_X2201,
-    CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001,
-    CORE_X3101, CORE_X3201, CORE_X3301, CORE_X9001, RUNTIME_DIAGNOSTIC_CATALOG,
-    RUNTIME_FINDING_CODES, RunFinding, RunStage, explain_runtime,
+    CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1004, CORE_X1005, CORE_X1101, CORE_X1201, CORE_X2001,
+    CORE_X2101, CORE_X2201, CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701,
+    CORE_X2801, CORE_X3001, CORE_X3101, CORE_X3201, CORE_X3301, CORE_X9001,
+    RUNTIME_DIAGNOSTIC_CATALOG, RUNTIME_FINDING_CODES, RunFinding, RunStage, explain_runtime,
 };
 pub use execute::external_checker::{
     EXTERNAL_CHECKER_ADAPTER_SCHEMA_VERSION, EXTERNAL_CHECKER_DOCUMENT_ROLE, ExternalArgument,

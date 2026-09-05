@@ -72,6 +72,15 @@ regulatory review. It makes their boundaries explicit and inspectable.
 - Identity-bound attempt lineage with automatic typed candidate diffs and
   parent-to-child verdict and exact-margin comparisons, plus scripted agent
   campaigns and engineering specimens used to test the loop.
+- Signed manifests and receipts: an operator trust root (`avila-core keys
+  generate`, `avila-core sign`, `run --trust-root`) that refuses a package
+  whose manifest signature does not verify and excludes an unverified
+  committed receipt from reuse, with a contract policy that can make an
+  unsigned package an outright refusal.
+- An independently implemented, standard-library-only Python verifier
+  (`verifier/`) that re-derives package identity, receipt invocation
+  identities, claims binding, and every requirement verdict from the same
+  fixture vectors, importing no Core crate.
 - A headless CLI and a thin native workbench over the same Rust implementation.
 
 ## Quick start

@@ -1,10 +1,10 @@
 use super::values::NOT_DEFINED_PLACEHOLDER;
 use super::{CompilationStatus, CompileReport, PresentationGateState, compile_documents};
 use crate::diagnostic::{
-    CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3401, CORE_R3501,
-    CORE_R3601, CORE_R3602, CORE_S1101, CORE_S1102, CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103,
-    CORE_T2104, CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2601, FindingClass, RepairApplicability,
-    RepairEdit,
+    CORE_A4404, CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3401,
+    CORE_R3501, CORE_R3601, CORE_R3602, CORE_S1101, CORE_S1102, CORE_T2001, CORE_T2101, CORE_T2102,
+    CORE_T2103, CORE_T2104, CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2601, FindingClass,
+    RepairApplicability, RepairEdit,
 };
 use crate::document::{
     AuthoredBinding, BasisKind, BoundSide, CategoricalPredicate, CategoricalRequirementSource,
@@ -782,6 +782,41 @@ fn unconsumed_declarations_are_notices_that_never_block() {
     blocked.requirements[0].metric = None;
     let report = compile_contract(&blocked);
     assert_eq!(codes(&report), BTreeSet::from([CORE_R3301]));
+}
+
+#[test]
+fn require_signatures_is_a_visible_non_blocking_notice() {
+    let plain = compile_contract(&contract());
+    assert_eq!(plain.status, CompilationStatus::Compiled);
+    assert!(
+        !plain
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_A4404),
+        "{:?}",
+        plain.findings
+    );
+
+    let mut signed = contract();
+    signed.execution_policy.require_signatures = true;
+    let report = compile_contract(&signed);
+    assert_eq!(
+        report.status,
+        CompilationStatus::Compiled,
+        "{:?}",
+        report.findings
+    );
+    let notice = report
+        .findings
+        .iter()
+        .find(|finding| finding.code == CORE_A4404)
+        .unwrap();
+    assert_eq!(notice.class, FindingClass::Notice);
+    assert!(!notice.blocks_compilation());
+    assert_eq!(
+        notice.primary.pointer,
+        "/execution_policy/require_signatures"
+    );
 }
 
 #[test]

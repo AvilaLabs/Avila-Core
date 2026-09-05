@@ -2125,7 +2125,11 @@ impl<'a> Runner<'a> {
             parameters: parameters.clone(),
             seed: step.reproducibility.seed.clone(),
         };
-        let executable = executable.map(|path| fs::canonicalize(&path).unwrap_or(path));
+        // Preserve the operator-supplied path: a virtualenv interpreter is
+        // semantically different from its resolved base Python because its
+        // prefix determines site-packages. Hashing below still follows the
+        // symlink target, so byte identity remains unchanged.
+        let executable = executable.map(|path| std::path::absolute(&path).unwrap_or(path));
         let program = executable
             .as_ref()
             .and_then(|path| path.file_name())
@@ -3327,6 +3331,33 @@ fn replay_expected(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn supplied_symlink_executable_becomes_absolute_without_resolution() {
+        use std::os::unix::fs::symlink;
+
+        let root =
+            std::env::temp_dir().join(format!("avila-core-executable-path-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        let target = root.join("python-base");
+        let link = root.join("venv-python");
+        fs::write(&target, b"interpreter").unwrap();
+        symlink(&target, &link).unwrap();
+
+        let relative = PathBuf::from(
+            link.strip_prefix(std::env::current_dir().unwrap())
+                .unwrap_or(&link),
+        );
+        let absolute = std::path::absolute(&relative).unwrap();
+        assert!(absolute.is_absolute());
+        assert_eq!(absolute, link);
+        assert!(absolute.is_symlink());
+        assert_eq!(fs::read_link(&absolute).unwrap(), target);
+
+        let _ = fs::remove_dir_all(&root);
+    }
 
     fn comparison_attempt() -> AttemptRecord {
         AttemptRecord {

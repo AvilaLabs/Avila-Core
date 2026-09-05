@@ -68,7 +68,7 @@ external product gate.
 | Known shortcut refusal | Exercised | An adversarial designer arm (CASE-002 campaign 3, amendment A6) confirmed refusals for out-of-envelope candidates, a wrong interpreter digest, a particle count below its domain, and coverage on a weaker basis, and obtained undeserved verdicts only by rewriting the package; the identity log and the manifest pin (S-030) now make a rewritten package a refusal or a visibly different identity | The verifier checks signatures, and `execution_policy.require_signatures` set on the three loop cases |
 | Autonomous search outcome | Reached twice | CASE-002 campaign 3: a language-model designer found an all-PASS design 277 kg lighter than the sweep's best at its second transport and stopped by judgment; the seeded surrogate found one at its eleventh. CASE-003 campaign 1, under the manifest pin: the same designer found an all-PASS spreader five times lighter than the sweep's bar at its sixth evaluation; see each case's `RESULTS.md` | EXP-002 ran on CASE-003 (2026-09-05, 15 trials, three arms): non-discriminating, every arm reached the optimum in one to three evaluations; Core's contribution must be isolated on a harder case (CASE-002). The predeclared shortcut was never proposed, so refusal during a successful search is still unexercised |
 | Optional practicality routing | Implemented for the slice | Exact instructed dossier exercises both `request_changes` and `present_to_user`; omission leaves Core fully usable |
-| Independent verification | Implemented for the first profile | `verifier/avila_core_verify.py` (S-041) reproduces package identity, receipt invocation identities, claims binding and every numeric and categorical verdict and margin for six cases with zero mismatches, and agrees with every semantic-core vector; envelopes, coverage, presentation gates, `campaign_sha256` and signatures are named as not checked | Extend the profile to signatures (ADR-0015) and qualification envelopes |
+| Independent verification | Implemented for the first profile | `verifier/avila_core_verify.py` (S-041) reproduces package identity, receipt invocation identities, claims binding and every numeric and categorical verdict and margin for six cases with zero mismatches, and agrees with every semantic-core vector; ADR-0015 signatures are verified from scratch against a trust root (S-042); envelopes are checked structurally because the extracted applicability facts are not persisted; coverage, presentation gates and `campaign_sha256` are named as not checked | Persist the applicability facts so envelope verdicts can be re-derived; extend to coverage and `campaign_sha256` |
 | Performance baseline | Measured once, debug build (2026-09-04) | Verify-only run of CASE-003: 10–40 ms. CASE-002 with every root supplied: 0.31 s per invocation, almost all of it re-hashing ~250 MB of static nuclear and ACTINV artifacts; a fresh screen adds ~30 ms; activation staging copy plus hash 1.1–1.5 s against a 12.4 s step; transport 4–6 min per candidate at 5e5 particles. Attempt lineage: 0.36 ms per log line plus 18 ms. See the [proposal review](reviews/2026-09-04-architecture-proposal-review.md) | A release-build baseline (EXP-003) with a frozen workload and machine, cold and warm separated, machine time separated from model time |
 | Tool license and deployment feasibility | Open | Every external tool in the chosen reference chain |
 
@@ -100,9 +100,9 @@ proposal against the code; see the
 
 1. EXP-002 ran on CASE-003 and is recorded as non-discriminating: every
    arm, with or without Core, reached the optimum within three evaluations.
-   Next: the same frozen three-arm design on CASE-002, where full
-   evaluations cost minutes and two campaigns of designers failed, with the
-   predeclared shortcut made tempting so refusal is actually exercised.
+   EXP-005 (the same three arms on CASE-002 with the shortcut made
+   tempting) is drafted with its harness validated and no scored run;
+   it is paused at the owner's request as of 2026-09-05.
 2. Strict qualification is landed: mechanism (S-035), candidate validation
    at the design boundary (S-036), per-output-slot scope and the screen
    geometry records with `require_qualification` set on CASE-001, CASE-002
@@ -118,12 +118,13 @@ proposal against the code; see the
    tests that SC-12 reuse never masks a registry, presentation or
    qualification edit. Remaining: the runner engine itself (staging, reuse
    decision, receipt verification) is still one 3,600-line file.
-4. Signed receipts and manifests are landed (S-040, ADR-0015) and the
-   independent offline verifier exists for its first profile (S-041).
-   Remaining: the verifier checks ADR-0015 signatures (pure-Python Ed25519
-   against the RFC 8032 vectors) and qualification envelopes; the campaign
-   adversarial checker verifies log-line signatures; `require_signatures`
-   set on the three loop cases.
+4. Signed receipts and manifests (S-040) and the independent verifier,
+   now including signature verification (S-041, S-042), are landed.
+   Remaining: `execution_policy.require_signatures` set on the three loop
+   cases with the workbench fields and CLI tests; the campaign adversarial
+   checker verifying log-line signatures; and the runner persisting each
+   step's extracted applicability facts so an envelope verdict can be
+   re-derived from outside.
 5. Constellation queries over the campaign logs; a harder coupled search
    (EXP-007) once EXP-002 shows the experiment discriminates; and a fresh
    speed-tier attempt gated on agreement with the verified S_N solver

@@ -3,7 +3,7 @@
 use std::error::Error;
 use std::fs;
 use std::io::{self, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use avila_core_compiler::{
@@ -11,9 +11,10 @@ use avila_core_compiler::{
     explain, render_campaign_report, render_compile_report,
 };
 use avila_core_evidence::sha256_hex;
+use avila_core_evidence::signature::{self, KeyRole};
 use avila_core_kernel::{SEMANTIC_PROFILE, canonicalize_json};
 use avila_core_runner::{RUNTIME_DIAGNOSTIC_CATALOG, explain_runtime};
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -80,6 +81,76 @@ enum Command {
         #[arg(long)]
         all: bool,
     },
+    /// Generate or inspect Ed25519 signing keys (ADR-0015).
+    Keys {
+        #[command(subcommand)]
+        command: KeysCommand,
+    },
+    /// Sign a case package document with a requester or runner key.
+    Sign {
+        #[command(subcommand)]
+        command: SignCommand,
+    },
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum KeyRoleArg {
+    Requester,
+    Runner,
+}
+
+impl From<KeyRoleArg> for KeyRole {
+    fn from(value: KeyRoleArg) -> Self {
+        match value {
+            KeyRoleArg::Requester => KeyRole::Requester,
+            KeyRoleArg::Runner => KeyRole::Runner,
+        }
+    }
+}
+
+#[derive(Debug, Subcommand)]
+enum KeysCommand {
+    /// Write a fresh 32-byte seed (mode 0600) and hex public key file, and
+    /// print the key id. The seed is never printed.
+    Generate {
+        #[arg(long, value_enum)]
+        role: KeyRoleArg,
+        /// Directory to write `<role>.seed` and `<role>.pub` into. Defaults
+        /// to `$XDG_CONFIG_HOME/avila-core/keys` (or `~/.config/avila-core/keys`).
+        #[arg(long, value_name = "DIR")]
+        out: Option<PathBuf>,
+    },
+    /// Print a key file's id and public key hex. Accepts either a seed file
+    /// or a public key file; a seed's bytes are never printed.
+    Show { file: PathBuf },
+}
+
+#[derive(Debug, Subcommand)]
+enum SignCommand {
+    /// Sign CASE's package manifest with a requester (or other) seed key,
+    /// writing `signatures/manifest.sig.json` and binding it into
+    /// `package.json` as a `signature` document. Re-run after any other
+    /// edit to the manifest; running it again replaces the prior signature.
+    Manifest {
+        /// Case directory containing package.json, or the manifest path itself.
+        case: PathBuf,
+        #[arg(long, value_name = "FILE")]
+        key: PathBuf,
+    },
+}
+
+/// `$XDG_CONFIG_HOME/avila-core/keys`, or `$HOME/.config/avila-core/keys`
+/// when `XDG_CONFIG_HOME` is unset, per ADR-0015 clause 4.
+fn default_key_dir() -> PathBuf {
+    let base = std::env::var_os("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".config")))
+        .unwrap_or_else(|| PathBuf::from(".config"));
+    base.join("avila-core").join("keys")
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
 #[derive(Debug, Args)]
@@ -282,8 +353,154 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             },
             _ => return Err("pass exactly one code, or `--all` for the whole catalog".into()),
         },
+        Command::Keys { command } => run_keys(command)?,
+        Command::Sign { command } => run_sign(command)?,
     }
     Ok(ExitCode::SUCCESS)
+}
+
+fn run_keys(command: KeysCommand) -> Result<(), Box<dyn Error>> {
+    match command {
+        KeysCommand::Generate { role, out } => {
+            let role: KeyRole = role.into();
+            let dir = out.unwrap_or_else(default_key_dir);
+            fs::create_dir_all(&dir)?;
+            let seed_path = dir.join(format!("{role}.seed"));
+            let public_key_path = dir.join(format!("{role}.pub"));
+            if seed_path.exists() {
+                return Err(format!(
+                    "refusing to overwrite existing seed file `{}`; move or delete it first",
+                    seed_path.display()
+                )
+                .into());
+            }
+            let pair = signature::generate_keypair(role)?;
+            fs::write(&seed_path, pair.seed)?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                fs::set_permissions(&seed_path, fs::Permissions::from_mode(0o600))?;
+            }
+            fs::write(&public_key_path, format!("{}\n", pair.public_key_hex))?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "role": role.to_string(),
+                    "key_id": pair.key_id,
+                    "public_key_hex": pair.public_key_hex,
+                    "seed_path": seed_path.display().to_string(),
+                    "public_key_path": public_key_path.display().to_string(),
+                }))?
+            );
+        }
+        KeysCommand::Show { file } => {
+            let bytes = fs::read(&file)?;
+            let public_key_hex = if bytes.len() == 32 {
+                let seed: [u8; 32] = bytes
+                    .try_into()
+                    .expect("length checked above to be exactly 32");
+                signature::public_key_hex_from_seed(&seed)
+            } else {
+                String::from_utf8(bytes)
+                    .map_err(|_| {
+                        format!(
+                            "`{}` is neither a 32-byte seed nor a UTF-8 hex public key file",
+                            file.display()
+                        )
+                    })?
+                    .trim()
+                    .to_string()
+            };
+            let key_id = signature::key_id_from_public_hex(&public_key_hex)?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "public_key_hex": public_key_hex,
+                    "key_id": key_id,
+                }))?
+            );
+        }
+    }
+    Ok(())
+}
+
+/// The document id `sign manifest` uses for the requester signature it
+/// binds. Running the command again replaces this exact entry, so signing
+/// is idempotent under repeated invocation on an otherwise unchanged
+/// manifest.
+const MANIFEST_SIGNATURE_DOCUMENT_ID: &str = "signature-manifest";
+
+fn run_sign(command: SignCommand) -> Result<(), Box<dyn Error>> {
+    match command {
+        SignCommand::Manifest { case, key } => {
+            let manifest_path = if case.is_dir() {
+                case.join("package.json")
+            } else {
+                case.clone()
+            };
+            let case_dir = manifest_path
+                .parent()
+                .filter(|path| !path.as_os_str().is_empty())
+                .unwrap_or_else(|| Path::new("."))
+                .to_path_buf();
+            let manifest_bytes = fs::read(&manifest_path)?;
+            let mut manifest: avila_core_evidence::CasePackageManifest =
+                serde_json::from_slice(&manifest_bytes)?;
+            let seed = signature::parse_seed_bytes(&fs::read(&key)?)?;
+
+            // The digest is computed with the not-yet-added (or, on a
+            // re-sign, the already-bound) signature entry removed, so
+            // signing is idempotent and the signature covers the manifest
+            // as the requester actually approved it (ADR-0015 clause 3).
+            let digest = signature::manifest_signing_digest(
+                &manifest_bytes,
+                MANIFEST_SIGNATURE_DOCUMENT_ID,
+            )?;
+            let signed_document_sha256 = format!("sha256:{}", hex_encode(&digest));
+            let document = signature::build_signature_document(
+                &seed,
+                "manifest",
+                manifest.case_id.clone(),
+                signed_document_sha256,
+                &digest,
+            );
+            let mut document_bytes = serde_json::to_vec_pretty(&document)?;
+            document_bytes.push(b'\n');
+
+            let signatures_dir = case_dir.join("signatures");
+            fs::create_dir_all(&signatures_dir)?;
+            let signature_path = signatures_dir.join("manifest.sig.json");
+            fs::write(&signature_path, &document_bytes)?;
+            let signature_document_sha256 = format!("sha256:{}", sha256_hex(&document_bytes));
+
+            manifest
+                .documents
+                .retain(|document| document.document_id != MANIFEST_SIGNATURE_DOCUMENT_ID);
+            manifest
+                .documents
+                .push(avila_core_evidence::PackageDocument {
+                    document_id: MANIFEST_SIGNATURE_DOCUMENT_ID.into(),
+                    role: "signature".into(),
+                    path: "signatures/manifest.sig.json".into(),
+                    sha256: signature_document_sha256,
+                    step_id: None,
+                });
+            let mut manifest_bytes_out = serde_json::to_vec_pretty(&manifest)?;
+            manifest_bytes_out.push(b'\n');
+            fs::write(&manifest_path, &manifest_bytes_out)?;
+
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "case_id": manifest.case_id,
+                    "signed_document_sha256": document.signed_document.sha256,
+                    "key_id": document.key_id,
+                    "signature_path": signature_path.display().to_string(),
+                }))?
+            );
+        }
+    }
+    Ok(())
 }
 
 #[derive(Debug, serde::Serialize)]

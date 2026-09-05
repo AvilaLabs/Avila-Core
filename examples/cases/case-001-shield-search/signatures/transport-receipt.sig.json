@@ -1,0 +1,12 @@
+{
+  "schema_version": "avila.core/signature/v0.1-draft",
+  "signed_document": {
+    "role": "execution_receipt",
+    "document_id": "transport",
+    "sha256": "sha256:793c11d941878753af17db5fe1f576ecff3172198e291df9411ea26c31351841"
+  },
+  "key_id": "49104f3eb2b3489e8b26bc1ebb0934637e43aacf515719b1698758532c6daf62",
+  "algorithm": "ed25519",
+  "signature_hex": "717a8aae2b1ef3d632c4c463939113dd94bc1463d44cd826653016b8f0f65b1a7709f594dc83b30c6dcc1197c11550fc9c34b067333110b90c3d91153e001609",
+  "notice": "A signature proves possession of a key at signing time. It does not establish the correctness of what was signed, qualification, review, or regulatory suitability."
+}

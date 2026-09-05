@@ -40,24 +40,42 @@
       "sha256": "sha256:2ce64c7049d319c0b9d9772dbde71cf9cc51240bcebccffa56f61faca024cd91"
     },
     {
-      "role": "expected_campaign_report",
       "document_id": "case-003-expected-campaign",
+      "role": "expected_campaign_report",
       "path": "campaign-report.json",
       "sha256": "sha256:45b7070e73f1a48d6db8d73355e4deb3f72c9c75b3e117eb750edde8db509633"
     },
     {
-      "role": "execution_receipt",
       "document_id": "case-003-screen-receipt",
+      "role": "execution_receipt",
       "path": "receipts/screen.json",
       "sha256": "sha256:962939298639eb44065619691acb1b49ff8cb7ac589c54a4f0e7694696b4bfa0",
       "step_id": "screen"
     },
     {
-      "role": "execution_receipt",
       "document_id": "case-003-fe-receipt",
+      "role": "execution_receipt",
       "path": "receipts/fe.json",
       "sha256": "sha256:678cdde5c64b0f14aced2f0673c8e116d4071b08a817bb8e451246d86c09451f",
       "step_id": "fe"
+    },
+    {
+      "document_id": "signature-receipt-screen",
+      "role": "signature",
+      "path": "signatures/screen-receipt.sig.json",
+      "sha256": "sha256:c84415847edb339e872065166157a820c854af286862f5909fa8e9a1bfa7373e"
+    },
+    {
+      "document_id": "signature-receipt-fe",
+      "role": "signature",
+      "path": "signatures/fe-receipt.sig.json",
+      "sha256": "sha256:441e437cae400cc3784fe67be239c7b45e8ea4844c82ae7073c39cb9a9697c4f"
+    },
+    {
+      "document_id": "signature-manifest",
+      "role": "signature",
+      "path": "signatures/manifest.sig.json",
+      "sha256": "sha256:40bc7309503ef35328f24b1b82474c709ef58c8e3e71104087afd8840fe306b5"
     }
   ],
   "artifacts": [
@@ -217,15 +235,18 @@
       ]
     }
   ],
+  "free_inputs": [
+    "candidate"
+  ],
   "coverage": {
     "requirement_set": "case-003-requirement-set",
     "mapping": {
+      "areal-mass": [
+        "THERM-R3-mass"
+      ],
       "hotspot-temperature": [
         "THERM-R1-screen",
         "THERM-R2-hotspot"
-      ],
-      "areal-mass": [
-        "THERM-R3-mass"
       ],
       "total-thickness": [
         "THERM-R4-thickness"
@@ -244,9 +265,6 @@
       }
     ]
   },
-  "free_inputs": [
-    "candidate"
-  ],
   "limitations": [
     "CASE-003 is a research-only design-search specimen over a synthetic strip-heated plate; no device, enclosure, or operating envelope is represented.",
     "The screening capability is unqualified and evaluated on a nominal basis; the finite-element capability produces an enclosure claim whose interval brackets discretisation only, under a qualification record that binds one NAFEMS benchmark reproduction as validation evidence.",

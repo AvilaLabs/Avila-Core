@@ -1,0 +1,12 @@
+{
+  "schema_version": "avila.core/signature/v0.1-draft",
+  "signed_document": {
+    "role": "manifest",
+    "document_id": "CASE-001",
+    "sha256": "sha256:70a6c8e5c7f01434f8d4d46216b290561420496e805b773111f8dc16c4795ba6"
+  },
+  "key_id": "191c470d8848ffedf3bb54e33798e98423a5659db297877d6482a06c96149cd7",
+  "algorithm": "ed25519",
+  "signature_hex": "df3b07373e8fba07d62f6bc56693b93a731e32a1f00c4003dd7e2682c0d7ae9678e229fce7438fa33f2fd6357e9178d3eda821f3299ebb588989df761eaa670a",
+  "notice": "A signature proves possession of a key at signing time. It does not establish the correctness of what was signed, qualification, review, or regulatory suitability."
+}

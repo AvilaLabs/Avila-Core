@@ -1,0 +1,15 @@
+{
+  "schema_version": "avila.core/trust-root/v0.1-draft",
+  "keys": [
+    {
+      "key_id": "191c470d8848ffedf3bb54e33798e98423a5659db297877d6482a06c96149cd7",
+      "public_key_hex": "f4289341bd0fdf7b4ef2ee2be2317650e04d3640782b835b169dd3963dcba97e",
+      "role": "requester"
+    },
+    {
+      "key_id": "49104f3eb2b3489e8b26bc1ebb0934637e43aacf515719b1698758532c6daf62",
+      "public_key_hex": "498a4a03ac09c56debc74a1a961a70b5c9a995c8011081ddb24c8d46c70429f1",
+      "role": "runner"
+    }
+  ]
+}

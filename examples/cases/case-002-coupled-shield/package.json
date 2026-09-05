@@ -52,31 +52,55 @@
       "sha256": "sha256:4242b3af100c4c07aa316a22b883eb50c3e285f74c6d6df99d7b942d6b3cc2ca"
     },
     {
-      "role": "expected_campaign_report",
       "document_id": "case-002-expected-campaign",
+      "role": "expected_campaign_report",
       "path": "campaign-report.json",
       "sha256": "sha256:181082243f73ff1ea495e11d07e70a19f7cef256dcaf5177fa9b59e1c0f43969"
     },
     {
-      "role": "execution_receipt",
       "document_id": "case-002-screen-receipt",
+      "role": "execution_receipt",
       "path": "receipts/screen.json",
       "sha256": "sha256:cd84eb80b15f625d184cc49a1128590c224ef12ae045e686bb9969b79602af68",
       "step_id": "screen"
     },
     {
-      "role": "execution_receipt",
       "document_id": "case-002-transport-receipt",
+      "role": "execution_receipt",
       "path": "receipts/transport.json",
       "sha256": "sha256:73328252c0d959fc88b72c103be9c4a5977cbcce6f140121357979ed547e23f1",
       "step_id": "transport"
     },
     {
-      "role": "execution_receipt",
       "document_id": "case-002-activation-receipt",
+      "role": "execution_receipt",
       "path": "receipts/activation.json",
       "sha256": "sha256:d6862a5cb03d6dd253ee0296d28995ebda6a2aaa66405529862782997288fcec",
       "step_id": "activation"
+    },
+    {
+      "document_id": "signature-receipt-screen",
+      "role": "signature",
+      "path": "signatures/screen-receipt.sig.json",
+      "sha256": "sha256:96f0697a2c6a579d5ff96cba677055aff94e18ec44f5cd02edf0f80cbfe24d86"
+    },
+    {
+      "document_id": "signature-receipt-transport",
+      "role": "signature",
+      "path": "signatures/transport-receipt.sig.json",
+      "sha256": "sha256:be3e1c36f5adec51ddaba47be6196a924f4f0e1df7dc69bbf5cec38b7a9b4124"
+    },
+    {
+      "document_id": "signature-receipt-activation",
+      "role": "signature",
+      "path": "signatures/activation-receipt.sig.json",
+      "sha256": "sha256:eaec28d8347d3cafed39e16cdeb632f072c1b7b1e2470b23461f5eb9a0754c6a"
+    },
+    {
+      "document_id": "signature-manifest",
+      "role": "signature",
+      "path": "signatures/manifest.sig.json",
+      "sha256": "sha256:5d381d6e8157b5332599b28b1a43a77a0fad6875b6f94f5ed1df849a600cdcd8"
     }
   ],
   "artifacts": [
@@ -423,18 +447,21 @@
       ]
     }
   ],
+  "free_inputs": [
+    "candidate"
+  ],
   "coverage": {
     "requirement_set": "case-002-requirement-set",
     "mapping": {
+      "areal-mass": [
+        "SHIELD-R4-mass"
+      ],
       "neutron-dose-rate": [
         "SHIELD-R1-screen",
         "SHIELD-R2-neutron"
       ],
       "secondary-photon-dose-rate": [
         "SHIELD-R3-photon"
-      ],
-      "areal-mass": [
-        "SHIELD-R4-mass"
       ],
       "total-thickness": [
         "SHIELD-R5-thickness"
@@ -453,9 +480,6 @@
       }
     ]
   },
-  "free_inputs": [
-    "candidate"
-  ],
   "limitations": [
     "CASE-002 is a research-only design-search specimen over a synthetic plane source; no facility, generator, or occupancy is represented.",
     "The screening capability is unqualified and evaluated on a nominal basis; the coupled transport capability produces bounded claims whose intervals cover statistical error only; the activation capability produces nominal inventories with no bound and satisfies only a nominal-basis requirement.",

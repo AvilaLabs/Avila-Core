@@ -102,6 +102,22 @@ and the authored practical instructions in the user-presentation queue. It
 reads reports and never constructs or alters a verdict. Core can be used
 without this agent stage by omitting the review capability from the contract.
 
+## Signed manifest and receipts
+
+The manifest and every step's committed receipt carry a detached Ed25519
+signature (ADR-0015), made with the public example keys under
+`examples/keys/` — see that directory's README for what these keys are and
+are not good for. Add `--trust-root examples/keys/trust-root.json` to any
+command above to verify them; the manifest and the `screen` step's receipt
+report `verified` in this sandbox, since `screen` needs only artifacts
+already inside the repository. `transport`'s receipt is signed the same way
+but its reuse cannot be demonstrated here, because its bound inputs need
+the external `nuclear-data` root (and its own executable) that a real
+verification of this case already requires; the signature would verify the
+same way once that root is supplied. `execution_policy.require_signatures`
+is not set on this contract, so every command above still works unchanged
+without `--trust-root`, reporting each signature `signature not checked`.
+
 ## Coverage of the library requirement set
 
 `requirement-set.json` is a byte-identical copy of the shielding library's

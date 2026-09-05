@@ -142,6 +142,23 @@ Omit the OpenMC capability and the transport step is reported `not_run`
 with its claims withheld; the activation step, which consumes transport's
 spectra, is then not reached.
 
+## Signed manifest and receipts
+
+The manifest and every step's committed receipt carry a detached Ed25519
+signature (ADR-0015), made with the public example keys under
+`examples/keys/` — see that directory's README for what these keys are and
+are not good for. Add `--trust-root examples/keys/trust-root.json` to any
+command above to verify them; the manifest and the `screen` step's receipt
+report `verified` in this sandbox, since `screen` needs only artifacts
+already inside the repository. `transport` and `activation`'s receipts are
+signed the same way but their reuse cannot be demonstrated here, because
+their bound inputs need the external `nuclear-data`, `actinv-release`, and
+`actinv-data` roots (and their own executables) that a real verification of
+this case already requires; each signature would verify the same way once
+those roots are supplied. `execution_policy.require_signatures` is not set
+on this contract, so every command above still works unchanged without
+`--trust-root`, reporting each signature `signature not checked`.
+
 ## What the package binds
 
 - **Capabilities:** `python3` (the system interpreter, by digest) for the

@@ -35,6 +35,25 @@ defect, and it is exercised by an adversarial test
 (S-030) is a separate mechanism and is unaffected by this cache: a rewritten
 package manifest is still refused before anything is compiled or executed.
 
+`avila-core run --trust-root FILE` verifies Ed25519 signatures against an
+operator-supplied list of requester and runner public keys (ADR-0015). A
+package's manifest signature must verify against a listed requester key or
+the run is refused before compilation; a committed receipt is reused under
+SC-12 only when its signature verifies against a listed runner key. Without
+`--trust-root`, every signature is checked for internal consistency only
+(a well-formed signature whose recorded target digest matches
+recomputation) and reported `unsigned` or `signature not checked`, never
+`verified`. Private keys (`avila-core keys generate`) are 32-byte seed
+files the tool writes with mode `0600`; the runner never reads, transmits,
+or logs one, and only ever signs a digest the caller already computed. A
+signature proves possession of a key at signing time, not the correctness,
+qualification, or regulatory suitability of what was signed. There are no
+certificate chains, revocation, timestamps, or hardware keys, and a key
+compromise is handled by replacing the trust root and re-blessing, not by
+anything this runner automates. `examples/keys/` deliberately commits both
+the public and private halves of its example keys, stated plainly in its
+own README: they prove nothing and must never be reused for anything real.
+
 The threat model includes:
 
 - untrusted capability packages and input documents;
@@ -47,5 +66,6 @@ The threat model includes:
 - unsafe interpretation of untrusted evidence in the desktop application.
 
 The current receipt and execution design is recorded in ADR 0007 and exercised
-by adversarial tests. Stronger isolation remains required before Core can accept
-untrusted capability packages or production data.
+by adversarial tests. Signed manifests and receipts are recorded in ADR 0015.
+Stronger isolation remains required before Core can accept untrusted
+capability packages or production data.

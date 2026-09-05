@@ -5,7 +5,13 @@ executable, and a case invocation with execution receipts exists for the steps
 a committed case declares (ADR-0007). In addition to built-in adapters, a
 package may now bind the narrow external-checker descriptor in ADR-0011.
 Signed capability manifests, selection, sandboxing, and the broader adapter
-lifecycle described below are not implemented.
+lifecycle described below are not implemented. This is a different signature
+from the one ADR-0015 implements: ADR-0015 lets a requester sign a case
+package's manifest and a runner sign its execution receipts and campaign
+log lines, so `run --trust-root FILE` can refuse a rewritten package or an
+unsigned reused receipt; it says nothing about a capability *provider*
+signing the capability package itself, which is what "provider signature"
+below still describes as unimplemented.
 
 ## Purpose
 

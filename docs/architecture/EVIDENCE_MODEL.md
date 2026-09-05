@@ -89,7 +89,11 @@ Rules must define:
 - hash algorithm identifiers and migration.
 
 The current helper computes SHA-256 over supplied bytes only. It does not define
-canonicalization or package identity.
+canonicalization or package identity. `avila_core_kernel::canonicalize_json`
+now backs one document-level identity used for signing: a manifest or
+receipt's Ed25519 signature covers the SHA-256 of that document's
+canonical JSON form (ADR-0015). This is not the archive-level package
+canonicalization above, which remains open.
 
 The `avila-core run` slice reads a draft case manifest, confines relative
 paths beneath explicitly selected roots, re-hashes package documents and
@@ -101,10 +105,18 @@ record: capability identity, staged inputs, portable invocation and its
 identity, process outcome, log and output digests, runner identity, and
 limitations. The receipt is re-read and re-hashed before anything is
 promoted. The generated claims document is then bound to the manifest
-digests and any configured agent-policy identities before campaign evaluation. This is an
+digests and any configured agent-policy identities before campaign evaluation. A detached
+`avila.core/signature/v0.1-draft` document (ADR-0015) can bind an Ed25519
+signature over a manifest or a receipt's digest; `run --trust-root FILE`
+verifies these against an operator-supplied requester and runner key list,
+refusing an unverified manifest before compilation and excluding an
+unverified receipt from SC-12 reuse, while `execution_policy.require_signatures`
+can make an unsigned package or unsigned reuse an outright refusal. This is an
 integrity, execution, and replay spike, not the final portable evidence
-package: it has no archive canonicalization, signed root, trust store,
-redaction semantics, sandbox, or lineage-completeness proof. Environment keys an adapter requires the operator to value are recorded
+package: it has no archive canonicalization, certificate chain or
+revocation, redaction semantics, sandbox, or lineage-completeness proof.
+The trust root itself is a flat operator-supplied key list, not the "trust
+store" a production package format would need. Environment keys an adapter requires the operator to value are recorded
 by name inside the invocation identity and by value outside it; the content
 a locator names is bound as a staged input. A package may declare free
 inputs; a supplied one is hashed and attested, the steps it reaches have
@@ -220,6 +232,10 @@ An offline verifier should report, separately:
 
 “Package valid” must never collapse these different checks into a single
 unqualified promise.
+
+The case runner itself now performs the signature-and-trust-root half of
+this list inline, as part of `run --trust-root FILE` (ADR-0015); a verifier
+that does not import or trust the runner's own code remains open.
 
 ## Confidentiality and portable evidence
 

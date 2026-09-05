@@ -1,6 +1,8 @@
 # ADR-0015: Signed manifests and receipts
 
-- Status: proposed
+- Status: accepted for the local runner, 2026-09-04 (implemented the same day
+  it was proposed; see Implementation notes below for the exact mechanism and
+  deviations)
 - Date: 2026-09-04
 - Refines: ADR-0007 (execution receipts), ADR-0014 (attempt lineage), and
   decision S-030 (the requester's manifest pin)
@@ -93,3 +95,68 @@ whose digests agree with forged outputs verifies.
   every log line it reads.
 - The independent verifier (queue item 4) verifies these signatures without
   importing the runner.
+
+## Implementation notes (2026-09-04)
+
+The mechanism above is implemented as specified, with these precise choices
+where the proposal left room:
+
+- **Dependency.** `ed25519-dalek` 2.2.0 (default features `fast`, `std`,
+  `zeroize`; no `rand_core`) plus `getrandom` 0.3.4 for key generation, both
+  pinned exactly and confined to `avila-core-evidence::signature`. This is
+  the workspace's first cryptographic dependency; see
+  `THIRD_PARTY_NOTICES.md`.
+- **The manifest-signing digest rule (clause 1).** Exactly the simplest
+  sound rule the ADR proposes: the digest covers the manifest with the
+  signature document's own `documents[]` entry removed, canonicalized.
+  Removing an absent id is a no-op, so signing (before the entry exists)
+  and verifying (after it does) compute the identical digest. One sharp
+  edge this exposed: the digest must be taken from the manifest as its
+  typed-struct serialization will actually render it, not from whatever
+  raw bytes happen to be on disk — the first tool to touch a manifest that
+  predates any struct round-trip normalizes in fields such as an empty
+  `free_inputs`, and a digest taken before that normalization never
+  matches one taken after. `avila-core sign manifest` and the equivalent
+  test helper both digest `serde_json::to_vec(&manifest)`, never the raw
+  file bytes.
+- **Report and log states.** Rather than the two literal states the ADR's
+  prose names ("unsigned" and "signature not checked"), the implementation
+  reports four: `unsigned`, `not_checked`, `verified { signed_by }`, and
+  `invalid { reason }`. `invalid` is a strict superset of what the ADR
+  requires — a tampered signature is visibly wrong even without a trust
+  root, since target-digest and structural consistency need no key to
+  check — and `verified` never appears without a trust root, matching the
+  ADR exactly.
+- **Signature target for a receipt or log line is its own role name and, for
+  a receipt, the step id** (stable across re-blessing) rather than the
+  package's own arbitrary `document_id` for that receipt document. A log
+  line's target role is `log_line`.
+- **A donor-receipt gap this work found and closed.** Reusing a committed
+  receipt never compared its `case_id` to the running case's, only its
+  invocation identity (capability, parameters, staged inputs, arguments,
+  environment). A receipt copied from a different package with
+  byte-identical capability and inputs would have been silently reused,
+  signed or not. `ChangeClass::DifferentCase` now refuses that,
+  independent of and in addition to signature checking; it is not part of
+  clause 1-7 as proposed but is required for the "donor package" acceptance
+  test to mean anything, since a genuine signature travels with its bytes
+  and cannot itself detect that those bytes describe a different case.
+  `compiled_snapshot_sha256` is deliberately not compared: a requirement,
+  registry, or review edit changes that identity without invalidating what
+  a capability already ran over (three existing tests pin this).
+- **`execution_policy.require_signatures` (clause 7).** Implemented as
+  specified: the compiler only carries the flag through and emits a visible
+  `CORE-A4404` notice (it has no receipts to check); the case runner
+  refuses the run outright when the flag is set and no `--trust-root` was
+  supplied, and refuses when any declared step's operative evidence
+  (reused, freshly executed, or left `not_run`) is not itself verified.
+- **Not implemented in this slice.** The independent offline verifier
+  (queue item 4) and `CASE-002`'s `adversarial_check.py` verifying log-line
+  signatures are both still open; see `docs/roadmap/STAGE_0_STATUS.md`.
+  CASE-001 and CASE-002's `transport` (and CASE-002's `activation`) steps
+  are signed but their reuse could not be demonstrated in the environment
+  this slice was built in, because their bound inputs need external
+  nuclear-data and ACTINV artifacts this sandbox does not carry and this
+  task's rules forbid running OpenMC or ACTINV to obtain; CASE-003, which
+  has no such external dependency, demonstrates every step reused and
+  every signature verified end to end.

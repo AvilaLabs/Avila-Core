@@ -9,6 +9,14 @@ untouched, so a package can be drafted before every artifact exists. With
 --check nothing is written and a non-zero exit means at least one digest
 differs or a file is missing. The package is rewritten with two-space
 indentation and its key order preserved.
+
+An ADR-0015 `signature` document is just another document by role here: its
+own bound digest is recomputed from its own bytes like any other, and
+rehashing it never checks or invalidates the Ed25519 signature it carries.
+Rehashing the *other* documents a signature covers (a manifest whose
+documents changed, or a receipt this changed) does not update that
+signature file's content either; see bless.py's stale-signature warning and
+re-sign with `avila-core sign receipt` / `sign manifest` afterward.
 """
 
 import argparse

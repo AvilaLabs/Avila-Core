@@ -111,6 +111,25 @@ loses the environment's packages. The interpreter's digest is then the
 system interpreter's; the result document records the finite-element
 package version, and the package limitations say so.
 
+## Signed manifest and receipts
+
+The manifest and every step's committed receipt carry a detached Ed25519
+signature (ADR-0015), made with the public example keys under
+`examples/keys/` — see that directory's README for what these keys are and
+are not good for. Verifying with the example trust root reports every
+signature `verified` and changes nothing else:
+
+```bash
+cargo run -p avila-core-cli -- run examples/cases/case-003-thermal-spreader \
+  --source-root case=examples/cases/case-003-thermal-spreader \
+  --source-root thermal=examples/capabilities/thermal \
+  --trust-root examples/keys/trust-root.json
+```
+
+`execution_policy.require_signatures` is not set on this contract, so
+running without `--trust-root` at all still works exactly as before
+signing existed, reporting each signature `signature not checked`.
+
 ## What the package binds
 
 - **Capabilities:** `python3` for the screen; `thermal-python` for the

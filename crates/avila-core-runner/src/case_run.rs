@@ -278,6 +278,11 @@ pub enum ChangeClass {
     /// document fails internal consistency, names an unlisted or
     /// wrong-role key, or does not cryptographically verify.
     ReceiptSignatureInvalid,
+    /// The committed receipt's `case_id` or `compiled_snapshot_sha256`
+    /// differs from this run's, even though nothing else about the planned
+    /// invocation changed: it was produced for a different case (a "donor"
+    /// receipt copied from elsewhere) and does not describe this one.
+    DifferentCase,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -2198,7 +2203,13 @@ impl<'a> Runner<'a> {
         // Compare with the committed receipt: what changed, by class.
         let committed = self.committed_receipt(&step.step_id)?;
         report.changes = match &committed {
-            Some((_, receipt)) => changes_since(receipt, &plan, &identity, &parameters),
+            Some((_, receipt)) => changes_since(
+                receipt,
+                &plan,
+                &identity,
+                &parameters,
+                &self.package.manifest.case_id,
+            ),
             None => vec![ChangeRecord {
                 class: ChangeClass::NoCommittedReceipt,
                 detail: "the package commits no execution receipt for this step".into(),
@@ -3031,8 +3042,29 @@ fn changes_since(
     plan: &PlannedInvocation,
     capability: &CapabilityIdentity,
     parameters: &BTreeMap<String, Value>,
+    case_id: &str,
 ) -> Vec<ChangeRecord> {
     let mut changes = Vec::new();
+    // A receipt whose case_id differs was produced for a different case,
+    // even if every other field of the plan happens to coincide (a donor
+    // receipt copied from another package with the same capability,
+    // parameters, and input identities). Checked before anything else so
+    // such a receipt is never mistaken for a merely-unchanged one.
+    //
+    // `compiled_snapshot_sha256` is deliberately not compared: SC-12
+    // execution memoization is about what a capability ran over, not about
+    // the requirement or policy logic later applied to its outputs, so a
+    // requirement, registry, or review edit that changes the compiled
+    // snapshot identity must not by itself invalidate a step's receipt.
+    if committed.case_id != case_id {
+        changes.push(ChangeRecord {
+            class: ChangeClass::DifferentCase,
+            detail: format!(
+                "receipt was produced for case `{}`, not `{case_id}`",
+                committed.case_id
+            ),
+        });
+    }
     if committed.capability != *capability {
         changes.push(ChangeRecord {
             class: ChangeClass::Capability,

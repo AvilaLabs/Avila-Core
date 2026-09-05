@@ -60,12 +60,13 @@ jobs:
         working-directory: verifier
         run: python3 -m unittest test_verifier -v
 
-      - name: Verify CASE-003 (thermal spreader, no external roots needed)
+      - name: Verify CASE-003 (thermal spreader, no external roots needed, ADR-0015 signatures)
         working-directory: verifier
         run: |
           python3 avila_core_verify.py verify-case ../examples/cases/case-003-thermal-spreader \
             --source-root case=../examples/cases/case-003-thermal-spreader \
-            --source-root thermal=../examples/capabilities/thermal
+            --source-root thermal=../examples/capabilities/thermal \
+            --trust-root ../examples/keys/trust-root.json
 
       - name: Verify CASE-008 (mode-selective quench, no external roots needed)
         working-directory: verifier

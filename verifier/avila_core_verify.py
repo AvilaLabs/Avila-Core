@@ -70,18 +70,20 @@ reported as ``not_checked`` with a reason; it is never silently skipped.
      cases with no such log this file reports the computed margin without
      a committed value to compare against, and says so.
 
-     Explicitly NOT_CHECKED and named as such: qualification envelope
-     *predicate* evaluation (this file reads a claim's already-recorded
-     ``qualification.state``, exactly as the real evaluator does per
-     CAMPAIGN_EVALUATION.md — "It does evaluate qualification positions
-     already carried by claims" — rather than re-deriving `inside` /
-     `outside` / `unknown` from the predicate text); coverage-set
-     evaluation; presentation-gate realisation; the ``campaign_sha256``
-     content identity (whole-report canonicalisation, a stretch beyond the
-     named per-verdict comparison); categorical ``in_set`` predicates
-     (declared but not exercised by any committed fixture or case — the
-     rule name is inferred by analogy to the vector-proven ``equals`` rule
-     and is reported as ``inferred_rule``, never silently trusted).
+     Explicitly NOT_CHECKED and named as such: full qualification envelope
+     predicate-over-real-facts re-evaluation at the verdict layer (this
+     file reads a claim's already-recorded ``qualification.state``,
+     exactly as the real evaluator does per CAMPAIGN_EVALUATION.md — "It
+     does evaluate qualification positions already carried by claims" —
+     rather than re-deriving `inside` / `outside` / `unknown` from real
+     facts here; see item 9 for how much of that this profile independently
+     re-derives instead, and why not all of it); coverage-set evaluation;
+     presentation-gate realisation; the ``campaign_sha256`` content identity
+     (whole-report canonicalisation, a stretch beyond the named per-verdict
+     comparison); categorical ``in_set`` predicates (declared but not
+     exercised by any committed fixture or case — the rule name is inferred
+     by analogy to the vector-proven ``equals`` rule and is reported as
+     ``inferred_rule``, never silently trusted).
 
   6. Attempt lineage — for a campaign/attempt JSONL log, verifies each
      child's parent-line SHA-256 binding (the exact bytes of the parent's
@@ -97,17 +99,77 @@ reported as ``not_checked`` with a reason; it is never silently skipped.
 
   7. Mutation tests — see test_verifier.py: a deliberately corrupted claim
      value, receipt output digest, manifest entry, log line, and verdict
-     margin in a scratch copy of CASE-001 and CASE-003, each shown to be
-     named by this verifier; plus the positive path on CASE-000, CASE-001,
-     CASE-002, CASE-003, CASE-008, and CASE-009 with whichever artifact
-     roots exist on this machine (unavailable roots are reported
-     ``not_checked`` by name, never silently passed).
+     margin in a scratch copy of CASE-001 and CASE-003, plus (item 8-9's
+     own mutations) a flipped signature byte, a swapped key id, a
+     signature over a re-blessed manifest, and a qualification envelope
+     term edited to lie — each shown to be named by this verifier; plus
+     the positive path on CASE-000, CASE-001, CASE-002, CASE-003,
+     CASE-008, and CASE-009 with whichever artifact roots exist on this
+     machine (unavailable roots are reported ``not_checked`` by name,
+     never silently passed).
+
+  8. ADR-0015 signatures — a from-scratch, standard-library Ed25519 (RFC
+     8032 section 5.1: field arithmetic, encoding, key generation, sign,
+     verify — no cryptography dependency, no import of ``ed25519-dalek``),
+     proved against every RFC 8032 section 7.1 test vector and against
+     every one of the nine ADR-0015 signature documents actually committed
+     under ``examples/cases/{case-001,002,003}-*/signatures/``. Verifies
+     the package manifest's requester signature (the exact digest rule ADR-
+     0015's "Implementation notes" state: the manifest with the signature
+     document's own ``documents[]`` entry removed, canonicalised), each
+     execution receipt's runner signature (target: role
+     ``execution_receipt``, document id the step id), and any campaign
+     log-line runner signatures present (target: role ``log_line``, the
+     canonical form of the line with ``signature`` removed). Reports, per
+     signature, exactly one of ``verified`` (naming the signer's key id),
+     ``invalid`` (naming the reason — a tampered digest, a wrong or
+     unlisted key, or a signature that plain does not verify — this state
+     is a strict superset of what a trust root can decide, so a corrupted
+     signature is visibly wrong even without one), or ``unsigned`` (no
+     signature document names this target at all). ``--trust-root FILE``
+     supplies the requester/runner public keys a run accepts
+     (``avila.core/trust-root/v0.1-draft``, e.g.
+     ``examples/keys/trust-root.json``); without it, every signature is
+     reported ``not_checked`` (present and internally consistent, but
+     nothing to cryptographically check it against) and never
+     ``verified`` — ADR-0015 clause 3.
+
+  9. Qualification envelopes (ADR-0008, S-039) — a from-scratch Strong-
+     Kleene predicate evaluator (ADR-0006 SC-7; the same three-valued
+     ``always`` / ``all`` / ``any`` / ``not`` / ``param_in_range`` /
+     ``input_attribute_in`` / ``environment_image_in`` / ``fact`` grammar
+     the kernel's applicability evaluator implements), proved against every
+     vector in ``fixtures/semantic-core/vectors/scope-predicates.v1.json``.
+     For every qualification-carrying claim in CASE-001, CASE-002, and
+     CASE-003's committed reports, independently re-derives and checks:
+     that its recorded qualification identity (id/revision/sha256) names a
+     qualification document the package actually binds; that its recorded
+     per-term predicate text is, in order, exactly the bound record's own
+     scope terms (catches an edited, reordered, or substituted term); that
+     its recorded overall ``state`` is the correct Inside/Outside/Unknown
+     aggregate of its own recorded per-term results (catches a state that
+     contradicts its own terms); and that it never carries an assessment on
+     an output slot the record's ``covered_output_slots`` excludes (S-039).
+     Explicitly NOT_CHECKED and named as such
+     (``UNSUPPORTED_NOTES["qualification_facts"]``): re-deriving a term's
+     recorded boolean itself from the real extracted applicability fact
+     (e.g., the candidate's actual measured thickness) that produced it —
+     Core does not persist that fact in any committed document (the
+     execution receipt is process evidence only; a claim's recorded term
+     text is the record's own authored threshold, not the measured value
+     compared against it), so this profile says precisely that rather than
+     trusting the recorded outcome under a different name.
+     ``candidates/outside-envelope*.json`` in CASE-001 are free-input search
+     candidates, not runs of their own with a committed campaign report (a
+     supplied free input invalidates every step it reaches, per S-023);
+     this profile has no committed claims.json to check them against and
+     checks none, rather than fabricating one.
 
 Explicitly refused (outside this profile, by name, never silently):
-  - signed manifests/receipts (ADR-0015 is still "proposed" and unimplemented
-    in the committed packages this profile reads; nothing here checks a
-    signature, and a signed package is read only for its unsigned fields);
-  - qualification envelope *predicate* re-evaluation (see item 5 above);
+  - re-deriving a qualification-envelope term's boolean from a run's real
+    extracted applicability facts (see item 9's own boundary above — this
+    is narrower than "signed manifests/receipts", which item 8 now
+    implements in full);
   - coverage-set evaluation against a requirement_set document;
   - presentation-gate / staged-review realisation or content;
   - archive/package-root canonicalisation beyond the flat document+artifact
@@ -139,12 +201,26 @@ VERIFIER_PROFILE = "avila.core/independent-verifier-profile/v1"
 SEMANTIC_PROFILE = "avila.core/semantic/0.2-draft"
 
 UNSUPPORTED_NOTES = {
-    "qualification_predicate": "qualification envelope predicate evaluation is not re-derived; the claim's recorded qualification.state is read as given, exactly as CAMPAIGN_EVALUATION.md describes the real evaluator doing",
+    "qualification_predicate": "verdict re-derivation reads each claim's recorded qualification.state as given, exactly as CAMPAIGN_EVALUATION.md describes the real evaluator doing; see the dedicated qualification-envelope section (and qualification_facts below) for how much of that state this profile independently re-derives instead of trusting, and why",
+    "qualification_facts": (
+        "the applicability facts a qualification envelope is evaluated over (the actual measured "
+        "slab.total_thickness, layer materials, source energy, etc. -- not the scope's authored threshold) "
+        "are never persisted in any committed document: the execution receipt is process evidence only "
+        "(schemas/execution-receipt.v0.1-draft.schema.json; every committed receipt's own notice field says so) "
+        "and a claim's qualification.terms[].predicate records the bound qualification record's own scope-term "
+        "text (the threshold), not the extracted value that was compared against it at plan time (ADR-0008 "
+        "clauses 2-3: the adapter reports that context to the runner and it is discarded once evaluate_envelope "
+        "runs; nothing binds it into the receipt or claims schema). This profile instead re-derives what committed "
+        "documents do carry: that each qualification-carrying claim's recorded per-term predicate text matches, "
+        "in order, the bound qualification record's own scope terms; that its recorded state is the correct "
+        "Inside/Outside/Unknown aggregate of its own recorded per-term results; and that covered_output_slots "
+        "(S-039) is respected. It cannot independently tell whether a given term's boolean is the one the real "
+        "candidate's facts should have produced."
+    ),
     "coverage": "coverage-set evaluation against a requirement_set document is not implemented",
     "presentation_gate": "presentation-gate / staged-review realisation and content are not implemented",
     "compiled_snapshot": "the compiler is not implemented; compiled_snapshot_sha256 equality is checked, never recomputed",
     "campaign_sha256": "whole-report canonical identity (campaign_sha256) is not recomputed; only its named per-verdict fields are",
-    "signatures": "ADR-0015 (signed manifests and receipts) is proposed and unimplemented; no signature is checked",
 }
 
 
@@ -1608,20 +1684,845 @@ def verify_attempt_log(log_path: Path, report: Report) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Section 8: Ed25519 (RFC 8032) — the ADR-0015 signature primitive
+#
+# A from-scratch, standard-library-only Ed25519 (sign, public-key-from-seed,
+# verify), re-derived from RFC 8032 section 5.1's own field arithmetic,
+# encoding, key-generation, sign, and verify algorithms (not from
+# ed25519-dalek, which this profile does not import). Curve constants (d, the
+# base point B, the group order L) are computed from RFC 8032's own defining
+# relations (d = -121665/121666 mod p; the base point's y-coordinate is 4/5
+# mod p, and its x-coordinate is recovered by the same point-decoding
+# procedure section 5.1.3 defines) rather than copied as literals, and cross-
+# checked once, in TestEd25519RFC8032Vectors, against the literal decimal
+# constants RFC 8032's Table 1 states for d, B, and L.
+#
+# Proved against every one of the five RFC 8032 section 7.1 test vectors
+# (TEST 1, TEST 2, TEST 3, TEST 1024, TEST SHA(abc)), embedded verbatim in
+# test_verifier.py's RFC8032_ED25519_VECTORS, and — far more relevantly to
+# this repository — against every one of the nine ADR-0015 signature
+# documents actually committed under examples/cases/*/signatures/, produced
+# by the real `ed25519-dalek`-backed `avila-core sign` (see
+# TestSignaturesAgainstCommittedDocuments): this file's verify() accepts
+# every one of them.
+# ---------------------------------------------------------------------------
+
+_ED25519_P = 2**255 - 19
+_ED25519_D = (-121665 * pow(121666, _ED25519_P - 2, _ED25519_P)) % _ED25519_P
+_ED25519_L = 2**252 + 27742317777372353535851937790883648493
+
+
+def _ed25519_inv(x: int) -> int:
+    return pow(x, _ED25519_P - 2, _ED25519_P)
+
+
+def _ed25519_xrecover(y: int) -> int:
+    """RFC 8032 section 5.1.3's square-root recovery, specialised to
+    p = 5 (mod 8) (section 5.1.1's shortcut)."""
+    p = _ED25519_P
+    xx = (y * y - 1) * _ed25519_inv(_ED25519_D * y * y + 1) % p
+    x = pow(xx, (p + 3) // 8, p)
+    if (x * x - xx) % p != 0:
+        x = (x * pow(2, (p - 1) // 4, p)) % p
+    if x % 2 != 0:
+        x = p - x
+    return x
+
+
+_ED25519_GY = (4 * _ed25519_inv(5)) % _ED25519_P
+_ED25519_GX = _ed25519_xrecover(_ED25519_GY)
+# Extended homogeneous coordinates (X, Y, Z, T) per RFC 8032 section 5.1.4.
+_ED25519_BASE = (_ED25519_GX, _ED25519_GY, 1, (_ED25519_GX * _ED25519_GY) % _ED25519_P)
+_ED25519_NEUTRAL = (0, 1, 1, 0)
+
+
+def _ed25519_add(p1: tuple, p2: tuple) -> tuple:
+    """RFC 8032 section 5.1.4's complete twisted-Edwards addition law."""
+    p = _ED25519_P
+    x1, y1, z1, t1 = p1
+    x2, y2, z2, t2 = p2
+    a = (y1 - x1) * (y2 - x2) % p
+    b = (y1 + x1) * (y2 + x2) % p
+    c = t1 * 2 * _ED25519_D % p * t2 % p
+    d = z1 * 2 % p * z2 % p
+    e = (b - a) % p
+    f = (d - c) % p
+    g = (d + c) % p
+    h = (b + a) % p
+    return (e * f % p, g * h % p, f * g % p, e * h % p)
+
+
+def _ed25519_scalarmult(point: tuple, scalar: int) -> tuple:
+    if scalar == 0:
+        return _ED25519_NEUTRAL
+    half = _ed25519_scalarmult(point, scalar // 2)
+    doubled = _ed25519_add(half, half)
+    return _ed25519_add(doubled, point) if scalar & 1 else doubled
+
+
+def _ed25519_to_affine(point: tuple) -> tuple[int, int]:
+    x, y, z, _t = point
+    zinv = _ed25519_inv(z)
+    return (x * zinv % _ED25519_P, y * zinv % _ED25519_P)
+
+
+def _ed25519_encode_point(point: tuple) -> bytes:
+    """RFC 8032 section 5.1.2: y little-endian over 32 octets, x's parity
+    bit copied into the encoding's top bit."""
+    x, y = _ed25519_to_affine(point)
+    out = bytearray(y.to_bytes(32, "little"))
+    if x & 1:
+        out[31] |= 0x80
+    return bytes(out)
+
+
+class Ed25519Error(Exception):
+    """A key or signature was malformed or did not decode to a valid curve
+    point (RFC 8032 section 5.1.3)."""
+
+
+def _ed25519_decode_point(encoded: bytes) -> tuple:
+    if len(encoded) != 32:
+        raise Ed25519Error("an encoded point must be exactly 32 bytes")
+    p = _ED25519_P
+    y = int.from_bytes(encoded, "little")
+    sign = (y >> 255) & 1
+    y &= (1 << 255) - 1
+    if y >= p:
+        raise Ed25519Error("y coordinate is not less than p")
+    xx = (y * y - 1) * _ed25519_inv(_ED25519_D * y * y + 1) % p
+    x = pow(xx, (p + 3) // 8, p)
+    if (x * x - xx) % p != 0:
+        x = (x * pow(2, (p - 1) // 4, p)) % p
+        if (x * x - xx) % p != 0:
+            raise Ed25519Error("encoded value is not a valid curve point")
+    if x == 0 and sign == 1:
+        raise Ed25519Error("invalid point encoding (x=0 with the sign bit set)")
+    if (x & 1) != sign:
+        x = p - x
+    return (x % p, y % p, 1, (x * y) % p)
+
+
+def _ed25519_clamp(low_32_bytes: bytes) -> int:
+    """RFC 8032 section 5.1.5 step 2 ('pruning')."""
+    a = bytearray(low_32_bytes)
+    a[0] &= 0xF8
+    a[31] &= 0x7F
+    a[31] |= 0x40
+    return int.from_bytes(bytes(a), "little")
+
+
+def ed25519_public_key_from_seed(seed: bytes) -> bytes:
+    """RFC 8032 section 5.1.5: the 32-byte public key for a 32-byte seed."""
+    if len(seed) != 32:
+        raise Ed25519Error("a seed must be exactly 32 bytes")
+    digest = hashlib.sha512(seed).digest()
+    scalar = _ed25519_clamp(digest[:32])
+    return _ed25519_encode_point(_ed25519_scalarmult(_ED25519_BASE, scalar))
+
+
+def ed25519_sign(seed: bytes, message: bytes) -> bytes:
+    """RFC 8032 section 5.1.6. Used only by this file's own tests, to
+    reproduce or mutate a signature for a scratch fixture; the verifier
+    itself never signs anything for real."""
+    if len(seed) != 32:
+        raise Ed25519Error("a seed must be exactly 32 bytes")
+    digest = hashlib.sha512(seed).digest()
+    scalar = _ed25519_clamp(digest[:32])
+    prefix = digest[32:64]
+    public_key = _ed25519_encode_point(_ed25519_scalarmult(_ED25519_BASE, scalar))
+    r = int.from_bytes(hashlib.sha512(prefix + message).digest(), "little") % _ED25519_L
+    r_point_bytes = _ed25519_encode_point(_ed25519_scalarmult(_ED25519_BASE, r))
+    k = int.from_bytes(
+        hashlib.sha512(r_point_bytes + public_key + message).digest(), "little"
+    ) % _ED25519_L
+    s = (r + k * scalar) % _ED25519_L
+    return r_point_bytes + s.to_bytes(32, "little")
+
+
+def ed25519_verify(public_key: bytes, message: bytes, signature: bytes) -> bool:
+    """RFC 8032 section 5.1.7, unbatched (checks [S]B = R + [k]A', which the
+    RFC states is sufficient though not the cofactored form). Returns False
+    for any malformed or non-verifying input; raises nothing, so a caller
+    never needs a second code path for "well-formed but wrong" versus
+    "malformed"."""
+    if len(public_key) != 32 or len(signature) != 64:
+        return False
+    r_bytes = signature[:32]
+    s = int.from_bytes(signature[32:64], "little")
+    if s >= _ED25519_L:
+        return False
+    try:
+        a_point = _ed25519_decode_point(public_key)
+        r_point = _ed25519_decode_point(r_bytes)
+    except Ed25519Error:
+        return False
+    k = int.from_bytes(hashlib.sha512(r_bytes + public_key + message).digest(), "little") % _ED25519_L
+    lhs = _ed25519_scalarmult(_ED25519_BASE, s)
+    rhs = _ed25519_add(r_point, _ed25519_scalarmult(a_point, k))
+    return _ed25519_to_affine(lhs) == _ed25519_to_affine(rhs)
+
+
+# ---------------------------------------------------------------------------
+# Section 9: ADR-0015 signature verification
+#
+# Rule source: docs/adr/0015-signed-manifests-and-receipts.md clauses 1-6 and
+# its "Implementation notes" (the manifest-signing digest rule, the four
+# report states, the receipt/log-line signing targets, the donor-receipt
+# case_id gap — not re-implemented here since it is a reuse-time SC-12 rule
+# with no signature involved), and
+# crates/avila-core-evidence/src/signature.rs /
+# crates/avila-core-runner/src/case_run/signing.rs, read to learn exactly
+# which bytes are signed and which four states are reported (never to copy
+# their control flow) — then independently re-derived and proved to agree
+# on the real committed artifacts:
+#   - the exact manifest-signing digest, cross-checked against every
+#     committed signatures/manifest.sig.json's own signed_document.sha256
+#     (TestManifestSigningDigest);
+#   - every one of the nine committed ADR-0015 signature documents under
+#     examples/cases/{case-001,002,003}-*/signatures/, verified against
+#     examples/keys/trust-root.json (TestSignaturesAgainstCommittedDocuments).
+#
+# Without a trust root, a signature is reported "not_checked" (internal
+# consistency only) or "invalid" (a tampered or malformed document is
+# visibly wrong even without a key); it is never "verified" — ADR-0015
+# clause 3, "Implementation notes" report-states paragraph.
+# ---------------------------------------------------------------------------
+
+SIGNATURE_SCHEMA_VERSION = "avila.core/signature/v0.1-draft"
+TRUST_ROOT_SCHEMA_VERSION = "avila.core/trust-root/v0.1-draft"
+ALGORITHM_ED25519 = "ed25519"
+
+_HEX64_RE = re.compile(r"^[a-f0-9]{64}$")
+_HEX128_RE = re.compile(r"^[a-f0-9]{128}$")
+
+
+class TrustRootError(CanonError):
+    def __init__(self, message: str):
+        super().__init__("CORE-SIG-TRUST", message)
+
+
+@dataclass
+class TrustRoot:
+    """The requester/runner public keys one verification run accepts,
+    keyed by (key_id, role) exactly as
+    avila-core-evidence::signature::TrustRoot::find does — a key listed
+    only under one role never satisfies a check for the other."""
+
+    keys: dict[tuple[str, str], str]
+
+    def find(self, key_id: str, role: str) -> Optional[str]:
+        return self.keys.get((key_id, role))
+
+
+def load_trust_root(path: Path) -> TrustRoot:
+    doc = load_json(path)
+    if doc.get("schema_version") != TRUST_ROOT_SCHEMA_VERSION:
+        raise TrustRootError(
+            f"trust root has unsupported schema_version {doc.get('schema_version')!r}; expected {TRUST_ROOT_SCHEMA_VERSION!r}"
+        )
+    keys: dict[tuple[str, str], str] = {}
+    for entry in doc.get("keys", []):
+        key_id = entry["key_id"]
+        role = entry["role"]
+        public_key_hex = entry["public_key_hex"]
+        if not _HEX64_RE.match(key_id) or not _HEX64_RE.match(public_key_hex):
+            raise TrustRootError(f"trust root entry {entry!r} has a malformed key_id or public_key_hex")
+        if (key_id, role) in keys:
+            raise TrustRootError(f"duplicate key_id {key_id!r} under role {role!r} in trust root")
+        keys[(key_id, role)] = public_key_hex
+    return TrustRoot(keys=keys)
+
+
+def digest_from_prefixed(value: str) -> bytes:
+    """Decodes a `sha256:`-prefixed hex digest into raw bytes, exactly the
+    identity shape every document and artifact in this repository binds."""
+    if not isinstance(value, str) or not value.startswith("sha256:"):
+        raise CanonError("CORE-SIG-DIGEST", f"digest {value!r} must use the `sha256:` prefix")
+    hex_part = value[len("sha256:") :]
+    if not _HEX64_RE.match(hex_part):
+        raise CanonError("CORE-SIG-DIGEST", f"digest {value!r} is not 64 lowercase hex characters")
+    return bytes.fromhex(hex_part)
+
+
+def manifest_signing_digest(manifest_bytes: bytes, signature_document_id: str) -> bytes:
+    """ADR-0015 "Implementation notes": the manifest with the signature
+    document's own `documents[]` entry removed, canonicalised as the typed
+    struct serialises it. Removing an absent id is a no-op, so this is
+    symmetric before and after the entry is bound. Proved against every
+    committed signatures/manifest.sig.json (see
+    TestManifestSigningDigest) — including that ``json.loads`` +
+    ``json.dumps`` round-tripping the manifest first (rather than hashing
+    package.json's raw bytes) reproduces the identity the Rust struct
+    round-trip normalises to, which is the exact edge this ADR clause
+    calls out."""
+    manifest = json.loads(manifest_bytes)
+    documents = manifest.get("documents")
+    if isinstance(documents, list):
+        manifest["documents"] = [
+            document for document in documents if document.get("document_id") != signature_document_id
+        ]
+    normalized_bytes = json.dumps(manifest).encode("utf-8")
+    canonical = canonicalize_json(normalized_bytes)
+    return hashlib.sha256(canonical).digest()
+
+
+def find_signature_for(
+    case_dir: Path, package: dict, target_role: str, target_document_id: str
+) -> Optional[tuple[str, dict]]:
+    """The bound `signature` document, if any, whose content names exactly
+    this (role, document_id) as its signed target — mirrors
+    case_run/signing.rs's find_signature_for. Returns the signature
+    package document's own `document_id` alongside its parsed content: the
+    former is what the manifest signature's own digest rule excludes from
+    the manifest it covers."""
+    for document in package.get("documents", []):
+        if document.get("role") != "signature":
+            continue
+        path = case_dir / document["path"]
+        if not path.is_file():
+            continue
+        try:
+            parsed = load_json(path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        signed = parsed.get("signed_document", {})
+        if signed.get("role") == target_role and signed.get("document_id") == target_document_id:
+            return document["document_id"], parsed
+    return None
+
+
+def check_signature_internal_consistency(document: dict, expected_digest: bytes) -> Optional[str]:
+    """None if internally consistent; otherwise the reason it is not.
+    Checkable without any trust root — a tampered signature document is
+    visibly wrong even without a key (ADR-0015 "Implementation notes",
+    the `invalid` state paragraph)."""
+    if document.get("schema_version") != SIGNATURE_SCHEMA_VERSION:
+        return f"signature document has unsupported schema_version {document.get('schema_version')!r}; expected {SIGNATURE_SCHEMA_VERSION!r}"
+    if document.get("algorithm") != ALGORITHM_ED25519:
+        return f"unsupported signature algorithm {document.get('algorithm')!r}; only {ALGORITHM_ED25519!r} is implemented"
+    signature_hex = document.get("signature_hex", "")
+    if not isinstance(signature_hex, str) or not _HEX128_RE.match(signature_hex):
+        return "signature_hex must be exactly 64 bytes, hex encoded"
+    try:
+        actual_digest = digest_from_prefixed(document["signed_document"]["sha256"])
+    except (CanonError, KeyError, TypeError) as error:
+        return f"signed_document.sha256 is malformed: {error}"
+    if actual_digest != expected_digest:
+        return "signed_document.sha256 does not match the digest this target actually re-hashes to"
+    return None
+
+
+def signature_status(
+    document: Optional[dict],
+    expected_digest: bytes,
+    trust_root: Optional[TrustRoot],
+    expected_role: str,
+) -> dict:
+    """The signature state of one target, mirroring
+    avila-core-runner::case_run::signing::SignatureStatus: ``unsigned`` (no
+    document at all), ``invalid`` (present but inconsistent, wrong key, or
+    a signature that plain does not verify — a strict superset of what
+    needs a trust root, per ADR-0015's own note that this is deliberate),
+    ``not_checked`` (present and consistent, no trust root supplied), or
+    ``verified`` (cryptographically checked against a listed key of the
+    expected role). ``verified`` never appears without a trust root."""
+    if document is None:
+        return {"state": "unsigned"}
+    reason = check_signature_internal_consistency(document, expected_digest)
+    if reason is not None:
+        return {"state": "invalid", "reason": reason}
+    if trust_root is None:
+        return {"state": "not_checked"}
+    key_id = document.get("key_id", "")
+    public_key_hex = trust_root.find(key_id, expected_role)
+    if public_key_hex is None:
+        return {
+            "state": "invalid",
+            "reason": f"key `{key_id}` is not listed under role `{expected_role}` in the supplied trust root",
+        }
+    verified = ed25519_verify(
+        bytes.fromhex(public_key_hex), expected_digest, bytes.fromhex(document["signature_hex"])
+    )
+    if not verified:
+        return {"state": "invalid", "reason": "signature does not verify against the listed key"}
+    return {"state": "verified", "signed_by": key_id}
+
+
+def describe_signature_status(status: dict) -> str:
+    state = status["state"]
+    if state == "unsigned":
+        return "unsigned"
+    if state == "not_checked":
+        return "signature not checked (no --trust-root supplied)"
+    if state == "verified":
+        return f"verified, signed by {status['signed_by']}"
+    return f"invalid: {status['reason']}"
+
+
+def manifest_signature_status(
+    case_dir: Path, package: dict, manifest_bytes: bytes, trust_root: Optional[TrustRoot]
+) -> dict:
+    found = find_signature_for(case_dir, package, "manifest", package["case_id"])
+    if found is None:
+        return {"state": "unsigned"}
+    signature_document_id, document = found
+    expected_digest = manifest_signing_digest(manifest_bytes, signature_document_id)
+    return signature_status(document, expected_digest, trust_root, "requester")
+
+
+def receipt_signature_status(
+    case_dir: Path,
+    package: dict,
+    step_id: str,
+    receipt_document_sha256: str,
+    trust_root: Optional[TrustRoot],
+) -> dict:
+    found = find_signature_for(case_dir, package, "execution_receipt", step_id)
+    if found is None:
+        return {"state": "unsigned"}
+    _, document = found
+    try:
+        expected_digest = digest_from_prefixed(receipt_document_sha256)
+    except CanonError as error:
+        return {"state": "invalid", "reason": str(error)}
+    return signature_status(document, expected_digest, trust_root, "runner")
+
+
+def verify_log_line_signature(line: dict, trust_root: Optional[TrustRoot]) -> dict:
+    """One campaign log line's own runner signature (ADR-0015 clause 6):
+    the canonical form of the line with its `signature` member removed
+    must reproduce the digest that member names. Mirrors
+    attempt.rs::verify_log_line_signature, minus the lineage check, which
+    Section 6 above already re-derives separately."""
+    if "signature" not in line:
+        return {"state": "unsigned"}
+    without_signature = {key: value for key, value in line.items() if key != "signature"}
+    canonical = canonicalize_json(json.dumps(without_signature).encode("utf-8"))
+    expected_digest = hashlib.sha256(canonical).digest()
+    return signature_status(line["signature"], expected_digest, trust_root, "runner")
+
+
+def verify_log_signatures(log_path: Path, trust_root: Optional[TrustRoot], report: Report) -> None:
+    lines = [line for line in log_path.read_bytes().splitlines() if line.strip()]
+    check = f"signatures.log.{log_path.parent.name}/{log_path.name}"
+    signed_indices: list[int] = []
+    verified_count = 0
+    invalid: list[str] = []
+    for index, raw in enumerate(lines):
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(parsed, dict) or "signature" not in parsed:
+            continue
+        signed_indices.append(index)
+        status = verify_log_line_signature(parsed, trust_root)
+        if status["state"] == "verified":
+            verified_count += 1
+        elif status["state"] == "invalid":
+            invalid.append(f"line {index}: {describe_signature_status(status)}")
+    if invalid:
+        report.mismatch(check, "; ".join(invalid))
+    elif not signed_indices:
+        report.not_checked(
+            check,
+            f"none of the {len(lines)} committed lines in this log carry a signature "
+            "(ADR-0015 log-line signing needs a live `run --runner-key`; this "
+            "repository's committed logs were produced without one)",
+        )
+    elif trust_root is None:
+        report.not_checked(check, f"{len(signed_indices)} of {len(lines)} lines carry a signature, not checked (no --trust-root supplied)")
+    else:
+        report.verified(check, f"{verified_count} of {len(signed_indices)} signed lines ({len(lines)} total) verified")
+
+
+def _report_signature_status(report: Report, check: str, status: dict) -> None:
+    detail = describe_signature_status(status)
+    if status["state"] == "verified":
+        report.verified(check, detail)
+    elif status["state"] == "invalid":
+        report.mismatch(check, detail)
+    else:
+        report.not_checked(check, detail)
+
+
+def verify_case_signatures(
+    case_dir: Path,
+    package: dict,
+    manifest_bytes: bytes,
+    docs_by_role: dict,
+    trust_root: Optional[TrustRoot],
+    report: Report,
+) -> None:
+    status = manifest_signature_status(case_dir, package, manifest_bytes, trust_root)
+    _report_signature_status(report, "signatures.manifest", status)
+
+    for receipt_doc in docs_by_role.get("execution_receipt", []):
+        step_id = receipt_doc.get("step_id", receipt_doc["document_id"])
+        check = f"signatures.receipt.{step_id}"
+        path = case_dir / receipt_doc["path"]
+        if not path.is_file():
+            report.not_checked(check, f"receipt file missing: {path}")
+            continue
+        status = receipt_signature_status(case_dir, package, step_id, receipt_doc["sha256"], trust_root)
+        _report_signature_status(report, check, status)
+
+    for log_name in ("attempts.jsonl", "campaign-log.jsonl"):
+        log_path = case_dir / "search" / log_name
+        if log_path.is_file():
+            verify_log_signatures(log_path, trust_root, report)
+    if not any((case_dir / "search" / name).is_file() for name in ("attempts.jsonl", "campaign-log.jsonl")):
+        report.not_checked("signatures.log", f"no search/attempts.jsonl or search/campaign-log.jsonl found under {case_dir}")
+
+
+# ---------------------------------------------------------------------------
+# Section 10: qualification envelopes (ADR-0008, S-039)
+#
+# Rule source: crates/avila-core-kernel/src/predicate.rs's documented
+# Strong-Kleene semantics (ADR-0006 SC-7) and
+# crates/avila-core-compiler/src/qualification.rs's evaluate_envelope (ADR-
+# 0008 clauses 2-3, S-039's covered_output_slots refinement), read to learn
+# which fields each predicate variant carries and how a scope's top-level
+# `all` is split into independently reported terms — never to copy control
+# flow — then re-derived and proved to agree on
+# fixtures/semantic-core/vectors/scope-predicates.v1.json (every vector;
+# see TestScopePredicateVectors) for the generic evaluator itself.
+#
+# What this section does NOT do, precisely: it does not feed that evaluator
+# a run's real applicability facts to reproduce a claim's recorded
+# Inside/Outside/Unknown from scratch, because Core does not persist them
+# in any committed document. The execution-receipt schema is process
+# evidence only (schemas/execution-receipt.v0.1-draft.schema.json; every
+# committed receipt's own `notice` field disclaims qualification), and a
+# claim's `qualification.terms[].predicate` records the bound qualification
+# record's own scope-term text — the threshold the case author authored —
+# not the extracted fact value the runner compared it against at plan time
+# (ADR-0008 clause 2: the adapter reports that context to the runner; ADR-
+# 0008/S-039 never say it is bound into any document). See
+# UNSUPPORTED_NOTES["qualification_facts"], reported by name below rather
+# than silently trusting a claim's recorded `state`.
+#
+# What IS independently re-derivable from committed documents alone, and
+# checked for every qualification-carrying claim in CASE-001, 002, and 003
+# (TestQualificationEnvelopeConsistency): that its recorded qualification
+# identity (id/revision/sha256) names a qualification document this
+# package actually binds; that its recorded per-term predicate text is,
+# in order, exactly the bound record's own scope terms (an edited,
+# reordered, or substituted term is a mismatch); that its recorded overall
+# `state` is the correct Inside/Outside/Unknown aggregate of its own
+# recorded per-term results (a state that contradicts its own terms is a
+# mismatch); and that it never carries an assessment on an output slot the
+# record's `covered_output_slots` excludes (S-039).
+# ---------------------------------------------------------------------------
+
+
+class PredicateError(Exception):
+    """A predicate could not be evaluated: a malformed shape, or a fact or
+    parameter compared as a quantity with no registered kind. Every such
+    error is treated as one term becoming ``unknown`` (matching
+    predicate.rs's per-term continue-on-Err path); unlike the Rust
+    evaluator, a malformed predicate *shape* is not additionally treated as
+    aborting the whole assessment early — a deliberate simplification, since
+    every committed qualification record's scope is schema-valid, and this
+    divergence can only matter for a deliberately malformed synthetic
+    input, never for real data."""
+
+
+def scope_terms(scope) -> list:
+    """Splits a qualification record's `scope` into the terms
+    evaluate_envelope reports separately: the items of a top-level non-
+    empty `all`, or the whole scope as a single term otherwise."""
+    all_items = scope.get("all") if isinstance(scope, dict) else None
+    return all_items if isinstance(all_items, list) and all_items else [scope]
+
+
+def compact_json(value) -> str:
+    """Rust's `serde_json::to_string(&Value)` compact form. This
+    workspace's serde_json has no `preserve_order` feature, so
+    `Value::Object` is BTreeMap-backed and keys serialise in sorted order
+    regardless of source order — confirmed byte-for-byte against every
+    `qualification.terms[].predicate` string committed in
+    examples/cases/{case-001,002,003}-*/claims.json."""
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _truth_not(value: str) -> str:
+    return {"true": "false", "false": "true", "unknown": "unknown"}[value]
+
+
+def _quantity_to_canonical(value_obj: dict, kind_id: str, kinds: dict[str, Kind]) -> Fraction:
+    kind = kinds.get(kind_id)
+    if kind is None:
+        raise PredicateError(f"kind `{kind_id}` is not in the supplied kind registry")
+    magnitude = read_authoritative_exact(value_obj["value"])
+    return kind.scale(magnitude, value_obj["unit"])
+
+
+def _compare_ordering(op: str, a, b) -> str:
+    table = {"eq": a == b, "ne": a != b, "lt": a < b, "le": a <= b, "gt": a > b, "ge": a >= b}
+    if op not in table:
+        raise PredicateError(f"unknown fact operator `{op}`")
+    return "true" if table[op] else "false"
+
+
+def _compare_scalar_eq_ne(op: str, a, b) -> str:
+    if op not in ("eq", "ne"):
+        raise PredicateError("ordered fact comparison requires an ordered numeric value")
+    return _compare_ordering(op, a, b)
+
+
+def _evaluate_range(range_pred: dict, context: dict, kinds: dict, param_kinds: dict) -> str:
+    if range_pred.get("min") is None and range_pred.get("max") is None:
+        raise PredicateError("a parameter range requires a minimum or maximum")
+    actual = context.get("params", {}).get(range_pred["param"])
+    if actual is None:
+        return "unknown"
+    kind_id = param_kinds.get(range_pred["param"])
+    if kind_id is None:
+        raise PredicateError(f"parameter `{range_pred['param']}` has no quantity kind")
+    actual_scaled = _quantity_to_canonical(actual, kind_id, kinds)
+    minimum_spec = range_pred.get("min")
+    if minimum_spec is not None:
+        minimum = _quantity_to_canonical(minimum_spec, kind_id, kinds)
+        if actual_scaled < minimum or (not range_pred.get("min_inclusive", False) and actual_scaled == minimum):
+            return "false"
+    maximum_spec = range_pred.get("max")
+    if maximum_spec is not None:
+        maximum = _quantity_to_canonical(maximum_spec, kind_id, kinds)
+        if actual_scaled > maximum or (not range_pred.get("max_inclusive", False) and actual_scaled == maximum):
+            return "false"
+    return "true"
+
+
+def _evaluate_attribute_set(pred: dict, context: dict) -> str:
+    value = context.get("inputs", {}).get(pred["slot"], {}).get("attributes", {}).get(pred["attribute"])
+    if not isinstance(value, str):
+        return "unknown"
+    return "true" if value in pred["values"] else "false"
+
+
+def _evaluate_fact(pred: dict, context: dict, kinds: dict, fact_kinds: dict) -> str:
+    actual = context.get("facts", {}).get(pred["name"])
+    if actual is None:
+        return "unknown"
+    source = actual.get("source", {})
+    requirement = pred["source_requirement"]
+    if source.get("class") != requirement["class"] or source.get("validator") != requirement["validator"]:
+        return "unknown"
+    op = pred["op"]
+    actual_value = actual["value"]
+    expected_value = pred["value"]
+    if isinstance(actual_value, dict) and isinstance(expected_value, dict):
+        kind_id = fact_kinds.get(pred["name"])
+        if kind_id is None:
+            raise PredicateError(f"fact `{pred['name']}` has no quantity kind")
+        return _compare_ordering(
+            op,
+            _quantity_to_canonical(actual_value, kind_id, kinds),
+            _quantity_to_canonical(expected_value, kind_id, kinds),
+        )
+    if isinstance(actual_value, bool) and isinstance(expected_value, bool):
+        return _compare_scalar_eq_ne(op, actual_value, expected_value)
+    if isinstance(actual_value, str) and isinstance(expected_value, str):
+        return _compare_scalar_eq_ne(op, actual_value, expected_value)
+    if (
+        isinstance(actual_value, int)
+        and not isinstance(actual_value, bool)
+        and isinstance(expected_value, int)
+        and not isinstance(expected_value, bool)
+    ):
+        return _compare_ordering(op, actual_value, expected_value)
+    return "unknown"
+
+
+def evaluate_predicate(predicate: dict, context: dict, kinds: dict, fact_kinds: dict, param_kinds: dict) -> str:
+    """Strong-Kleene evaluation of one kernel applicability predicate
+    (predicate.rs) over an explicit context, returning "true" / "false" /
+    "unknown". Proved against every vector in
+    fixtures/semantic-core/vectors/scope-predicates.v1.json — see
+    TestScopePredicateVectors."""
+    if not isinstance(predicate, dict) or len(predicate) != 1:
+        raise PredicateError(f"not a valid predicate: {predicate!r}")
+    ((variant, body),) = predicate.items()
+    if variant == "always":
+        return "true" if body else "false"
+    if variant == "not":
+        return _truth_not(evaluate_predicate(body, context, kinds, fact_kinds, param_kinds))
+    if variant == "all":
+        if not body:
+            raise PredicateError("`all` requires at least one predicate")
+        result = "true"
+        for item in body:
+            outcome = evaluate_predicate(item, context, kinds, fact_kinds, param_kinds)
+            if outcome == "false":
+                return "false"
+            if outcome == "unknown":
+                result = "unknown"
+        return result
+    if variant == "any":
+        if not body:
+            raise PredicateError("`any` requires at least one predicate")
+        result = "false"
+        for item in body:
+            outcome = evaluate_predicate(item, context, kinds, fact_kinds, param_kinds)
+            if outcome == "true":
+                return "true"
+            if outcome == "unknown":
+                result = "unknown"
+        return result
+    if variant == "param_in_range":
+        return _evaluate_range(body, context, kinds, param_kinds)
+    if variant == "input_attribute_in":
+        return _evaluate_attribute_set(body, context)
+    if variant == "environment_image_in":
+        environment = context.get("environment")
+        if environment is None:
+            return "unknown"
+        return "true" if environment.get("image_digest") in body else "false"
+    if variant == "fact":
+        return _evaluate_fact(body, context, kinds, fact_kinds)
+    raise PredicateError(f"unknown predicate variant `{variant}`")
+
+
+def _aggregate_envelope_state(results: list) -> str:
+    if any(result == "false" for result in results):
+        return "outside"
+    if results and all(result == "true" for result in results):
+        return "inside"
+    return "unknown"
+
+
+def evaluate_envelope_terms(record: dict, context: dict, kinds: dict) -> tuple[str, list, list]:
+    """Re-derives qualification.rs's evaluate_envelope: splits the record's
+    scope into its top-level terms, evaluates each independently over
+    ``context``, and aggregates Inside/Outside/Unknown. Returns
+    (state, terms, issues); each term is {"predicate": <compact json>,
+    "result": "true"|"false"|"unknown"}."""
+    fact_kinds = record.get("fact_kinds", {})
+    terms: list[dict] = []
+    issues: list[str] = []
+    for term in scope_terms(record["scope"]):
+        try:
+            result = evaluate_predicate(term, context, kinds, fact_kinds, {})
+        except PredicateError as error:
+            issues.append(str(error))
+            result = "unknown"
+        terms.append({"predicate": compact_json(term), "result": result})
+    return _aggregate_envelope_state([term["result"] for term in terms]), terms, issues
+
+
+def verify_case_qualification_envelopes(
+    case_dir: Path,
+    package: dict,
+    docs_by_role: dict,
+    claims: Optional[dict],
+    kinds: dict,
+    report: Report,
+) -> None:
+    qualification_docs: list[tuple[dict, str]] = []
+    for document in docs_by_role.get("qualification", []):
+        path = case_dir / document["path"]
+        if not path.is_file():
+            continue
+        raw = path.read_bytes()
+        try:
+            record = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        qualification_docs.append((record, sha256_bytes(raw)))
+
+    if claims is None:
+        return
+    qualifying_claims = [claim for claim in claims.get("claims", []) if claim.get("qualification")]
+    if not qualifying_claims:
+        return
+
+    for claim in qualifying_claims:
+        check = f"qualification.{claim['claim_id']}"
+        qualification = claim["qualification"]
+        match = next(
+            (
+                (record, actual_sha256)
+                for record, actual_sha256 in qualification_docs
+                if record.get("qualification_id") == qualification.get("qualification_id")
+                and record.get("revision") == qualification.get("revision")
+            ),
+            None,
+        )
+        if match is None:
+            report.mismatch(
+                check,
+                f"claim references qualification_id={qualification.get('qualification_id')!r} "
+                f"revision={qualification.get('revision')!r}, which is not a qualification document this package binds",
+            )
+            continue
+        record, actual_sha256 = match
+
+        problems = []
+        if qualification.get("sha256") != actual_sha256:
+            problems.append(
+                f"claim binds qualification sha256 {qualification.get('sha256')!r}, "
+                f"the bound document is actually {actual_sha256!r}"
+            )
+
+        covered_slots = record.get("covered_output_slots")
+        if covered_slots is not None and claim.get("output_slot") not in covered_slots:
+            problems.append(
+                f"claim carries a qualification assessment on output slot {claim.get('output_slot')!r}, "
+                f"which record {record.get('qualification_id')!r} does not list in "
+                f"covered_output_slots {covered_slots!r} (S-039)"
+            )
+
+        expected_predicates = [compact_json(term) for term in scope_terms(record["scope"])]
+        actual_terms = qualification.get("terms", [])
+        actual_predicates = [term.get("predicate") for term in actual_terms]
+        if actual_predicates != expected_predicates:
+            problems.append(
+                "claim's recorded term predicates do not match the bound record's own scope "
+                f"terms in order: recorded {actual_predicates!r}, expected {expected_predicates!r}"
+            )
+
+        recomputed_state = _aggregate_envelope_state([term.get("result") for term in actual_terms])
+        if recomputed_state != qualification.get("state"):
+            problems.append(
+                f"claim's recorded state {qualification.get('state')!r} is not what its own "
+                f"recorded per-term results imply ({recomputed_state!r})"
+            )
+
+        if problems:
+            report.mismatch(check, "; ".join(problems))
+        else:
+            report.verified(
+                check,
+                f"{len(actual_predicates)} recorded terms match the bound qualification record's "
+                f"scope; recorded state {qualification['state']!r} is the correct aggregate of its own terms",
+            )
+
+    report.not_checked("qualification.envelope_predicate_over_facts", UNSUPPORTED_NOTES["qualification_facts"])
+
+
+# ---------------------------------------------------------------------------
 # Case-level orchestration and CLI
 # ---------------------------------------------------------------------------
 
 
-def verify_case(case_dir: Path, roots: dict[str, Path]) -> Report:
+def verify_case(
+    case_dir: Path, roots: dict[str, Path], trust_root: Optional[TrustRoot] = None
+) -> Report:
     """Runs every applicable section of the profile against one case
     directory (an examples/cases/CASE-NNN-* layout: package.json plus the
-    documents it names)."""
+    documents it names). ``trust_root``, when supplied, is the ADR-0015
+    requester/runner public keys (``load_trust_root``); without one, every
+    signature is reported ``not_checked`` or ``invalid``, never
+    ``verified``."""
     report = Report(str(case_dir))
     package_path = case_dir / "package.json"
     if not package_path.is_file():
         report.not_checked("package.manifest", f"no package.json found at {case_dir}")
         return report
-    package = load_json(package_path)
+    manifest_bytes = package_path.read_bytes()
+    package = json.loads(manifest_bytes)
 
     verify_package_identity(case_dir, package, roots, report)
 
@@ -1661,19 +2562,24 @@ def verify_case(case_dir: Path, roots: dict[str, Path]) -> Report:
     else:
         report.not_checked("verdict.all", "contract.json, registry.json, or claims.json missing/undeclared for this case")
 
+    verify_case_qualification_envelopes(
+        case_dir, package, docs_by_role, claims, kinds_from_registry_doc(registry) if registry is not None else {}, report
+    )
+
     log_path = case_dir / "search" / "attempts.jsonl"
     if log_path.is_file():
         verify_attempt_log(log_path, report)
     else:
         report.not_checked("lineage.all", f"no attempt log at {log_path}")
 
-    report.not_checked("signatures", UNSUPPORTED_NOTES["signatures"])
+    verify_case_signatures(case_dir, package, manifest_bytes, docs_by_role, trust_root, report)
     return report
 
 
 def cmd_verify_case(args: argparse.Namespace) -> int:
     roots = parse_source_roots(args.source_root or [])
-    report = verify_case(Path(args.case_dir), roots)
+    trust_root = load_trust_root(Path(args.trust_root)) if args.trust_root else None
+    report = verify_case(Path(args.case_dir), roots, trust_root=trust_root)
     _emit(report, args)
     return report.exit_code()
 
@@ -1720,6 +2626,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="append",
         metavar="NAME=PATH",
         help="External artifact root, exactly like `avila-core run --source-root NAME=PATH`; may be repeated",
+    )
+    p_case.add_argument(
+        "--trust-root",
+        metavar="FILE",
+        help="ADR-0015 trust root (avila.core/trust-root/v0.1-draft: requester/runner public keys) to verify "
+        "signatures against; without it every signature is reported not_checked or invalid, never verified",
     )
     p_case.add_argument("--json", action="store_true", help="Emit the machine-readable JSON report instead of text")
     p_case.set_defaults(func=cmd_verify_case)

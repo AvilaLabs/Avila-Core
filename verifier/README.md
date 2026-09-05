@@ -19,7 +19,7 @@ Evidence-package spike build gate.
 
 ## Supported profile
 
-This file checks exactly seven things and refuses everything else by name.
+This file checks exactly nine things and refuses everything else by name.
 See the module docstring in `avila_core_verify.py` for the full, precise
 statement (each item there cites the ADR clause or fixture file it proves
 agreement against); in short:
@@ -54,18 +54,40 @@ agreement against); in short:
    inheritance, and the recursive RFC 6901 `changes` diff (ADR-0014).
 7. **Mutation tests** — `test_verifier.py`'s `TestMutations` corrupts one
    claim value, one receipt output digest, one manifest entry, one log
-   line, and one verdict margin, each in a scratch copy of a real case with
-   everything *else* re-hashed to stay self-consistent, and asserts this
-   verifier names exactly the corrupted layer.
+   line, one verdict margin, one signature byte, one signature's key id,
+   one manifest (without re-signing it), and one qualification envelope
+   term, each in a scratch copy of a real case with everything *else*
+   re-hashed to stay self-consistent, and asserts this verifier names
+   exactly the corrupted layer.
+8. **ADR-0015 signatures** — a from-scratch, standard-library Ed25519 (RFC
+   8032), proved against every RFC 8032 section 7.1 test vector and every
+   ADR-0015 signature document committed under `examples/cases/*/signatures/`.
+   Verifies the manifest's requester signature, each execution receipt's
+   runner signature, and any campaign log-line runner signatures present;
+   reports `verified` (with the signer's key id), `invalid` (with the
+   reason — a bad digest, an unlisted or wrong-role key, or a signature
+   that plain does not verify), or `unsigned` per signature. `--trust-root
+   FILE` supplies the accepted keys (e.g. `examples/keys/trust-root.json`);
+   without it, every signature is `not_checked` and never `verified`.
+9. **Qualification envelopes** (ADR-0008, S-039) — a from-scratch
+   Strong-Kleene predicate evaluator, proved against every vector in
+   `fixtures/semantic-core/vectors/scope-predicates.v1.json`. For CASE-001,
+   002, and 003's committed claims, independently checks that each
+   qualification-carrying claim's recorded per-term predicate text matches,
+   in order, the bound qualification record's own scope terms; that its
+   recorded `state` is the correct aggregate of its own recorded per-term
+   results; and that `covered_output_slots` is respected. It does **not**
+   re-derive a term's recorded boolean from the real extracted
+   applicability fact that produced it — Core does not persist that fact in
+   any committed document — and says so by name
+   (`qualification.envelope_predicate_over_facts`) rather than silently
+   trusting the recorded outcome.
 
 Explicitly **out of scope**, refused by name wherever the check would
 otherwise silently pass or silently mismatch:
 
-- signed manifests/receipts (ADR-0015 is `proposed`, not implemented in any
-  committed package this profile reads);
-- qualification envelope *predicate* re-evaluation (a claim's recorded
-  `qualification.state` is read as given, exactly as the real evaluator
-  does per `CAMPAIGN_EVALUATION.md`);
+- re-deriving a qualification-envelope term's boolean from a run's real
+  extracted applicability facts (item 9's own boundary above);
 - coverage-set evaluation against a `requirement_set` document;
 - presentation-gate / staged-review realisation or content;
 - recompiling a contract + registry into a compiled-snapshot identity
@@ -83,6 +105,13 @@ otherwise silently pass or silently mismatch:
 python3 avila_core_verify.py verify-case ../examples/cases/case-003-thermal-spreader \
   --source-root case=../examples/cases/case-003-thermal-spreader \
   --source-root thermal=../examples/capabilities/thermal
+
+# Same, plus verify ADR-0015 signatures against the example trust root
+# (CASE-001, 002, and 003 are the three signed cases).
+python3 avila_core_verify.py verify-case ../examples/cases/case-003-thermal-spreader \
+  --source-root case=../examples/cases/case-003-thermal-spreader \
+  --source-root thermal=../examples/capabilities/thermal \
+  --trust-root ../examples/keys/trust-root.json
 
 # Same, machine-readable.
 python3 avila_core_verify.py verify-case ../examples/cases/case-000-actinv-aftermatter --json
@@ -134,8 +163,26 @@ or committed example case it proves agreement against — see
   `campaign-log.jsonl` / `attempts.jsonl` in this repository (several
   thousand) reproduces exactly.
 - `TestPositivePathOnRealCases`: CASE-000, 001, 002, 003, 008, 009 each
-  verify with zero `mismatch`.
-- `TestMutations`: the five corruption scenarios in item 7 above.
+  verify with zero `mismatch` (CASE-001, 002, 003 additionally with
+  `--trust-root`, asserting every manifest/receipt signature `verified`).
+- `TestEd25519RFC8032Vectors`: all 5 RFC 8032 section 7.1 vectors (public
+  key derivation, signing, and verification), plus the curve constants
+  cross-checked against RFC 8032 Table 1's own literals.
+- `TestSignaturesAgainstCommittedDocuments`, `TestManifestSigningDigest`:
+  every ADR-0015 signature document under `examples/cases/*/signatures/`
+  verifies against `examples/keys/trust-root.json`, and the manifest-signing
+  digest rule reproduces every committed `signatures/manifest.sig.json`.
+- `TestLogLineSignatureVerification`: no committed log carries a signed
+  line (log-line signing needs a live `run --runner-key`), so this signs a
+  synthetic line with the real, committed `examples/keys/runner.seed` and
+  proves the verify/tamper/unsigned/mixed-file paths all report correctly.
+- `TestScopePredicateVectors`: all 19 vectors in `scope-predicates.v1.json`,
+  plus hand-written cases for the string/bool/integer fact and structural-
+  error paths those 19 vectors don't happen to reach.
+- `TestQualificationEnvelopeConsistency`: every qualification-carrying claim
+  in CASE-001, 002, and 003 is self-consistent with its bound qualification
+  record.
+- `TestMutations`: the nine corruption scenarios in item 7 above.
 
 ## What this is not
 

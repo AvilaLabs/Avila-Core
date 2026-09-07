@@ -53,6 +53,7 @@ impl TourTargets {
 pub(crate) enum HelpView {
     Case(HelpTab),
     Specimen,
+    Tools,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -587,6 +588,10 @@ impl GuidedHelp {
 
 fn view_help(view: HelpView) -> (&'static str, &'static str) {
     match view {
+        HelpView::Tools => (
+            "Tools",
+            "Choose a query, then use the current workbench report or paste or drop a saved report or campaign log. Filter by the IDs relevant to that tool and run the query. Results retain exact values and source identities; they do not freshly verify artifacts. Run history searches only the selected log, and Compare with parent validates the attempt's lineage. Use the workbench for current reuse planning or execution.",
+        ),
         HelpView::Case(HelpTab::Overview) => (
             "Overview",
             "The six stages of one run with their outcome badges. Every badge is read from the runner's report; the notice below the card states what no badge ever claims.",

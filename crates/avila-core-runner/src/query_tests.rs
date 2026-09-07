@@ -264,6 +264,11 @@ fn real_runner_report_and_log_are_queryable_without_mutation() {
         let result = call_tool(&QueryContext::unrestricted(), tool, json!({"path":path})).unwrap();
         assert_eq!(result["verification"], "recorded_only");
         assert_eq!(result["result"]["case_id"], report.case_id);
+        let memory = call_report_tool(tool, json!({}), &bytes).unwrap();
+        assert_eq!(memory["result"], result["result"]);
+        assert_eq!(memory["source"]["sha256"], result["source"]["sha256"]);
+        assert_eq!(memory["source"]["label"], "Current workbench report");
+        assert!(memory["source"].get("path").is_none());
     }
     let history_bytes = fs::read(&log_path).unwrap();
     let result = call_tool(
@@ -276,4 +281,6 @@ fn real_runner_report_and_log_are_queryable_without_mutation() {
     assert_eq!(result["result"]["items"][0]["case_id"], report.case_id);
     assert_eq!(fs::read(&path).unwrap(), bytes);
     assert_eq!(fs::read(&log_path).unwrap(), history_bytes);
+    assert!(call_report_tool("core_history", json!({}), &bytes).is_err());
+    assert!(call_report_tool("core_inspect", json!({"path":"ignored.json"}), &bytes).is_err());
 }

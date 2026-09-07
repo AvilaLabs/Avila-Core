@@ -10,6 +10,7 @@
 
 mod case_view;
 mod help;
+mod tools_view;
 
 use avila_core_compiler::{
     CompilationStatus, CompileReport, ContractSource, CoreDiagnostic, FindingClass,
@@ -41,7 +42,7 @@ fn main() -> eframe::Result {
         Ok(setup) => setup,
         Err(error) => {
             eprintln!(
-                "error: {error}\nusage: avila-core-app [--case DIR] [--source-root NAME=PATH]... [--capability NAME=PATH]... [--workspace DIR] [--no-reuse] [--auto-run | --auto-plan] [--screenshot PNG] [--tab NAME]"
+                "error: {error}\nusage: avila-core-app [--case DIR] [--source-root NAME=PATH]... [--capability NAME=PATH]... [--workspace DIR] [--log FILE] [--no-reuse] [--auto-run | --auto-plan] [--tools REPORT_OR_LOG] [--tool NAME] [--screenshot PNG] [--tab NAME]"
             );
             std::process::exit(2);
         }
@@ -105,6 +106,7 @@ enum Mode {
     #[default]
     Case,
     Specimen,
+    Tools,
 }
 
 struct CoreApp {
@@ -114,6 +116,7 @@ struct CoreApp {
     specimen: Result<Specimen, String>,
     case: case_view::CaseView,
     help: GuidedHelp,
+    tools: tools_view::ToolsView,
 }
 
 impl CoreApp {
@@ -125,13 +128,20 @@ impl CoreApp {
         if let Some(guide) = setup.tour.as_deref().and_then(help::GuideKind::by_name) {
             help.start_tour(guide);
         }
+        let tools = tools_view::ToolsView::new(setup.tools_path.clone(), setup.tool.as_deref());
+        let mode = if setup.tools_path.is_some() || setup.tool.is_some() {
+            Mode::Tools
+        } else {
+            Mode::Case
+        };
         Self {
-            mode: Mode::Case,
+            mode,
             workspace: Workspace::Overview,
             logo: load_logo_texture(context).ok(),
             specimen: load_specimen(),
             case: case_view::CaseView::new(setup),
             help,
+            tools,
         }
     }
 
@@ -139,6 +149,7 @@ impl CoreApp {
         match self.mode {
             Mode::Case => HelpView::Case(self.case.help_tab()),
             Mode::Specimen => HelpView::Specimen,
+            Mode::Tools => HelpView::Tools,
         }
     }
 
@@ -150,6 +161,7 @@ impl CoreApp {
                 self.case.show_help_tab(tab);
             }
             Some(HelpView::Specimen) => self.mode = Mode::Specimen,
+            Some(HelpView::Tools) => self.mode = Mode::Tools,
             None => {}
         }
     }
@@ -202,6 +214,7 @@ impl eframe::App for CoreApp {
             self.help.toggle_center();
         }
         self.apply_requested_view();
+        self.case.tick(ui.ctx());
         let mut targets = TourTargets::default();
 
         // Paint the root background from the active theme; the window's clear
@@ -214,6 +227,7 @@ impl eframe::App for CoreApp {
             for (mode, label) in [
                 (Mode::Case, "Case workbench"),
                 (Mode::Specimen, "Specimen compiler"),
+                (Mode::Tools, "Tools"),
             ] {
                 if ui.selectable_label(self.mode == mode, label).clicked() {
                     self.mode = mode;
@@ -222,11 +236,17 @@ impl eframe::App for CoreApp {
         });
         targets.set(TourTarget::ModeSwitch, switch.response.rect);
         ui.separator();
-        if self.mode == Mode::Case {
-            self.case.ui(ui, &mut targets);
-        } else {
-            self.specimen_ui(ui, &mut targets);
+        match self.mode {
+            Mode::Case => self.case.ui(ui, &mut targets),
+            Mode::Specimen => self.specimen_ui(ui, &mut targets),
+            Mode::Tools => self.tools.ui(ui, self.case.report(), &self.case.setup.log),
         }
+        let ready = match self.mode {
+            Mode::Case => self.case.settled(),
+            Mode::Tools => self.tools.settled(),
+            Mode::Specimen => true,
+        };
+        self.case.drive_screenshot(ui.ctx(), ready);
         let view = self.current_view();
         self.help.show_center(ui.ctx(), view);
         self.help.show_tour(ui.ctx(), &targets);

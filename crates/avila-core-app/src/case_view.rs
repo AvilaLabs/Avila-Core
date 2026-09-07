@@ -115,6 +115,8 @@ pub struct CaseSetup {
     /// Operator-owned JSON file caching verified digests of large artifacts
     /// resolved under a source root. Empty means off, the default.
     pub hash_cache: String,
+    /// Optional campaign history appended by the runner for each run or plan.
+    pub log: String,
     /// Start a run (or a plan) as soon as the window opens.
     pub auto_run: Option<bool>,
     /// Save a PNG of the window once the automatic run has rendered, then
@@ -126,6 +128,10 @@ pub struct CaseSetup {
     pub light: bool,
     /// Start a walkthrough immediately, by its first word or full title.
     pub tour: Option<String>,
+    /// Open the query workspace with a saved report or campaign log.
+    pub tools_path: Option<String>,
+    /// Query name to select in the Tools workspace.
+    pub tool: Option<String>,
 }
 
 impl CaseSetup {
@@ -150,6 +156,7 @@ impl CaseSetup {
                 "--case" => setup.case_dir = value()?,
                 "--workspace" => setup.workspace = value()?,
                 "--hash-cache" => setup.hash_cache = value()?,
+                "--log" => setup.log = value()?,
                 "--source-root" => setup.source_roots.push(named_path(&value()?)?),
                 "--capability" => setup.capabilities.push(named_path(&value()?)?),
                 "--input" => setup.free_inputs.push(named_path(&value()?)?),
@@ -161,6 +168,14 @@ impl CaseSetup {
                 "--tab" => setup.tab = Some(value()?),
                 "--light" => setup.light = true,
                 "--tour" => setup.tour = Some(value()?),
+                "--tools" => setup.tools_path = Some(value()?),
+                "--tool" => {
+                    let name = value()?;
+                    if crate::tools_view::Tool::by_name(&name).is_none() {
+                        return Err(format!("unknown tool `{name}`"));
+                    }
+                    setup.tool = Some(name);
+                }
                 other => return Err(format!("unknown argument `{other}`")),
             }
         }
@@ -240,6 +255,7 @@ impl CaseSetup {
             plan_only,
             hash_cache: (!self.hash_cache.trim().is_empty())
                 .then(|| PathBuf::from(self.hash_cache.trim())),
+            log: (!self.log.trim().is_empty()).then(|| PathBuf::from(self.log.trim())),
             ..CaseRunOptions::default()
         }
     }
@@ -355,11 +371,11 @@ impl CaseView {
     /// Drive the development screenshot: after the automatic run has rendered
     /// for a few frames, ask the viewport for a capture; when it arrives, write
     /// it as PNG and close the window.
-    pub fn drive_screenshot(&mut self, context: &egui::Context) {
+    pub fn drive_screenshot(&mut self, context: &egui::Context, ready: bool) {
         let Some(path) = self.setup.screenshot.clone() else {
             return;
         };
-        if self.running.is_some() || (self.report.is_none() && self.run_error.is_none()) {
+        if !ready {
             return;
         }
         self.settled_frames += 1;
@@ -452,9 +468,6 @@ impl CaseView {
     }
 
     pub fn ui(&mut self, ui: &mut egui::Ui, targets: &mut TourTargets) {
-        self.start_automatic();
-        self.poll(ui.ctx());
-        self.drive_screenshot(ui.ctx());
         egui::Panel::left("case-setup")
             .resizable(true)
             .show(ui, |ui| {
@@ -478,6 +491,19 @@ impl CaseView {
                 .show(ui, |ui| self.report_panel(ui, targets));
             targets.set(TourTarget::ReportPanel, panel.inner_rect);
         });
+    }
+
+    pub(crate) fn tick(&mut self, context: &egui::Context) {
+        self.start_automatic();
+        self.poll(context);
+    }
+
+    pub(crate) fn report(&self) -> Option<&CaseRunReport> {
+        self.report.as_ref()
+    }
+
+    pub(crate) fn settled(&self) -> bool {
+        self.running.is_none() && (self.report.is_some() || self.run_error.is_some())
     }
 
     fn setup_panel(&mut self, ui: &mut egui::Ui, targets: &mut TourTargets) {
@@ -593,6 +619,14 @@ impl CaseView {
                 ui.add(
                     egui::TextEdit::singleline(&mut self.setup.hash_cache)
                         .hint_text("off by default; a JSON file to cache large artifact digests in")
+                        .desired_width(f32::INFINITY),
+                );
+            });
+            ui.horizontal(|ui| {
+                ui.label("Campaign log");
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.setup.log)
+                        .hint_text("Optional campaign.jsonl for the Run history tool")
                         .desired_width(f32::INFINITY),
                 );
             });
@@ -1728,6 +1762,21 @@ mod tests {
         assert_eq!(display("A → B"), "A -> B");
         assert!(CaseSetup::from_arguments(&["--bogus".into()]).is_err());
         assert!(CaseSetup::from_arguments(&["--source-root".into(), "nope".into()]).is_err());
+        let logged = CaseSetup::from_arguments(&["--log".into(), "campaign.jsonl".into()]).unwrap();
+        assert_eq!(
+            logged.options(false).log,
+            Some(PathBuf::from("campaign.jsonl"))
+        );
+        let tools = CaseSetup::from_arguments(&[
+            "--tools".into(),
+            "run-report.json".into(),
+            "--tool".into(),
+            "requirements".into(),
+        ])
+        .unwrap();
+        assert_eq!(tools.tools_path.as_deref(), Some("run-report.json"));
+        assert_eq!(tools.tool.as_deref(), Some("requirements"));
+        assert!(CaseSetup::from_arguments(&["--tool".into(), "unknown-query".into()]).is_err());
     }
 
     #[test]

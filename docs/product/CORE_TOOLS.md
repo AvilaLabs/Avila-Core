@@ -1,6 +1,6 @@
 # Core tools for people and agents
 
-The CLI and local MCP server expose the same read-only Rust query operations.
+The CLI, native workbench, and local MCP server expose the same read-only Rust query operations.
 No model, hosted service, or separate database is required. Use these operations
 to retrieve Core-owned facts instead of maintaining parallel status documents.
 
@@ -44,6 +44,28 @@ integration guidance that the MCP server also supplies at initialization.
 Existing `compile`, `evaluate`, `explain`, `canonicalize`, and `run --plan`
 commands complement the query suite.
 
+## Native workbench
+
+Open **Tools** next to **Case workbench** and **Specimen compiler**. All ten
+queries have named entries with the relevant filter fields; no JSON arguments
+or terminal commands are needed.
+
+Report queries can use **Current workbench run**, including a plan or a run
+that reused committed receipts without creating a workspace. Alternatively,
+select **Saved report** and paste or drop a report file. History and parent
+comparison take a campaign log path; diagnostic lookup takes a code.
+Set **Campaign log** in the case workbench before running to record history
+from app runs and plans. In the history tool, **Use workbench log** selects it.
+
+Queries run in the background. Results show recorded states, source identities,
+expandable details, pagination, and buttons to copy JSON or readable text.
+Changing filters clears the previous result. Pages of a current workbench
+report retain the same snapshot even if another run completes in the meantime.
+Use **Run query** again to inspect the newer report.
+
+To open a saved report directly: `avila-core-app --tools report.json --tool
+requirements`. Tool names also accept the shared names from `tools list`.
+
 ## What a query establishes
 
 Report and history queries identify the exact file bytes they read and return
@@ -81,8 +103,8 @@ opened. Use the client's process sandbox for OS-level isolation; root checks
 do not protect against concurrent filesystem replacement by another writer.
 The server exposes only recorded-result queries and diagnostic lookup. It
 does not launch solvers, modify records, open network ports, or manage keys.
-People retain the CLI for execution and fresh planning checks. Native
-workbench integration and MCP execution tools are separate future additions.
+People can use the CLI or case workbench for execution and fresh planning
+checks. MCP execution tools are a separate future addition.
 
 For Codex, after building, an example connection command is:
 

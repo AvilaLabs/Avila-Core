@@ -83,7 +83,7 @@ regulatory review. It makes their boundaries explicit and inspectable.
   fixture vectors, importing no Core crate.
 - A headless CLI and a thin native workbench over the same Rust implementation.
 - Ten shared read-only queries for recorded results, available through a
-  human-readable CLI and a local stdio MCP server. See the
+  human-readable CLI, the native workbench's Tools workspace, and a local stdio MCP server. See the
   [Core tools guide](docs/product/CORE_TOOLS.md) for usage and verification boundaries.
 
 ## Quick start

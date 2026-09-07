@@ -16,6 +16,8 @@ avila-core-compiler.workspace = true
 avila-core-evidence.workspace = true
 avila-core-kernel.workspace = true
 avila-core-runner.workspace = true
-eframe.workspace = true
+eframe = { workspace = true, features = ["persistence"] }
+serde.workspace = true
+rfd = "0.16.0"
 image.workspace = true
 serde_json.workspace = true

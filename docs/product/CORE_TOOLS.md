@@ -46,7 +46,27 @@ commands complement the query suite.
 
 ## Native workbench
 
-Open **Tools** next to **Case workbench** and **Specimen compiler**. All ten
+Launch `avila-core-app` to open the **Cases** browser. Choose a recent case,
+an example, or **Open case folder…** (Ctrl+O). A case folder contains
+`package.json`; dropping that file or its folder onto Cases also opens it.
+Opening only previews the authored question and package contents.
+
+In **Current case**, **Machine setup** locates data folders and programs using
+native Browse dialogs. **Check setup** invokes the shared runner’s plan
+operation without launching solver steps; **Run case** explicitly executes or
+reuses verified steps. Advanced run options include the workspace and campaign
+log. Recent cases and their data/program locations are remembered locally;
+**Forget** removes that entry without deleting the case. Environment values,
+run workspaces, and execution authorization are not persisted. Remembered
+locations still undergo the runner’s normal identity checks. Examples are
+discovered from the source checkout when it is present; separately distributed
+builds can always open a case folder.
+
+Use **Open saved results…** on Cases to browse a saved run report in Tools
+without running the case. This expects a full runner report, not a package’s
+`campaign-report.json`.
+
+Open **Tools** next to **Current case** and **Specimen compiler**. All ten
 queries have named entries with the relevant filter fields; no JSON arguments
 or terminal commands are needed.
 

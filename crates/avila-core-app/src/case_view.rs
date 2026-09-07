@@ -94,7 +94,8 @@ fn display(text: &str) -> String {
 }
 
 /// One `NAME=PATH` row in the setup panel.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct NamedPath {
     pub name: String,
     pub path: String,
@@ -104,6 +105,9 @@ pub struct NamedPath {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CaseSetup {
     pub case_dir: String,
+    /// Open the corresponding panel at launch, also useful for native UI review.
+    pub show_setup: bool,
+    pub show_help: bool,
     pub source_roots: Vec<NamedPath>,
     pub capabilities: Vec<NamedPath>,
     /// Free inputs of the case: input id and the file supplied for it.
@@ -140,7 +144,6 @@ impl CaseSetup {
     /// are reported, never ignored.
     pub fn from_arguments(arguments: &[String]) -> Result<Self, String> {
         let mut setup = Self {
-            case_dir: "examples/cases/case-000-actinv-aftermatter".into(),
             reuse: true,
             ..Self::default()
         };
@@ -154,6 +157,8 @@ impl CaseSetup {
             };
             match flag.as_str() {
                 "--case" => setup.case_dir = value()?,
+                "--show-setup" => setup.show_setup = true,
+                "--show-help" => setup.show_help = true,
                 "--workspace" => setup.workspace = value()?,
                 "--hash-cache" => setup.hash_cache = value()?,
                 "--log" => setup.log = value()?,
@@ -178,6 +183,9 @@ impl CaseSetup {
                 }
                 other => return Err(format!("unknown argument `{other}`")),
             }
+        }
+        if setup.auto_run.is_some() && setup.case_dir.trim().is_empty() {
+            return Err("--auto-run and --auto-plan require --case DIR".into());
         }
         Ok(setup)
     }
@@ -275,19 +283,24 @@ fn named_path(value: &str) -> Result<NamedPath, String> {
 }
 
 /// Read the case package to learn which roots and capabilities it requests.
-pub fn inspect_case(case_dir: &str) -> Result<CasePackageManifest, String> {
-    let path = PathBuf::from(case_dir).join("package.json");
-    let bytes = std::fs::read(&path).map_err(|error| format!("{}: {error}", path.display()))?;
-    serde_json::from_slice(&bytes).map_err(|error| format!("{}: {error}", path.display()))
+#[cfg(test)]
+fn inspect_case(case_dir: &str) -> Result<CasePackageManifest, String> {
+    crate::case_browser::CaseInfo::read(std::path::Path::new(case_dir)).map(|info| info.manifest)
 }
 
 pub struct CaseView {
     pub setup: CaseSetup,
+    pub info: Option<crate::case_browser::CaseInfo>,
+    pub show_setup: bool,
+    picker: crate::case_browser::FilePicker,
+    picker_target: Option<(bool, usize)>,
     tab: CaseTab,
     manifest: Option<CasePackageManifest>,
     inspect_error: Option<String>,
     running: Option<Receiver<Result<CaseRunReport, String>>>,
     last_plan_only: bool,
+    report_setup: Option<CaseSetup>,
+    pending_setup: Option<CaseSetup>,
     report: Option<CaseRunReport>,
     run_error: Option<String>,
     summary: String,
@@ -302,25 +315,37 @@ pub struct CaseView {
 
 impl CaseView {
     pub fn new(mut setup: CaseSetup) -> Self {
-        let (manifest, inspect_error) = match inspect_case(&setup.case_dir) {
-            Ok(manifest) => {
-                setup.absorb_manifest(&manifest);
-                (Some(manifest), None)
+        let (info, inspect_error) = if setup.case_dir.is_empty() {
+            (None, None)
+        } else {
+            match crate::case_browser::CaseInfo::read(std::path::Path::new(&setup.case_dir)) {
+                Ok(info) => {
+                    setup.case_dir = info.path.display().to_string();
+                    setup.absorb_manifest(&info.manifest);
+                    (Some(info), None)
+                }
+                Err(error) => (None, Some(error)),
             }
-            Err(error) => (None, Some(error)),
         };
+        let manifest = info.as_ref().map(|info| info.manifest.clone());
         let tab = setup
             .tab
             .as_deref()
             .and_then(CaseTab::by_name)
             .unwrap_or_default();
         Self {
+            info,
+            show_setup: setup.show_setup,
+            picker: Default::default(),
+            picker_target: None,
             setup,
             tab,
             manifest,
             inspect_error,
             running: None,
             last_plan_only: false,
+            report_setup: None,
+            pending_setup: None,
             report: None,
             run_error: None,
             summary: String::new(),
@@ -411,22 +436,57 @@ impl CaseView {
         }
     }
 
-    fn open_case(&mut self) {
-        match inspect_case(&self.setup.case_dir) {
-            Ok(manifest) => {
-                self.setup.absorb_manifest(&manifest);
-                self.manifest = Some(manifest);
-                self.inspect_error = None;
-            }
-            Err(error) => {
-                self.manifest = None;
-                self.inspect_error = Some(error);
+    pub fn busy(&self) -> bool {
+        self.running.is_some()
+    }
+
+    pub fn select_case(
+        &mut self,
+        info: crate::case_browser::CaseInfo,
+        saved: Option<&crate::case_browser::RecentCase>,
+    ) -> Result<(), String> {
+        if self.busy() {
+            return Err("Wait for the current run to finish before opening another case.".into());
+        }
+        let mut setup = CaseSetup {
+            case_dir: info.path.display().to_string(),
+            reuse: true,
+            screenshot: self.setup.screenshot.clone(),
+            light: self.setup.light,
+            ..Default::default()
+        };
+        setup.absorb_manifest(&info.manifest);
+        if let Some(saved) = saved {
+            for (rows, previous) in [
+                (&mut setup.source_roots, &saved.roots),
+                (&mut setup.capabilities, &saved.capabilities),
+            ] {
+                for row in rows {
+                    if let Some(old) = previous.iter().find(|old| old.name == row.name) {
+                        row.path.clone_from(&old.path);
+                    }
+                }
             }
         }
+        *self = Self::new(setup);
+        self.manifest = Some(info.manifest.clone());
+        self.inspect_error = None;
+        self.info = Some(info);
+        Ok(())
+    }
+
+    pub fn recent(&self) -> Option<crate::case_browser::RecentCase> {
+        let info = self.info.as_ref()?;
+        Some(crate::case_browser::RecentCase {
+            path: info.path.clone(),
+            title: info.manifest.title.clone(),
+            roots: self.setup.source_roots.clone(),
+            capabilities: self.setup.capabilities.clone(),
+        })
     }
 
     fn start(&mut self, plan_only: bool) {
-        if self.running.is_some() {
+        if self.running.is_some() || self.info.is_none() {
             return;
         }
         let case_dir = PathBuf::from(self.setup.case_dir.trim());
@@ -436,6 +496,7 @@ impl CaseView {
             let outcome = execute_case(&case_dir, &options).map_err(|error| error.to_string());
             let _ = sender.send(outcome);
         });
+        self.pending_setup = Some(self.setup.clone());
         self.last_plan_only = plan_only;
         self.running = Some(receiver);
         self.run_error = None;
@@ -450,6 +511,7 @@ impl CaseView {
             Ok(Ok(report)) => {
                 self.summary = human_summary(&report);
                 self.report = Some(report);
+                self.report_setup = self.pending_setup.take();
                 self.read_sources();
                 self.finish();
             }
@@ -468,15 +530,48 @@ impl CaseView {
     }
 
     pub fn ui(&mut self, ui: &mut egui::Ui, targets: &mut TourTargets) {
-        egui::Panel::left("case-setup")
-            .resizable(true)
-            .show(ui, |ui| {
-                ui.set_min_width(340.0);
-                egui::ScrollArea::vertical()
-                    .auto_shrink([false, false])
-                    .show(ui, |ui| self.setup_panel(ui, targets));
-            });
+        let actions = ui.horizontal_wrapped(|ui| {
+            if let Some(info) = &self.info { ui.strong(display(&info.manifest.title)); }
+            ui.toggle_value(&mut self.show_setup, "Machine setup").on_hover_text("Choose where this case's data and programs live on this computer.");
+            if ui.add_enabled(!self.busy() && self.info.is_some(), egui::Button::new("Check setup")).on_hover_text("Runs Core's plan operation: checks current inputs and reuse without launching solver steps.").clicked() { self.start(true); }
+            if ui.add_enabled(!self.busy() && self.info.is_some(), egui::Button::new("Run case")).on_hover_text("Execute the case using these locations; reuse verified receipts where possible.").clicked() { self.start(false); }
+            if self.busy() {
+                ui.spinner();
+                ui.label(format!("{} {:.1} s", if self.last_plan_only { "Checking setup…" } else { "Running case…" }, self.started.map_or(0.0, |started| started.elapsed().as_secs_f32())));
+            } else if let Some(duration) = self.last_duration {
+                ui.small(format!("Completed in {:.2} s", duration.as_secs_f32()));
+            }
+        });
+        targets.set(TourTarget::RunButtons, actions.response.rect);
+        if self.show_setup {
+            egui::Panel::left("case-setup")
+                .resizable(true)
+                .default_size(370.0)
+                .max_size(480.0)
+                .show(ui, |ui| {
+                    ui.set_width(ui.available_width());
+                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                    egui::ScrollArea::vertical()
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            ui.add_enabled_ui(!self.busy(), |ui| self.setup_panel(ui, targets));
+                        });
+                });
+        }
         egui::CentralPanel::default().show(ui, |ui| {
+            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+            if let Some(error) = &self.run_error { ui.colored_label(RED, error); }
+            if self.report.is_some() {
+                if self.busy() { ui.label("Showing the previous report while the new request completes."); }
+                else if self.report_setup.as_ref().is_some_and(|setup| setup != &self.setup) {
+                    ui.colored_label(AMBER, "Setup has changed. This report belongs to the previous setup; check again to assess the new locations.");
+                }
+                if let Some(info) = &self.info { ui.collapsing("Case question", |ui| { ui.label(&info.question); }); }
+            }
+            if self.report.is_none() {
+                egui::ScrollArea::vertical().show(ui, |ui| self.case_overview(ui));
+                return;
+            }
             let tabs = ui.horizontal_wrapped(|ui| {
                 for tab in CaseTab::ALL {
                     if ui.selectable_label(self.tab == tab, tab.label()).clicked() {
@@ -494,6 +589,18 @@ impl CaseView {
     }
 
     pub(crate) fn tick(&mut self, context: &egui::Context) {
+        if let Some(path) = self.picker.poll()
+            && let Some((folder, index)) = self.picker_target.take()
+        {
+            let rows = if folder {
+                &mut self.setup.source_roots
+            } else {
+                &mut self.setup.capabilities
+            };
+            if let Some(row) = rows.get_mut(index) {
+                row.path = path.display().to_string();
+            }
+        }
         self.start_automatic();
         self.poll(context);
     }
@@ -503,70 +610,31 @@ impl CaseView {
     }
 
     pub(crate) fn settled(&self) -> bool {
-        self.running.is_none() && (self.report.is_some() || self.run_error.is_some())
+        self.running.is_none()
     }
 
     fn setup_panel(&mut self, ui: &mut egui::Ui, targets: &mut TourTargets) {
         ui.add_space(4.0);
         let case = ui.scope(|ui| {
-            ui.label(
-                egui::RichText::new("CASE")
-                    .size(10.0)
-                    .strong()
-                    .color(muted(ui)),
-            );
-            ui.horizontal(|ui| {
-                ui.add(
-                    egui::TextEdit::singleline(&mut self.setup.case_dir)
-                        .desired_width(f32::INFINITY),
-                );
-            });
-            ui.horizontal(|ui| {
-                if ui.button("Open").clicked() {
-                    self.open_case();
-                }
-                if let Some(manifest) = &self.manifest {
-                    ui.label(
-                        egui::RichText::new(display(&format!(
-                            "{} — {}",
-                            manifest.case_id, manifest.title
-                        )))
-                        .color(muted(ui)),
-                    );
-                }
-            });
-            if let Some(error) = &self.inspect_error {
-                ui.colored_label(RED, error);
-            }
-            if let Some(manifest) = &self.manifest {
-                ui.label(
-                    egui::RichText::new(format!(
-                        "{} documents, {} artifacts, {} capabilities, {} executions declared",
-                        manifest.documents.len(),
-                        manifest.artifacts.len(),
-                        manifest.capabilities.len(),
-                        manifest.executions.len()
-                    ))
-                    .color(muted(ui))
-                    .size(11.0),
-                );
-            }
+            ui.heading("Machine setup");
+            ui.label("Tell Core where this case's files and programs are on your computer.");
+            ui.small("Locations are remembered per case on this computer. Each check or run verifies identities again.");
+            ui.collapsing("Case location", |ui| { ui.label(&self.setup.case_dir); });
+            if let Some(error) = &self.inspect_error { ui.colored_label(RED, error); }
         });
         targets.set(TourTarget::CaseInput, case.response.rect);
-
         ui.add_space(8.0);
         let roots = ui.scope(|ui| {
-            named_paths(ui, "SOURCE ROOTS", "roots", &mut self.setup.source_roots);
+            ui.strong("Data folders");
+            ui.small("Choose the folder that contains each named collection of input files.");
+            self.location_rows(ui, true);
         });
         targets.set(TourTarget::SourceRoots, roots.response.rect);
         ui.add_space(8.0);
         let capabilities = ui.scope(|ui| {
-            named_paths(
-                ui,
-                "CAPABILITIES",
-                "capabilities",
-                &mut self.setup.capabilities,
-            );
+            ui.strong("Programs");
+            ui.small("Select executables to run new steps. Verified saved steps may be reused without them.");
+            self.location_rows(ui, false);
         });
         targets.set(TourTarget::Capabilities, capabilities.response.rect);
         if !self.setup.free_inputs.is_empty() {
@@ -595,7 +663,7 @@ impl CaseView {
         }
 
         ui.add_space(8.0);
-        let options = ui.scope(|ui| {
+        let options = ui.collapsing("Advanced run options", |ui| {
             ui.label(
                 egui::RichText::new("OPTIONS")
                     .size(10.0)
@@ -631,64 +699,8 @@ impl CaseView {
                 );
             });
         });
-        targets.set(TourTarget::Options, options.response.rect);
+        targets.set(TourTarget::Options, options.header_response.rect);
 
-        ui.add_space(10.0);
-        let buttons = ui.horizontal(|ui| {
-            let idle = self.running.is_none();
-            if ui
-                .add_enabled(idle, egui::Button::new("Plan"))
-                .on_hover_text("Report what would be reused or rerun, and why, without running")
-                .clicked()
-            {
-                self.start(true);
-            }
-            if ui
-                .add_enabled(idle, egui::Button::new("Run"))
-                .on_hover_text("Verify, execute or reuse, generate claims, evaluate, replay")
-                .clicked()
-            {
-                self.start(false);
-            }
-            if !idle {
-                ui.spinner();
-                let elapsed = self
-                    .started
-                    .map_or(0.0, |started| started.elapsed().as_secs_f32());
-                ui.label(format!(
-                    "{} {elapsed:.1} s",
-                    if self.last_plan_only {
-                        "planning…"
-                    } else {
-                        "running…"
-                    }
-                ));
-            } else if let Some(duration) = self.last_duration {
-                ui.label(
-                    egui::RichText::new(format!(
-                        "{} in {:.2} s",
-                        if self.last_plan_only {
-                            "planned"
-                        } else {
-                            "ran"
-                        },
-                        duration.as_secs_f32()
-                    ))
-                    .color(muted(ui)),
-                );
-            }
-        });
-        targets.set(TourTarget::RunButtons, buttons.response.rect);
-        if let Some(error) = &self.run_error {
-            ui.colored_label(RED, format!("The runner could not run: {error}"));
-        }
-        if let Some(report) = &self.report {
-            ui.add_space(6.0);
-            ui.horizontal(|ui| {
-                outcome_badge(ui, report.status);
-                ui.label(egui::RichText::new(&report.case_id).strong());
-            });
-        }
         ui.add_space(10.0);
         ui.label(
             egui::RichText::new(
@@ -697,6 +709,111 @@ impl CaseView {
             .color(muted(ui))
             .size(11.0),
         );
+    }
+
+    fn location_rows(&mut self, ui: &mut egui::Ui, folder: bool) {
+        let rows = if folder {
+            &mut self.setup.source_roots
+        } else {
+            &mut self.setup.capabilities
+        };
+        if rows.is_empty() {
+            ui.small("None declared by this case.");
+        }
+        for (index, row) in rows.iter_mut().enumerate() {
+            ui.push_id((folder, index), |ui| {
+                ui.add_space(6.0);
+                ui.strong(&row.name);
+                if folder && row.name == "case" && ui.small_button("Use this case folder").on_hover_text("Use the opened package directory for this data collection; Core checks its contents when you check or run.").clicked() {
+                    row.path.clone_from(&self.setup.case_dir);
+                }
+                ui.horizontal(|ui| {
+                    ui.add(
+                        egui::TextEdit::singleline(&mut row.path)
+                            .hint_text(if folder {
+                                "Choose a folder…"
+                            } else {
+                                "Choose a program…"
+                            })
+                            .desired_width((ui.available_width() - 110.0).max(80.0)),
+                    );
+                    if ui
+                        .add_enabled(!self.picker.busy(), egui::Button::new("Browse…").wrap_mode(egui::TextWrapMode::Extend))
+                        .clicked()
+                    {
+                        self.picker_target = Some((folder, index));
+                        self.picker
+                            .start(ui.ctx(), folder, &format!("Locate {}", row.name));
+                    }
+                });
+                ui.small(if row.path.trim().is_empty() {
+                    "No location selected"
+                } else {
+                    "Location selected · identity checked when you check or run"
+                });
+            });
+        }
+    }
+
+    fn case_overview(&mut self, ui: &mut egui::Ui) {
+        let Some(info) = &self.info else {
+            ui.heading("Open a case to begin");
+            ui.label(
+                "Choose Cases above to browse examples or open a folder containing package.json.",
+            );
+            if let Some(error) = &self.inspect_error {
+                ui.colored_label(RED, error);
+            }
+            return;
+        };
+        ui.add_space(16.0);
+        ui.small(format!(
+            "{} · Package preview · Not yet checked",
+            info.manifest.case_id
+        ));
+        ui.heading("The question this case answers");
+        ui.add_space(8.0);
+        ui.label(egui::RichText::new(&info.question).size(19.0));
+        if let Some(error) = &info.metadata_error {
+            ui.colored_label(RED, format!("Could not preview the question: {error}"));
+        }
+        ui.add_space(20.0);
+        egui::Frame::group(ui.style()).show(ui, |ui| {
+            ui.set_min_width(ui.available_width());
+            ui.strong("What happens next");
+            ui.label("1. Open Machine setup to locate any data folders and programs you have.");
+            ui.label("2. Check setup to see what Core can reuse and what is missing. This does not launch solver steps.");
+            ui.label("3. Run case when you are ready to execute. Review the report and requirement verdicts afterward.");
+            ui.small("You can check with incomplete setup. Core reports missing inputs explicitly; opening this preview does not verify the evidence.");
+        });
+        ui.add_space(14.0);
+        ui.collapsing(
+            format!("Requirements ({})", info.requirements.len()),
+            |ui| {
+                for (id, statement) in &info.requirements {
+                    ui.strong(id);
+                    ui.label(statement);
+                    ui.add_space(6.0);
+                }
+                if info.requirements.is_empty() {
+                    ui.label("No requirements available in this preview.");
+                }
+            },
+        );
+        ui.collapsing("What's inside this case", |ui| {
+            show_manifest(ui, &info.manifest);
+        });
+        ui.collapsing("Assumptions and limitations", |ui| {
+            for assumption in &info.assumptions { ui.label(assumption); }
+            for limitation in &info.manifest.limitations { ui.label(limitation); }
+            if info.manifest.limitations.is_empty() { ui.label("No package-level limitations declared. Review the contract and evidence before interpreting a result."); }
+        });
+        ui.collapsing("Case location", |ui| {
+            ui.label(info.path.display().to_string());
+        });
+        if let Some(error) = &self.run_error {
+            ui.colored_label(RED, error);
+        }
     }
 
     fn report_panel(&mut self, ui: &mut egui::Ui, targets: &mut TourTargets) {
@@ -728,18 +845,6 @@ impl CaseView {
             CaseTab::Verdicts => show_verdicts(ui, report),
         }
     }
-}
-
-fn named_paths(ui: &mut egui::Ui, title: &str, id: &str, rows: &mut Vec<NamedPath>) {
-    named_values(
-        ui,
-        title,
-        id,
-        rows,
-        "name",
-        "path on this machine",
-        "NOT SUPPLIED",
-    );
 }
 
 fn named_values(
@@ -1733,6 +1838,126 @@ fn compact(value: &serde_json::Value) -> String {
 mod tests {
     use super::*;
 
+    fn example(name: &str) -> crate::case_browser::CaseInfo {
+        crate::case_browser::CaseInfo::read(
+            &PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../examples/cases")
+                .join(name),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn machine_setup_keeps_the_question_inside_the_window() {
+        for width in [920.0, 1260.0] {
+            let context = egui::Context::default();
+            crate::configure_style(&context);
+            let mut view = CaseView::new(CaseSetup::default());
+            view.select_case(example("case-000-actinv-aftermatter"), None)
+                .unwrap();
+            view.show_setup = true;
+            let question = view.info.as_ref().unwrap().question.clone();
+            for _ in 0..3 {
+                let mut output = context.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(width, 800.0),
+                        )),
+                        ..Default::default()
+                    },
+                    |ui| view.ui(ui, &mut TourTargets::default()),
+                );
+                output.textures_delta.clear();
+                let text = output
+                    .shapes
+                    .iter()
+                    .find_map(|shape| match &shape.shape {
+                        egui::Shape::Text(text) if text.galley.text() == question => Some(text),
+                        _ => None,
+                    })
+                    .expect("case question must remain visible alongside setup");
+                assert!(
+                    text.visual_bounding_rect().right() <= width,
+                    "question must wrap inside the window"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn opening_a_case_resets_results_and_only_restores_declared_locations() {
+        let mut view = CaseView::new(CaseSetup::from_arguments(&[]).unwrap());
+        assert!(view.setup.case_dir.is_empty());
+        assert!(view.inspect_error.is_none());
+        let first = example("case-000-actinv-aftermatter");
+        view.select_case(first, None).unwrap();
+        view.summary = "old report".into();
+        view.run_error = Some("old error".into());
+        view.setup.source_roots[0].path = "/old/data".into();
+        view.setup.environment.push(NamedPath {
+            name: "SECRET".into(),
+            path: "not persisted".into(),
+        });
+        let next = example("case-003-thermal-spreader");
+        let saved = crate::case_browser::RecentCase {
+            path: next.path.clone(),
+            roots: vec![
+                NamedPath {
+                    name: "case".into(),
+                    path: "/restored/case".into(),
+                },
+                NamedPath {
+                    name: "stale-root".into(),
+                    path: "/stale".into(),
+                },
+            ],
+            ..Default::default()
+        };
+        view.select_case(next, Some(&saved)).unwrap();
+        assert!(view.summary.is_empty());
+        assert!(view.run_error.is_none());
+        assert!(view.report.is_none());
+        assert!(view.running.is_none());
+        assert!(view.setup.auto_run.is_none());
+        assert!(
+            !view
+                .setup
+                .source_roots
+                .iter()
+                .any(|r| r.name == "stale-root" || r.path == "/old/data")
+        );
+        assert_eq!(
+            view.setup
+                .source_roots
+                .iter()
+                .find(|r| r.name == "case")
+                .unwrap()
+                .path,
+            "/restored/case"
+        );
+        assert!(
+            !serde_json::to_string(&view.recent())
+                .unwrap()
+                .contains("SECRET")
+        );
+    }
+
+    #[test]
+    fn switching_is_blocked_during_a_run() {
+        let mut view = CaseView::new(CaseSetup::default());
+        let first = example("case-000-actinv-aftermatter");
+        view.select_case(first.clone(), None).unwrap();
+        let (_sender, receiver) = channel();
+        view.running = Some(receiver);
+        assert!(
+            view.select_case(example("case-003-thermal-spreader"), None)
+                .is_err()
+        );
+        assert_eq!(view.info.as_ref().unwrap().path, first.path);
+        assert!(view.busy());
+    }
+
     #[test]
     fn arguments_configure_the_setup_and_reject_unknown_flags() {
         let setup = CaseSetup::from_arguments(&[
@@ -1751,12 +1976,15 @@ mod tests {
         assert!(!setup.reuse);
         assert_eq!(setup.auto_run, None);
         let automatic = CaseSetup::from_arguments(&[
+            "--case".into(),
+            "cases/x".into(),
             "--auto-plan".into(),
             "--screenshot".into(),
             "x.png".into(),
         ])
         .unwrap();
         assert_eq!(automatic.auto_run, Some(true));
+        assert!(CaseSetup::from_arguments(&["--auto-plan".into()]).is_err());
         assert_eq!(automatic.screenshot.as_deref(), Some("x.png"));
         assert_eq!(CaseTab::by_name("verdicts"), Some(CaseTab::Verdicts));
         assert_eq!(display("A → B"), "A -> B");

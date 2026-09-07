@@ -8,6 +8,7 @@
 //! application performs no calculation and holds no scientific state of its
 //! own.
 
+mod case_browser;
 mod case_view;
 mod help;
 mod tools_view;
@@ -47,7 +48,13 @@ fn main() -> eframe::Result {
             std::process::exit(2);
         }
     };
+    let screenshot_state = setup
+        .screenshot
+        .as_ref()
+        .map(|path| std::path::PathBuf::from(format!("{path}.state")));
     let options = eframe::NativeOptions {
+        persistence_path: screenshot_state,
+        persist_window: setup.screenshot.is_none(),
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1_260.0, 800.0])
             .with_min_inner_size([920.0, 620.0]),
@@ -58,7 +65,15 @@ fn main() -> eframe::Result {
         options,
         Box::new(|creation_context| {
             configure_style(&creation_context.egui_ctx);
-            Ok(Box::new(CoreApp::new(&creation_context.egui_ctx, setup)))
+            let mut app = CoreApp::new(&creation_context.egui_ctx, setup);
+            if let Some(storage) = creation_context.storage {
+                app.browser.local =
+                    eframe::get_value(storage, "core-local-cases-v1").unwrap_or_default();
+            }
+            if let Some(entry) = app.case.recent() {
+                app.browser.local.remember(entry);
+            }
+            Ok(Box::new(app))
         }),
     )
 }
@@ -105,6 +120,7 @@ struct Specimen {
 enum Mode {
     #[default]
     Case,
+    Cases,
     Specimen,
     Tools,
 }
@@ -117,6 +133,7 @@ struct CoreApp {
     case: case_view::CaseView,
     help: GuidedHelp,
     tools: tools_view::ToolsView,
+    browser: case_browser::CaseBrowser,
 }
 
 impl CoreApp {
@@ -125,12 +142,17 @@ impl CoreApp {
             context.set_theme(egui::Theme::Light);
         }
         let mut help = GuidedHelp::default();
+        if setup.show_help {
+            help.toggle_center();
+        }
         if let Some(guide) = setup.tour.as_deref().and_then(help::GuideKind::by_name) {
             help.start_tour(guide);
         }
         let tools = tools_view::ToolsView::new(setup.tools_path.clone(), setup.tool.as_deref());
         let mode = if setup.tools_path.is_some() || setup.tool.is_some() {
             Mode::Tools
+        } else if setup.case_dir.is_empty() {
+            Mode::Cases
         } else {
             Mode::Case
         };
@@ -142,12 +164,14 @@ impl CoreApp {
             case: case_view::CaseView::new(setup),
             help,
             tools,
+            browser: case_browser::CaseBrowser::new(Default::default()),
         }
     }
 
     fn current_view(&self) -> HelpView {
         match self.mode {
             Mode::Case => HelpView::Case(self.case.help_tab()),
+            Mode::Cases => HelpView::Cases,
             Mode::Specimen => HelpView::Specimen,
             Mode::Tools => HelpView::Tools,
         }
@@ -159,10 +183,53 @@ impl CoreApp {
             Some(HelpView::Case(tab)) => {
                 self.mode = Mode::Case;
                 self.case.show_help_tab(tab);
+                self.case.show_setup = true;
             }
+            Some(HelpView::Cases) => self.mode = Mode::Cases,
             Some(HelpView::Specimen) => self.mode = Mode::Specimen,
             Some(HelpView::Tools) => self.mode = Mode::Tools,
             None => {}
+        }
+    }
+
+    fn open_case(&mut self, path: &std::path::Path) {
+        match case_browser::CaseInfo::read(path) {
+            Ok(info) => {
+                if let Some(previous) = self.case.recent()
+                    && self
+                        .browser
+                        .local
+                        .recent
+                        .iter()
+                        .any(|old| old.path == previous.path)
+                {
+                    self.browser.local.remember(previous);
+                }
+                let saved = self
+                    .browser
+                    .local
+                    .recent
+                    .iter()
+                    .find(|entry| entry.path == info.path)
+                    .cloned();
+                match self.case.select_case(info, saved.as_ref()) {
+                    Ok(()) => {
+                        if let Some(entry) = self.case.recent() {
+                            self.browser.local.remember(entry);
+                        }
+                        self.browser.error = None;
+                        self.mode = Mode::Case;
+                    }
+                    Err(error) => {
+                        self.browser.error = Some(error);
+                        self.mode = Mode::Cases;
+                    }
+                }
+            }
+            Err(error) => {
+                self.browser.error = Some(error);
+                self.mode = Mode::Cases;
+            }
         }
     }
 
@@ -209,12 +276,56 @@ impl CoreApp {
 }
 
 impl eframe::App for CoreApp {
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        if let Some(entry) = self.case.recent() {
+            // Forget remains effective until this case is deliberately opened again.
+            if self
+                .browser
+                .local
+                .recent
+                .iter()
+                .any(|old| old.path == entry.path)
+            {
+                self.browser.local.remember(entry);
+            }
+        }
+        eframe::set_value(storage, "core-local-cases-v1", &self.browser.local);
+    }
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         if ui.input(|input| input.key_pressed(egui::Key::F1)) {
             self.help.toggle_center();
         }
         self.apply_requested_view();
         self.case.tick(ui.ctx());
+        if ui.input_mut(|input| input.consume_key(egui::Modifiers::COMMAND, egui::Key::O))
+            && !self.case.busy()
+        {
+            self.browser.picker.start(
+                ui.ctx(),
+                true,
+                "Open a Core case folder (contains package.json)",
+            );
+        }
+        if let Some(path) = self.browser.picker.poll() {
+            self.open_case(&path);
+        }
+        if let Some(path) = self.browser.report_picker.poll() {
+            self.tools =
+                tools_view::ToolsView::new(Some(path.display().to_string()), Some("inspect"));
+            self.mode = Mode::Tools;
+        }
+        if self.mode == Mode::Cases {
+            let dropped = ui.input(|input| {
+                input
+                    .raw
+                    .dropped_files
+                    .first()
+                    .map(|file| file.path().to_path_buf())
+            });
+            if let Some(path) = dropped {
+                self.open_case(&path);
+            }
+        }
         let mut targets = TourTargets::default();
 
         // Paint the root background from the active theme; the window's clear
@@ -225,11 +336,23 @@ impl eframe::App for CoreApp {
         ui.add_space(8.0);
         let switch = ui.horizontal(|ui| {
             for (mode, label) in [
-                (Mode::Case, "Case workbench"),
+                (Mode::Cases, "Cases"),
+                (Mode::Case, "Current case"),
                 (Mode::Specimen, "Specimen compiler"),
                 (Mode::Tools, "Tools"),
             ] {
                 if ui.selectable_label(self.mode == mode, label).clicked() {
+                    if mode == Mode::Cases
+                        && let Some(entry) = self.case.recent()
+                        && self
+                            .browser
+                            .local
+                            .recent
+                            .iter()
+                            .any(|old| old.path == entry.path)
+                    {
+                        self.browser.local.remember(entry);
+                    }
                     self.mode = mode;
                 }
             }
@@ -237,6 +360,11 @@ impl eframe::App for CoreApp {
         targets.set(TourTarget::ModeSwitch, switch.response.rect);
         ui.separator();
         match self.mode {
+            Mode::Cases => {
+                if let Some(path) = self.browser.ui(ui, self.case.busy()) {
+                    self.open_case(&path);
+                }
+            }
             Mode::Case => self.case.ui(ui, &mut targets),
             Mode::Specimen => self.specimen_ui(ui, &mut targets),
             Mode::Tools => self.tools.ui(ui, self.case.report(), &self.case.setup.log),
@@ -244,11 +372,31 @@ impl eframe::App for CoreApp {
         let ready = match self.mode {
             Mode::Case => self.case.settled(),
             Mode::Tools => self.tools.settled(),
-            Mode::Specimen => true,
+            Mode::Specimen | Mode::Cases => true,
         };
         self.case.drive_screenshot(ui.ctx(), ready);
         let view = self.current_view();
         self.help.show_center(ui.ctx(), view);
+        if let Some(action) = self.help.take_action() {
+            match action {
+                help::HelpAction::Cases => self.mode = Mode::Cases,
+                help::HelpAction::Setup => {
+                    self.mode = if self.case.info.is_some() {
+                        Mode::Case
+                    } else {
+                        Mode::Cases
+                    };
+                    self.case.show_setup = true;
+                }
+                help::HelpAction::Results => {
+                    self.browser.report_picker.start(
+                        ui.ctx(),
+                        false,
+                        "Open a saved Core run report",
+                    );
+                }
+            }
+        }
         self.help.show_tour(ui.ctx(), &targets);
     }
 }
@@ -278,6 +426,7 @@ fn configure_style(context: &egui::Context) {
     dark.faint_bg_color = egui::Color32::from_rgb(31, 31, 31);
     dark.selection.bg_fill = egui::Color32::from_rgb(126, 70, 4);
     dark.selection.stroke = egui::Stroke::new(1.0, CORE_ORANGE);
+    dark.widgets.noninteractive.fg_stroke.color = egui::Color32::from_rgb(211, 214, 220);
     context.set_visuals_of(egui::Theme::Dark, dark);
     let mut light = egui::Visuals::light();
     light.panel_fill = egui::Color32::from_rgb(246, 246, 247);
@@ -285,13 +434,15 @@ fn configure_style(context: &egui::Context) {
     light.extreme_bg_color = egui::Color32::WHITE;
     light.faint_bg_color = egui::Color32::from_rgb(236, 236, 238);
     light.selection.bg_fill = egui::Color32::from_rgb(255, 214, 160);
-    light.selection.stroke = egui::Stroke::new(1.0, CORE_ORANGE);
+    light.selection.stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(120, 62, 0));
     context.set_visuals_of(egui::Theme::Light, light);
     context.set_theme(egui::Theme::Dark);
-    context.global_style_mut(|style| {
-        style.spacing.item_spacing = egui::vec2(10.0, 9.0);
-        style.spacing.button_padding = egui::vec2(13.0, 7.0);
-    });
+    for theme in [egui::Theme::Dark, egui::Theme::Light] {
+        context.style_mut_of(theme, |style| {
+            style.spacing.item_spacing = egui::vec2(10.0, 9.0);
+            style.spacing.button_padding = egui::vec2(13.0, 7.0);
+        });
+    }
 }
 
 fn show_header(
@@ -325,7 +476,7 @@ fn show_header(
                                             egui::pos2(0.04, 0.32),
                                             egui::pos2(0.96, 0.70),
                                         ))
-                                        .fit_to_exact_size(egui::vec2(218.0, 90.0))
+                                        .fit_to_exact_size(egui::vec2(135.0, 56.0))
                                         .maintain_aspect_ratio(false)
                                         .corner_radius(6),
                                 );
@@ -342,7 +493,7 @@ fn show_header(
                         ui.add_space(6.0);
                         ui.vertical(|ui| {
                             ui.label(
-                                egui::RichText::new("SEMANTIC COMPILER AND CASE RUNNER")
+                                egui::RichText::new("AVILA CORE")
                                     .size(10.0)
                                     .strong()
                                     .color(muted(ui)),
@@ -351,48 +502,41 @@ fn show_header(
                                 egui::RichText::new(
                                     "Resolve a technical question into reviewable evidence",
                                 )
-                                .size(18.0)
+                                .size(16.0)
                                 .strong(),
                             );
                             ui.label(
-                                egui::RichText::new(
-                                    "Contract-first compilation for portable computational evidence",
-                                )
-                                .color(muted(ui)),
+                                egui::RichText::new("Cases, evidence, and requirement verdicts")
+                                    .color(muted(ui)),
                             );
                         });
                     });
                     brand.response.rect
                 },
                 |ui| {
-                    let row = ui.with_layout(
-                        egui::Layout::right_to_left(egui::Align::Min),
-                        |ui| {
-                            badge(ui, "SCAFFOLD", CORE_ORANGE);
-                            let help_button = ui
-                                .add(
-                                    egui::Button::new(
-                                        egui::RichText::new("?").size(16.0).strong(),
-                                    )
+                    let row = ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                        badge(ui, "SCAFFOLD", CORE_ORANGE);
+                        let help_button = ui
+                            .add(
+                                egui::Button::new(egui::RichText::new("Help").strong())
                                     .min_size(egui::vec2(34.0, 30.0)),
-                                )
-                                .on_hover_text("Help, walkthroughs, and bundled answers (F1)");
-                            if help_button.clicked() {
-                                help.toggle_center();
-                            }
-                            let theme = ui
-                                .button(if dark { "Light mode" } else { "Dark mode" })
-                                .on_hover_text("Switch the interface theme");
-                            if theme.clicked() {
-                                ui.ctx().set_theme(if dark {
-                                    egui::Theme::Light
-                                } else {
-                                    egui::Theme::Dark
-                                });
-                            }
-                            (theme.rect, help_button.rect)
-                        },
-                    );
+                            )
+                            .on_hover_text("Help, walkthroughs, and bundled answers (F1)");
+                        if help_button.clicked() {
+                            help.toggle_center();
+                        }
+                        let theme = ui
+                            .button(if dark { "Light mode" } else { "Dark mode" })
+                            .on_hover_text("Switch the interface theme");
+                        if theme.clicked() {
+                            ui.ctx().set_theme(if dark {
+                                egui::Theme::Light
+                            } else {
+                                egui::Theme::Dark
+                            });
+                        }
+                        (theme.rect, help_button.rect)
+                    });
                     row.inner
                 },
             );
@@ -918,6 +1062,20 @@ fn verdict_badge(ui: &mut egui::Ui, verdict: VerdictStatus) {
 mod tests {
     use super::*;
 
+    #[test]
+    fn invalid_open_preserves_the_current_case() {
+        let context = egui::Context::default();
+        let mut app = CoreApp::new(&context, case_view::CaseSetup::from_arguments(&[]).unwrap());
+        assert_eq!(app.mode, Mode::Cases);
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/cases/case-003-thermal-spreader");
+        app.open_case(&path);
+        let selected = app.case.info.as_ref().unwrap().path.clone();
+        app.open_case(&path.join("not-a-case"));
+        assert!(app.browser.error.is_some());
+        assert_eq!(app.case.info.as_ref().unwrap().path, selected);
+        assert_eq!(app.mode, Mode::Cases);
+    }
     #[test]
     fn embedded_specimen_is_an_honest_draft() {
         let specimen = load_specimen().expect("embedded specimen should load");

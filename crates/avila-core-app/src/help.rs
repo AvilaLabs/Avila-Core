@@ -51,6 +51,7 @@ impl TourTargets {
 /// Where a step wants the interface to be before it is shown.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum HelpView {
+    Cases,
     Case(HelpTab),
     Specimen,
     Tools,
@@ -157,19 +158,19 @@ const VERIFY_STEPS: [TourStep; 7] = [
         target: TourTarget::CaseInput,
         view: None,
         title: "Open a case",
-        instruction: "A case is a directory with a package manifest: hashed documents, bound artifact identities, bound executables, and the steps that execute. Enter its path and press Open.",
+        instruction: "Use Cases to open a folder containing package.json or choose an example. The case overview explains the authored question before you configure this computer.",
     },
     TourStep {
         target: TourTarget::SourceRoots,
         view: None,
-        title: "Point the requested roots at local paths",
-        instruction: "The package names the roots its artifacts live under. Give each a path on this machine and every artifact is re-hashed against its bound identity. A root left empty is reported as not checked, never assumed.",
+        title: "Locate the data folders",
+        instruction: "Use Browse beside each data collection to select its local folder. Check setup or Run case then checks artifact bytes against their declared identities. An empty location is reported as not checked.",
     },
     TourStep {
         target: TourTarget::RunButtons,
         view: None,
         title: "Run",
-        instruction: "With nothing changed since the committed receipts, both steps are reused: their invocation identities match and their outputs verify, so nothing executes and no executable is needed. Runs happen on a background thread.",
+        instruction: "Use Check setup first to see which steps can be reused. Run case reuses steps only when committed receipts and outputs verify; other steps may execute if their required programs and inputs are supplied. Runs happen in the background.",
     },
     TourStep {
         target: TourTarget::Tabs,
@@ -181,7 +182,7 @@ const VERIFY_STEPS: [TourStep; 7] = [
         target: TourTarget::ReportPanel,
         view: Some(HelpView::Case(HelpTab::Verdicts)),
         title: "Technical verdicts have boundaries",
-        instruction: "CASE-000 returns two numeric PASS verdicts and one categorical FAIL: the fractions clear their limits while the Clive route remains unresolved rather than feasible. None needs professional review to exist, and none claims qualification, practical suitability, certification, or regulatory approval.",
+        instruction: "Read each requirement separately: PASS, FAIL, INCONCLUSIVE, and NOT EVALUATED mean different things. Expand its Boundary to inspect the profile and evidence identities. A result applies under that boundary; it does not establish practical suitability or approval.",
     },
     TourStep {
         target: TourTarget::HelpButton,
@@ -201,8 +202,8 @@ const PLAN_STEPS: [TourStep; 5] = [
     TourStep {
         target: TourTarget::RunButtons,
         view: None,
-        title: "Plan, do not run",
-        instruction: "Plan performs the whole analysis and stops before execution: it reports which steps would be reused and which would rerun, and names every difference by change class.",
+        title: "Check setup without executing",
+        instruction: "Check setup uses the runner's plan operation and stops before solver execution: it reports which steps would be reused and which would rerun, and names every difference by change class.",
     },
     TourStep {
         target: TourTarget::ReportPanel,
@@ -220,7 +221,7 @@ const PLAN_STEPS: [TourStep; 5] = [
         target: TourTarget::HelpButton,
         view: None,
         title: "Try it on this case",
-        instruction: "Change one input in a scratch copy of a root, rebind its digest in the package, and Plan again. A rulepack change reaches classification only; a spectrum change reaches activation first.",
+        instruction: "Choose another declared input under Machine setup, then Check setup again to inspect its effects. Changing authored input identities is a case-design change; review it in the contract rather than editing a result to make it pass.",
     },
 ];
 
@@ -234,14 +235,14 @@ const EXECUTE_STEPS: [TourStep; 5] = [
     TourStep {
         target: TourTarget::Options,
         view: None,
-        title: "Turn reuse off",
-        instruction: "With reuse off every declared step executes afresh in its own workspace: verified inputs are staged at the layout the tool expects, the environment is cleared, and only declared outputs are collected.",
+        title: "Choose whether to reuse saved steps",
+        instruction: "Expand Advanced run options. Leave reuse enabled normally; disable it only for an intentionally fresh execution. With reuse off, executable steps run afresh in their workspace when their prerequisites are satisfied: verified inputs are staged at the layout the tool expects, the environment is cleared, and only declared outputs are collected.",
     },
     TourStep {
         target: TourTarget::RunButtons,
         view: None,
         title: "Run",
-        instruction: "The ACTINV build takes a few seconds and Aftermatter a few milliseconds. The elapsed time is shown while the background thread works.",
+        instruction: "Run case starts the configured workflow. The elapsed time is shown while the background thread works. You can inspect Tools while waiting; switching the active case is blocked until the run completes.",
     },
     TourStep {
         target: TourTarget::ReportPanel,
@@ -317,8 +318,16 @@ struct ActiveTour {
     step_index: usize,
 }
 
+#[derive(Debug)]
+pub(crate) enum HelpAction {
+    Cases,
+    Setup,
+    Results,
+}
+
 #[derive(Debug, Default)]
 pub(crate) struct GuidedHelp {
+    action: Option<HelpAction>,
     center_open: bool,
     active_tour: Option<ActiveTour>,
     question: String,
@@ -345,6 +354,10 @@ impl GuidedHelp {
         self.active_step().and_then(|step| step.view)
     }
 
+    pub(crate) fn take_action(&mut self) -> Option<HelpAction> {
+        self.action.take()
+    }
+
     pub(crate) fn show_center(&mut self, context: &egui::Context, current: HelpView) {
         if !self.center_open || self.active_tour.is_some() {
             return;
@@ -356,9 +369,12 @@ impl GuidedHelp {
             .open(&mut open)
             .collapsible(false)
             .resizable(true)
-            .default_width(440.0)
+            .default_width(480.0)
+            .default_height(640.0)
+            .default_pos(context.content_rect().center() - egui::vec2(240.0, 320.0))
             .min_width(360.0)
             .max_width(600.0)
+            .vscroll(true)
             .constrain_to(context.content_rect())
             .show(context, |ui| {
                 ui.label(
@@ -373,7 +389,13 @@ impl GuidedHelp {
 
                 ui.add_space(12.0);
                 ui.separator();
-                ui.heading("Walk me through it");
+                ui.heading("Get started");
+                ui.label("A case is a saved technical question with requirements, methods, and evidence. A run is one attempt to answer it using particular inputs.");
+                if ui.button("Choose a case or browse examples").clicked() { self.action = Some(HelpAction::Cases); }
+                if ui.button("Locate data and programs for the current case").clicked() { self.action = Some(HelpAction::Setup); }
+                if ui.button("Read a saved run report").clicked() { self.action = Some(HelpAction::Results); }
+                ui.small("Check setup checks current files and reuse without launching solver steps. Run case may launch the selected programs. Missing evidence stays explicit in the report.");
+                ui.collapsing("Guided walkthroughs", |ui| {
                 for guide in GuideKind::ALL {
                     let response = ui.add(
                         egui::Button::new(egui::RichText::new(guide.title()).strong())
@@ -388,14 +410,15 @@ impl GuidedHelp {
 
                 ui.add_space(8.0);
                 ui.separator();
-                ui.heading("Ask bundled help");
+                });
+                ui.heading("Search help topics");
                 ui.small(
-                    "Answers come from reviewed guidance bundled with the application. No model or service is contacted.",
+                    "Search the built-in reference by topic, such as reuse, verdicts, or data folders.",
                 );
                 let enter_pressed = ui.input(|input| input.key_pressed(egui::Key::Enter));
                 let response = ui.add(
                     egui::TextEdit::singleline(&mut self.question)
-                        .hint_text("Why is the verdict NOT EVALUATED?")
+                        .hint_text("Search: verdicts, reuse, receipts…")
                         .desired_width(f32::INFINITY),
                 );
                 if response.changed() || (response.has_focus() && enter_pressed) {
@@ -424,7 +447,7 @@ impl GuidedHelp {
                     });
                 }
             });
-        self.center_open = open;
+        self.center_open = open && self.action.is_none();
         if let Some(guide) = guide_to_start {
             self.start_tour(guide);
         }
@@ -588,13 +611,17 @@ impl GuidedHelp {
 
 fn view_help(view: HelpView) -> (&'static str, &'static str) {
     match view {
+        HelpView::Cases => (
+            "Opening a case",
+            "Use Open case folder to select the folder containing package.json, drop that folder onto the Cases screen, or choose an example. No programs run when you open a case. Your recent cases and their data/program locations are stored on this computer; use Forget to remove them.",
+        ),
         HelpView::Tools => (
             "Tools",
             "Choose a query, then use the current workbench report or paste or drop a saved report or campaign log. Filter by the IDs relevant to that tool and run the query. Results retain exact values and source identities; they do not freshly verify artifacts. Run history searches only the selected log, and Compare with parent validates the attempt's lineage. Use the workbench for current reuse planning or execution.",
         ),
         HelpView::Case(HelpTab::Overview) => (
             "Overview",
-            "The six stages of one run with their outcome badges. Every badge is read from the runner's report; the notice below the card states what no badge ever claims.",
+            "Before a run, this page shows the case's authored question. Machine setup connects its named inputs to files on your computer. Check setup reports missing inputs and reuse decisions without launching solver steps. After checking or running, this page displays the runner's report; the other tabs explain each stage.",
         ),
         HelpView::Case(HelpTab::Integrity) => (
             "Integrity",

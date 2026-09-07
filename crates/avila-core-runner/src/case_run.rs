@@ -69,8 +69,9 @@ mod inputs;
 use inputs::{steps_reached_by_inputs, supply_free_inputs, validate_free_inputs};
 mod compare;
 pub use compare::VerdictMargin;
+pub(crate) use compare::compare_attempt_results;
 #[cfg(test)]
-use compare::{compare_attempt_results, write_attempt_comparison};
+use compare::write_attempt_comparison;
 use compare::{compare_attempt_to_parent, margins};
 mod report;
 #[cfg(test)]

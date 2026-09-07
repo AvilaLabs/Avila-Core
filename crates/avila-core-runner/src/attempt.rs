@@ -413,6 +413,10 @@ fn read_attempts(path: &Path) -> Result<BTreeMap<String, PriorAttempt>, String> 
             ));
         }
     };
+    parse_attempts(&content, path)
+}
+
+fn parse_attempts(content: &str, path: &Path) -> Result<BTreeMap<String, PriorAttempt>, String> {
     let mut attempts = BTreeMap::new();
     for (index, raw_line) in content.split('\n').enumerate() {
         if raw_line.trim().is_empty() {
@@ -460,6 +464,48 @@ fn read_attempts(path: &Path) -> Result<BTreeMap<String, PriorAttempt>, String> 
         }
     }
     Ok(attempts)
+}
+
+/// Query one immutable in-memory log snapshot using the runner's existing
+/// lineage validator and exact comparison implementation. No signatures or
+/// external artifacts are verified by this read-only view.
+pub(crate) fn query_attempt(bytes: &[u8], id: &str) -> Result<Value, String> {
+    let content = std::str::from_utf8(bytes).map_err(|e| e.to_string())?;
+    for line in content.split('\n').filter(|line| !line.trim().is_empty()) {
+        canonicalize_json(line.as_bytes()).map_err(|e| e.to_string())?;
+        let record: Value = serde_json::from_str(line).map_err(|e| e.to_string())?;
+        crate::query::validate_history_record(&record)?;
+    }
+    let attempts = parse_attempts(content, Path::new("query snapshot"))?;
+    validate_history(&attempts, None)?;
+    let Some(attempt) = attempts.get(id) else {
+        return Ok(serde_json::json!({"match_status":"no_match_in_record"}));
+    };
+    let comparison = if let Some(parent_id) = &attempt.record.parent_attempt_id {
+        let parent = &attempts[parent_id];
+        let parse_margins = |prior: &PriorAttempt| -> Result<Vec<crate::VerdictMargin>, String> {
+            serde_json::from_value(
+                prior
+                    .verdicts
+                    .clone()
+                    .ok_or("attempt has no recorded verdict collection")?,
+            )
+            .map_err(|e| format!("invalid attempt verdict collection: {e}"))
+        };
+        Some(crate::case_run::compare_attempt_results(
+            &attempt.record,
+            &parse_margins(parent)?,
+            &parse_margins(attempt)?,
+        )?)
+    } else {
+        None
+    };
+    Ok(
+        serde_json::json!({"match_status":"found","line":attempt.line,
+        "record_sha256":attempt.record_sha256,"attempt":attempt.record,
+        "comparison":comparison,"lineage_validation":"consistent",
+        "signature_verification":"not_checked"}),
+    )
 }
 
 fn validate_history(
@@ -701,6 +747,61 @@ fn escape_pointer_segment(value: &str) -> String {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn query_recomputes_comparison_and_rejects_rewritten_parent() {
+        let candidate = json!({"thickness":"1"});
+        let root = AttemptRecord {
+            schema_version: ATTEMPT_LINEAGE_SCHEMA_VERSION.into(),
+            attempt_id: "parent".into(),
+            generation: 0,
+            parent_attempt_id: None,
+            parent_record_sha256: None,
+            fixed_manifest_sha256: digest("manifest"),
+            fixed_compiled_snapshot_sha256: digest("question"),
+            candidate_input: "candidate".into(),
+            candidate_artifact_sha256: digest("candidate bytes"),
+            candidate_state_sha256: candidate_state_identity(&candidate).unwrap(),
+            candidate_state: candidate,
+            changes: Vec::new(),
+        };
+        let margin = |value: &str| json!({"requirement_id":"r","status":"pass","rule":"test","unit":"m","margin":value});
+        let row = |record: &AttemptRecord, value: &str| {
+            json!({
+            "schema_version":"avila.core/run-attempt/v0.3-draft","status":"evaluated","case_id":"case","steps":[],
+            "manifest_sha256":record.fixed_manifest_sha256,
+            "compiled_snapshot_sha256":record.fixed_compiled_snapshot_sha256,
+            "attempt":record,"verdicts":[margin(value)],
+            "attempt_comparison":{"untrusted":"this stored comparison is deliberately ignored"}})
+        };
+        let parent = row(&root, "1/3").to_string();
+        let mut child = root.clone();
+        child.attempt_id = "child".into();
+        child.generation = 1;
+        child.parent_attempt_id = Some("parent".into());
+        child.parent_record_sha256 = Some(digest(parent.as_bytes()));
+        child.candidate_state = json!({"thickness":"2"});
+        child.candidate_state_sha256 = candidate_state_identity(&child.candidate_state).unwrap();
+        child.candidate_artifact_sha256 = digest("new candidate bytes");
+        child.changes = diff_candidate_states(&root.candidate_state, &child.candidate_state);
+        let text = format!("{parent}\n{}\n", row(&child, "2/3"));
+        let result = query_attempt(text.as_bytes(), "child").unwrap();
+        assert_eq!(result["lineage_validation"], "consistent");
+        assert_eq!(result["signature_verification"], "not_checked");
+        assert_eq!(
+            result["comparison"]["exact_margin_comparisons"][0]["delta"],
+            "1/3"
+        );
+        let root_result = query_attempt(text.as_bytes(), "parent").unwrap();
+        assert!(root_result["comparison"].is_null());
+        let changed = text.replacen("1/3", "1/4", 1);
+        assert!(
+            query_attempt(changed.as_bytes(), "child")
+                .unwrap_err()
+                .contains("hashes to")
+        );
+        assert!(query_attempt(format!("{text}{parent}\n").as_bytes(), "child").is_err());
+    }
 
     #[test]
     fn published_schema_names_the_runtime_lineage_version() {

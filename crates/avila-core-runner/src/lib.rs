@@ -15,6 +15,7 @@ mod attempt;
 mod case_run;
 mod diagnostic;
 mod execute;
+pub mod query;
 
 pub use attempt::{
     ATTEMPT_COMPARISON_SCHEMA_VERSION, ATTEMPT_LINEAGE_SCHEMA_VERSION, AttemptChange,

@@ -2,17 +2,20 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   rust:
-    name: Rust workspace
-    runs-on: ubuntu-latest
+    name: Rust workspace (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -34,6 +37,9 @@ jobs:
 
       - name: Test
         run: cargo test --workspace --all-targets --locked
+
+      - name: Build desktop app and CLI
+        run: cargo build --locked -p avila-core-app -p avila-core-cli
 
   documents:
     name: JSON documents

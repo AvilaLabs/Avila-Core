@@ -88,7 +88,11 @@ regulatory review. It makes their boundaries explicit and inspectable.
 
 ## Quick start
 
-Avila Core currently requires Rust 1.95.0.
+Avila Core currently requires Rust 1.95.0. CI builds the desktop app and CLI
+and runs the Rust workspace checks on Ubuntu, Windows, and macOS. This checks
+Core itself; external solvers still need compatible, explicitly bound builds.
+Installers and signing are not yet provided. Repository checkouts preserve exact
+line endings because package identities hash file bytes.
 
 ```bash
 git clone https://github.com/AvilaLabs/Avila-Core.git

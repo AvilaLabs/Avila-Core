@@ -1,0 +1,2 @@
+# Core identities hash exact bytes. Never rewrite checkout line endings.
+* -text

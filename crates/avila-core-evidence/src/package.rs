@@ -722,7 +722,7 @@ fn validate_digest(value: &str) -> Result<(), PackageError> {
     Ok(())
 }
 
-fn canonical_directory(path: &Path) -> Result<PathBuf, PackageError> {
+pub(crate) fn canonical_directory(path: &Path) -> Result<PathBuf, PackageError> {
     let canonical = fs::canonicalize(path).map_err(|source| PackageError::Io {
         path: path.display().to_string(),
         source,

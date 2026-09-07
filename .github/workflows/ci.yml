@@ -28,6 +28,8 @@ jobs:
 
       - name: Cache build artifacts
         uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
 
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -36,7 +38,7 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Test
-        run: cargo test --workspace --all-targets --locked
+        run: cargo test --workspace --all-targets --locked --no-fail-fast
 
       - name: Build desktop app and CLI
         run: cargo build --locked -p avila-core-app -p avila-core-cli

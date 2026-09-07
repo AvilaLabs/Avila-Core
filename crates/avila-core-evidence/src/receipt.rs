@@ -302,6 +302,10 @@ pub fn verify_receipt(
     workspace: &Path,
     expected: &ReceiptExpectations,
 ) -> Result<ReceiptCheck, ReceiptError> {
+    // Compare resolved file paths with a resolved directory on every platform
+    // (macOS /var aliases and Windows verbatim path prefixes included).
+    let canonical_workspace = crate::package::canonical_directory(workspace)?;
+    let workspace = canonical_workspace.as_path();
     let mut issues = Vec::new();
     let mut files = Vec::new();
 
@@ -698,6 +702,33 @@ mod tests {
             outputs: BTreeSet::from(["result".to_string()]),
         };
         (receipt, expected)
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn aliased_workspace_verifies_but_output_links_cannot_escape_it() {
+        let root = TestDir::new();
+        let aliases = TestDir::new();
+        let outside = TestDir::new();
+        let (receipt, expected) = fixture(&root.0);
+        let alias = aliases.0.join("workspace");
+        std::os::unix::fs::symlink(&root.0, &alias).unwrap();
+        assert_eq!(
+            verify_receipt(&receipt, &alias, &expected).unwrap().state,
+            ReceiptCheckState::Verified
+        );
+
+        fs::write(outside.0.join("result.json"), b"result").unwrap();
+        fs::remove_file(root.0.join("outputs/result.json")).unwrap();
+        std::os::unix::fs::symlink(
+            outside.0.join("result.json"),
+            root.0.join("outputs/result.json"),
+        )
+        .unwrap();
+        assert!(matches!(
+            verify_receipt(&receipt, &alias, &expected),
+            Err(ReceiptError::Package(PackageError::EscapesRoot { .. }))
+        ));
     }
 
     #[test]

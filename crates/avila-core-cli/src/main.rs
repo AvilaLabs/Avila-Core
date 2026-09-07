@@ -1,5 +1,8 @@
 #![forbid(unsafe_code)]
 
+mod mcp;
+mod queries;
+
 use std::error::Error;
 use std::fs;
 use std::io::{self, Write};
@@ -29,6 +32,22 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Query a saved run report without executing or freshly verifying artifacts.
+    Inspect(queries::InspectArgs),
+    /// Search recorded runs in one explicit campaign JSONL log.
+    History(queries::HistoryArgs),
+    /// Inspect an attempt and compare it with its identity-bound parent.
+    Attempt(queries::AttemptArgs),
+    /// Discover and call shared Core query tools, or print integration instructions.
+    Tools {
+        #[command(subcommand)]
+        command: queries::ToolsCommand,
+    },
+    /// Serve shared read-only query tools to local MCP clients.
+    Mcp {
+        #[command(subcommand)]
+        command: mcp::McpCommand,
+    },
     /// Report the draft semantic profile and exact embedded vector identities.
     SemanticProfile,
     /// Read authoritative JSON and emit its deterministic canonical bytes.
@@ -254,6 +273,11 @@ fn main() -> ExitCode {
 
 fn run() -> Result<ExitCode, Box<dyn Error>> {
     match Cli::parse().command {
+        Command::Inspect(args) => queries::inspect(args)?,
+        Command::History(args) => queries::history(args)?,
+        Command::Attempt(args) => queries::attempt(args)?,
+        Command::Tools { command } => queries::tools(command)?,
+        Command::Mcp { command } => mcp::run(command)?,
         Command::SemanticProfile => {
             println!(
                 "{}",

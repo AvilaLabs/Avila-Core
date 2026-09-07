@@ -559,18 +559,13 @@ pub fn execute_step(
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout))
         .stderr(Stdio::from(stderr));
-    #[cfg(unix)]
-    {
-        use std::os::unix::process::CommandExt as _;
-        // Make the child the leader of its own process group (pgid equal to
-        // its own pid) so a timeout can reach a grandchild the adapter
-        // spawned — a `python3` adapter that shells out to a solver, for
-        // example — and not only the direct child `wait_with_timeout` holds
-        // a handle to.
-        command.process_group(0);
-    }
-    let mut child = command.spawn()?;
-    let (status, timed_out) = wait_with_timeout(&mut child, timeout)?;
+    let mut child = spawn_step(command)?;
+    let (status, timed_out) = wait_with_timeout(child.as_mut(), timeout)?;
+    // Terminate any Windows descendants left by an adapter that exited normally
+    // before collecting output bytes. The guard also requests cleanup on errors.
+    #[cfg(windows)]
+    child.as_mut().start_kill()?;
+    drop(child);
     let duration = started.elapsed();
     let finished_at = rfc3339_now();
 
@@ -665,11 +660,11 @@ pub fn execute_step(
         limitations: [
             "Exit status and output digests are process evidence, not scientific success.".into(),
             "The executable digest identifies the bytes that ran; it does not qualify the method.".into(),
-            "No sandbox or resource accounting was applied beyond a cleared environment, a working directory confined to the workspace, and (on unix) killing the child's whole process group on timeout; nothing here is signed.".into(),
+            "No sandbox or resource accounting was applied beyond a cleared environment, a working directory confined to the workspace, and terminating the child's Unix process group or Windows Job Object on timeout; nothing here is signed.".into(),
         ]
         .into_iter()
         .chain(timed_out.then(|| {
-            "This step timed out; on unix the child's whole process group was killed, not only the direct child, so a solver or transport process the adapter shelled out to does not outlive the step.".to_string()
+            "This step timed out; the child's Unix process group or Windows Job Object was killed, including contained solver descendants. This is process cleanup, not a security sandbox.".to_string()
         }))
         .chain(request.adapter.limitations())
         .collect(),
@@ -696,8 +691,37 @@ fn missing_output(output: &ResolvedAdapterOutput) -> ReceiptOutput {
     }
 }
 
+/// Establish containment before any adapter code runs. Windows creates the child
+/// suspended, assigns it to a Job Object, then resumes it. Failure
+/// to establish the job fails the spawn instead of running an uncontained child.
+fn spawn_step(command: Command) -> io::Result<StepChild> {
+    let mut command = process_wrap::std::CommandWrap::from(command);
+    #[cfg(unix)]
+    command.wrap(process_wrap::std::ProcessGroup::leader());
+    #[cfg(windows)]
+    command.wrap(process_wrap::std::JobObject);
+    command.spawn().map(StepChild)
+}
+
+struct StepChild(Box<dyn process_wrap::std::ChildWrapper>);
+
+impl StepChild {
+    fn as_mut(&mut self) -> &mut dyn process_wrap::std::ChildWrapper {
+        self.0.as_mut()
+    }
+}
+
+impl Drop for StepChild {
+    fn drop(&mut self) {
+        // process-wrap’s std JobObject does not enable kill-on-close. Keep
+        // explicit cleanup here for error and unwind paths as well.
+        #[cfg(windows)]
+        let _ = self.0.start_kill();
+    }
+}
+
 fn wait_with_timeout(
-    child: &mut std::process::Child,
+    child: &mut dyn process_wrap::std::ChildWrapper,
     timeout: Duration,
 ) -> io::Result<(std::process::ExitStatus, bool)> {
     let deadline = Instant::now() + timeout;
@@ -706,7 +730,7 @@ fn wait_with_timeout(
             return Ok((status, false));
         }
         if Instant::now() >= deadline {
-            kill_timed_out(child)?;
+            child.start_kill()?;
             let status = child.wait()?;
             return Ok((status, true));
         }
@@ -719,41 +743,6 @@ fn wait_with_timeout(
         // module's own test uses one second) still resolves promptly.
         std::thread::sleep(Duration::from_millis(20));
     }
-}
-
-/// Kill everything a timed-out child left running. On unix the child was
-/// spawned as the leader of its own process group (`process_group(0)`, pgid
-/// equal to its pid), so a grandchild the adapter spawned — a solver a
-/// `python3` adapter shells out to, for example — shares that pgid unless it
-/// called `setpgid` itself, and a plain `child.kill()` would leave it
-/// running after the timeout.
-///
-/// The direct syscall for this is `killpg(2)`, but std exposes no group-
-/// signal API and this crate forbids unsafe code crate-wide, so the group is
-/// reached through the standard `kill` utility instead of raw FFI. If `kill`
-/// cannot be found or run at all, this is not fatal: the direct child below
-/// is still killed exactly as before this fix, so a missing `kill` binary
-/// only narrows the fix back to its pre-existing behavior rather than
-/// failing the step outright.
-#[cfg(unix)]
-fn kill_timed_out(child: &mut std::process::Child) -> io::Result<()> {
-    let pgid = child.id();
-    // `-s KILL -- -PGID` is the one spelling both procps and util-linux
-    // accept: procps reads a bare `-4321` after the signal as a second
-    // signal specification and does nothing.
-    let _ = Command::new("kill")
-        .args(["-s", "KILL", "--"])
-        .arg(format!("-{pgid}"))
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status();
-    child.kill()
-}
-
-#[cfg(not(unix))]
-fn kill_timed_out(child: &mut std::process::Child) -> io::Result<()> {
-    child.kill()
 }
 
 #[cfg(unix)]
@@ -845,6 +834,111 @@ mod tests {
             &staged,
         )
         .unwrap()
+    }
+
+    // Re-enter the native test executable to exercise real Windows descendants
+    // without depending on PowerShell, Python, or a shell script interpreter.
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "subprocess fixture for Windows process-tree tests"]
+    fn windows_process_fixture() {
+        use std::os::windows::fs::OpenOptionsExt as _;
+        let Ok(role) = std::env::var("AVILA_TEST_PROCESS_ROLE") else {
+            return;
+        };
+        let root = PathBuf::from(std::env::var_os("AVILA_TEST_PROCESS_ROOT").unwrap());
+        if role == "leaf" {
+            let _lock = fs::OpenOptions::new()
+                .create(true)
+                .truncate(true)
+                .write(true)
+                .share_mode(0)
+                .open(root.join("leaf.lock"))
+                .unwrap();
+            fs::write(root.join("ready"), b"ready").unwrap();
+            std::thread::sleep(Duration::from_secs(60));
+        } else if role == "parent" {
+            let mut leaf = Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--ignored",
+                    "--exact",
+                    "execute::tests::windows_process_fixture",
+                ])
+                .env("AVILA_TEST_PROCESS_ROLE", "leaf")
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()
+                .unwrap();
+            assert!(leaf.wait().unwrap().success());
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_timeout_terminates_descendants_and_releases_their_files() {
+        use std::os::windows::fs::OpenOptionsExt as _;
+        let root = std::env::temp_dir().join(format!("avila-windows-job-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        let mut command = Command::new(std::env::current_exe().unwrap());
+        command
+            .args([
+                "--ignored",
+                "--exact",
+                "execute::tests::windows_process_fixture",
+            ])
+            .env_clear()
+            .env("AVILA_TEST_PROCESS_ROLE", "parent")
+            .env("AVILA_TEST_PROCESS_ROOT", &root)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        let mut child = spawn_step(command).unwrap();
+        let ready_deadline = Instant::now() + Duration::from_secs(20);
+        while !root.join("ready").exists() {
+            assert!(
+                Instant::now() < ready_deadline,
+                "the descendant did not start"
+            );
+            assert!(
+                child.as_mut().try_wait().unwrap().is_none(),
+                "parent exited before its descendant was ready"
+            );
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        assert!(
+            fs::OpenOptions::new()
+                .write(true)
+                .share_mode(0)
+                .open(root.join("leaf.lock"))
+                .is_err(),
+            "descendant must hold its file before timeout"
+        );
+        let (status, timed_out) =
+            wait_with_timeout(child.as_mut(), Duration::from_millis(100)).unwrap();
+        assert!(timed_out);
+        assert!(!status.success());
+        // Keep the Job Object handle alive: this proves timeout termination,
+        // rather than relying on kill-on-drop to repair a direct-child-only kill.
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            if fs::OpenOptions::new()
+                .write(true)
+                .share_mode(0)
+                .open(root.join("leaf.lock"))
+                .is_ok()
+            {
+                break;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "descendant survived timeout and still holds its file"
+            );
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        drop(child);
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

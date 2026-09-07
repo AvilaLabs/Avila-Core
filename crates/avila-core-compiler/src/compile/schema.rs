@@ -260,7 +260,7 @@ impl<'a> Validator<'a> {
             return;
         }
         if let Some(expected) = node.get("const")
-            && !matches_scalar(instance, expected)
+            && !matches_value(instance, expected)
         {
             let repair = choice(&pointer, vec![render_plain(expected)]);
             self.invalid(
@@ -271,9 +271,7 @@ impl<'a> Validator<'a> {
             return;
         }
         if let Some(options) = node.get("enum").and_then(Value::as_array)
-            && !options
-                .iter()
-                .any(|option| matches_scalar(instance, option))
+            && !options.iter().any(|option| matches_value(instance, option))
         {
             let candidates: Vec<_> = options.iter().map(render_plain).collect();
             let repair = choice(&pointer, candidates.clone());
@@ -555,12 +553,31 @@ fn type_matches(kind: &str, instance: &CanonicalJsonValue) -> bool {
     )
 }
 
-fn matches_scalar(instance: &CanonicalJsonValue, expected: &Value) -> bool {
+/// Compare a schema value with the authoritative canonical value without any
+/// coercion. Objects are compared by key/value membership (not source order),
+/// while arrays retain their order. JSON numbers are accepted only when they
+/// are the same safe integer representation the canonical reader supports.
+fn matches_value(instance: &CanonicalJsonValue, expected: &Value) -> bool {
     match (instance, expected) {
         (CanonicalJsonValue::String(actual), Value::String(expected)) => actual == expected,
         (CanonicalJsonValue::Bool(actual), Value::Bool(expected)) => actual == expected,
         (CanonicalJsonValue::Integer(actual), Value::Number(expected)) => {
             expected.as_i64() == Some(*actual)
+        }
+        (CanonicalJsonValue::Array(actual), Value::Array(expected)) => {
+            actual.len() == expected.len()
+                && actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(actual, expected)| matches_value(actual, expected))
+        }
+        (CanonicalJsonValue::Object(actual), Value::Object(expected)) => {
+            actual.len() == expected.len()
+                && actual.iter().all(|(key, actual)| {
+                    expected
+                        .get(key)
+                        .is_some_and(|expected| matches_value(actual, expected))
+                })
         }
         _ => false,
     }
@@ -813,5 +830,46 @@ mod tests {
             "/requirements/0/metric/source"
         )));
         assert!(summary.contains(&("CORE-S1102", FindingClass::Missing, "/contract_id")));
+    }
+
+    #[test]
+    fn nested_const_and_enum_values_use_structural_json_equality() {
+        let schema: Value = serde_json::json!({
+            "type": "object",
+            "properties": {
+                "units": {"const": {"length": "m", "field": "T", "current": "A"}},
+                "grid": {"enum": [
+                    {"shape": [1, 2], "enabled": true},
+                    {"shape": [2, 1], "enabled": false}
+                ]}
+            },
+            "required": ["units", "grid"],
+            "additionalProperties": false
+        });
+        let mut definition_findings = Vec::new();
+        assert!(validate_role_schema_definition(
+            &schema,
+            "/role/input_schema",
+            &mut definition_findings
+        ));
+        assert!(definition_findings.is_empty());
+
+        let check = |instance: &str| {
+            let instance = read_authoritative_json(instance.as_bytes()).unwrap();
+            let mut findings = Vec::new();
+            validate_against_schema(&schema, "candidate", "owner", &instance, &mut findings);
+            findings
+        };
+        assert!(check(r#"{"units":{"current":"A","field":"T","length":"m"},"grid":{"enabled":true,"shape":[1,2]}}"#).is_empty());
+        assert!(
+            check(r#"{"units":{"length":"m","field":"T"},"grid":{"enabled":true,"shape":[1,2]}}"#)
+                .iter()
+                .any(|f| f.primary.pointer == "/units")
+        );
+        assert!(check(r#"{"units":{"length":"m","field":"T","current":"V"},"grid":{"enabled":true,"shape":[1,2]}}"#).iter().any(|f| f.primary.pointer == "/units"));
+        assert!(check(r#"{"units":{"length":"m","field":"T","current":"A","extra":"x"},"grid":{"enabled":true,"shape":[1,2]}}"#).iter().any(|f| f.primary.pointer == "/units"));
+        assert!(check(r#"{"units":{"length":"m","field":"T","current":"A"},"grid":{"enabled":true,"shape":[2,1]}}"#).iter().any(|f| f.primary.pointer == "/grid"));
+        assert!(check(r#"{"units":{"length":"m","field":"T","current":"A"},"grid":{"enabled":true,"shape":[1,"2"]}}"#).iter().any(|f| f.primary.pointer == "/grid"));
+        assert!(check(r#"{"units":{"length":"m","field":"T","current":"A"},"grid":{"enabled":false,"shape":[2,1]}}"#).is_empty());
     }
 }

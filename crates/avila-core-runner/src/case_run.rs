@@ -69,8 +69,9 @@ mod inputs;
 use inputs::{steps_reached_by_inputs, supply_free_inputs, validate_free_inputs};
 mod compare;
 pub use compare::VerdictMargin;
+pub(crate) use compare::compare_attempt_results;
 #[cfg(test)]
-use compare::{compare_attempt_results, write_attempt_comparison};
+use compare::write_attempt_comparison;
 use compare::{compare_attempt_to_parent, margins};
 mod report;
 #[cfg(test)]
@@ -2125,7 +2126,11 @@ impl<'a> Runner<'a> {
             parameters: parameters.clone(),
             seed: step.reproducibility.seed.clone(),
         };
-        let executable = executable.map(|path| fs::canonicalize(&path).unwrap_or(path));
+        // Preserve the operator-supplied path: a virtualenv interpreter is
+        // semantically different from its resolved base Python because its
+        // prefix determines site-packages. Hashing below still follows the
+        // symlink target, so byte identity remains unchanged.
+        let executable = executable.map(|path| std::path::absolute(&path).unwrap_or(path));
         let program = executable
             .as_ref()
             .and_then(|path| path.file_name())

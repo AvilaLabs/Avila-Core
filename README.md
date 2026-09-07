@@ -82,10 +82,17 @@ regulatory review. It makes their boundaries explicit and inspectable.
   identities, claims binding, and every requirement verdict from the same
   fixture vectors, importing no Core crate.
 - A headless CLI and a thin native workbench over the same Rust implementation.
+- Ten shared read-only queries for recorded results, available through a
+  human-readable CLI, the native workbench's Tools workspace, and a local stdio MCP server. See the
+  [Core tools guide](docs/product/CORE_TOOLS.md) for usage and verification boundaries.
 
 ## Quick start
 
-Avila Core currently requires Rust 1.95.0.
+Avila Core currently requires Rust 1.95.0. CI builds the desktop app and CLI
+and runs the Rust workspace checks on Ubuntu, Windows, and macOS. This checks
+Core itself; external solvers still need compatible, explicitly bound builds.
+Installers and signing are not yet provided. Repository checkouts preserve exact
+line endings because package identities hash file bytes.
 
 ```bash
 git clone https://github.com/AvilaLabs/Avila-Core.git

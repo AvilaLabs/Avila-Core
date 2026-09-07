@@ -14,3 +14,4 @@ avila-core-kernel.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+process-wrap = { version = "10.0.0", default-features = false, features = ["std", "process-group", "job-object"] }

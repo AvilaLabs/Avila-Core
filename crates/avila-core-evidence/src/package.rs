@@ -722,7 +722,7 @@ fn validate_digest(value: &str) -> Result<(), PackageError> {
     Ok(())
 }
 
-fn canonical_directory(path: &Path) -> Result<PathBuf, PackageError> {
+pub(crate) fn canonical_directory(path: &Path) -> Result<PathBuf, PackageError> {
     let canonical = fs::canonicalize(path).map_err(|source| PackageError::Io {
         path: path.display().to_string(),
         source,
@@ -1186,7 +1186,10 @@ mod tests {
         let original_modified = fs::metadata(&path).unwrap().modified().unwrap();
         // Same length as b"artifact" (8 bytes), different content.
         fs::write(&path, b"ARTIFACT").unwrap();
-        fs::File::open(&path)
+        // Windows requires write access to update file timestamps.
+        fs::OpenOptions::new()
+            .write(true)
+            .open(&path)
             .unwrap()
             .set_modified(original_modified)
             .unwrap();

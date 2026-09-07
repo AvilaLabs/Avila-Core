@@ -621,6 +621,8 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn package_declared_checker_executes_and_logs_categorical_evidence() {
+        use std::os::unix::fs::symlink;
+
         let temp = TestDir::new();
         let case = temp.0.join("case");
         let root = temp.0.join("artifacts");
@@ -630,10 +632,13 @@ mod tests {
         let checker = temp.0.join("checker.sh");
         fs::write(
             &checker,
-            "#!/bin/sh\nin=$1\nout=$2\nwhile IFS= read -r line || [ -n \"$line\" ]; do printf '%s\\n' \"$line\"; done < \"$in\" > \"$out\"\n",
+            "#!/bin/sh\nprintf '%s\\n' \"$0\"\nin=$1\nout=$2\nwhile IFS= read -r line || [ -n \"$line\" ]; do printf '%s\\n' \"$line\"; done < \"$in\" > \"$out\"\n",
         )
         .unwrap();
         fs::set_permissions(&checker, fs::Permissions::from_mode(0o755)).unwrap();
+        let supplied_checker = temp.0.join("venv/bin/checker");
+        fs::create_dir_all(supplied_checker.parent().unwrap()).unwrap();
+        symlink(&checker, &supplied_checker).unwrap();
         let checker_sha = sha256_file(&checker).unwrap().0;
 
         let result = b"{\"remaining\":2,\"outcome\":\"rejected\"}\n";
@@ -818,7 +823,7 @@ mod tests {
             &case,
             &CaseRunOptions {
                 source_roots: BTreeMap::from([("fixture".into(), root)]),
-                capabilities: BTreeMap::from([("checker".into(), checker)]),
+                capabilities: BTreeMap::from([("checker".into(), supplied_checker.clone())]),
                 workspace: Some(temp.0.join("workspace")),
                 reuse: false,
                 plan_only: false,
@@ -844,6 +849,10 @@ mod tests {
             StepExecutionState::Executed
         );
         assert_eq!(report.margins[0].status, VerdictStatus::Fail);
+        assert_eq!(
+            fs::read_to_string(temp.0.join("workspace/check/logs/stdout.log")).unwrap(),
+            format!("{}\n", supplied_checker.display())
+        );
         assert!(human_summary(&report).contains("category outcome: rejected"));
         let generated: Value =
             serde_json::from_slice(&fs::read(temp.0.join("workspace/claims.json")).unwrap())

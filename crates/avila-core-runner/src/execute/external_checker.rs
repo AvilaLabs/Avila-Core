@@ -64,6 +64,25 @@ pub enum ExternalClaim {
         pointer: String,
         unit: String,
     },
+    Interval {
+        output_slot: String,
+        output_id: String,
+        lower_pointer: String,
+        upper_pointer: String,
+        #[serde(
+            default,
+            deserialize_with = "optional_pointer",
+            skip_serializing_if = "Option::is_none"
+        )]
+        nominal_pointer: Option<String>,
+        unit: String,
+    },
+    Unquantified {
+        output_slot: String,
+        output_id: String,
+        pointer: String,
+        unit: String,
+    },
     Categorical {
         output_slot: String,
         output_id: String,
@@ -75,21 +94,48 @@ pub enum ExternalClaim {
 impl ExternalClaim {
     fn output_slot(&self) -> &str {
         match self {
-            Self::Exact { output_slot, .. } | Self::Categorical { output_slot, .. } => output_slot,
+            Self::Exact { output_slot, .. }
+            | Self::Interval { output_slot, .. }
+            | Self::Unquantified { output_slot, .. }
+            | Self::Categorical { output_slot, .. } => output_slot,
         }
     }
 
     fn output_id(&self) -> &str {
         match self {
-            Self::Exact { output_id, .. } | Self::Categorical { output_id, .. } => output_id,
+            Self::Exact { output_id, .. }
+            | Self::Interval { output_id, .. }
+            | Self::Unquantified { output_id, .. }
+            | Self::Categorical { output_id, .. } => output_id,
         }
     }
 
-    fn pointer(&self) -> &str {
-        match self {
-            Self::Exact { pointer, .. } | Self::Categorical { pointer, .. } => pointer,
-        }
+    fn pointers(&self) -> impl Iterator<Item = &str> {
+        let pointers = match self {
+            Self::Exact { pointer, .. }
+            | Self::Unquantified { pointer, .. }
+            | Self::Categorical { pointer, .. } => [Some(pointer.as_str()), None, None],
+            Self::Interval {
+                lower_pointer,
+                upper_pointer,
+                nominal_pointer,
+                ..
+            } => [
+                Some(lower_pointer.as_str()),
+                Some(upper_pointer.as_str()),
+                nominal_pointer.as_deref(),
+            ],
+        };
+        pointers.into_iter().flatten()
     }
+}
+
+// Omission is allowed; explicit null is not a JSON Pointer. Keep serde's
+// boundary aligned with the descriptor schema's optional string property.
+fn optional_pointer<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<String>, D::Error> {
+    String::deserialize(deserializer).map(Some)
 }
 
 impl ExternalCheckerAdapter {
@@ -210,9 +256,17 @@ impl ExternalCheckerAdapter {
                     claim.output_id()
                 ));
             }
-            validate_pointer(claim.pointer())?;
+            for pointer in claim.pointers() {
+                validate_pointer(pointer)?;
+            }
             match claim {
                 ExternalClaim::Exact { unit, .. } => require_nonempty("exact claim unit", unit)?,
+                ExternalClaim::Interval { unit, .. } => {
+                    require_nonempty("interval claim unit", unit)?
+                }
+                ExternalClaim::Unquantified { unit, .. } => {
+                    require_nonempty("unquantified claim unit", unit)?
+                }
                 ExternalClaim::Categorical { allowed_values, .. } => {
                     if allowed_values.is_empty() {
                         return Err(format!(
@@ -324,32 +378,62 @@ impl ExternalCheckerAdapter {
                 let document = documents
                     .get(claim.output_id())
                     .expect("every referenced output was parsed");
-                let value = document.pointer(claim.pointer()).ok_or_else(|| {
-                    format!(
-                        "checker output `{}` has no value at JSON Pointer `{}`",
-                        claim.output_id(),
-                        claim.pointer()
-                    )
-                })?;
+                let value_at = |pointer: &str| {
+                    document.pointer(pointer).ok_or_else(|| {
+                        format!(
+                            "checker output `{}` has no value at JSON Pointer `{pointer}`",
+                            claim.output_id()
+                        )
+                    })
+                };
+                let quantity_at = |pointer: &str, unit: &str| {
+                    exact_value(value_at(pointer)?, pointer)
+                        .map(|value| json!({ "value": value, "unit": unit }))
+                };
                 let claim_value = match claim {
-                    ExternalClaim::Exact { unit, .. } => {
-                        let exact = exact_value(value, claim.pointer())?;
+                    ExternalClaim::Exact { pointer, unit, .. } => {
                         json!({
                             "model": "exact",
-                            "nominal": { "value": exact, "unit": unit },
+                            "nominal": quantity_at(pointer, unit)?,
                         })
                     }
-                    ExternalClaim::Categorical { allowed_values, .. } => {
-                        let CanonicalJsonValue::String(category) = value else {
+                    ExternalClaim::Interval {
+                        lower_pointer,
+                        upper_pointer,
+                        nominal_pointer,
+                        unit,
+                        ..
+                    } => {
+                        // Transport the provider's enclosure without inventing
+                        // a midpoint, uncertainty allowance, or qualification.
+                        // Admission and the kernel own the interval semantics.
+                        let mut value = json!({
+                            "model": "interval",
+                            "lower": quantity_at(lower_pointer, unit)?,
+                            "upper": quantity_at(upper_pointer, unit)?,
+                        });
+                        if let Some(pointer) = nominal_pointer {
+                            value["nominal"] = quantity_at(pointer, unit)?;
+                        }
+                        value
+                    }
+                    ExternalClaim::Unquantified { pointer, unit, .. } => json!({
+                        "model": "unquantified",
+                        "nominal": quantity_at(pointer, unit)?,
+                    }),
+                    ExternalClaim::Categorical {
+                        pointer,
+                        allowed_values,
+                        ..
+                    } => {
+                        let CanonicalJsonValue::String(category) = value_at(pointer)? else {
                             return Err(format!(
-                                "categorical value at `{}` must be a string",
-                                claim.pointer()
+                                "categorical value at `{pointer}` must be a string"
                             ));
                         };
                         if !allowed_values.contains(category) {
                             return Err(format!(
-                                "categorical value `{category}` at `{}` is outside the descriptor's closed set {:?}",
-                                claim.pointer(), allowed_values
+                                "categorical value `{category}` at `{pointer}` is outside the descriptor's closed set {allowed_values:?}"
                             ));
                         }
                         json!({ "model": "unquantified", "value": category })
@@ -433,6 +517,10 @@ fn require_nonempty(field: &str, value: &str) -> Result<(), String> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "external_checker_numeric_tests.rs"]
+mod numeric_tests;
 
 #[cfg(test)]
 mod tests {

@@ -3152,6 +3152,7 @@ fn changes_since(
     let old = &committed.invocation;
     let new = &plan.invocation;
     if old.arguments != new.arguments
+        || old.adapter_sha256 != new.adapter_sha256
         || old.working_directory != new.working_directory
         || old.environment != new.environment
         || old.required_environment != new.required_environment
@@ -3159,8 +3160,7 @@ fn changes_since(
     {
         changes.push(ChangeRecord {
             class: ChangeClass::Invocation,
-            detail: "the adapter's arguments, environment, working directory, or timeout differ"
-                .into(),
+            detail: "the adapter's descriptor, arguments, environment, working directory, or timeout differ".into(),
         });
     }
     if committed.status != ReceiptStatus::Completed || committed.process.exit_status != Some(0) {

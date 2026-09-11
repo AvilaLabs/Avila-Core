@@ -110,8 +110,10 @@ file validates before filtering, so a tampered tail is an error even when the
 selection sits earlier; an attempt the file never recorded is
 `no_match_in_record`, not an absent attempt.
 
-Queries currently support run-report envelopes v0.2–v0.5 and run-attempt logs
-v0.1–v0.3. This is a projection of recorded fields, not full schema conformance
+Queries currently support run-report envelopes v0.2–v0.5, run-attempt logs
+v0.1–v0.3, and the pre-schema campaign records the example campaigns wrote
+(a distinct recognized profile — the exact recorded fields are required, an
+`attempt` member contradicts the format, and anything else is refused). This is a projection of recorded fields, not full schema conformance
 or scientific verification. Inputs are capped at 64 MiB; history scans the
 selected file and has no latency guarantee or persistent index. Reuse remains
 limited to the runner's existing committed-receipt rules, not arbitrary past

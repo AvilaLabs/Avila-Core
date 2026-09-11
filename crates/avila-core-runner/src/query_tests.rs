@@ -418,3 +418,69 @@ fn constellation_refuses_a_tampered_or_incomplete_lineage() {
     // A workbench report cannot masquerade as a log.
     assert!(call_report_tool("core_constellation", json!({}), b"{}").is_err());
 }
+
+fn legacy_log() -> String {
+    let campaign = format!("sha256:{}", "c".repeat(64));
+    let first = json!({"case_id":"case","recorded_at":"2026-09-02T00:00:00Z",
+        "status":"evaluated","campaign_sha256":campaign,
+        "steps":[["screen","executed"],["transport","not_run"]],
+        "supplied_inputs":[{"input_id":"candidate","sha256":"sha256:cc"}],
+        "verdicts":[{"requirement_id":"R1","status":"fail","margin":"-1/4"}],
+        "workspace":"/workspace/case/1"});
+    let second = json!({"case_id":"case","recorded_at":"2026-09-02T00:01:00Z",
+        "status":"evaluated","campaign_sha256":campaign,
+        "steps":[["screen","executed"],["transport","executed"]],
+        "supplied_inputs":[],"verdicts":[{"requirement_id":"R1","status":"pass"}],
+        "workspace":"/workspace/case/2"});
+    format!("{first}\n{second}\n")
+}
+
+#[test]
+fn pre_schema_campaign_logs_read_as_their_own_profile() {
+    let text = legacy_log();
+    let result = constellation(text.as_bytes(), &QueryArgs::default()).unwrap();
+    assert_eq!(result["total"], 2);
+    assert_eq!(result["summary"]["untracked_records"], 2);
+    assert_eq!(result["summary"]["attempt_records"], 0);
+    assert_eq!(
+        result["summary"]["requirement_status_counts"]["R1"]["fail"],
+        1
+    );
+    assert_eq!(
+        result["summary"]["requirement_status_counts"]["R1"]["pass"],
+        1
+    );
+    // Legacy `[step_id, state]` pairs project to the same shape schema'd
+    // records use; nothing is fabricated — no attempt ids, no lineage.
+    assert_eq!(
+        result["items"][0]["steps"],
+        json!([{"step_id":"screen","state":"executed"},{"step_id":"transport","state":"not_run"}])
+    );
+    assert_eq!(result["items"][0]["attempt_id"], Value::Null);
+    let history_result = history(text.as_bytes(), &QueryArgs::default()).unwrap();
+    assert_eq!(history_result["total"], 2);
+    assert_eq!(history_result["items"][0]["steps"][0]["step_id"], "screen");
+    // A legacy-shaped record with a corrupt campaign identity, an `attempt`
+    // member, or a schema_version Core never issued still fails closed.
+    for bad in [
+        json!({"case_id":"case","recorded_at":"t","status":"evaluated",
+            "campaign_sha256":"sha256:deadbeef","steps":[],"verdicts":[],
+            "supplied_inputs":[],"workspace":"/w"}),
+        json!({"case_id":"case","recorded_at":"t","status":"evaluated",
+            "campaign_sha256":format!("sha256:{}","c".repeat(64)),"steps":[],
+            "verdicts":[],"supplied_inputs":[],"workspace":"/w",
+            "attempt":{"attempt_id":"fake"}}),
+        json!({"schema_version":"avila.core/run-attempt/v9.9-draft",
+            "case_id":"case","status":"evaluated","steps":[]}),
+    ] {
+        let bytes = format!("{}{bad}\n", text.clone());
+        assert!(
+            constellation(bytes.as_bytes(), &QueryArgs::default()).is_err(),
+            "{bad}"
+        );
+        assert!(
+            history(bytes.as_bytes(), &QueryArgs::default()).is_err(),
+            "{bad}"
+        );
+    }
+}

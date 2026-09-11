@@ -182,6 +182,20 @@ fn project(value: &Value, fields: &[&str]) -> Value {
     Value::Object(object)
 }
 
+/// Schema'd logs record steps as objects; pre-schema records record them as
+/// `[step_id, state]` pairs. Project both to the same shape.
+fn project_step(step: &Value) -> Value {
+    if let Some(pair) = step.as_array()
+        && pair.len() == 2
+    {
+        return json!({"step_id":pair[0],"state":pair[1]});
+    }
+    project(
+        step,
+        &["step_id", "state", "planned_invocation_sha256", "receipt"],
+    )
+}
+
 fn array_at(value: &Value, pointer: &str) -> Result<Vec<Value>, String> {
     match value.pointer(pointer) {
         None | Some(Value::Null) => Ok(Vec::new()),
@@ -432,6 +446,39 @@ fn report_view(record: &Value, name: &str, args: &QueryArgs) -> Result<Value, St
 }
 
 pub(crate) fn validate_history_record(record: &Value) -> Result<(), String> {
+    if record.get("schema_version").is_none() {
+        // Pre-schema run records (the CASE-001/002 campaign logs) are a
+        // distinct recognized profile, not a tolerated omission: the exact
+        // recorded fields are required, an `attempt` member contradicts the
+        // format, and anything else is still refused.
+        if !matches!(
+            record["status"].as_str(),
+            Some("evaluated" | "rejected" | "planned" | "error")
+        ) || !record["case_id"].is_string()
+            || !record["recorded_at"].is_string()
+            || !record["campaign_sha256"].as_str().is_some_and(|d| {
+                d.len() == 71
+                    && d.starts_with("sha256:")
+                    && d[7..]
+                        .bytes()
+                        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+            })
+            || record.get("attempt").is_some()
+            || (record["status"] != "error"
+                && (!record["steps"].as_array().is_some_and(|steps| {
+                    steps.iter().all(|step| {
+                        step.as_array().is_some_and(|pair| {
+                            pair.len() == 2 && pair[0].is_string() && pair[1].is_string()
+                        })
+                    })
+                }) || !record["verdicts"].is_array()
+                    || !record["supplied_inputs"].is_array()
+                    || !record["workspace"].is_string()))
+        {
+            return Err("unsupported or malformed Core history record".into());
+        }
+        return Ok(());
+    }
     if !matches!(
         record["schema_version"].as_str(),
         Some(
@@ -506,15 +553,7 @@ fn history(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
         item["line"] = json!(index + 1);
         item["record_sha256"] = json!(format!("sha256:{}", sha256_hex(line.as_bytes())));
         item["attempt_id"] = record["attempt"]["attempt_id"].clone();
-        item["steps"] = json!(
-            matching_steps
-                .iter()
-                .map(|s| project(
-                    s,
-                    &["step_id", "state", "planned_invocation_sha256", "receipt"]
-                ))
-                .collect::<Vec<_>>()
-        );
+        item["steps"] = json!(matching_steps.iter().map(project_step).collect::<Vec<_>>());
         items.push(item);
     }
     Ok(page(items, args))
@@ -578,6 +617,12 @@ fn constellation(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
         );
         item["line"] = json!(line_number);
         item["record_sha256"] = json!(format!("sha256:{}", sha256_hex(raw.as_bytes())));
+        item["steps"] = json!(
+            array_at(record, "/steps")?
+                .iter()
+                .map(project_step)
+                .collect::<Vec<_>>()
+        );
         item["verdicts"] = json!(
             verdicts
                 .iter()

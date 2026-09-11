@@ -138,7 +138,9 @@ proposal against the code; see the
 5. `core_constellation` (S-049) projects one campaign log in record order —
    lineage edges, candidate states, verdicts, and a derived summary — under
    the same lineage validation as `core_attempt`, so a tampered tail fails
-   closed and pre-`schema_version` logs remain out of profile. The deeper
+   closed; pre-`schema_version` campaign records (all fifteen example
+   campaign logs) read under an explicitly named legacy profile, with
+   `[step_id, state]` pairs normalized and no lineage invented (S-050). The deeper
    generative-loop items stand: a harder coupled search (EXP-007) once
    EXP-002 shows the experiment discriminates, and a fresh speed-tier
    attempt gated on agreement with the verified S_N solver (S-031, S-033).

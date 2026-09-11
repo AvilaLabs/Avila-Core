@@ -32,9 +32,11 @@ Key ids (SHA-256 of the public key bytes, hex):
 
 CASE-001, CASE-002, and CASE-003 each carry a `signatures/manifest.sig.json`
 document (signed with `requester.seed`) and one `signatures/<step>-receipt.sig.json`
-per declared execution step (signed with `runner.seed`). None of the three
-cases sets `execution_policy.require_signatures`; verifying with
-`--trust-root examples/keys/trust-root.json` reports every signature
-`verified` but does not change any technical verdict, and running without
-`--trust-root` at all still reports them `signature not checked` and works
-exactly as before signing existed.
+per declared execution step (signed with `runner.seed`). All three cases now
+set `execution_policy.require_signatures`; verifying with `--trust-root
+examples/keys/trust-root.json` reports every signature `verified` and does
+not change any technical verdict, but running without `--trust-root` at all
+now refuses the run outright under `CORE-X1005`, before anything is
+compiled, rather than merely reporting each signature `signature not
+checked`. Each case's own README names the exact roots and, where a fresh
+execution is involved, the `--runner-key` its examples need.

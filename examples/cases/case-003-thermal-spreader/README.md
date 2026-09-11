@@ -88,18 +88,28 @@ model is steady state.
 
 ## Running it
 
+This contract sets `execution_policy.require_signatures`, so every command
+below needs `--trust-root examples/keys/trust-root.json`; without it the run
+refuses outright under `CORE-X1005` before anything is compiled (see [Signed
+manifest and receipts](#signed-manifest-and-receipts)).
+
 Verify the frozen case; nothing runs:
 
 ```bash
 cargo run -p avila-core-cli -- run examples/cases/case-003-thermal-spreader \
   --source-root case=examples/cases/case-003-thermal-spreader \
-  --source-root thermal=examples/capabilities/thermal
+  --source-root thermal=examples/capabilities/thermal \
+  --trust-root examples/keys/trust-root.json
 ```
 
-Run a candidate of your own through both steps (a few seconds):
+Run a candidate of your own through both steps (a few seconds). A supplied
+candidate always executes the screen fresh, so `--runner-key` is needed to
+sign that receipt or `require_signatures` refuses the run after execution:
 
 ```bash
-  … --capability python3=/usr/bin/python3 \
+  … --trust-root examples/keys/trust-root.json \
+    --runner-key examples/keys/runner.seed \
+    --capability python3=/usr/bin/python3 \
     --capability thermal-python=/path/to/venv/bin/python \
     --input candidate=my-candidate.json --log campaign-log.jsonl
 ```
@@ -116,19 +126,16 @@ package version, and the package limitations say so.
 The manifest and every step's committed receipt carry a detached Ed25519
 signature (ADR-0015), made with the public example keys under
 `examples/keys/` — see that directory's README for what these keys are and
-are not good for. Verifying with the example trust root reports every
-signature `verified` and changes nothing else:
-
-```bash
-cargo run -p avila-core-cli -- run examples/cases/case-003-thermal-spreader \
-  --source-root case=examples/cases/case-003-thermal-spreader \
-  --source-root thermal=examples/capabilities/thermal \
-  --trust-root examples/keys/trust-root.json
-```
-
-`execution_policy.require_signatures` is not set on this contract, so
-running without `--trust-root` at all still works exactly as before
-signing existed, reporting each signature `signature not checked`.
+are not good for. `execution_policy.require_signatures` is `true` on this
+contract, so `--trust-root examples/keys/trust-root.json` is not optional:
+without it, `run` refuses the package outright under `CORE-X1005` before
+anything is compiled. With it, the manifest and both `fe` and `screen`'s
+committed receipts report `verified`, and every declared step reuses from
+its verified receipt without running anything. A freshly executed step's
+receipt is unsigned unless the run also carries `--runner-key
+examples/keys/runner.seed`; without it, `require_signatures` refuses the run
+after execution instead of leaving the outcome silently unsigned, exactly
+where it refuses an unsigned package.
 
 ## What the package binds
 

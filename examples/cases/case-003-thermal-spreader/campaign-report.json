@@ -2,8 +2,20 @@
   "schema_version": "avila.core/campaign-report/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "status": "evaluated",
-  "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
-  "claims_sha256": "sha256:7b84ce85fdbedd97d4fef8136a9b6832809a2eaa916350ec43ca5d0439959e1c",
+  "compiled_snapshot_sha256": "sha256:b699fff3a5fe1312d9812ad3b7df046903d7de25a1da06f43cb96db4fa6b5822",
+  "claims_sha256": "sha256:7bc313ac5167697dfd9fe5d58197ad6000170e9413b6b88ab76f40a5d3997662",
+  "findings": [
+    {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+        "document": "contract",
+        "pointer": "/execution_policy/require_signatures"
+      },
+      "message": "this contract's execution policy requires signed manifests and receipts; `avila-core run` for this contract must be given `--trust-root` and will refuse an unsigned package or unsigned reuse"
+    }
+  ],
   "admissions": [
     {
       "evidence_id": "input:candidate",
@@ -124,8 +136,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
-        "claims_sha256": "sha256:7b84ce85fdbedd97d4fef8136a9b6832809a2eaa916350ec43ca5d0439959e1c"
+        "compiled_snapshot_sha256": "sha256:b699fff3a5fe1312d9812ad3b7df046903d7de25a1da06f43cb96db4fa6b5822",
+        "claims_sha256": "sha256:7bc313ac5167697dfd9fe5d58197ad6000170e9413b6b88ab76f40a5d3997662"
       }
     },
     {
@@ -151,8 +163,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
-        "claims_sha256": "sha256:7b84ce85fdbedd97d4fef8136a9b6832809a2eaa916350ec43ca5d0439959e1c"
+        "compiled_snapshot_sha256": "sha256:b699fff3a5fe1312d9812ad3b7df046903d7de25a1da06f43cb96db4fa6b5822",
+        "claims_sha256": "sha256:7bc313ac5167697dfd9fe5d58197ad6000170e9413b6b88ab76f40a5d3997662"
       }
     },
     {
@@ -179,8 +191,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
-        "claims_sha256": "sha256:7b84ce85fdbedd97d4fef8136a9b6832809a2eaa916350ec43ca5d0439959e1c"
+        "compiled_snapshot_sha256": "sha256:b699fff3a5fe1312d9812ad3b7df046903d7de25a1da06f43cb96db4fa6b5822",
+        "claims_sha256": "sha256:7bc313ac5167697dfd9fe5d58197ad6000170e9413b6b88ab76f40a5d3997662"
       }
     },
     {
@@ -207,11 +219,11 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:ad8c938fc31e355a3668c729f9094a88a8f586fa125acd707e53a1c1334334cd",
-        "claims_sha256": "sha256:7b84ce85fdbedd97d4fef8136a9b6832809a2eaa916350ec43ca5d0439959e1c"
+        "compiled_snapshot_sha256": "sha256:b699fff3a5fe1312d9812ad3b7df046903d7de25a1da06f43cb96db4fa6b5822",
+        "claims_sha256": "sha256:7bc313ac5167697dfd9fe5d58197ad6000170e9413b6b88ab76f40a5d3997662"
       }
     }
   ],
-  "campaign_sha256": "sha256:47fac7536a663276ad54927aa3b7756ac3349c93c00ed438629158473bcb0b47",
+  "campaign_sha256": "sha256:3cdfbcc5936d92b4c9d85ed33f8753df620d40f7d44633419500a54017bed37e",
   "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
 }

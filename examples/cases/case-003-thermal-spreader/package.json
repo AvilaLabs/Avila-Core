@@ -7,7 +7,7 @@
       "document_id": "case-003-contract",
       "role": "contract",
       "path": "contract.json",
-      "sha256": "sha256:327b8e35d198144dffc452d3da51bbecd4ee772810842a3401c929fb47cfa992"
+      "sha256": "sha256:18fe3a4a9d454a8f554e6ae403230d58b2ea94ca89ac7185595ca0b4db959b89"
     },
     {
       "document_id": "case-003-registry",
@@ -19,7 +19,7 @@
       "document_id": "case-003-claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:17aaf9132a06f10e5106fdede1dbcdda00fd24a11e3edd929f8b8d94d33b7d2e"
+      "sha256": "sha256:274c06685f6c7d6b22373eb0d39653172d8c18e10b5d550de195d48edcb5d487"
     },
     {
       "document_id": "case-003-requirement-set",
@@ -43,7 +43,7 @@
       "document_id": "case-003-expected-campaign",
       "role": "expected_campaign_report",
       "path": "campaign-report.json",
-      "sha256": "sha256:45b7070e73f1a48d6db8d73355e4deb3f72c9c75b3e117eb750edde8db509633"
+      "sha256": "sha256:74ce332326f9a6e71f5fe4378e2e762b45c0af61de76507e98ddd171fbb19f01"
     },
     {
       "document_id": "case-003-screen-receipt",
@@ -75,7 +75,7 @@
       "document_id": "signature-manifest",
       "role": "signature",
       "path": "signatures/manifest.sig.json",
-      "sha256": "sha256:40bc7309503ef35328f24b1b82474c709ef58c8e3e71104087afd8840fe306b5"
+      "sha256": "sha256:96e8da97ec077dd184d816064ea9f22fa0b244b96b12c6c403b9252dfb74b4d3"
     }
   ],
   "artifacts": [

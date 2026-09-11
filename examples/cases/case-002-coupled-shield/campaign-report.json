@@ -2,8 +2,20 @@
   "schema_version": "avila.core/campaign-report/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "status": "evaluated",
-  "compiled_snapshot_sha256": "sha256:5135e3e32eabd414b47c6932645967b518117a8388e4239b445902de1a01cb7a",
-  "claims_sha256": "sha256:a65d37a54f1c5bb29308f4f568843daa471f5078f2d42adbce76b8c8b8bfad42",
+  "compiled_snapshot_sha256": "sha256:428f39a1e94bde40c3b77fcc239af2b43404405efcaf1b3994928434b515f572",
+  "claims_sha256": "sha256:ef5ee64884f3079223652cee8a9bd20f90a3a3c8611431d680e89bf32bb8ead6",
+  "findings": [
+    {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+        "document": "contract",
+        "pointer": "/execution_policy/require_signatures"
+      },
+      "message": "this contract's execution policy requires signed manifests and receipts; `avila-core run` for this contract must be given `--trust-root` and will refuse an unsigned package or unsigned reuse"
+    }
+  ],
   "admissions": [
     {
       "evidence_id": "input:actinv-activation-library",
@@ -249,8 +261,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:5135e3e32eabd414b47c6932645967b518117a8388e4239b445902de1a01cb7a",
-        "claims_sha256": "sha256:a65d37a54f1c5bb29308f4f568843daa471f5078f2d42adbce76b8c8b8bfad42"
+        "compiled_snapshot_sha256": "sha256:428f39a1e94bde40c3b77fcc239af2b43404405efcaf1b3994928434b515f572",
+        "claims_sha256": "sha256:ef5ee64884f3079223652cee8a9bd20f90a3a3c8611431d680e89bf32bb8ead6"
       }
     },
     {
@@ -277,8 +289,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:5135e3e32eabd414b47c6932645967b518117a8388e4239b445902de1a01cb7a",
-        "claims_sha256": "sha256:a65d37a54f1c5bb29308f4f568843daa471f5078f2d42adbce76b8c8b8bfad42"
+        "compiled_snapshot_sha256": "sha256:428f39a1e94bde40c3b77fcc239af2b43404405efcaf1b3994928434b515f572",
+        "claims_sha256": "sha256:ef5ee64884f3079223652cee8a9bd20f90a3a3c8611431d680e89bf32bb8ead6"
       }
     },
     {
@@ -305,8 +317,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:5135e3e32eabd414b47c6932645967b518117a8388e4239b445902de1a01cb7a",
-        "claims_sha256": "sha256:a65d37a54f1c5bb29308f4f568843daa471f5078f2d42adbce76b8c8b8bfad42"
+        "compiled_snapshot_sha256": "sha256:428f39a1e94bde40c3b77fcc239af2b43404405efcaf1b3994928434b515f572",
+        "claims_sha256": "sha256:ef5ee64884f3079223652cee8a9bd20f90a3a3c8611431d680e89bf32bb8ead6"
       }
     },
     {
@@ -333,8 +345,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:5135e3e32eabd414b47c6932645967b518117a8388e4239b445902de1a01cb7a",
-        "claims_sha256": "sha256:a65d37a54f1c5bb29308f4f568843daa471f5078f2d42adbce76b8c8b8bfad42"
+        "compiled_snapshot_sha256": "sha256:428f39a1e94bde40c3b77fcc239af2b43404405efcaf1b3994928434b515f572",
+        "claims_sha256": "sha256:ef5ee64884f3079223652cee8a9bd20f90a3a3c8611431d680e89bf32bb8ead6"
       }
     },
     {
@@ -361,8 +373,8 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:5135e3e32eabd414b47c6932645967b518117a8388e4239b445902de1a01cb7a",
-        "claims_sha256": "sha256:a65d37a54f1c5bb29308f4f568843daa471f5078f2d42adbce76b8c8b8bfad42"
+        "compiled_snapshot_sha256": "sha256:428f39a1e94bde40c3b77fcc239af2b43404405efcaf1b3994928434b515f572",
+        "claims_sha256": "sha256:ef5ee64884f3079223652cee8a9bd20f90a3a3c8611431d680e89bf32bb8ead6"
       }
     },
     {
@@ -388,11 +400,11 @@
         "semantic_profile": "avila.core/semantic/0.2-draft",
         "compiler": "avila.core/compiler-rust@0.1.0",
         "evaluator": "avila.core/kernel-rust@0.1.0",
-        "compiled_snapshot_sha256": "sha256:5135e3e32eabd414b47c6932645967b518117a8388e4239b445902de1a01cb7a",
-        "claims_sha256": "sha256:a65d37a54f1c5bb29308f4f568843daa471f5078f2d42adbce76b8c8b8bfad42"
+        "compiled_snapshot_sha256": "sha256:428f39a1e94bde40c3b77fcc239af2b43404405efcaf1b3994928434b515f572",
+        "claims_sha256": "sha256:ef5ee64884f3079223652cee8a9bd20f90a3a3c8611431d680e89bf32bb8ead6"
       }
     }
   ],
-  "campaign_sha256": "sha256:a8a04bedc1605cebc850e7b5fe5e114f7f55ff6c8a4ae94355f6272b5bbb2947",
+  "campaign_sha256": "sha256:e271703d6f33eb7cf84365408f8143174bd208c6ac72b4a1b475337ace40dd71",
   "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
 }

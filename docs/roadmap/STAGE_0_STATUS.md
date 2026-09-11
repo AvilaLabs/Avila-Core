@@ -64,8 +64,8 @@ external product gate.
 | Gate | Current evidence | Target |
 | --- | --- | --- |
 | Technical verdict independent of review | Implemented | Kernel, campaign, claims, schemas, CASE-000, and regressions contain no review-gating path |
-| Fixed requirements during search | Implemented for native JSON attempt lineages | CASE-008 and CASE-009 each record two attempts under one manifest and compiled snapshot; Core refuses a child if its parent record, manifest, snapshot, candidate state, or derived diff cannot be revalidated. CASE-009 additionally demonstrates exact negative margin comparison and PASS→FAIL transitions. Signed manifests and receipts landed (S-040); the verifier does not yet check them. |
-| Known shortcut refusal | Exercised | An adversarial designer arm (CASE-002 campaign 3, amendment A6) confirmed refusals for out-of-envelope candidates, a wrong interpreter digest, a particle count below its domain, and coverage on a weaker basis, and obtained undeserved verdicts only by rewriting the package; the identity log and the manifest pin (S-030) now make a rewritten package a refusal or a visibly different identity | The verifier checks signatures, and `execution_policy.require_signatures` set on the three loop cases |
+| Fixed requirements during search | Implemented for native JSON attempt lineages | CASE-008 and CASE-009 each record two attempts under one manifest and compiled snapshot; Core refuses a child if its parent record, manifest, snapshot, candidate state, or derived diff cannot be revalidated. CASE-009 additionally demonstrates exact negative margin comparison and PASS→FAIL transitions. Signed manifests and receipts landed (S-040) and the independent verifier checks them (S-042); `execution_policy.require_signatures` is set on the three loop cases (S-043). |
+| Known shortcut refusal | Exercised | An adversarial designer arm (CASE-002 campaign 3, amendment A6) confirmed refusals for out-of-envelope candidates, a wrong interpreter digest, a particle count below its domain, and coverage on a weaker basis, and obtained undeserved verdicts only by rewriting the package; the identity log and the manifest pin (S-030) now make a rewritten package a refusal or a visibly different identity; `execution_policy.require_signatures` is set on CASE-001, CASE-002 and CASE-003, and the campaign adversarial checker verifies each log row's ADR-0015 signature against a trust root (S-043), so a log row edited after Core wrote it classifies `refused` | A predeclared shortcut proposed and refused inside a scored search arm (EXP-005, paused) |
 | Autonomous search outcome | Reached twice | CASE-002 campaign 3: a language-model designer found an all-PASS design 277 kg lighter than the sweep's best at its second transport and stopped by judgment; the seeded surrogate found one at its eleventh. CASE-003 campaign 1, under the manifest pin: the same designer found an all-PASS spreader five times lighter than the sweep's bar at its sixth evaluation; see each case's `RESULTS.md` | EXP-002 ran on CASE-003 (2026-09-05, 15 trials, three arms): non-discriminating, every arm reached the optimum in one to three evaluations; Core's contribution must be isolated on a harder case (CASE-002). The predeclared shortcut was never proposed, so refusal during a successful search is still unexercised |
 | Optional practicality routing | Implemented for the slice | Exact instructed dossier exercises both `request_changes` and `present_to_user`; omission leaves Core fully usable |
 | Independent verification | Implemented for the first profile | `verifier/avila_core_verify.py` (S-041) reproduces package identity, receipt invocation identities, claims binding and every numeric and categorical verdict and margin for six cases with zero mismatches, and agrees with every semantic-core vector; ADR-0015 signatures are verified from scratch against a trust root (S-042); envelopes are checked structurally because the extracted applicability facts are not persisted; coverage, presentation gates and `campaign_sha256` are named as not checked | Persist the applicability facts so envelope verdicts can be re-derived; extend to coverage and `campaign_sha256` |
@@ -119,12 +119,12 @@ proposal against the code; see the
    qualification edit. Remaining: the runner engine itself (staging, reuse
    decision, receipt verification) is still one 3,600-line file.
 4. Signed receipts and manifests (S-040) and the independent verifier,
-   now including signature verification (S-041, S-042), are landed.
-   Remaining: `execution_policy.require_signatures` set on the three loop
-   cases with the workbench fields and CLI tests; the campaign adversarial
-   checker verifying log-line signatures; and the runner persisting each
-   step's extracted applicability facts so an envelope verdict can be
-   re-derived from outside.
+   now including signature verification (S-041, S-042), are landed, and
+   `execution_policy.require_signatures` is now set on CASE-001, CASE-002
+   and CASE-003 with the workbench fields, CLI tests, and the campaign
+   adversarial checker verifying log-line signatures (S-043). Remaining:
+   the runner persisting each step's extracted applicability facts so an
+   envelope verdict can be re-derived from outside.
 5. Constellation queries over the campaign logs; a harder coupled search
    (EXP-007) once EXP-002 shows the experiment discriminates; and a fresh
    speed-tier attempt gated on agreement with the verified S_N solver

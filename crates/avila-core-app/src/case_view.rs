@@ -13,7 +13,8 @@ use avila_core_evidence::{CasePackageManifest, IntegrityCheckState, PackageInteg
 use avila_core_kernel::VerdictStatus;
 use avila_core_runner::{
     BindingStatus, CapabilityCheckState, CaseRunOptions, CaseRunReport, CaseRunStatus,
-    ExecutionStatus, PresentationGateReadiness, StepExecutionState, execute_case, human_summary,
+    ExecutionStatus, PresentationGateReadiness, SignatureStatus, StepExecutionState, execute_case,
+    human_summary,
 };
 use eframe::egui;
 
@@ -121,6 +122,14 @@ pub struct CaseSetup {
     pub hash_cache: String,
     /// Optional campaign history appended by the runner for each run or plan.
     pub log: String,
+    /// The requester and runner public keys this run accepts (ADR-0015).
+    /// Empty means no trust root: every signature is reported `unsigned` or
+    /// `signature not checked`, never `verified`, and a contract that sets
+    /// `execution_policy.require_signatures` refuses the run outright.
+    pub trust_root: String,
+    /// A runner seed key (32 raw bytes). Empty means a freshly executed
+    /// step's receipt is written unsigned.
+    pub runner_key: String,
     /// Start a run (or a plan) as soon as the window opens.
     pub auto_run: Option<bool>,
     /// Save a PNG of the window once the automatic run has rendered, then
@@ -162,6 +171,8 @@ impl CaseSetup {
                 "--workspace" => setup.workspace = value()?,
                 "--hash-cache" => setup.hash_cache = value()?,
                 "--log" => setup.log = value()?,
+                "--trust-root" => setup.trust_root = value()?,
+                "--runner-key" => setup.runner_key = value()?,
                 "--source-root" => setup.source_roots.push(named_path(&value()?)?),
                 "--capability" => setup.capabilities.push(named_path(&value()?)?),
                 "--input" => setup.free_inputs.push(named_path(&value()?)?),
@@ -264,6 +275,10 @@ impl CaseSetup {
             hash_cache: (!self.hash_cache.trim().is_empty())
                 .then(|| PathBuf::from(self.hash_cache.trim())),
             log: (!self.log.trim().is_empty()).then(|| PathBuf::from(self.log.trim())),
+            trust_root: (!self.trust_root.trim().is_empty())
+                .then(|| PathBuf::from(self.trust_root.trim())),
+            runner_key: (!self.runner_key.trim().is_empty())
+                .then(|| PathBuf::from(self.runner_key.trim())),
             ..CaseRunOptions::default()
         }
     }
@@ -691,6 +706,24 @@ impl CaseView {
                 );
             });
             ui.horizontal(|ui| {
+                ui.label("Trust root");
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.setup.trust_root)
+                        .hint_text(
+                            "unset: signatures report unsigned/not checked (ADR-0015 trust-root.json)",
+                        )
+                        .desired_width(f32::INFINITY),
+                );
+            });
+            ui.horizontal(|ui| {
+                ui.label("Runner key");
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.setup.runner_key)
+                        .hint_text("unset: a freshly executed step's receipt is written unsigned")
+                        .desired_width(f32::INFINITY),
+                );
+            });
+            ui.horizontal(|ui| {
                 ui.label("Campaign log");
                 ui.add(
                     egui::TextEdit::singleline(&mut self.setup.log)
@@ -830,7 +863,7 @@ impl CaseView {
         };
         match self.tab {
             CaseTab::Overview => show_overview(ui, report, &self.summary, targets),
-            CaseTab::Integrity => show_integrity(ui, report),
+            CaseTab::Integrity => show_integrity(ui, report, self.manifest.as_ref()),
             CaseTab::Compile => {
                 let sources: Vec<(&str, &[u8])> = self
                     .sources
@@ -955,6 +988,50 @@ fn integrity_badge(ui: &mut egui::Ui, state: IntegrityCheckState) {
         IntegrityCheckState::NotChecked => badge(ui, "NOT CHECKED", muted(ui)),
         IntegrityCheckState::Missing => badge(ui, "MISSING", RED),
         IntegrityCheckState::Mismatch => badge(ui, "MISMATCH", RED),
+    }
+}
+
+/// A document's ADR-0015 signature status, next to its byte-integrity
+/// badge: a signature proves possession of a key at signing time, not the
+/// correctness of what was signed, so this is reported alongside identity,
+/// never in place of it.
+/// `detail` adds the signing key id (or refusal reason) next to the badge;
+/// pass `false` in a narrow grid cell, where that text would only push the
+/// column wide enough to crowd out the ones after it.
+fn signature_status_badge(ui: &mut egui::Ui, status: Option<&SignatureStatus>, detail: bool) {
+    match status {
+        None => {
+            ui.label(egui::RichText::new("—").color(muted(ui)));
+        }
+        Some(SignatureStatus::Unsigned) => badge(ui, "UNSIGNED", muted(ui)),
+        Some(SignatureStatus::NotChecked) => badge(ui, "NOT CHECKED", AMBER),
+        Some(SignatureStatus::Verified { signed_by }) => {
+            if detail {
+                ui.horizontal(|ui| {
+                    badge(ui, "VERIFIED", GREEN);
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "by {}…",
+                            &signed_by[..signed_by.len().min(12)]
+                        ))
+                        .color(muted(ui))
+                        .size(10.0),
+                    );
+                });
+            } else {
+                badge(ui, "VERIFIED", GREEN);
+            }
+        }
+        Some(SignatureStatus::Invalid { reason }) => {
+            if detail {
+                ui.horizontal_wrapped(|ui| {
+                    badge(ui, "INVALID", RED);
+                    ui.label(egui::RichText::new(reason).color(muted(ui)).size(10.0));
+                });
+            } else {
+                badge(ui, "INVALID", RED);
+            }
+        }
     }
 }
 
@@ -1217,24 +1294,73 @@ fn show_overview(
         });
 }
 
-fn show_integrity(ui: &mut egui::Ui, report: &CaseRunReport) {
+fn show_integrity(
+    ui: &mut egui::Ui,
+    report: &CaseRunReport,
+    manifest: Option<&CasePackageManifest>,
+) {
     let integrity = &report.integrity;
     section_heading(
         ui,
         "Package integrity",
-        "Byte identity of the package documents and of every artifact under a supplied root. A match proves identity only.",
+        "Byte identity of the package documents and of every artifact under a supplied root. A match proves identity only. A signature (ADR-0015) proves possession of a key at signing time, not correctness.",
     );
+    // A receipt document's own runner signature, by the step it records;
+    // every other document is covered only transitively, through the
+    // manifest's requester signature (ADR-0015 clause 1).
+    let receipt_signature_for_step = |step_id: &str| -> Option<&SignatureStatus> {
+        report
+            .execution
+            .as_ref()?
+            .steps
+            .iter()
+            .find(|step| step.step_id == step_id)
+            .and_then(|step| step.receipt_signature.as_ref())
+    };
+    let signature_for_document = |document_id: &str, role: &str| -> Option<&SignatureStatus> {
+        if role == "signature" {
+            return None;
+        }
+        if role == "execution_receipt" {
+            return manifest
+                .and_then(|manifest| {
+                    manifest
+                        .documents
+                        .iter()
+                        .find(|document| document.document_id == document_id)
+                })
+                .and_then(|document| document.step_id.as_deref())
+                .and_then(receipt_signature_for_step);
+        }
+        report.manifest_signature.as_ref()
+    };
     card(ui, |ui| {
-        key_value(ui, "Manifest", &integrity.manifest_sha256);
-        egui::Grid::new("documents").striped(true).show(ui, |ui| {
-            for check in &integrity.documents {
-                ui.label(&check.document_id);
-                ui.label(egui::RichText::new(&check.role).color(muted(ui)));
-                ui.label(&check.path);
-                integrity_badge(ui, check.state);
-                ui.end_row();
-            }
+        ui.horizontal_wrapped(|ui| {
+            ui.label(egui::RichText::new("Manifest:").strong());
+            ui.label(&integrity.manifest_sha256);
+            signature_status_badge(ui, report.manifest_signature.as_ref(), true);
         });
+        // Horizontal, not just vertical: a signature-status column added to
+        // an already-full-width grid must stay reachable by scrolling
+        // rather than being silently clipped past the window edge.
+        egui::ScrollArea::horizontal()
+            .id_salt("documents-scroll")
+            .show(ui, |ui| {
+                egui::Grid::new("documents").striped(true).show(ui, |ui| {
+                    for check in &integrity.documents {
+                        ui.label(&check.document_id);
+                        ui.label(egui::RichText::new(&check.role).color(muted(ui)));
+                        ui.label(&check.path);
+                        integrity_badge(ui, check.state);
+                        signature_status_badge(
+                            ui,
+                            signature_for_document(&check.document_id, &check.role),
+                            false,
+                        );
+                        ui.end_row();
+                    }
+                });
+            });
     });
     ui.add_space(8.0);
     card(ui, |ui| {
@@ -2033,5 +2159,34 @@ mod tests {
             setup.options(false).source_roots.is_empty(),
             "empty paths are not options"
         );
+    }
+
+    #[test]
+    fn trust_root_and_runner_key_are_parsed_and_left_unset_when_blank() {
+        let setup = CaseSetup::from_arguments(&[
+            "--trust-root".into(),
+            "examples/keys/trust-root.json".into(),
+            "--runner-key".into(),
+            "examples/keys/runner.seed".into(),
+        ])
+        .unwrap();
+        assert_eq!(setup.trust_root, "examples/keys/trust-root.json");
+        assert_eq!(setup.runner_key, "examples/keys/runner.seed");
+        let options = setup.options(false);
+        assert_eq!(
+            options.trust_root,
+            Some(PathBuf::from("examples/keys/trust-root.json"))
+        );
+        assert_eq!(
+            options.runner_key,
+            Some(PathBuf::from("examples/keys/runner.seed"))
+        );
+
+        // Unset (the default) never fabricates a path: `execute_case` must
+        // see `None`, not `Some(PathBuf::from(""))`, or every run would
+        // look for a trust root file named the empty string.
+        let unset = CaseSetup::default().options(false);
+        assert_eq!(unset.trust_root, None);
+        assert_eq!(unset.runner_key, None);
     }
 }

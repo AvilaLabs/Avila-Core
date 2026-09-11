@@ -23,6 +23,8 @@ avila-core inspect report.json --view steps --id STEP_ID
 avila-core history campaign.jsonl --case-id CASE_ID --limit 20
 avila-core history campaign.jsonl --invocation sha256:EXACT_64_HEX_DIGEST
 avila-core attempt campaign.jsonl CHILD_ATTEMPT_ID
+avila-core constellation campaign.jsonl
+# Optional: --id ATTEMPT_ID, --case-id CASE_ID, --offset/--limit
 
 # Current checks already belong to the execution path:
 avila-core run CASE --plan --capability NAME=EXECUTABLE --input NAME=FILE
@@ -36,8 +38,8 @@ views default to 20 entries and accept `--offset` and `--limit` (maximum 100).
 The response includes the total and next offset. A single entry can still be
 large; pagination limits entry count, not tokens.
 
-`avila-core tools list --json` publishes names and argument schemas for all ten
-queries. `avila-core tools call core_requirements --arguments
+`avila-core tools list --json` publishes names and argument schemas for all
+eleven queries. `avila-core tools call core_requirements --arguments
 '{"path":"report.json","id":"REQUIREMENT_ID"}' --json` calls the same operation
 as `inspect --view requirements`. `tools instructions` prints the concise
 integration guidance that the MCP server also supplies at initialization.
@@ -66,14 +68,15 @@ Use **Open saved results…** on Cases to browse a saved run report in Tools
 without running the case. This expects a full runner report, not a package’s
 `campaign-report.json`.
 
-Open **Tools** next to **Current case** and **Specimen compiler**. All ten
+Open **Tools** next to **Current case** and **Specimen compiler**. All eleven
 queries have named entries with the relevant filter fields; no JSON arguments
 or terminal commands are needed.
 
 Report queries can use **Current workbench run**, including a plan or a run
 that reused committed receipts without creating a workspace. Alternatively,
-select **Saved report** and paste or drop a report file. History and parent
-comparison take a campaign log path; diagnostic lookup takes a code.
+select **Saved report** and paste or drop a report file. History, attempt
+constellation, and parent comparison take a campaign log path; diagnostic
+lookup takes a code.
 Set **Campaign log** in the case workbench before running to record history
 from app runs and plans. In the history tool, **Use workbench log** selects it.
 
@@ -99,7 +102,13 @@ malformed line, unknown envelope version, or unsupported canonical JSON is an
 error, never a negative history answer. Missing verdicts remain absent rather
 than being converted into PASS/FAIL or a fabricated NOT_EVALUATED verdict.
 Attempt queries validate lineage and recompute the parent comparison using
-Core's existing exact comparison code, but do not verify signatures.
+Core's existing exact comparison code, but do not verify signatures. The
+constellation query projects one log in record order — every line, its raw
+digest, its lineage edge and candidate state where present, and a derived
+summary (roots, leaves, generations, requirement-status counts). The whole
+file validates before filtering, so a tampered tail is an error even when the
+selection sits earlier; an attempt the file never recorded is
+`no_match_in_record`, not an absent attempt.
 
 Queries currently support run-report envelopes v0.2–v0.5 and run-attempt logs
 v0.1–v0.3. This is a projection of recorded fields, not full schema conformance

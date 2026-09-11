@@ -38,6 +38,9 @@ enum Command {
     History(queries::HistoryArgs),
     /// Inspect an attempt and compare it with its identity-bound parent.
     Attempt(queries::AttemptArgs),
+    /// Read one campaign log's recorded constellation: every run in order
+    /// with its lineage edge, candidate state, verdicts, and a summary.
+    Constellation(queries::ConstellationArgs),
     /// Discover and call shared Core query tools, or print integration instructions.
     Tools {
         #[command(subcommand)]
@@ -276,6 +279,7 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
         Command::Inspect(args) => queries::inspect(args)?,
         Command::History(args) => queries::history(args)?,
         Command::Attempt(args) => queries::attempt(args)?,
+        Command::Constellation(args) => queries::constellation(args)?,
         Command::Tools { command } => queries::tools(command)?,
         Command::Mcp { command } => mcp::run(command)?,
         Command::SemanticProfile => {

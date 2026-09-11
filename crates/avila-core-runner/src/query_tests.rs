@@ -280,8 +280,141 @@ fn real_runner_report_and_log_are_queryable_without_mutation() {
     .unwrap();
     assert_eq!(result["result"]["total"], 1);
     assert_eq!(result["result"]["items"][0]["case_id"], report.case_id);
+    let constellation = call_tool(
+        &QueryContext::unrestricted(),
+        "core_constellation",
+        json!({"path":log_path}),
+    )
+    .unwrap();
+    assert_eq!(constellation["result"]["total"], 1);
+    assert_eq!(constellation["result"]["summary"]["untracked_records"], 1);
+    assert_eq!(constellation["result"]["lineage_validation"], "consistent");
     assert_eq!(fs::read(&path).unwrap(), bytes);
     assert_eq!(fs::read(&log_path).unwrap(), history_bytes);
     assert!(call_report_tool("core_history", json!({}), &bytes).is_err());
+    assert!(call_report_tool("core_constellation", json!({}), &bytes).is_err());
     assert!(call_report_tool("core_inspect", json!({"path":"ignored.json"}), &bytes).is_err());
+}
+
+fn constellation_log() -> String {
+    let manifest = format!("sha256:{}", "a".repeat(64));
+    let snapshot = format!("sha256:{}", "b".repeat(64));
+    let untracked = json!({"schema_version":"avila.core/run-attempt/v0.3-draft","case_id":"case",
+        "recorded_at":"2026-09-10T00:00:00Z","status":"evaluated",
+        "steps":[{"step_id":"screen","state":"executed"}],
+        "supplied_inputs":[{"input_id":"candidate","sha256":"sha256:cc"}],
+        "verdicts":[{"requirement_id":"R1","status":"fail","margin":"-1/4"}]});
+    let root_state = json!({"candidate_id":"root","ratio":"2"});
+    let root_state_sha256 = format!(
+        "sha256:{}",
+        sha256_hex(
+            canonicalize_json(&serde_json::to_vec(&root_state).unwrap())
+                .unwrap()
+                .as_slice()
+        )
+    );
+    let root = json!({"schema_version":"avila.core/run-attempt/v0.3-draft","case_id":"case",
+        "recorded_at":"2026-09-10T00:01:00Z","status":"evaluated",
+        "manifest_sha256":manifest,"compiled_snapshot_sha256":snapshot,
+        "steps":[{"step_id":"screen","state":"executed"}],
+        "verdicts":[{"requirement_id":"R1","status":"pass","margin":"3/8"}],
+        "attempt":{"schema_version":"avila.core/attempt-lineage/v0.1-draft",
+            "attempt_id":"root-a","generation":0,
+            "fixed_manifest_sha256":manifest,"fixed_compiled_snapshot_sha256":snapshot,
+            "candidate_input":"candidate","candidate_artifact_sha256":"sha256:aa",
+            "candidate_state_sha256":root_state_sha256,"candidate_state":root_state}});
+    let root_line = root.to_string();
+    let parent_sha256 = format!("sha256:{}", sha256_hex(root_line.as_bytes()));
+    let child_state = json!({"candidate_id":"child","ratio":"4"});
+    let child_state_sha256 = format!(
+        "sha256:{}",
+        sha256_hex(
+            canonicalize_json(&serde_json::to_vec(&child_state).unwrap())
+                .unwrap()
+                .as_slice()
+        )
+    );
+    let child = json!({"schema_version":"avila.core/run-attempt/v0.3-draft","case_id":"case",
+        "recorded_at":"2026-09-10T00:02:00Z","status":"evaluated",
+        "manifest_sha256":manifest,"compiled_snapshot_sha256":snapshot,
+        "steps":[{"step_id":"screen","state":"executed"}],
+        "verdicts":[{"requirement_id":"R1","status":"fail","margin":"-1/8"}],
+        "attempt":{"schema_version":"avila.core/attempt-lineage/v0.1-draft",
+            "attempt_id":"child-b","generation":1,
+            "parent_attempt_id":"root-a","parent_record_sha256":parent_sha256,
+            "fixed_manifest_sha256":manifest,"fixed_compiled_snapshot_sha256":snapshot,
+            "candidate_input":"candidate","candidate_artifact_sha256":"sha256:bb",
+            "candidate_state_sha256":child_state_sha256,"candidate_state":child_state,
+            "changes":[
+                {"kind":"replaced","pointer":"/candidate_id","before":"root","after":"child"},
+                {"kind":"replaced","pointer":"/ratio","before":"2","after":"4"}]}});
+    format!("{untracked}\n{root}\n{child}\n")
+}
+
+#[test]
+fn constellation_reads_the_whole_recorded_lineage() {
+    let text = constellation_log();
+    let result = constellation(text.as_bytes(), &QueryArgs::default()).unwrap();
+    assert_eq!(result["total"], 3);
+    assert_eq!(result["lineage_validation"], "consistent");
+    assert_eq!(result["signature_verification"], "not_checked");
+    let items = result["items"].as_array().unwrap();
+    assert_eq!(items[0]["attempt_id"], Value::Null);
+    assert_eq!(items[0]["verdicts"][0]["margin"], "-1/4");
+    assert_eq!(items[0]["supplied_inputs"][0]["input_id"], "candidate");
+    assert_eq!(items[1]["attempt_id"], "root-a");
+    assert_eq!(items[1]["candidate_state"]["ratio"], "2");
+    assert!(items[1].get("parent_attempt_id").is_none());
+    let child = &items[2];
+    assert_eq!(child["attempt_id"], "child-b");
+    assert_eq!(child["generation"], 1);
+    assert_eq!(child["parent_attempt_id"], "root-a");
+    assert_eq!(child["parent_line"], 2);
+    assert_eq!(child["changes"].as_array().unwrap().len(), 2);
+    let summary = &result["summary"];
+    assert_eq!(summary["lines"], 3);
+    assert_eq!(summary["attempt_records"], 2);
+    assert_eq!(summary["untracked_records"], 1);
+    assert_eq!(summary["roots"], json!(["root-a"]));
+    assert_eq!(summary["leaves"], json!(["child-b"]));
+    assert_eq!(summary["max_generation"], 1);
+    assert_eq!(summary["distinct_candidate_states"], 2);
+    assert_eq!(summary["requirement_status_counts"]["R1"]["fail"], 2);
+    assert_eq!(summary["requirement_status_counts"]["R1"]["pass"], 1);
+    let only_child = constellation(
+        text.as_bytes(),
+        &QueryArgs {
+            id: Some("child-b".into()),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(only_child["total"], 1);
+    assert_eq!(only_child["items"][0]["attempt_id"], "child-b");
+    let elsewhere = constellation(
+        text.as_bytes(),
+        &QueryArgs {
+            case_id: Some("elsewhere".into()),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(elsewhere["match_status"], "no_match_in_record");
+}
+
+#[test]
+fn constellation_refuses_a_tampered_or_incomplete_lineage() {
+    let good = constellation_log();
+    let mut lines: Vec<String> = good.split('\n').map(str::to_owned).collect();
+    // A child naming a parent the log does not carry is an error, not a gap.
+    let mut orphan: Value = serde_json::from_str(&lines[2]).unwrap();
+    orphan["attempt"]["parent_attempt_id"] = json!("absent");
+    lines[2] = orphan.to_string();
+    assert!(constellation(lines.join("\n").as_bytes(), &QueryArgs::default()).is_err());
+    // A malformed tail fails closed even when the constellation asked for is
+    // elsewhere in the file.
+    let broken = format!("{good}{{broken");
+    assert!(constellation(broken.as_bytes(), &QueryArgs::default()).is_err());
+    // A workbench report cannot masquerade as a log.
+    assert!(call_report_tool("core_constellation", json!({}), b"{}").is_err());
 }

@@ -19,11 +19,12 @@ pub(crate) enum Tool {
     Steps,
     History,
     Attempt,
+    Constellation,
     Diagnostic,
 }
 
 impl Tool {
-    const ALL: [Self; 10] = [
+    const ALL: [Self; 11] = [
         Self::Overview,
         Self::Requirements,
         Self::Findings,
@@ -33,6 +34,7 @@ impl Tool {
         Self::Steps,
         Self::History,
         Self::Attempt,
+        Self::Constellation,
         Self::Diagnostic,
     ];
     fn name(self) -> &'static str {
@@ -46,6 +48,7 @@ impl Tool {
             Self::Steps => "core_steps",
             Self::History => "core_history",
             Self::Attempt => "core_attempt",
+            Self::Constellation => "core_constellation",
             Self::Diagnostic => "core_explain",
         }
     }
@@ -60,6 +63,7 @@ impl Tool {
             Self::Steps => "Execution steps",
             Self::History => "Run history",
             Self::Attempt => "Compare with parent",
+            Self::Constellation => "Attempt constellation",
             Self::Diagnostic => "Explain a diagnostic",
         }
     }
@@ -82,6 +86,9 @@ impl Tool {
             Self::Attempt => {
                 "Compare an attempt with its bound parent using Core's lineage checks and exact margins."
             }
+            Self::Constellation => {
+                "See one campaign log's whole recorded constellation: attempts, lineage edges, candidate states, and verdicts."
+            }
             Self::Diagnostic => "Look up a diagnostic code and its next action in Core's catalog.",
         }
     }
@@ -93,7 +100,10 @@ impl Tool {
         })
     }
     fn report(self) -> bool {
-        !matches!(self, Self::History | Self::Attempt | Self::Diagnostic)
+        !matches!(
+            self,
+            Self::History | Self::Attempt | Self::Constellation | Self::Diagnostic
+        )
     }
     fn paginated(self) -> bool {
         !matches!(self, Self::Overview | Self::Attempt | Self::Diagnostic)
@@ -104,6 +114,7 @@ impl Tool {
             Self::Evidence => Some("Evidence ID (optional)"),
             Self::Steps => Some("Step ID (optional)"),
             Self::Attempt => Some("Attempt ID"),
+            Self::Constellation => Some("Attempt ID (optional)"),
             Self::Diagnostic => Some("Diagnostic code"),
             _ => None,
         }
@@ -187,13 +198,13 @@ impl ToolsView {
                 return Err("Enter the attempt ID or diagnostic code.".into());
             }
         }
-        if self.tool == Tool::History {
-            if !self.case_id.trim().is_empty() {
-                args["case_id"] = json!(self.case_id.trim());
-            }
-            if !self.invocation.trim().is_empty() {
-                args["invocation"] = json!(self.invocation.trim());
-            }
+        if self.tool == Tool::History && !self.invocation.trim().is_empty() {
+            args["invocation"] = json!(self.invocation.trim());
+        }
+        if matches!(self.tool, Tool::History | Tool::Constellation)
+            && !self.case_id.trim().is_empty()
+        {
+            args["case_id"] = json!(self.case_id.trim());
         }
         if self.tool.paginated() {
             args["offset"] = json!(offset);
@@ -329,8 +340,10 @@ impl ToolsView {
                 if let Some(label)=self.tool.id_label() {
                     ui.horizontal(|ui| {ui.label(label);changed|=ui.add(egui::TextEdit::singleline(&mut self.id).desired_width(280.0)).changed();});
                 }
-                if self.tool==Tool::History {
+                if matches!(self.tool,Tool::History|Tool::Constellation) {
                     ui.horizontal(|ui| {ui.label("Case ID (optional)");changed|=ui.text_edit_singleline(&mut self.case_id).changed();});
+                }
+                if self.tool==Tool::History {
                     ui.horizontal(|ui| {ui.label("Invocation hash (optional)");changed|=ui.add(egui::TextEdit::singleline(&mut self.invocation).desired_width(f32::INFINITY).hint_text("sha256:…")).changed();});
                 }
                 ui.horizontal(|ui| {

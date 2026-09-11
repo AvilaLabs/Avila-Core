@@ -127,6 +127,11 @@ const TOOLS: &[(&str, &str, bool)] = &[
         true,
     ),
     (
+        "core_constellation",
+        "Read one campaign JSONL log as the recorded constellation slice: every run in order with its lineage edge, candidate state, and verdicts, plus a derived lineage summary. Optional id selects one attempt. Absence means no match in this file only.",
+        true,
+    ),
+    (
         "core_explain",
         "Explain a stable Core diagnostic code. Requires id; no file access.",
         true,
@@ -145,8 +150,10 @@ pub fn tool_catalog() -> Vec<Value> {
             properties.insert("id".into(), json!({"type":"string","minLength":1}));
             if matches!(*name, "core_attempt" | "core_explain") { required.push("id"); }
         }
-        if *name == "core_history" {
+        if matches!(*name, "core_history" | "core_constellation") {
             properties.insert("case_id".into(), json!({"type":"string"}));
+        }
+        if *name == "core_history" {
             properties.insert("invocation".into(), json!({"type":"string","pattern":"^sha256:[0-9a-f]{64}$"}));
         }
         if !matches!(*name, "core_inspect" | "core_attempt" | "core_explain") {
@@ -247,7 +254,10 @@ fn validate_arguments(
 /// The same validation and projections serve file-backed CLI/MCP queries.
 /// `arguments` omits `path`; source identity names these exact serialized bytes.
 pub fn call_report_tool(name: &str, arguments: Value, bytes: &[u8]) -> Result<Value, String> {
-    if matches!(name, "core_history" | "core_attempt" | "core_explain") {
+    if matches!(
+        name,
+        "core_history" | "core_attempt" | "core_constellation" | "core_explain"
+    ) {
         return Err("this tool does not inspect a workbench report".into());
     }
     let args = validate_arguments(name, arguments, false)?;
@@ -285,6 +295,8 @@ fn call_validated_tool(
         history(&bytes, &args)?
     } else if name == "core_attempt" {
         crate::attempt::query_attempt(&bytes, args.id.as_deref().ok_or("id is required")?)?
+    } else if name == "core_constellation" {
+        constellation(&bytes, &args)?
     } else {
         let record = parse_json(&bytes)?;
         validate_report(&record)?;
@@ -506,6 +518,132 @@ fn history(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
         items.push(item);
     }
     Ok(page(items, args))
+}
+
+/// One campaign log's recorded constellation: every run in order, the ADR-0014
+/// lineage edge and candidate state where the line carries an attempt record,
+/// and a derived summary over the whole file. The lineage validator runs over
+/// the log first, so a tampered or corrupt line fails the query rather than
+/// silently dropping out of view; signatures are named, never re-verified.
+fn constellation(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
+    let content = std::str::from_utf8(bytes).map_err(|e| e.to_string())?;
+    let mut records = Vec::new();
+    for (index, line) in content.split('\n').enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let record =
+            parse_json(line.as_bytes()).map_err(|e| format!("history line {}: {e}", index + 1))?;
+        validate_history_record(&record).map_err(|e| format!("{e} on line {}", index + 1))?;
+        records.push((index + 1, line, record));
+    }
+    let attempts = crate::attempt::parse_attempts(content, Path::new("query snapshot"))?;
+    crate::attempt::validate_history(&attempts, None)?;
+
+    let mut items = Vec::new();
+    let mut case_ids = std::collections::BTreeSet::new();
+    let mut parented = std::collections::BTreeSet::new();
+    let mut attempt_ids = Vec::new();
+    let mut roots = Vec::new();
+    let mut candidate_states = std::collections::BTreeSet::new();
+    let mut max_generation = 0_u64;
+    let mut requirement_statuses: std::collections::BTreeMap<
+        String,
+        std::collections::BTreeMap<String, usize>,
+    > = std::collections::BTreeMap::new();
+    for (line_number, raw, record) in &records {
+        if let Some(case_id) = record["case_id"].as_str() {
+            case_ids.insert(case_id.to_string());
+        }
+        let verdicts = array_at(record, "/verdicts")?;
+        for verdict in &verdicts {
+            let requirement = verdict["requirement_id"].as_str().unwrap_or("");
+            let status = verdict["status"].as_str().unwrap_or("");
+            *requirement_statuses
+                .entry(requirement.to_string())
+                .or_default()
+                .entry(status.to_string())
+                .or_default() += 1;
+        }
+        let mut item = project(
+            record,
+            &[
+                "recorded_at",
+                "case_id",
+                "status",
+                "execution_status",
+                "campaign_sha256",
+                "supplied_inputs",
+            ],
+        );
+        item["line"] = json!(line_number);
+        item["record_sha256"] = json!(format!("sha256:{}", sha256_hex(raw.as_bytes())));
+        item["verdicts"] = json!(
+            verdicts
+                .iter()
+                .map(|verdict| project(
+                    verdict,
+                    &["requirement_id", "status", "rule", "unit", "margin"]
+                ))
+                .collect::<Vec<_>>()
+        );
+        if let Some(attempt_value) = record.get("attempt") {
+            let attempt: crate::attempt::AttemptRecord =
+                serde_json::from_value(attempt_value.clone()).map_err(|e| {
+                    format!("line {line_number} has an invalid attempt record: {e}")
+                })?;
+            item["attempt_id"] = json!(attempt.attempt_id);
+            item["generation"] = json!(attempt.generation);
+            item["candidate_input"] = json!(attempt.candidate_input);
+            item["candidate_state_sha256"] = json!(attempt.candidate_state_sha256);
+            item["candidate_state"] = attempt.candidate_state.clone();
+            if !attempt.changes.is_empty() {
+                item["changes"] =
+                    serde_json::to_value(&attempt.changes).map_err(|e| e.to_string())?;
+            }
+            max_generation = max_generation.max(attempt.generation);
+            candidate_states.insert(attempt.candidate_state_sha256.clone());
+            match (&attempt.parent_attempt_id, &attempt.parent_record_sha256) {
+                (Some(parent_id), Some(parent_sha256)) => {
+                    item["parent_attempt_id"] = json!(parent_id);
+                    item["parent_record_sha256"] = json!(parent_sha256);
+                    item["parent_line"] = json!(attempts[parent_id].line);
+                    parented.insert(parent_id.clone());
+                }
+                _ => roots.push(attempt.attempt_id.clone()),
+            }
+            attempt_ids.push(attempt.attempt_id);
+        } else {
+            item["attempt_id"] = Value::Null;
+        }
+        items.push(item);
+    }
+    let leaves: Vec<_> = attempt_ids
+        .iter()
+        .filter(|id| !parented.contains(*id))
+        .cloned()
+        .collect();
+    if let Some(case_id) = &args.case_id {
+        items.retain(|item| item["case_id"].as_str() == Some(case_id));
+    }
+    if let Some(id) = &args.id {
+        items.retain(|item| item["attempt_id"].as_str() == Some(id));
+    }
+    let mut result = page(items, args);
+    result["summary"] = json!({
+        "lines": records.len(),
+        "attempt_records": attempt_ids.len(),
+        "untracked_records": records.len() - attempt_ids.len(),
+        "case_ids": case_ids,
+        "roots": roots,
+        "leaves": leaves,
+        "max_generation": max_generation,
+        "distinct_candidate_states": candidate_states.len(),
+        "requirement_status_counts": requirement_statuses,
+    });
+    result["lineage_validation"] = json!("consistent");
+    result["signature_verification"] = json!("not_checked");
+    Ok(result)
 }
 
 /// Compact readable rendering; retains the source identity and all boundaries.

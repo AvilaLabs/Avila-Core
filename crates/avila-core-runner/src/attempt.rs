@@ -166,10 +166,10 @@ pub struct AttemptMarginUnavailable {
 }
 
 #[derive(Debug)]
-struct PriorAttempt {
+pub(crate) struct PriorAttempt {
     record: AttemptRecord,
     record_sha256: String,
-    line: usize,
+    pub(crate) line: usize,
     top_level_manifest_sha256: Option<String>,
     top_level_compiled_snapshot_sha256: Option<String>,
     verdicts: Option<Value>,
@@ -416,7 +416,10 @@ fn read_attempts(path: &Path) -> Result<BTreeMap<String, PriorAttempt>, String> 
     parse_attempts(&content, path)
 }
 
-fn parse_attempts(content: &str, path: &Path) -> Result<BTreeMap<String, PriorAttempt>, String> {
+pub(crate) fn parse_attempts(
+    content: &str,
+    path: &Path,
+) -> Result<BTreeMap<String, PriorAttempt>, String> {
     let mut attempts = BTreeMap::new();
     for (index, raw_line) in content.split('\n').enumerate() {
         if raw_line.trim().is_empty() {
@@ -508,7 +511,7 @@ pub(crate) fn query_attempt(bytes: &[u8], id: &str) -> Result<Value, String> {
     )
 }
 
-fn validate_history(
+pub(crate) fn validate_history(
     attempts: &BTreeMap<String, PriorAttempt>,
     trust_root: Option<&TrustRoot>,
 ) -> Result<(), String> {

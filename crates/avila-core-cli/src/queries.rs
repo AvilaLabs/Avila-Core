@@ -71,6 +71,22 @@ pub struct AttemptArgs {
     json: bool,
 }
 
+#[derive(Debug, Args)]
+pub struct ConstellationArgs {
+    log: PathBuf,
+    /// Select one attempt by exact id.
+    #[arg(long)]
+    id: Option<String>,
+    #[arg(long)]
+    case_id: Option<String>,
+    #[arg(long)]
+    offset: Option<usize>,
+    #[arg(long)]
+    limit: Option<usize>,
+    #[arg(long)]
+    json: bool,
+}
+
 #[derive(Debug, Subcommand)]
 pub enum ToolsCommand {
     /// List the same named tools and argument schemas exposed over MCP.
@@ -129,6 +145,15 @@ pub fn attempt(args: AttemptArgs) -> Result<(), Box<dyn Error>> {
         json!({"path":args.log,"id":args.id}),
         args.json,
     )
+}
+
+pub fn constellation(args: ConstellationArgs) -> Result<(), Box<dyn Error>> {
+    let mut values = json!({"path":args.log});
+    put(&mut values, "id", args.id);
+    put(&mut values, "case_id", args.case_id);
+    put(&mut values, "offset", args.offset);
+    put(&mut values, "limit", args.limit);
+    invoke("core_constellation", values, args.json)
 }
 
 pub fn tools(command: ToolsCommand) -> Result<(), Box<dyn Error>> {

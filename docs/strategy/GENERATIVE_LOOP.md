@@ -118,7 +118,9 @@ These slices exist as [CASE-001](../../examples/cases/case-001-shield-search/REA
 - **Campaign log.** `--log FILE` appends one JSON line per run: supplied
   inputs and their identities, step states, every verdict with its numbers
   and margin, and the campaign identity. That file is the raw material of the
-  engineering constellation; nothing reads it yet.
+  engineering constellation; `core_constellation` reads it as a bounded
+  projection — every recorded run in order, lineage edges, candidate states,
+  and verdicts — without acquiring any authority over the records.
 - **Scripted designer.** `examples/agents/shield_search.py` proposes layered
   slabs, screens them, and sends the feasible candidates with the most screen
   margin to transport. It reads reports and cannot construct a verdict.
@@ -166,7 +168,7 @@ exactly what fell short and by how much, and the log holds every candidate.
 
 Not yet: validation evidence behind an envelope, enforcement of
 qualification for every bounded verdict, physical evidence as a capability,
-and any optimizer or constellation view over the log. The workbench exposes free inputs,
+and any optimizer over the log. The workbench exposes free inputs,
 environment values, margins, coverage, and presentation requests, but cannot
 yet drive a search itself.
 
@@ -222,7 +224,7 @@ the candidate. Core stores its canonical state, derives typed JSON-Pointer
 changes, binds a child to the exact parent log record, and refuses execution if
 the lineage crosses a manifest or compiled-snapshot identity. Findings,
 verdict margins, receipts, and artifacts from the run remain in the same log
-entry. Core still has no built-in optimizer or constellation view: proposal
+entry. Core still has no built-in optimizer: proposal
 strategy remains outside the oracle, and the next real campaign must determine
 whether the new lineage actually improves iteration rather than merely making
 it tidier.
@@ -254,8 +256,9 @@ quench model, or turn normalized proxies into engineering safety. The I²t
 margin is especially narrow, and a conductor-resolved model is now the proper
 scientific falsification step. Core now derives a parent-bound comparison for
 each child: changed verdict states and exact child-minus-parent margin deltas
-are present in both JSON and concise human output. A constellation view and
-proposal strategy remain outside Core.
+are present in both JSON and concise human output, and `core_constellation`
+projects the whole log's lineage, candidate states, and verdicts read-only.
+The cross-campaign constellation and proposal strategy remain outside Core.
 
 ## What CASE-009 demonstrated (2026-09-04)
 

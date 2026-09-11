@@ -394,6 +394,11 @@ pub struct StepExecutionReport {
     pub receipt: Option<ReceiptSummary>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub outputs: Vec<OutputReport>,
+    /// Optional adapter claims whose pointers resolved to no value this run:
+    /// their evidence is legitimately absent, so dependent requirements see
+    /// missing evidence rather than an adapter defect.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub absent_slots: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub verification: Option<ReceiptCheck>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1765,6 +1770,7 @@ impl<'a> Runner<'a> {
                     receipt_signature: None,
                     receipt: None,
                     outputs: Vec::new(),
+                    absent_slots: Vec::new(),
                     verification: None,
                     replay: None,
                     findings: vec![RunFinding::runtime(
@@ -1840,6 +1846,7 @@ impl<'a> Runner<'a> {
             receipt_signature: None,
             receipt: None,
             outputs: Vec::new(),
+            absent_slots: Vec::new(),
             verification: None,
             replay: None,
             findings: Vec::new(),
@@ -2284,7 +2291,11 @@ impl<'a> Runner<'a> {
                         .iter()
                         .map(|claim| claim.output_slot.as_str())
                         .collect();
-                    if extracted_slots != adapter_slots {
+                    let required_slots: BTreeSet<&str> =
+                        adapter.required_output_slots().into_iter().collect();
+                    if !required_slots.is_subset(&extracted_slots)
+                        || !extracted_slots.is_subset(&adapter_slots)
+                    {
                         report.add_finding(
                             CORE_X2801,
                             FindingClass::Invalid,
@@ -2292,13 +2303,19 @@ impl<'a> Runner<'a> {
                             "adapter_owner",
                             SourceLocation::new("case-run", "/execution"),
                             format!(
-                                "adapter extracted claims for {:?}, but declares {:?}",
-                                extracted_slots, adapter_slots
+                                "adapter extracted claims for {:?}, but requires {:?} and declares {:?}",
+                                extracted_slots, required_slots, adapter_slots
                             ),
                         );
                         report.state = StepExecutionState::Failed;
                         return Ok(report);
                     }
+                    report.absent_slots = adapter
+                        .optional_output_slots()
+                        .into_iter()
+                        .filter(|slot| !extracted_slots.contains(slot))
+                        .map(str::to_string)
+                        .collect();
                     for (output, _) in &outputs {
                         report.outputs.push(OutputReport {
                             output_id: output.output_id.clone(),
@@ -2636,7 +2653,12 @@ impl<'a> Runner<'a> {
                 .iter()
                 .map(|claim| claim.output_slot.as_str())
                 .collect();
-            if !extracted.is_empty() && extracted_slots != adapter_slots {
+            let required_slots: BTreeSet<&str> =
+                adapter.required_output_slots().into_iter().collect();
+            if !extracted.is_empty()
+                && (!required_slots.is_subset(&extracted_slots)
+                    || !extracted_slots.is_subset(&adapter_slots))
+            {
                 report.add_finding(
                     CORE_X2801,
                     FindingClass::Invalid,
@@ -2644,11 +2666,17 @@ impl<'a> Runner<'a> {
                     "adapter_owner",
                     SourceLocation::new("case-run", "/execution"),
                     format!(
-                        "adapter extracted claims for {:?}, but declares {:?}",
-                        extracted_slots, adapter_slots
+                        "adapter extracted claims for {:?}, but requires {:?} and declares {:?}",
+                        extracted_slots, required_slots, adapter_slots
                     ),
                 );
             }
+            report.absent_slots = adapter
+                .optional_output_slots()
+                .into_iter()
+                .filter(|slot| !extracted_slots.contains(slot))
+                .map(str::to_string)
+                .collect();
         }
 
         for output in &receipt.outputs {
@@ -3161,6 +3189,18 @@ fn changes_since(
             class: ChangeClass::Invocation,
             detail: "the adapter's arguments, environment, working directory, or timeout differ"
                 .into(),
+        });
+    }
+    // The descriptor digest is invocation identity: extraction or mapping
+    // edits that leave argv untouched must still invalidate the receipt.
+    if old.adapter_sha256 != new.adapter_sha256 {
+        changes.push(ChangeRecord {
+            class: ChangeClass::Invocation,
+            detail: format!(
+                "adapter descriptor {} → {}",
+                old.adapter_sha256.as_deref().unwrap_or("none"),
+                new.adapter_sha256.as_deref().unwrap_or("none")
+            ),
         });
     }
     if committed.status != ReceiptStatus::Completed || committed.process.exit_status != Some(0) {

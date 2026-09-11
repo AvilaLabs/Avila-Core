@@ -123,7 +123,12 @@
             "output_slot": { "$ref": "#/$defs/nonemptyString" },
             "output_id": { "$ref": "#/$defs/nonemptyString" },
             "pointer": { "$ref": "#/$defs/jsonPointer" },
-            "unit": { "$ref": "#/$defs/nonemptyString" }
+            "unit": { "$ref": "#/$defs/nonemptyString" },
+            "optional": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, a pointer that resolves to no value leaves the claim absent instead of failing extraction; dependent requirements see missing evidence. A present but malformed value still fails."
+            }
           }
         },
         {
@@ -140,6 +145,11 @@
               "minItems": 1,
               "uniqueItems": true,
               "items": { "$ref": "#/$defs/nonemptyString" }
+            },
+            "optional": {
+              "type": "boolean",
+              "default": false,
+              "description": "Same absence semantics as the exact variant."
             }
           }
         }

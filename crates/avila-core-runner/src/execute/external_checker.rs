@@ -63,12 +63,19 @@ pub enum ExternalClaim {
         output_id: String,
         pointer: String,
         unit: String,
+        /// An optional claim is silently absent when its pointer resolves to
+        /// no value; a present-but-malformed value still fails extraction.
+        #[serde(default)]
+        optional: bool,
     },
     Categorical {
         output_slot: String,
         output_id: String,
         pointer: String,
         allowed_values: Vec<String>,
+        /// Same absence semantics as the exact variant.
+        #[serde(default)]
+        optional: bool,
     },
 }
 
@@ -88,6 +95,12 @@ impl ExternalClaim {
     fn pointer(&self) -> &str {
         match self {
             Self::Exact { pointer, .. } | Self::Categorical { pointer, .. } => pointer,
+        }
+    }
+
+    fn optional(&self) -> bool {
+        match self {
+            Self::Exact { optional, .. } | Self::Categorical { optional, .. } => *optional,
         }
     }
 }
@@ -254,6 +267,27 @@ impl ExternalCheckerAdapter {
         self.claims.iter().map(ExternalClaim::output_slot).collect()
     }
 
+    /// Slots whose claim must always be extracted; an optional claim that
+    /// resolves to no value is absent from the extraction, which dependent
+    /// requirements see as missing evidence rather than an adapter defect.
+    pub fn required_output_slots(&self) -> Vec<&str> {
+        self.claims
+            .iter()
+            .filter(|claim| !claim.optional())
+            .map(ExternalClaim::output_slot)
+            .collect()
+    }
+
+    /// Slots declared optional: present when the pointer resolves, absent
+    /// otherwise.
+    pub fn optional_output_slots(&self) -> Vec<&str> {
+        self.claims
+            .iter()
+            .filter(|claim| claim.optional())
+            .map(ExternalClaim::output_slot)
+            .collect()
+    }
+
     pub fn arguments(&self, staged: &BTreeMap<String, String>) -> Result<Vec<String>, String> {
         let supplied: BTreeSet<&str> = staged.keys().map(String::as_str).collect();
         let expected: BTreeSet<&str> = self.input_slots.iter().map(String::as_str).collect();
@@ -318,50 +352,53 @@ impl ExternalCheckerAdapter {
             documents.insert(claim.output_id().to_string(), document);
         }
 
-        self.claims
-            .iter()
-            .map(|claim| {
-                let document = documents
-                    .get(claim.output_id())
-                    .expect("every referenced output was parsed");
-                let value = document.pointer(claim.pointer()).ok_or_else(|| {
-                    format!(
-                        "checker output `{}` has no value at JSON Pointer `{}`",
-                        claim.output_id(),
-                        claim.pointer()
-                    )
-                })?;
-                let claim_value = match claim {
-                    ExternalClaim::Exact { unit, .. } => {
-                        let exact = exact_value(value, claim.pointer())?;
-                        json!({
-                            "model": "exact",
-                            "nominal": { "value": exact, "unit": unit },
-                        })
+        let mut extracted = Vec::new();
+        for claim in &self.claims {
+            let document = documents
+                .get(claim.output_id())
+                .expect("every referenced output was parsed");
+            let Some(value) = document.pointer(claim.pointer()) else {
+                if claim.optional() {
+                    continue;
+                }
+                return Err(format!(
+                    "checker output `{}` has no value at JSON Pointer `{}`",
+                    claim.output_id(),
+                    claim.pointer()
+                ));
+            };
+            let claim_value = match claim {
+                ExternalClaim::Exact { unit, .. } => {
+                    let exact = exact_value(value, claim.pointer())?;
+                    json!({
+                        "model": "exact",
+                        "nominal": { "value": exact, "unit": unit },
+                    })
+                }
+                ExternalClaim::Categorical { allowed_values, .. } => {
+                    let CanonicalJsonValue::String(category) = value else {
+                        return Err(format!(
+                            "categorical value at `{}` must be a string",
+                            claim.pointer()
+                        ));
+                    };
+                    if !allowed_values.contains(category) {
+                        return Err(format!(
+                            "categorical value `{category}` at `{}` is outside the descriptor's closed set {:?}",
+                            claim.pointer(),
+                            allowed_values
+                        ));
                     }
-                    ExternalClaim::Categorical { allowed_values, .. } => {
-                        let CanonicalJsonValue::String(category) = value else {
-                            return Err(format!(
-                                "categorical value at `{}` must be a string",
-                                claim.pointer()
-                            ));
-                        };
-                        if !allowed_values.contains(category) {
-                            return Err(format!(
-                                "categorical value `{category}` at `{}` is outside the descriptor's closed set {:?}",
-                                claim.pointer(), allowed_values
-                            ));
-                        }
-                        json!({ "model": "unquantified", "value": category })
-                    }
-                };
-                Ok(ExtractedClaim {
-                    output_slot: claim.output_slot().to_string(),
-                    output_id: claim.output_id().to_string(),
-                    claim: claim_value,
-                })
-            })
-            .collect()
+                    json!({ "model": "unquantified", "value": category })
+                }
+            };
+            extracted.push(ExtractedClaim {
+                output_slot: claim.output_slot().to_string(),
+                output_id: claim.output_id().to_string(),
+                claim: claim_value,
+            });
+        }
+        Ok(extracted)
     }
 
     pub fn timeout(&self) -> Duration {
@@ -552,6 +589,48 @@ mod tests {
     }
 
     #[test]
+    fn optional_claims_are_absent_not_failed_when_the_pointer_misses() {
+        let mut value = serde_json::to_value(descriptor()).unwrap();
+        value["claims"][0]["optional"] = json!(true);
+        let adapter =
+            ExternalCheckerAdapter::from_bytes(&serde_json::to_vec(&value).unwrap()).unwrap();
+        assert_eq!(adapter.required_output_slots(), ["outcome"]);
+        assert_eq!(adapter.optional_output_slots(), ["remaining"]);
+
+        // The optional pointer misses: only the required claim is extracted.
+        let claims = adapter
+            .extract_claims(
+                &BTreeMap::from([("report".into(), br#"{"outcome":"rejected"}"#.to_vec())]),
+                &StepContext::default(),
+            )
+            .unwrap();
+        assert_eq!(claims.len(), 1);
+        assert_eq!(claims[0].output_slot, "outcome");
+
+        // A present but malformed value still fails: optional governs
+        // absence, not correctness.
+        let invalid = adapter
+            .extract_claims(
+                &BTreeMap::from([(
+                    "report".into(),
+                    br#"{"remaining":"not-a-number","outcome":"clear"}"#.to_vec(),
+                )]),
+                &StepContext::default(),
+            )
+            .unwrap_err();
+        assert!(invalid.contains("exact value"));
+
+        // A required claim whose pointer misses still fails extraction.
+        let missing = descriptor()
+            .extract_claims(
+                &BTreeMap::from([("report".into(), br#"{"outcome":"clear"}"#.to_vec())]),
+                &StepContext::default(),
+            )
+            .unwrap_err();
+        assert!(missing.contains("has no value at JSON Pointer"));
+    }
+
+    #[test]
     fn extraction_refuses_unknown_categories_and_non_authoritative_numbers() {
         let adapter = descriptor();
         let unknown = adapter
@@ -619,11 +698,12 @@ mod tests {
     }
 
     #[cfg(unix)]
-    #[test]
-    fn package_declared_checker_executes_and_logs_categorical_evidence() {
+    /// Build a single-step external-checker case: a copy-stub checker maps
+    /// `candidate` to `report`, with exact `remaining` and categorical
+    /// `outcome` claims. Returns (case dir, artifact root, supplied checker).
+    fn external_case(temp: &TestDir) -> (PathBuf, PathBuf, PathBuf) {
         use std::os::unix::fs::symlink;
 
-        let temp = TestDir::new();
         let case = temp.0.join("case");
         let root = temp.0.join("artifacts");
         fs::create_dir_all(&case).unwrap();
@@ -817,25 +897,70 @@ mod tests {
             }]
         });
         write_json(&case.join("package.json"), &package);
+        (case, root, supplied_checker)
+    }
 
+    #[cfg(unix)]
+    /// Commit the receipt a fresh run left in the workspace so a later run
+    /// can exercise committed-receipt reuse.
+    fn bless_external_case(case: &Path, workspace: &Path) {
+        fs::create_dir_all(case.join("receipts")).unwrap();
+        fs::copy(
+            workspace.join("check/receipt.json"),
+            case.join("receipts/check.json"),
+        )
+        .unwrap();
+        let mut package: Value =
+            serde_json::from_slice(&fs::read(case.join("package.json")).unwrap()).unwrap();
+        package["documents"].as_array_mut().unwrap().push(json!({
+            "document_id": "check-receipt", "role": "execution_receipt",
+            "path": "receipts/check.json",
+            "sha256": sha256_file(&case.join("receipts/check.json")).unwrap().0,
+            "step_id": "check"
+        }));
+        write_json(&case.join("package.json"), &package);
+    }
+
+    #[cfg(unix)]
+    fn external_options(
+        temp: &TestDir,
+        root: &Path,
+        supplied_checker: &Path,
+        workspace: &Path,
+        reuse: bool,
+    ) -> CaseRunOptions {
+        CaseRunOptions {
+            source_roots: BTreeMap::from([("fixture".into(), root.to_path_buf())]),
+            capabilities: BTreeMap::from([("checker".into(), supplied_checker.to_path_buf())]),
+            workspace: Some(workspace.to_path_buf()),
+            reuse,
+            plan_only: false,
+            inputs: BTreeMap::new(),
+            environment: BTreeMap::new(),
+            log: Some(temp.0.join("attempts.jsonl")),
+            expected_manifest_sha256: None,
+            attempt: None,
+            hash_cache: None,
+            trust_root: None,
+            runner_key: None,
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn package_declared_checker_executes_and_logs_categorical_evidence() {
+        let temp = TestDir::new();
+        let (case, root, supplied_checker) = external_case(&temp);
         let log = temp.0.join("attempts.jsonl");
         let report = execute_case(
             &case,
-            &CaseRunOptions {
-                source_roots: BTreeMap::from([("fixture".into(), root)]),
-                capabilities: BTreeMap::from([("checker".into(), supplied_checker.clone())]),
-                workspace: Some(temp.0.join("workspace")),
-                reuse: false,
-                plan_only: false,
-                inputs: BTreeMap::new(),
-                environment: BTreeMap::new(),
-                log: Some(log.clone()),
-                expected_manifest_sha256: None,
-                attempt: None,
-                hash_cache: None,
-                trust_root: None,
-                runner_key: None,
-            },
+            &external_options(
+                &temp,
+                &root,
+                &supplied_checker,
+                &temp.0.join("workspace"),
+                false,
+            ),
         )
         .unwrap();
         assert_eq!(
@@ -882,5 +1007,118 @@ mod tests {
             "document_id":id, "role":role, "path":path,
             "sha256":sha256_file(&case.join(path)).unwrap().0
         })
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_optional_claim_absent_in_the_output_leaves_the_requirement_unevaluated() {
+        let temp = TestDir::new();
+        let (case, root, supplied_checker) = external_case(&temp);
+
+        // The optional claim misses: a supplied candidate emits only
+        // `outcome`. The package declares `candidate` free so the run
+        // supplies it; the step is invalidated, its committed claims are
+        // withheld, and the fresh extraction carries only what exists.
+        let absent = b"{\"outcome\":\"rejected\"}\n";
+        let supplied_candidate = temp.0.join("supplied-candidate.json");
+        fs::write(&supplied_candidate, absent.as_slice()).unwrap();
+        let mut adapter: Value =
+            serde_json::from_slice(&fs::read(case.join("adapter.json")).unwrap()).unwrap();
+        adapter["claims"][0]["optional"] = json!(true);
+        write_json(&case.join("adapter.json"), &adapter);
+        let mut package: Value =
+            serde_json::from_slice(&fs::read(case.join("package.json")).unwrap()).unwrap();
+        package["free_inputs"] = json!(["candidate"]);
+        for document in package["documents"].as_array_mut().unwrap() {
+            if document["document_id"] == "test/check@1" {
+                document["sha256"] = json!(sha256_file(&case.join("adapter.json")).unwrap().0);
+            }
+        }
+        write_json(&case.join("package.json"), &package);
+
+        let mut options = external_options(
+            &temp,
+            &root,
+            &supplied_checker,
+            &temp.0.join("workspace"),
+            false,
+        );
+        options.inputs = BTreeMap::from([("candidate".into(), supplied_candidate)]);
+        let report = execute_case(&case, &options).unwrap();
+        let summary = human_summary(&report);
+        // The step completes and reports the absence; the requirement
+        // sees missing evidence and stays NOT_EVALUATED.
+        assert_eq!(
+            report.execution.as_ref().unwrap().steps[0].state,
+            StepExecutionState::Executed,
+            "{summary}"
+        );
+        assert_eq!(
+            report.execution.as_ref().unwrap().steps[0].absent_slots,
+            ["remaining"]
+        );
+        assert_eq!(report.margins[0].status, VerdictStatus::NotEvaluated);
+        assert!(summary.contains("absent optional claim(s): remaining"));
+        let generated: Value =
+            serde_json::from_slice(&fs::read(temp.0.join("workspace/claims.json")).unwrap())
+                .unwrap();
+        assert_eq!(generated["claims"].as_array().unwrap().len(), 1);
+        assert_eq!(generated["claims"][0]["output_slot"], "outcome");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_adapter_descriptor_change_invalidates_the_committed_receipt() {
+        let temp = TestDir::new();
+        let (case, root, supplied_checker) = external_case(&temp);
+        let workspace = temp.0.join("workspace");
+        let options = external_options(&temp, &root, &supplied_checker, &workspace, false);
+        let first = execute_case(&case, &options).unwrap();
+        assert_eq!(
+            first.execution.as_ref().unwrap().steps[0].state,
+            StepExecutionState::Executed,
+            "{}",
+            human_summary(&first)
+        );
+        bless_external_case(&case, &workspace);
+
+        // The descriptor changes without touching argv: identical staged
+        // inputs, identical capability, but a different extraction rule.
+        let mut adapter: Value =
+            serde_json::from_slice(&fs::read(case.join("adapter.json")).unwrap()).unwrap();
+        adapter["claims"][0]["optional"] = json!(true);
+        write_json(&case.join("adapter.json"), &adapter);
+        let mut package: Value =
+            serde_json::from_slice(&fs::read(case.join("package.json")).unwrap()).unwrap();
+        for document in package["documents"].as_array_mut().unwrap() {
+            if document["document_id"] == "test/check@1" {
+                document["sha256"] = json!(sha256_file(&case.join("adapter.json")).unwrap().0);
+            }
+        }
+        write_json(&case.join("package.json"), &package);
+
+        let mut options = external_options(
+            &temp,
+            &root,
+            &supplied_checker,
+            &temp.0.join("workspace2"),
+            true,
+        );
+        options.plan_only = true;
+        let report = execute_case(&case, &options).unwrap();
+        let step = &report.execution.as_ref().unwrap().steps[0];
+        assert_eq!(
+            step.state,
+            StepExecutionState::Planned,
+            "{}",
+            human_summary(&report)
+        );
+        assert!(
+            step.changes
+                .iter()
+                .any(|change| change.detail.contains("adapter descriptor")),
+            "{:?}",
+            step.changes
+        );
     }
 }

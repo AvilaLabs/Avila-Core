@@ -432,6 +432,13 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                                 }
                             );
                         }
+                        if !step.absent_slots.is_empty() {
+                            let _ = writeln!(
+                                out,
+                                "      absent optional claim(s): {}",
+                                step.absent_slots.join(", ")
+                            );
+                        }
                     }
                     StepExecutionState::Reused => {
                         let _ = writeln!(
@@ -444,6 +451,13 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                             step.planned_invocation_sha256.as_deref().unwrap_or("?"),
                             step.outputs.len()
                         );
+                        if !step.absent_slots.is_empty() {
+                            let _ = writeln!(
+                                out,
+                                "      absent optional claim(s): {}",
+                                step.absent_slots.join(", ")
+                            );
+                        }
                     }
                     StepExecutionState::Planned => {
                         let _ = writeln!(

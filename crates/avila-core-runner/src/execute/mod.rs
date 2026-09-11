@@ -205,6 +205,25 @@ impl Adapter {
         }
     }
 
+    /// Slots whose claim must always be extracted; external checkers may
+    /// declare a claim `optional`, in which case its absence is legitimate
+    /// evidence, not an adapter defect. Built-in adapters have none.
+    pub fn required_output_slots(&self) -> Vec<&str> {
+        match self {
+            Self::ExternalChecker { adapter, .. } => adapter.required_output_slots(),
+            _ => self.output_slots(),
+        }
+    }
+
+    /// Slots declared optional by an external checker: extracted when the
+    /// pointer resolves, legitimately absent otherwise.
+    pub fn optional_output_slots(&self) -> Vec<&str> {
+        match self {
+            Self::ExternalChecker { adapter, .. } => adapter.optional_output_slots(),
+            _ => Vec::new(),
+        }
+    }
+
     pub fn timeout(&self) -> Duration {
         match self {
             Self::AftermatterEvaluate => aftermatter::TIMEOUT,
@@ -1037,6 +1056,7 @@ mod tests {
                 output_id: "result".into(),
                 pointer: "/outcome".into(),
                 allowed_values: vec!["ok".into()],
+                optional: false,
             }],
             timeout_ms: 1_000,
             limitations: Vec::new(),

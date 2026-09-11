@@ -705,6 +705,40 @@ class TestQualificationEnvelopeConsistency(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Item 10: requirement-set coverage (S-024) — every case binding a
+# requirement_set re-derives a complete declaration; a case without one
+# gets no check at all. CASE-002 is included here deliberately: its stale
+# claims only affect item 9's qualification checks; its coverage
+# declaration is current and must still re-derive.
+# ---------------------------------------------------------------------------
+
+
+class TestCoverageReDerivation(unittest.TestCase):
+    BOUND = ["case-001-shield-search", "case-002-coupled-shield", "case-003-thermal-spreader"]
+    UNBOUND = ["case-000-actinv-aftermatter", "case-008-mode-selective-quench", "case-009-ncsx-copper-discharge"]
+
+    @staticmethod
+    def coverage_checks(case_dir: Path) -> dict:
+        package = load(case_dir / "package.json")
+        contract = load(case_dir / "contract.json")
+        report = v.Report(str(case_dir))
+        v.verify_case_coverage(case_dir, package, contract, report)
+        return {c.check: c for c in report.checks}
+
+    def test_bound_cases_re_derive_complete(self):
+        for case_name in self.BOUND:
+            checks = self.coverage_checks(EXAMPLES / case_name)
+            check = checks.get("coverage.requirement_set")
+            self.assertIsNotNone(check, case_name)
+            self.assertEqual(check.status, "verified", f"{case_name}: {check.to_dict()}")
+            self.assertIn("re-derives complete", check.detail)
+
+    def test_unbound_cases_emit_no_coverage_check(self):
+        for case_name in self.UNBOUND:
+            self.assertEqual(self.coverage_checks(EXAMPLES / case_name), {}, case_name)
+
+
+# ---------------------------------------------------------------------------
 # Section 6: every committed attempt-lineage log
 # ---------------------------------------------------------------------------
 
@@ -1128,6 +1162,110 @@ class TestMutations(unittest.TestCase):
         by_check = self._qualification_report(case_dir)
         self.assertEqual(by_check["qualification.screen-mass"].status, "mismatch")
         self.assertIn("planned invocation", by_check["qualification.screen-mass"].detail)
+
+    # -----------------------------------------------------------------
+    # Item 10's own mutations: a declaration edit that makes coverage
+    # incomplete — a conforming `run` would refuse it, so committed
+    # artifacts under it are self-inconsistent.
+    # -----------------------------------------------------------------
+
+    def _coverage_check(self, case_dir: Path):
+        return TestCoverageReDerivation.coverage_checks(case_dir)["coverage.requirement_set"]
+
+    def test_dropping_the_bounded_cover_is_named_by_coverage(self):
+        # neutron-dose-rate must be covered on at least a bounded basis;
+        # leaving only the nominal screen makes the derivation incomplete.
+        case_dir = self._copy_case("case-001-shield-search")
+        package_path = case_dir / "package.json"
+        package = json.loads(package_path.read_text())
+        package["coverage"]["mapping"]["neutron-dose-rate"] = ["SHIELD-R1-screen"]
+        _write_json(package_path, package)
+
+        check = self._coverage_check(case_dir)
+        self.assertEqual(check.status, "mismatch")
+        self.assertIn("weaker", check.detail)
+        self.assertIn("neutron-dose-rate", check.detail)
+
+    def test_deleting_a_stated_omission_is_named_by_coverage(self):
+        # streaming-paths is must_state; silently dropping its omission
+        # leaves it uncovered and unstated.
+        case_dir = self._copy_case("case-001-shield-search")
+        package_path = case_dir / "package.json"
+        package = json.loads(package_path.read_text())
+        package["coverage"]["omissions"] = [
+            omission
+            for omission in package["coverage"]["omissions"]
+            if omission["set_requirement_id"] != "streaming-paths"
+        ]
+        _write_json(package_path, package)
+
+        check = self._coverage_check(case_dir)
+        self.assertEqual(check.status, "mismatch")
+        self.assertIn("streaming-paths", check.detail)
+        self.assertIn("no omission is stated", check.detail)
+
+    def test_mapping_a_requirement_that_does_not_exist_is_named_by_coverage(self):
+        case_dir = self._copy_case("case-001-shield-search")
+        package_path = case_dir / "package.json"
+        package = json.loads(package_path.read_text())
+        package["coverage"]["mapping"]["areal-mass"] = ["SHIELD-R9-nonexistent"]
+        _write_json(package_path, package)
+
+        check = self._coverage_check(case_dir)
+        self.assertEqual(check.status, "mismatch")
+        self.assertIn("does not exist", check.detail)
+
+    def test_raising_the_sets_minimum_basis_is_named_by_coverage(self):
+        # Editing the bound requirement-set document itself: requiring an
+        # enclosure basis where only bounded requirements map makes the
+        # derivation incomplete. The manifest entry is re-hashed so package
+        # identity stays self-consistent — only the coverage check fires.
+        case_dir = self._copy_case("case-001-shield-search")
+        set_path = case_dir / "requirement-set.json"
+        set_doc = json.loads(set_path.read_text())
+        for entry in set_doc["requirements"]:
+            if entry["set_requirement_id"] == "neutron-dose-rate":
+                entry["minimum_basis"] = "enclosure"
+        _write_json(set_path, set_doc)
+        package_path = case_dir / "package.json"
+        package = json.loads(package_path.read_text())
+        _rehash_document(package, "case-001-requirement-set", v.sha256_file(set_path))
+        _write_json(package_path, package)
+
+        check = self._coverage_check(case_dir)
+        self.assertEqual(check.status, "mismatch")
+        self.assertIn("weaker", check.detail)
+
+    def test_edited_campaign_findings_are_named_by_campaign_identity(self):
+        # `findings` is inside the campaign_sha256 identity body but is not
+        # a field verdict re-derivation compares — only the digest catches
+        # an edit to it.
+        case_dir = self._copy_case("case-003-thermal-spreader")
+        report_path = case_dir / "campaign-report.json"
+        campaign = json.loads(report_path.read_text())
+        campaign.setdefault("findings", []).append(
+            {"severity": "error", "code": "FORGED", "message": "added after the fact"}
+        )
+        _write_json(report_path, campaign)
+        package_path = case_dir / "package.json"
+        package = json.loads(package_path.read_text())
+        _rehash_document(package, "case-003-expected-campaign", v.sha256_file(report_path))
+        _write_json(package_path, package)
+
+        report = v.Report(str(case_dir))
+        v.verify_case_verdicts(
+            json.loads((case_dir / "contract.json").read_text()),
+            json.loads((case_dir / "registry.json").read_text()),
+            json.loads((case_dir / "claims.json").read_text()),
+            json.loads(report_path.read_text()),
+            report,
+        )
+        by_check = {c.check: c for c in report.checks}
+        self.assertEqual(by_check["verdict.campaign_sha256"].status, "mismatch")
+        self.assertIn("recomputed", by_check["verdict.campaign_sha256"].detail)
+        verdict_checks = [c for c in report.checks if c.check.startswith("verdict.") and c.check != "verdict.campaign_sha256"]
+        for check in verdict_checks:
+            self.assertNotEqual(check.status, "mismatch", check.to_dict())
 
 
 if __name__ == "__main__":

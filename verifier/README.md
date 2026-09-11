@@ -19,7 +19,7 @@ Evidence-package spike build gate.
 
 ## Supported profile
 
-This file checks exactly nine things and refuses everything else by name.
+This file checks exactly ten things and refuses everything else by name.
 See the module docstring in `avila_core_verify.py` for the full, precise
 statement (each item there cites the ADR clause or fixture file it proves
 agreement against); in short:
@@ -48,7 +48,10 @@ agreement against); in short:
    `unit-scaling.v1.json`, and on every fixture in
    `fixtures/semantic-core/campaigns/campaign-cases.v1.json` except three
    that need a compiler this profile does not implement (named in
-   `test_verifier.py`'s `NOT_RE_DERIVABLE_CAMPAIGN_FIXTURES`).
+   `test_verifier.py`'s `NOT_RE_DERIVABLE_CAMPAIGN_FIXTURES`). Also
+   recomputes the committed report's `campaign_sha256` over its semantic
+   body — the digest additionally binds the `findings` and `admissions`
+   fields this profile does not individually re-derive.
 6. **Attempt lineage** — verifies a campaign/attempt JSONL log's
    parent-line SHA-256 binding, candidate-state digest, manifest/snapshot
    inheritance, and the recursive RFC 6901 `changes` diff (ADR-0014).
@@ -57,10 +60,13 @@ agreement against); in short:
    line, one verdict margin, one signature byte, one signature's key id,
    one manifest (without re-signing it), one qualification envelope term,
    one persisted applicability-fact value, one qualification context (by
-   removal), one context input identity, and one context (by lifting it
-   from a sibling step), each in a scratch copy of a real case with
-   everything *else* re-hashed to stay self-consistent, and asserts this
-   verifier names exactly the corrupted layer.
+   removal), one context input identity, one context (by lifting it from a
+   sibling step), four coverage declarations (a dropped bounded cover, a
+   deleted stated omission, a mapping to a requirement that does not
+   exist, a raised `minimum_basis` in the bound set), and one
+   campaign-report `findings` entry, each in a scratch copy of a real case
+   with everything *else* re-hashed to stay self-consistent, and asserts
+   this verifier names exactly the corrupted layer.
 8. **ADR-0015 signatures** — a from-scratch, standard-library Ed25519 (RFC
    8032), proved against every RFC 8032 section 7.1 test vector and every
    ADR-0015 signature document committed under `examples/cases/*/signatures/`.
@@ -92,17 +98,29 @@ agreement against); in short:
    cannot be regenerated); every one of its qualified claims' missing
    context is reported as a mismatch until the case is deliberately
    re-pinned and re-blessed.
+10. **Requirement-set coverage** (S-024) — a case package may bind one
+    `requirement_set` document and declare in its manifest which contract
+    requirements cover each set entry and, for the rest, a reason and an
+    accepting owner. A `run` refuses to spend evaluation on an incomplete
+    declaration (an unstated `must_state` omission, or coverage only on a
+    basis weaker than the entry's `minimum_basis`), so a package whose
+    committed claims and campaign report exist asserts its coverage
+    re-derives `complete`. The verifier re-derives the assessment from
+    the committed manifest, requirement set, and contract, and reports a
+    derived `incomplete` as a `mismatch`. The per-entry coverage report
+    is written to the transient run workspace and never committed, so the
+    derived status is the only committed observable — this check does not
+    fabricate a per-entry diff. Cases with no `coverage` declaration get
+    no check.
 
 Explicitly **out of scope**, refused by name wherever the check would
 otherwise silently pass or silently mismatch:
 
 - proving a persisted applicability fact was extracted correctly from the
   staged bytes (item 9's own boundary above);
-- coverage-set evaluation against a `requirement_set` document;
 - presentation-gate / staged-review realisation or content;
 - recompiling a contract + registry into a compiled-snapshot identity
   (equality is checked; recomputation is not);
-- the whole-report `campaign_sha256` content identity;
 - the A3 parent-admission dataflow cascade and the A6
   registry-role-permitted-claim-model check (both need a compiled
   dataflow graph / role table this profile does not build — three
@@ -196,7 +214,10 @@ or committed example case it proves agreement against — see
   claim in CASE-001 and 003 re-derives from its persisted context and
   binds to its step's receipt; CASE-002's pre-ADR-0018 claims are named
   as mismatches by the missing context.
-- `TestMutations`: the thirteen corruption scenarios in item 7 above.
+- `TestCoverageReDerivation`: CASE-001, 002, and 003's bound requirement
+  sets each re-derive a `complete` coverage declaration; the unbound
+  cases emit no coverage check.
+- `TestMutations`: the eighteen corruption scenarios in item 7 above.
 
 ## What this is not
 

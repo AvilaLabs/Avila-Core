@@ -68,7 +68,11 @@ reported as ``not_checked`` with a reason; it is never silently skipped.
      record exists, cross-checked against its recorded ``margin`` field —
      margin does not appear in campaign-report.json's own schema, so for
      cases with no such log this file reports the computed margin without
-     a committed value to compare against, and says so.
+     a committed value to compare against, and says so. The committed
+     report's ``campaign_sha256`` is recomputed over its semantic body
+     (everything except the field itself and the informational ``notice``)
+     and compared — the digest binds findings and admissions fields this
+     profile does not otherwise re-derive.
 
      Explicitly NOT_CHECKED and named as such: full qualification envelope
      predicate-over-real-facts re-evaluation at the verdict layer (this
@@ -77,10 +81,8 @@ reported as ``not_checked`` with a reason; it is never silently skipped.
      does evaluate qualification positions already carried by claims" —
      rather than re-deriving `inside` / `outside` / `unknown` from real
      facts here; see item 9 for how much of that this profile independently
-     re-derives instead, and why not all of it); coverage-set evaluation;
-     presentation-gate realisation; the ``campaign_sha256`` content identity
-     (whole-report canonicalisation, a stretch beyond the named per-verdict
-     comparison); categorical ``in_set`` predicates (declared but not
+     re-derives instead, and why not all of it); presentation-gate
+     realisation; categorical ``in_set`` predicates (declared but not
      exercised by any committed fixture or case — the rule name is inferred
      by analogy to the vector-proven ``equals`` rule and is reported as
      ``inferred_rule``, never silently trusted).
@@ -166,8 +168,22 @@ reported as ``not_checked`` with a reason; it is never silently skipped.
      this profile has no committed claims.json to check them against and
      checks none, rather than fabricating one.
 
+ 10. Requirement-set coverage (S-024) — a case package may bind one
+     ``requirement_set`` document and declare in its manifest which
+     contract requirements cover each set entry and, for the rest, a
+     reason and an accepting owner. A ``run`` refuses to spend evaluation
+     on an incomplete declaration (an unstated ``must_state`` omission, or
+     coverage only on a basis weaker than the entry's ``minimum_basis``),
+     so a package whose committed claims and campaign report exist asserts
+     its coverage re-derives ``complete``. This section re-derives the
+     assessment — declaration issues, per-entry states, aggregate status —
+     from the committed manifest, requirement set, and contract, and
+     reports a derived ``incomplete`` as a ``mismatch``. The per-entry
+     report is never committed, so the derived status is the only
+     committed observable this check can compare; it does not fabricate a
+     per-entry diff.
+
 Explicitly refused (outside this profile, by name, never silently):
-  - coverage-set evaluation against a requirement_set document;
   - presentation-gate / staged-review realisation or content;
   - archive/package-root canonicalisation beyond the flat document+artifact
     list a case-package.v0.1-draft manifest already enumerates;
@@ -198,10 +214,8 @@ VERIFIER_PROFILE = "avila.core/independent-verifier-profile/v1"
 SEMANTIC_PROFILE = "avila.core/semantic/0.2-draft"
 
 UNSUPPORTED_NOTES = {
-    "coverage": "coverage-set evaluation against a requirement_set document is not implemented",
     "presentation_gate": "presentation-gate / staged-review realisation and content are not implemented",
     "compiled_snapshot": "the compiler is not implemented; compiled_snapshot_sha256 equality is checked, never recomputed",
-    "campaign_sha256": "whole-report canonical identity (campaign_sha256) is not recomputed; only its named per-verdict fields are",
 }
 
 
@@ -1526,8 +1540,31 @@ def verify_case_verdicts(
 
     if campaign_report is None:
         report.not_checked("verdict.campaign_report", "no committed campaign-report.json supplied to compare against")
-    report.not_checked("verdict.campaign_sha256", UNSUPPORTED_NOTES["campaign_sha256"])
-    report.not_checked("verdict.coverage", UNSUPPORTED_NOTES["coverage"])
+        report.not_checked("verdict.campaign_sha256", "no committed campaign-report.json to recompute")
+    elif campaign_report.get("campaign_sha256") is None:
+        report.not_checked(
+            "verdict.campaign_sha256",
+            "campaign report carries no campaign_sha256 (a rejected report has none)",
+        )
+    else:
+        # campaign/mod.rs computes the identity over the report's semantic
+        # body — schema_version, semantic_profile, status,
+        # compiled_snapshot_sha256, claims_sha256, findings, admissions,
+        # verdicts — canonicalised; `campaign_sha256` itself and the
+        # informational `notice` are outside the body. The identity body
+        # always carries `findings`, while the committed report omits the
+        # field when empty — reproduced against all ten committed
+        # campaign-report.json files, which agree either way.
+        body = {k: v for k, v in campaign_report.items() if k not in ("campaign_sha256", "notice")}
+        body.setdefault("findings", [])
+        recomputed = sha256_bytes(canonicalize_value(body))
+        if recomputed == campaign_report["campaign_sha256"]:
+            report.verified("verdict.campaign_sha256", "recomputed whole-report canonical identity matches")
+        else:
+            report.mismatch(
+                "verdict.campaign_sha256",
+                f"recomputed {recomputed}, committed {campaign_report['campaign_sha256']}",
+            )
     report.not_checked("verdict.presentation_gate", UNSUPPORTED_NOTES["presentation_gate"])
 
 
@@ -2569,6 +2606,237 @@ def verify_case_qualification_envelopes(
 
 
 # ---------------------------------------------------------------------------
+# Section 10: requirement-set coverage (S-024)
+#
+# Rule source: the requirement-set model itself — S-024 states the rule a
+# `run` applies: a case package binds one requirement_set document (a
+# library's owned list of what any contract in its domain must address)
+# and declares in its manifest which contract requirements cover each set
+# entry and, for the rest, a reason and an accepting owner; coverage on a
+# basis weaker than the entry's `minimum_basis`, or a `must_state` entry
+# left uncovered with no stated omission, makes coverage incomplete and
+# the run refuses before any evaluation is spent. So a package whose
+# committed claims and campaign report exist asserts that its coverage
+# declaration re-derived `complete`; this section re-derives the
+# assessment from the three committed documents alone and reports a
+# derived `incomplete` as a mismatch — artifacts that could not have been
+# produced by a conforming run. The per-entry coverage report is written
+# to the transient run workspace and never committed, so the derived
+# status is the only committed observable; the check names every derived
+# issue and does not pretend a per-entry diff against a record that does
+# not exist. Cases with no `coverage` declaration have nothing to check
+# and get none.
+# ---------------------------------------------------------------------------
+
+_BASIS_RANK = {"nominal": 0, "bounded": 1, "enclosure": 2}
+_COMPARISONS = {"less_than", "less_than_or_equal", "greater_than", "greater_than_or_equal", "equal"}
+_OMISSION_POLICIES = {"must_state", "may_omit"}
+REQUIREMENT_SET_SCHEMA_VERSION = "avila.core/requirement-set/v0.1-draft"
+
+
+def _requirement_set_problems(set_doc: object) -> list:
+    """The validation a `run` applies to a bound requirement set before any
+    coverage is assessed: an unreadable or invalid set is a refusal, not an
+    empty set."""
+    problems: list[str] = []
+    if not isinstance(set_doc, dict):
+        return ["requirement set is not a JSON object"]
+    unknown = set(set_doc) - {"schema_version", "set_id", "revision", "owner", "title", "requirements"}
+    if unknown:
+        problems.append(f"requirement set carries unknown fields {sorted(unknown)}")
+    if set_doc.get("schema_version") != REQUIREMENT_SET_SCHEMA_VERSION:
+        problems.append(
+            f"requirement set schema {set_doc.get('schema_version')!r} is not {REQUIREMENT_SET_SCHEMA_VERSION!r}"
+        )
+    for field_name in ("set_id", "owner", "title"):
+        if not str(set_doc.get(field_name, "")).strip():
+            problems.append(f"requirement set `{field_name}` must not be empty")
+    if not isinstance(set_doc.get("revision"), int) or set_doc["revision"] < 1:
+        problems.append("requirement set revision must be at least 1")
+    requirements = set_doc.get("requirements")
+    if not isinstance(requirements, list) or not requirements:
+        problems.append("requirement set must contain at least one requirement")
+        return problems
+    seen: set[str] = set()
+    for entry in requirements:
+        if not isinstance(entry, dict):
+            problems.append("a requirement-set entry is not an object")
+            continue
+        eid = entry.get("set_requirement_id")
+        label = eid if isinstance(eid, str) and eid else "<missing id>"
+        unknown = set(entry) - {
+            "set_requirement_id", "statement", "kind", "comparison",
+            "minimum_basis", "omission", "rationale",
+        }
+        if unknown:
+            problems.append(f"requirement set entry `{label}` carries unknown fields {sorted(unknown)}")
+        for field_name in ("set_requirement_id", "statement", "kind"):
+            if not str(entry.get(field_name, "")).strip():
+                problems.append(f"requirement set entry `{label}`: `{field_name}` must not be empty")
+        if entry.get("comparison") not in _COMPARISONS:
+            problems.append(f"requirement set entry `{label}`: comparison {entry.get('comparison')!r} is not a known comparison")
+        if entry.get("minimum_basis") not in _BASIS_RANK:
+            problems.append(f"requirement set entry `{label}`: minimum_basis {entry.get('minimum_basis')!r} is not a known basis")
+        if entry.get("omission") not in _OMISSION_POLICIES:
+            problems.append(f"requirement set entry `{label}`: omission {entry.get('omission')!r} is not a known omission policy")
+        if isinstance(eid, str) and eid:
+            if eid in seen:
+                problems.append(f"requirement set entry `{eid}` is declared twice")
+            seen.add(eid)
+    return problems
+
+
+def _assess_coverage(set_doc: dict, declaration: dict, requirements: dict, categorical_ids: set) -> tuple:
+    """Re-derives the coverage assessment a `run` computes. ``requirements``
+    maps each quantitative contract requirement id to
+    ``(limit.kind, comparison, basis.kind)``; ``categorical_ids`` holds the
+    contract's categorical requirement ids. Returns ``(issues, entries)``
+    where entries carry ``(set_requirement_id, state, issues)``."""
+    issues: list[str] = []
+    set_ids = {entry["set_requirement_id"] for entry in set_doc["requirements"]}
+    mapping = declaration.get("mapping", {})
+    if not isinstance(mapping, dict):
+        mapping = {}
+        issues.append("coverage `mapping` is not an object")
+    for key in mapping:
+        if key not in set_ids:
+            issues.append(f"mapping names `{key}`, which is not in requirement set `{set_doc['set_id']}`")
+    omissions: dict[str, dict] = {}
+    for omission in declaration.get("omissions", []):
+        if not isinstance(omission, dict):
+            issues.append("a coverage `omissions` entry is not an object")
+            continue
+        oid = omission.get("set_requirement_id")
+        if oid not in set_ids:
+            issues.append(f"omission names `{oid}`, which is not in requirement set `{set_doc['set_id']}`")
+            continue
+        if not str(omission.get("reason", "")).strip() or not str(omission.get("accepted_by", "")).strip():
+            issues.append(f"omission of `{oid}` must state a reason and who accepted it")
+            continue
+        if mapping.get(oid):
+            issues.append(f"`{oid}` is both mapped to contract requirements and declared omitted")
+            continue
+        if oid in omissions:
+            issues.append(f"omission of `{oid}` is declared twice")
+        omissions[oid] = omission
+
+    entries: list[tuple[str, str, list]] = []
+    for entry in set_doc["requirements"]:
+        eid = entry["set_requirement_id"]
+        entry_issues: list[str] = []
+        covered_by: list[bool] = []
+        for requirement_id in mapping.get(eid) or []:
+            found = requirements.get(requirement_id)
+            if found is None:
+                if requirement_id in categorical_ids:
+                    entry_issues.append(
+                        f"mapped contract requirement `{requirement_id}` is categorical and cannot cover a quantitative requirement-set entry"
+                    )
+                else:
+                    entry_issues.append(f"mapped contract requirement `{requirement_id}` does not exist")
+                continue
+            kind, comparison, basis = found
+            if kind != entry["kind"]:
+                entry_issues.append(f"`{requirement_id}` compares kind `{kind}`, the set entry requires `{entry['kind']}`")
+                continue
+            if comparison != entry["comparison"]:
+                entry_issues.append(
+                    f"`{requirement_id}` uses comparison `{comparison}`, the set entry requires `{entry['comparison']}`"
+                )
+                continue
+            if basis not in _BASIS_RANK:
+                entry_issues.append(f"`{requirement_id}` declares basis `{basis}`, which is not a known basis")
+                continue
+            covered_by.append(_BASIS_RANK[basis] >= _BASIS_RANK[entry["minimum_basis"]])
+        if any(covered_by):
+            state = "covered"
+        elif covered_by:
+            entry_issues.append(
+                f"covered only on a basis weaker than the set's minimum `{entry['minimum_basis']}`; a guide is not evidence"
+            )
+            state = "covered_under_basis"
+        elif eid in omissions:
+            state = "omitted_stated"
+        elif entry["omission"] == "may_omit":
+            state = "omissible"
+        else:
+            entry_issues.append("not covered and no omission is stated; the set requires a reason and an accepting owner")
+            state = "omitted_unstated"
+        entries.append((eid, state, entry_issues))
+
+    incomplete = bool(issues) or any(
+        entry_issues or state in ("covered_under_basis", "omitted_unstated")
+        for _eid, state, entry_issues in entries
+    )
+    return issues, entries, "incomplete" if incomplete else "complete"
+
+
+def verify_case_coverage(case_dir: Path, package: dict, contract: Optional[dict], report: Report) -> None:
+    coverage = package.get("coverage")
+    if coverage is None:
+        return
+    check = "coverage.requirement_set"
+    if not isinstance(coverage, dict) or not isinstance(coverage.get("requirement_set"), str):
+        report.mismatch(check, "manifest `coverage` is malformed: `requirement_set` must name a bound document id")
+        return
+    set_document = next(
+        (d for d in package.get("documents", []) if d.get("document_id") == coverage["requirement_set"]),
+        None,
+    )
+    if set_document is None:
+        report.mismatch(
+            check,
+            f"coverage names requirement_set {coverage['requirement_set']!r}, which is not a document the manifest binds",
+        )
+        return
+    path = case_dir / set_document["path"]
+    if not path.is_file():
+        report.mismatch(check, f"requirement-set document {set_document['path']!r} is missing")
+        return
+    try:
+        set_doc = load_json(path)
+    except (OSError, json.JSONDecodeError) as error:
+        report.mismatch(check, f"requirement-set document does not parse: {error}")
+        return
+    problems = _requirement_set_problems(set_doc)
+    if problems:
+        report.mismatch(check, "requirement set is invalid — a conforming run refuses it: " + "; ".join(problems))
+        return
+    if contract is None:
+        report.not_checked(check, "contract document unavailable; coverage cannot be re-derived")
+        return
+
+    requirements = {
+        req["requirement_id"]: (req["limit"]["kind"], req["comparison"], req["basis"]["kind"])
+        for req in contract.get("requirements", [])
+    }
+    categorical_ids = {req["requirement_id"] for req in contract.get("categorical_requirements", [])}
+    issues, entries, status = _assess_coverage(set_doc, coverage, requirements, categorical_ids)
+    if status == "incomplete":
+        detail = issues + [
+            f"entry `{eid}` is {state}: {'; '.join(entry_issues)}" if entry_issues else f"entry `{eid}` is {state}"
+            for eid, state, entry_issues in entries
+            if entry_issues or state in ("covered_under_basis", "omitted_unstated")
+        ]
+        report.mismatch(
+            check,
+            "coverage re-derives incomplete — a conforming `run` refuses before evaluation, so the "
+            "committed claims and campaign report could not have been produced under this declaration: "
+            + "; ".join(detail),
+        )
+    else:
+        counts: dict[str, int] = {}
+        for _eid, state, _entry_issues in entries:
+            counts[state] = counts.get(state, 0) + 1
+        report.verified(
+            check,
+            f"coverage of requirement set {set_doc['set_id']} revision {set_doc['revision']} re-derives "
+            f"complete: "
+            + ", ".join(f"{counts.get(state, 0)} {state}" for state in ("covered", "omitted_stated", "omissible")),
+        )
+
+
+# ---------------------------------------------------------------------------
 # Case-level orchestration and CLI
 # ---------------------------------------------------------------------------
 
@@ -2629,6 +2897,8 @@ def verify_case(
         verify_case_verdicts(contract, registry, claims, campaign_report, report)
     else:
         report.not_checked("verdict.all", "contract.json, registry.json, or claims.json missing/undeclared for this case")
+
+    verify_case_coverage(case_dir, package, contract, report)
 
     verify_case_qualification_envelopes(
         case_dir, package, docs_by_role, claims, kinds_from_registry_doc(registry) if registry is not None else {},

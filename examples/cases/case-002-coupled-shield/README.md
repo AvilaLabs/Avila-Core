@@ -106,6 +106,11 @@ The verify run reports all three `[INSIDE]` for the reference candidate.
 
 ## Running it
 
+This contract sets `execution_policy.require_signatures`, so every command
+below needs `--trust-root examples/keys/trust-root.json`; without it the run
+refuses outright under `CORE-X1005` before anything is compiled (see [Signed
+manifest and receipts](#signed-manifest-and-receipts)).
+
 Verify the frozen case; nothing runs and no executable is needed:
 
 ```bash
@@ -116,7 +121,8 @@ cargo run -p avila-core-cli -- run examples/cases/case-002-coupled-shield \
   --source-root agents=examples/agents \
   --source-root nuclear-data=/path/to/endfb-vii.1-hdf5 \
   --source-root actinv-release=/path/to/actinv/target/release \
-  --source-root actinv-data=/path/to/actinv-data/v1.0.0
+  --source-root actinv-data=/path/to/actinv-data/v1.0.0 \
+  --trust-root examples/keys/trust-root.json
 ```
 
 The `nuclear-data`, `actinv-release`, and `actinv-data` roots hold hundreds
@@ -127,12 +133,20 @@ in place of `verified` wherever it did. This verify command deliberately
 does not pass it above: verifying the frozen case is exactly the moment a
 full re-hash from bytes is the point, and `examples/cases/tools/bless.py`
 and `rehash.py` never pass it either. Its trust boundary is in `SECURITY.md`.
+Omitting any of the three external roots leaves the step(s) that need it
+`not_run` with no signature to check, which `require_signatures` refuses
+just as it refuses an unsigned package: with this contract, a verify run
+needs every root supplied, not only the ones a particular question touches.
 
 Run a candidate of your own through every step (about four minutes on
-eight threads at 500 000 particles):
+eight threads at 500 000 particles). A supplied candidate always executes at
+least the screen fresh, so `--runner-key` is needed to sign that receipt or
+`require_signatures` refuses the run after execution:
 
 ```bash
-  … --capability python3=/usr/bin/python3 \
+  … --trust-root examples/keys/trust-root.json \
+    --runner-key examples/keys/runner.seed \
+    --capability python3=/usr/bin/python3 \
     --capability openmc-python=/path/to/venv/bin/python3.12 \
     --env OPENMC_CROSS_SECTIONS=/path/to/endfb-vii.1-hdf5/cross_sections.xml \
     --input candidate=my-candidate.json --log campaign-log.jsonl
@@ -147,17 +161,17 @@ spectra, is then not reached.
 The manifest and every step's committed receipt carry a detached Ed25519
 signature (ADR-0015), made with the public example keys under
 `examples/keys/` — see that directory's README for what these keys are and
-are not good for. Add `--trust-root examples/keys/trust-root.json` to any
-command above to verify them; the manifest and the `screen` step's receipt
-report `verified` in this sandbox, since `screen` needs only artifacts
-already inside the repository. `transport` and `activation`'s receipts are
-signed the same way but their reuse cannot be demonstrated here, because
-their bound inputs need the external `nuclear-data`, `actinv-release`, and
-`actinv-data` roots (and their own executables) that a real verification of
-this case already requires; each signature would verify the same way once
-those roots are supplied. `execution_policy.require_signatures` is not set
-on this contract, so every command above still works unchanged without
-`--trust-root`, reporting each signature `signature not checked`.
+are not good for. `execution_policy.require_signatures` is `true` on this
+contract, so `--trust-root examples/keys/trust-root.json` is not optional:
+without it, `run` refuses the package outright under `CORE-X1005` before
+anything is compiled. With it and every external root supplied, the manifest
+and all three of `screen`, `transport`, and `activation`'s committed receipts
+report `verified`, and every declared step reuses from its verified receipt
+without running anything or needing its own executable. A freshly executed
+step's receipt is unsigned unless the run also carries `--runner-key
+examples/keys/runner.seed`; without it, `require_signatures` refuses the run
+after execution instead of leaving the outcome silently unsigned, exactly
+where it refuses an unsigned package.
 
 ## What the package binds
 

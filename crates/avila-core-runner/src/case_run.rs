@@ -3559,13 +3559,36 @@ mod tests {
         assert_eq!(feedback, DiagnosticStderrFeedback::WithheldForRedaction);
     }
 
+    /// Exercises `build_presentation_gates` directly against CASE-001's
+    /// committed contract, registry, and claims, rather than through
+    /// `execute_case`: CASE-001's `transport` step needs an external
+    /// `nuclear-data` root this workspace does not carry, and since CASE-001
+    /// now sets `execution_policy.require_signatures` (ADR-0015), a step
+    /// left unreached for lack of that root is unsigned and the whole run
+    /// refuses before a campaign is ever evaluated. Package integrity,
+    /// compilation, and presentation-gate construction do not depend on
+    /// execution at all, so reading the committed documents directly keeps
+    /// this test exercising the real fixture without needing that root or a
+    /// trust root.
     #[test]
     fn case_001_materializes_an_exact_optional_practical_review_request() {
-        let report = execute_case(&case_001(), &CaseRunOptions::default()).unwrap();
-        assert_eq!(report.status, CaseRunStatus::Evaluated);
-        assert!(report.replay.as_ref().unwrap().matches);
+        let contract = fs::read(case_001().join("contract.json")).unwrap();
+        let registry = fs::read(case_001().join("registry.json")).unwrap();
+        let compile = compile_documents(&contract, &registry).unwrap();
+        let compiled = compile.compiled.as_ref().unwrap();
+        let claims_bytes = fs::read(case_001().join("claims.json")).unwrap();
+        let claims: ClaimsDocument = serde_json::from_slice(&claims_bytes).unwrap();
+        let campaign = evaluate_campaign(&contract, &registry, &claims_bytes).unwrap();
 
-        let [stage] = report.presentation_gates.as_slice() else {
+        let transport = campaign
+            .verdicts
+            .iter()
+            .find(|verdict| verdict.requirement_id == "SHIELD-R2-transport")
+            .unwrap();
+        assert_eq!(transport.verdict.status, VerdictStatus::Fail);
+
+        let stages = build_presentation_gates(compiled, &claims, &campaign).unwrap();
+        let [stage] = stages.as_slice() else {
             panic!("CASE-001 must materialize exactly one staged review request");
         };
         assert_eq!(stage.step_id, "practical-review");
@@ -3574,7 +3597,7 @@ mod tests {
         assert_eq!(stage.readiness, PresentationGateReadiness::ReadyForAgent);
         assert_eq!(
             stage.request_sha256,
-            "sha256:d21d5702aa3f7431d6ccea7d7b5f529687b1143547db1fc07bc89db2ef78449e"
+            "sha256:907ff3ff739332d2d0d3586936017a52967fc7a699b1088c1eb93afaff517ab7"
         );
         assert_eq!(
             stage
@@ -3600,28 +3623,18 @@ mod tests {
             ]
         );
 
-        let transport = report
-            .campaign
-            .as_ref()
-            .unwrap()
-            .verdicts
-            .iter()
-            .find(|verdict| verdict.requirement_id == "SHIELD-R2-transport")
-            .unwrap();
-        assert_eq!(transport.verdict.status, VerdictStatus::Fail);
-
-        let contract = fs::read(case_001().join("contract.json")).unwrap();
-        let registry = fs::read(case_001().join("registry.json")).unwrap();
-        let compile = compile_documents(&contract, &registry).unwrap();
-        let compiled = compile.compiled.as_ref().unwrap();
-        let mut claims: ClaimsDocument =
-            serde_json::from_slice(&fs::read(case_001().join("claims.json")).unwrap()).unwrap();
-        claims
+        // Withholding `transport-result`, as a supplied free input would,
+        // leaves the gate awaiting that one piece of evidence.
+        let mut without_transport = claims.clone();
+        without_transport
             .claims
             .retain(|claim| claim.claim_id != "transport-result");
-        let claims_bytes = serde_json::to_vec(&claims).unwrap();
-        let campaign = evaluate_campaign(&contract, &registry, &claims_bytes).unwrap();
-        let stages = build_presentation_gates(compiled, &claims, &campaign).unwrap();
+        let without_transport_bytes = serde_json::to_vec(&without_transport).unwrap();
+        let campaign_without_transport =
+            evaluate_campaign(&contract, &registry, &without_transport_bytes).unwrap();
+        let stages =
+            build_presentation_gates(compiled, &without_transport, &campaign_without_transport)
+                .unwrap();
         assert_eq!(
             stages[0].readiness,
             PresentationGateReadiness::AwaitingEvidence
@@ -3644,6 +3657,14 @@ mod tests {
 
     /// S-038: `--hash-cache` is opt-in, never changes a verdict, and reports
     /// a hit as a state distinct from a fresh hash.
+    // Both hash-cache tests below supply only the `shielding` root: enough
+    // for `screen`'s inputs, but not for `transport`'s external
+    // `nuclear-data` root, which this workspace does not carry. CASE-001 now
+    // sets `execution_policy.require_signatures` (ADR-0015), and a step left
+    // unreached for want of an unsupplied root is unsigned, so the run
+    // refuses before a campaign is ever evaluated regardless. Package
+    // integrity and the hash cache it is opt-in to are both resolved before
+    // that point, which is all these two tests exercise.
     #[test]
     fn hash_cache_cold_run_populates_and_warm_run_reports_the_cached_state() {
         let cache_path = std::env::temp_dir().join(format!(
@@ -3659,8 +3680,7 @@ mod tests {
         };
 
         let cold = execute_case(&case_001(), &options).unwrap();
-        assert_eq!(cold.status, CaseRunStatus::Evaluated, "{cold:?}");
-        assert!(cold.replay.as_ref().unwrap().matches);
+        assert_eq!(cold.status, CaseRunStatus::Rejected, "{cold:?}");
         let shielding_checks: Vec<_> = cold
             .integrity
             .artifacts
@@ -3690,8 +3710,7 @@ mod tests {
         );
 
         let warm = execute_case(&case_001(), &options).unwrap();
-        assert_eq!(warm.status, CaseRunStatus::Evaluated, "{warm:?}");
-        assert!(warm.replay.as_ref().unwrap().matches);
+        assert_eq!(warm.status, CaseRunStatus::Rejected, "{warm:?}");
         let warm_shielding: Vec<_> = warm
             .integrity
             .artifacts
@@ -3729,7 +3748,7 @@ mod tests {
             ..CaseRunOptions::default()
         };
         let report = execute_case(&case_001(), &options).unwrap();
-        assert_eq!(report.status, CaseRunStatus::Evaluated, "{report:?}");
+        assert_eq!(report.status, CaseRunStatus::Rejected, "{report:?}");
         assert!(
             report
                 .findings

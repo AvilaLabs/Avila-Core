@@ -56,6 +56,11 @@ bounded one says another, and it never lets the first count as the second.
 
 ## Running it
 
+This contract sets `execution_policy.require_signatures`, so every command
+below needs `--trust-root examples/keys/trust-root.json`; without it the run
+refuses outright under `CORE-X1005` before anything is compiled (see [Signed
+manifest and receipts](#signed-manifest-and-receipts)).
+
 Verify the frozen case; nothing runs and no executable or environment value is
 needed (about 20 ms):
 
@@ -64,11 +69,16 @@ cargo run -p avila-core-cli -- run examples/cases/case-001-shield-search \
   --source-root case=examples/cases/case-001-shield-search \
   --source-root shielding=examples/capabilities/shielding \
   --source-root agents=examples/agents \
-  --source-root nuclear-data=/path/to/endfb-vii.1-hdf5
+  --source-root nuclear-data=/path/to/endfb-vii.1-hdf5 \
+  --trust-root examples/keys/trust-root.json
 ```
 
 Screen a candidate of your own (the transport step is reached by the supplied
-input, so its committed claims are withheld and R2 is `NOT_EVALUATED`):
+input, so its committed claims are withheld and R2 is `NOT_EVALUATED`). A
+supplied candidate always executes the screen fresh, so this also needs
+`--runner-key` to sign the fresh receipt; without it the run refuses under
+`CORE-X1005` after the screen executes, since `require_signatures` refuses
+unsigned execution just as it refuses an unsigned package:
 
 ```bash
 cargo run -p avila-core-cli -- run examples/cases/case-001-shield-search \
@@ -76,6 +86,8 @@ cargo run -p avila-core-cli -- run examples/cases/case-001-shield-search \
   --source-root shielding=examples/capabilities/shielding \
   --source-root agents=examples/agents \
   --source-root nuclear-data=/path/to/endfb-vii.1-hdf5 \
+  --trust-root examples/keys/trust-root.json \
+  --runner-key examples/keys/runner.seed \
   --capability python3=/usr/bin/python3 \
   --input candidate=my-candidate.json --log campaign-log.jsonl \
   --attempt candidate-001
@@ -107,16 +119,17 @@ without this agent stage by omitting the review capability from the contract.
 The manifest and every step's committed receipt carry a detached Ed25519
 signature (ADR-0015), made with the public example keys under
 `examples/keys/` — see that directory's README for what these keys are and
-are not good for. Add `--trust-root examples/keys/trust-root.json` to any
-command above to verify them; the manifest and the `screen` step's receipt
-report `verified` in this sandbox, since `screen` needs only artifacts
-already inside the repository. `transport`'s receipt is signed the same way
-but its reuse cannot be demonstrated here, because its bound inputs need
-the external `nuclear-data` root (and its own executable) that a real
-verification of this case already requires; the signature would verify the
-same way once that root is supplied. `execution_policy.require_signatures`
-is not set on this contract, so every command above still works unchanged
-without `--trust-root`, reporting each signature `signature not checked`.
+are not good for. `execution_policy.require_signatures` is `true` on this
+contract, so `--trust-root examples/keys/trust-root.json` is not optional:
+without it, `run` refuses the package outright under `CORE-X1005` before
+anything is compiled. With it, the manifest and both `screen` and
+`transport`'s committed receipts report `verified`, and every declared step
+reuses from that verified receipt without running anything (the `nuclear-data`
+root supplies the only external byte `transport` needs; its own executable
+is never required for reuse). A freshly executed step's receipt is unsigned
+unless the run also carries `--runner-key examples/keys/runner.seed`; without
+it, `require_signatures` refuses the run after execution instead of leaving
+the outcome silently unsigned, exactly where it refuses an unsigned package.
 
 ## Coverage of the library requirement set
 

@@ -409,13 +409,19 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             },
             _ => return Err("pass exactly one code, or `--all` for the whole catalog".into()),
         },
-        Command::Keys { command } => run_keys(command)?,
-        Command::Sign { command } => run_sign(command)?,
+        Command::Keys { command } => {
+            println!("{}", serde_json::to_string_pretty(&run_keys(command)?)?);
+        }
+        Command::Sign { command } => {
+            println!("{}", serde_json::to_string_pretty(&run_sign(command)?)?);
+        }
     }
     Ok(ExitCode::SUCCESS)
 }
 
-fn run_keys(command: KeysCommand) -> Result<(), Box<dyn Error>> {
+/// Performs a `keys` subcommand and returns exactly the JSON document the
+/// CLI prints, so a test can assert on its fields without capturing stdout.
+fn run_keys(command: KeysCommand) -> Result<serde_json::Value, Box<dyn Error>> {
     match command {
         KeysCommand::Generate { role, out } => {
             let role: KeyRole = role.into();
@@ -438,16 +444,13 @@ fn run_keys(command: KeysCommand) -> Result<(), Box<dyn Error>> {
                 fs::set_permissions(&seed_path, fs::Permissions::from_mode(0o600))?;
             }
             fs::write(&public_key_path, format!("{}\n", pair.public_key_hex))?;
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&serde_json::json!({
-                    "role": role.to_string(),
-                    "key_id": pair.key_id,
-                    "public_key_hex": pair.public_key_hex,
-                    "seed_path": seed_path.display().to_string(),
-                    "public_key_path": public_key_path.display().to_string(),
-                }))?
-            );
+            Ok(serde_json::json!({
+                "role": role.to_string(),
+                "key_id": pair.key_id,
+                "public_key_hex": pair.public_key_hex,
+                "seed_path": seed_path.display().to_string(),
+                "public_key_path": public_key_path.display().to_string(),
+            }))
         }
         KeysCommand::Show { file } => {
             let bytes = fs::read(&file)?;
@@ -468,16 +471,12 @@ fn run_keys(command: KeysCommand) -> Result<(), Box<dyn Error>> {
                     .to_string()
             };
             let key_id = signature::key_id_from_public_hex(&public_key_hex)?;
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&serde_json::json!({
-                    "public_key_hex": public_key_hex,
-                    "key_id": key_id,
-                }))?
-            );
+            Ok(serde_json::json!({
+                "public_key_hex": public_key_hex,
+                "key_id": key_id,
+            }))
         }
     }
-    Ok(())
 }
 
 /// The document id `sign manifest` uses for the requester signature it
@@ -486,7 +485,9 @@ fn run_keys(command: KeysCommand) -> Result<(), Box<dyn Error>> {
 /// manifest.
 const MANIFEST_SIGNATURE_DOCUMENT_ID: &str = "signature-manifest";
 
-fn run_sign(command: SignCommand) -> Result<(), Box<dyn Error>> {
+/// Performs a `sign` subcommand and returns exactly the JSON document the
+/// CLI prints, so a test can assert on its fields without capturing stdout.
+fn run_sign(command: SignCommand) -> Result<serde_json::Value, Box<dyn Error>> {
     match command {
         SignCommand::Manifest { case, key } => {
             let manifest_path = if case.is_dir() {
@@ -551,15 +552,12 @@ fn run_sign(command: SignCommand) -> Result<(), Box<dyn Error>> {
             manifest_bytes_out.push(b'\n');
             fs::write(&manifest_path, &manifest_bytes_out)?;
 
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&serde_json::json!({
-                    "case_id": manifest.case_id,
-                    "signed_document_sha256": document.signed_document.sha256,
-                    "key_id": document.key_id,
-                    "signature_path": signature_path.display().to_string(),
-                }))?
-            );
+            Ok(serde_json::json!({
+                "case_id": manifest.case_id,
+                "signed_document_sha256": document.signed_document.sha256,
+                "key_id": document.key_id,
+                "signature_path": signature_path.display().to_string(),
+            }))
         }
         SignCommand::Receipt { case, step, key } => {
             let manifest_path = if case.is_dir() {
@@ -632,19 +630,15 @@ fn run_sign(command: SignCommand) -> Result<(), Box<dyn Error>> {
             manifest_bytes_out.push(b'\n');
             fs::write(&manifest_path, &manifest_bytes_out)?;
 
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&serde_json::json!({
-                    "case_id": manifest.case_id,
-                    "step_id": step,
-                    "signed_document_sha256": document.signed_document.sha256,
-                    "key_id": document.key_id,
-                    "signature_path": signature_path.display().to_string(),
-                }))?
-            );
+            Ok(serde_json::json!({
+                "case_id": manifest.case_id,
+                "step_id": step,
+                "signed_document_sha256": document.signed_document.sha256,
+                "key_id": document.key_id,
+                "signature_path": signature_path.display().to_string(),
+            }))
         }
     }
-    Ok(())
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -877,5 +871,394 @@ mod tests {
         assert_eq!(request.candidate_input, "candidate");
         assert!(attempt_request(None, Some("try-001".into()), None).is_err());
         assert!(attempt_request(None, None, Some("design".into())).is_err());
+    }
+
+    // --- ADR-0015: `keys` and `sign` (S-043) --------------------------
+
+    /// A fresh, per-test scratch directory under the OS temp dir, removed
+    /// when the guard drops so a failed assertion never leaks files into a
+    /// later test run.
+    struct ScratchDir(PathBuf);
+
+    impl ScratchDir {
+        fn new(label: &str) -> Self {
+            let dir = std::env::temp_dir().join(format!(
+                "avila-core-cli-test-{label}-{}",
+                std::process::id()
+            ));
+            let _ = fs::remove_dir_all(&dir);
+            fs::create_dir_all(&dir).unwrap();
+            Self(dir)
+        }
+
+        fn join(&self, name: &str) -> PathBuf {
+            self.0.join(name)
+        }
+    }
+
+    impl Drop for ScratchDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn is_lowercase_hex(text: &str, expected_len: usize) -> bool {
+        text.len() == expected_len && text.bytes().all(|byte| byte.is_ascii_hexdigit())
+    }
+
+    #[test]
+    fn keys_generate_writes_a_seed_and_public_key_with_a_well_formed_id() {
+        let scratch = ScratchDir::new("keys-generate");
+        let generated = run_keys(KeysCommand::Generate {
+            role: KeyRoleArg::Requester,
+            out: Some(scratch.0.clone()),
+        })
+        .unwrap();
+
+        assert_eq!(generated["role"], "requester");
+        let key_id = generated["key_id"].as_str().unwrap();
+        let public_key_hex = generated["public_key_hex"].as_str().unwrap();
+        // Key id: SHA-256 of the public key, hex encoded (64 chars). Public
+        // key: 32 raw bytes, hex encoded (64 chars). Both lowercase, neither
+        // carrying the `sha256:` content-digest prefix used elsewhere.
+        assert!(is_lowercase_hex(key_id, 64), "key_id: {key_id}");
+        assert!(
+            is_lowercase_hex(public_key_hex, 64),
+            "public_key_hex: {public_key_hex}"
+        );
+        assert!(!key_id.starts_with("sha256:"));
+
+        let seed_path = scratch.join("requester.seed");
+        let public_key_path = scratch.join("requester.pub");
+        assert_eq!(generated["seed_path"], seed_path.display().to_string());
+        assert_eq!(
+            generated["public_key_path"],
+            public_key_path.display().to_string()
+        );
+        let seed_bytes = fs::read(&seed_path).unwrap();
+        assert_eq!(seed_bytes.len(), 32, "a seed file is exactly 32 raw bytes");
+        assert_eq!(
+            fs::read_to_string(&public_key_path).unwrap(),
+            format!("{public_key_hex}\n")
+        );
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = fs::metadata(&seed_path).unwrap().permissions().mode();
+            assert_eq!(
+                mode & 0o777,
+                0o600,
+                "a private seed must be readable only by its owner"
+            );
+        }
+
+        // The key id is deterministically the SHA-256 of the public key
+        // bytes: the CLI's own derivation must reproduce what it just wrote.
+        assert_eq!(
+            signature::key_id_from_public_hex(public_key_hex).unwrap(),
+            key_id
+        );
+
+        // A second `generate` into the same, now-populated directory must
+        // never silently overwrite a private key.
+        let error = run_keys(KeysCommand::Generate {
+            role: KeyRoleArg::Requester,
+            out: Some(scratch.0.clone()),
+        })
+        .unwrap_err();
+        assert!(error.to_string().contains("refusing to overwrite"));
+    }
+
+    #[test]
+    fn keys_show_reports_the_same_key_id_from_either_the_seed_or_the_public_file() {
+        let scratch = ScratchDir::new("keys-show");
+        let generated = run_keys(KeysCommand::Generate {
+            role: KeyRoleArg::Runner,
+            out: Some(scratch.0.clone()),
+        })
+        .unwrap();
+        let key_id = generated["key_id"].as_str().unwrap().to_string();
+        let public_key_hex = generated["public_key_hex"].as_str().unwrap().to_string();
+
+        let from_seed = run_keys(KeysCommand::Show {
+            file: scratch.join("runner.seed"),
+        })
+        .unwrap();
+        assert_eq!(from_seed["key_id"], key_id);
+        assert_eq!(from_seed["public_key_hex"], public_key_hex);
+
+        let from_public = run_keys(KeysCommand::Show {
+            file: scratch.join("runner.pub"),
+        })
+        .unwrap();
+        assert_eq!(from_public["key_id"], key_id);
+        assert_eq!(from_public["public_key_hex"], public_key_hex);
+
+        // Neither a seed's nor a key id's raw bytes are ever printed: only
+        // the derived public key and key id appear in either report.
+        assert_eq!(from_seed.as_object().unwrap().len(), 2, "{from_seed:?}");
+    }
+
+    #[test]
+    fn keys_show_refuses_a_file_that_is_neither_a_seed_nor_hex_text() {
+        let scratch = ScratchDir::new("keys-show-malformed");
+        // Not 32 bytes (so not a seed) and not valid UTF-8 (so not hex text
+        // either), unlike a too-short or too-long ASCII string, which would
+        // instead reach the hex decoder and fail there with a different,
+        // still-honest message.
+        let path = scratch.join("not-a-key");
+        fs::write(&path, [0xff_u8, 0xfe, 0x00, 0x01]).unwrap();
+        let error = run_keys(KeysCommand::Show { file: path }).unwrap_err();
+        assert!(
+            error.to_string().contains("neither a 32-byte seed"),
+            "{error}"
+        );
+
+        // Valid UTF-8 that is merely not valid hex is refused too, just by
+        // the hex decoder further along instead of this message.
+        let non_hex_ascii = scratch.join("not-hex-text");
+        fs::write(&non_hex_ascii, b"not hexadecimal at all").unwrap();
+        assert!(
+            run_keys(KeysCommand::Show {
+                file: non_hex_ascii
+            })
+            .is_err()
+        );
+    }
+
+    /// A minimal on-disk case package: just enough for `sign manifest` and
+    /// `sign receipt` to have a `package.json` and, when requested, one
+    /// committed `execution_receipt` document to sign.
+    fn write_minimal_case(
+        scratch: &ScratchDir,
+        case_id: &str,
+        receipt_step: Option<&str>,
+    ) -> PathBuf {
+        let case_dir = scratch.join(case_id);
+        fs::create_dir_all(&case_dir).unwrap();
+        let mut documents = Vec::new();
+        if let Some(step) = receipt_step {
+            let receipt_bytes = format!("{{\"receipt for\":\"{step}\"}}").into_bytes();
+            fs::create_dir_all(case_dir.join("receipts")).unwrap();
+            fs::write(
+                case_dir.join("receipts").join(format!("{step}.json")),
+                &receipt_bytes,
+            )
+            .unwrap();
+            documents.push(avila_core_evidence::PackageDocument {
+                document_id: format!("{case_id}-{step}-receipt"),
+                role: "execution_receipt".into(),
+                path: format!("receipts/{step}.json"),
+                sha256: format!("sha256:{}", sha256_hex(&receipt_bytes)),
+                step_id: Some(step.into()),
+            });
+        }
+        let manifest = avila_core_evidence::CasePackageManifest {
+            schema_version: avila_core_evidence::CASE_PACKAGE_SCHEMA_VERSION.into(),
+            case_id: case_id.into(),
+            title: "CLI signing test fixture".into(),
+            documents,
+            artifacts: Vec::new(),
+            capabilities: Vec::new(),
+            executions: Vec::new(),
+            free_inputs: Vec::new(),
+            coverage: None,
+            limitations: Vec::new(),
+        };
+        let mut bytes = serde_json::to_vec_pretty(&manifest).unwrap();
+        bytes.push(b'\n');
+        fs::write(case_dir.join("package.json"), bytes).unwrap();
+        case_dir
+    }
+
+    fn generate_key(scratch: &ScratchDir, name: &str, role: KeyRoleArg) -> PathBuf {
+        run_keys(KeysCommand::Generate {
+            role,
+            out: Some(scratch.join(name)),
+        })
+        .unwrap();
+        let role: KeyRole = role.into();
+        scratch.join(name).join(format!("{role}.seed"))
+    }
+
+    #[test]
+    fn sign_manifest_writes_a_schema_valid_signature_and_is_idempotent() {
+        let scratch = ScratchDir::new("sign-manifest");
+        let case_dir = write_minimal_case(&scratch, "CLI-SIGN-TEST", None);
+        let key_path = generate_key(&scratch, "keys", KeyRoleArg::Requester);
+
+        let result = run_sign(SignCommand::Manifest {
+            case: case_dir.clone(),
+            key: key_path.clone(),
+        })
+        .unwrap();
+        assert_eq!(result["case_id"], "CLI-SIGN-TEST");
+        let key_id = result["key_id"].as_str().unwrap().to_string();
+        assert!(is_lowercase_hex(&key_id, 64), "key_id: {key_id}");
+        let signed_document_sha256 = result["signed_document_sha256"].as_str().unwrap();
+        assert!(signed_document_sha256.starts_with("sha256:"));
+
+        let signature_path = case_dir.join("signatures").join("manifest.sig.json");
+        assert_eq!(
+            result["signature_path"],
+            signature_path.display().to_string()
+        );
+        let document: signature::SignatureDocument =
+            serde_json::from_slice(&fs::read(&signature_path).unwrap()).unwrap();
+        assert_eq!(document.schema_version, signature::SIGNATURE_SCHEMA_VERSION);
+        assert_eq!(document.algorithm, signature::ALGORITHM_ED25519);
+        assert_eq!(document.key_id, key_id);
+        assert_eq!(document.signed_document.role, "manifest");
+        assert_eq!(document.signed_document.document_id, "CLI-SIGN-TEST");
+        assert_eq!(document.signed_document.sha256, signed_document_sha256);
+        assert!(
+            is_lowercase_hex(&document.signature_hex, 128),
+            "an Ed25519 signature is 64 raw bytes, hex encoded: {}",
+            document.signature_hex
+        );
+        assert!(!document.notice.is_empty());
+
+        // The manifest now binds the signature document as `documents[]`.
+        let manifest: avila_core_evidence::CasePackageManifest =
+            serde_json::from_slice(&fs::read(case_dir.join("package.json")).unwrap()).unwrap();
+        let bound = manifest
+            .documents
+            .iter()
+            .find(|document| document.document_id == "signature-manifest")
+            .unwrap();
+        assert_eq!(bound.role, "signature");
+        assert_eq!(bound.path, "signatures/manifest.sig.json");
+
+        // Re-running against the now-signed manifest is idempotent: Ed25519
+        // is deterministic, and the digest rule excludes the entry it is
+        // about to write, so the signature bytes reproduce exactly.
+        let second = run_sign(SignCommand::Manifest {
+            case: case_dir.clone(),
+            key: key_path,
+        })
+        .unwrap();
+        assert_eq!(second, result);
+        let document_again: signature::SignatureDocument =
+            serde_json::from_slice(&fs::read(&signature_path).unwrap()).unwrap();
+        assert_eq!(document_again, document);
+    }
+
+    #[test]
+    fn a_manifest_signed_by_the_wrong_role_key_is_refused_at_verification() {
+        // The CLI itself signs with whatever seed it is given: `sign
+        // manifest` never asks whether a key is a requester's. The role
+        // check that matters happens when a trust root verifies the
+        // resulting signature document against an expected role — exactly
+        // what `run --trust-root` does before compiling a package (S-030,
+        // ADR-0015 clause 3).
+        let scratch = ScratchDir::new("sign-manifest-wrong-role");
+        let case_dir = write_minimal_case(&scratch, "CLI-WRONG-ROLE", None);
+        let runner_key_path = generate_key(&scratch, "keys", KeyRoleArg::Runner);
+        let runner_public_hex = fs::read_to_string(scratch.join("keys").join("runner.pub"))
+            .unwrap()
+            .trim()
+            .to_string();
+        let runner_key_id = signature::key_id_from_public_hex(&runner_public_hex).unwrap();
+
+        run_sign(SignCommand::Manifest {
+            case: case_dir.clone(),
+            key: runner_key_path,
+        })
+        .unwrap();
+        let document: signature::SignatureDocument = serde_json::from_slice(
+            &fs::read(case_dir.join("signatures").join("manifest.sig.json")).unwrap(),
+        )
+        .unwrap();
+
+        // A trust root that lists this exact key, but only under `runner`.
+        let trust_root = signature::TrustRoot {
+            schema_version: signature::TRUST_ROOT_SCHEMA_VERSION.into(),
+            keys: vec![signature::TrustRootEntry {
+                key_id: runner_key_id.clone(),
+                public_key_hex: runner_public_hex,
+                role: KeyRole::Runner,
+            }],
+        };
+
+        // Verifying under its real role succeeds: the signature itself is
+        // genuine.
+        assert_eq!(
+            signature::verify_signature_document(&document, &trust_root, KeyRole::Runner).unwrap(),
+            runner_key_id
+        );
+        // Verifying under the role a manifest signature must carry does
+        // not: the key is well-formed and the signature is genuine, but it
+        // is not listed as a requester key.
+        let error =
+            signature::verify_signature_document(&document, &trust_root, KeyRole::Requester)
+                .unwrap_err();
+        assert!(
+            matches!(error, signature::SignatureError::KeyNotListed { .. }),
+            "{error:?}"
+        );
+    }
+
+    #[test]
+    fn sign_receipt_writes_a_signature_document_bound_to_its_step() {
+        let scratch = ScratchDir::new("sign-receipt");
+        let case_dir = write_minimal_case(&scratch, "CLI-SIGN-RECEIPT", Some("screen"));
+        let key_path = generate_key(&scratch, "keys", KeyRoleArg::Runner);
+
+        let result = run_sign(SignCommand::Receipt {
+            case: case_dir.clone(),
+            step: "screen".into(),
+            key: key_path,
+        })
+        .unwrap();
+        assert_eq!(result["case_id"], "CLI-SIGN-RECEIPT");
+        assert_eq!(result["step_id"], "screen");
+
+        let signature_path = case_dir.join("signatures").join("screen-receipt.sig.json");
+        let document: signature::SignatureDocument =
+            serde_json::from_slice(&fs::read(&signature_path).unwrap()).unwrap();
+        assert_eq!(document.signed_document.role, "execution_receipt");
+        assert_eq!(document.signed_document.document_id, "screen");
+        let manifest: avila_core_evidence::CasePackageManifest =
+            serde_json::from_slice(&fs::read(case_dir.join("package.json")).unwrap()).unwrap();
+        let receipt_document = manifest
+            .documents
+            .iter()
+            .find(|document| document.step_id.as_deref() == Some("screen"))
+            .unwrap();
+        assert_eq!(document.signed_document.sha256, receipt_document.sha256);
+    }
+
+    #[test]
+    fn sign_receipt_refuses_a_step_the_manifest_does_not_name() {
+        let scratch = ScratchDir::new("sign-receipt-unknown-step");
+        let case_dir = write_minimal_case(&scratch, "CLI-NO-SUCH-STEP", Some("screen"));
+        let key_path = generate_key(&scratch, "keys", KeyRoleArg::Runner);
+        let error = run_sign(SignCommand::Receipt {
+            case: case_dir,
+            step: "transport".into(),
+            key: key_path,
+        })
+        .unwrap_err();
+        assert!(error.to_string().contains("no committed execution_receipt"));
+    }
+
+    #[test]
+    fn sign_receipt_refuses_a_receipt_whose_bytes_no_longer_match_the_manifest() {
+        let scratch = ScratchDir::new("sign-receipt-drifted");
+        let case_dir = write_minimal_case(&scratch, "CLI-DRIFTED-RECEIPT", Some("screen"));
+        let key_path = generate_key(&scratch, "keys", KeyRoleArg::Runner);
+        fs::write(
+            case_dir.join("receipts").join("screen.json"),
+            b"{\"edited after binding\":true}",
+        )
+        .unwrap();
+        let error = run_sign(SignCommand::Receipt {
+            case: case_dir,
+            step: "screen".into(),
+            key: key_path,
+        })
+        .unwrap_err();
+        assert!(error.to_string().contains("rehash before signing"));
     }
 }

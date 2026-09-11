@@ -17,7 +17,8 @@
   ],
   "execution_policy": {
     "permit_nominal_basis": true,
-    "require_qualification": true
+    "require_qualification": true,
+    "require_signatures": true
   },
   "inputs": [
     {

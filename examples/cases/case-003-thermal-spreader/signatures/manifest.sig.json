@@ -3,10 +3,10 @@
   "signed_document": {
     "role": "manifest",
     "document_id": "CASE-003",
-    "sha256": "sha256:2e426c680c3acdcd3bcb513556e042b0c81aecd7a79f8d26523e706acacaa9b8"
+    "sha256": "sha256:8b73100d4b92f9a2b14bae467026a38b1e99dc4fe8db40d36d09884ca509caac"
   },
   "key_id": "191c470d8848ffedf3bb54e33798e98423a5659db297877d6482a06c96149cd7",
   "algorithm": "ed25519",
-  "signature_hex": "d827634c4be975097adef66440e77d55bc471ffafa29e5907e106e93eb2ee6bcd2b000372b9259bbcf8b737322ff6dcc4f307812efe5ef9de65b01ec990d9400",
+  "signature_hex": "d35f8f71a6fa9275e8a9791d7929a0735373f76a81ddbe3faac84b574fe60697a5ff373f06cfd9e423e7aa4ddc92031b10bffb4e68e9f2d4875cca81a20e0e0a",
   "notice": "A signature proves possession of a key at signing time. It does not establish the correctness of what was signed, qualification, review, or regulatory suitability."
 }

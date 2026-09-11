@@ -27,6 +27,8 @@ fn real_report_has_identical_cli_and_mcp_query_results() {
                 "thermal={}",
                 root.join("examples/capabilities/thermal").display()
             ),
+            "--trust-root",
+            &root.join("examples/keys/trust-root.json").display().to_string(),
         ])
         .arg("--json")
         .output()

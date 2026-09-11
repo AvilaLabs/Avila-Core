@@ -235,8 +235,8 @@ fn root_bounds_paths_and_symlinks_and_arguments_match_catalog() {
 fn real_runner_report_and_log_are_queryable_without_mutation() {
     let fixture = Fixture::new();
     let log_path = fixture.0.join("campaign.jsonl");
-    let case = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../examples/cases/case-003-thermal-spreader");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let case = root.join("examples/cases/case-003-thermal-spreader");
     let report = crate::execute_case(
         &case,
         &crate::CaseRunOptions {
@@ -245,6 +245,7 @@ fn real_runner_report_and_log_are_queryable_without_mutation() {
                 ("case".into(), case.clone()),
                 ("thermal".into(), case.join("../../capabilities/thermal")),
             ]),
+            trust_root: Some(root.join("examples/keys/trust-root.json")),
             ..Default::default()
         },
     )

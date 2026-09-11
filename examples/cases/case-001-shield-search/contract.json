@@ -14,7 +14,8 @@
   ],
   "execution_policy": {
     "permit_nominal_basis": true,
-    "require_qualification": true
+    "require_qualification": true,
+    "require_signatures": true
   },
   "inputs": [
     { "input_id": "candidate", "role": { "id": "shielding.candidate", "major": 1 }, "media_type": "application/vnd.avila.shield-candidate+json", "claim_model": { "model": "unquantified" } },

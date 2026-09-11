@@ -77,6 +77,40 @@ case author states no wider a search box than that. It binds no validation
 evidence and says so in its limitations. Both records report `[INSIDE]` for
 the reference candidate.
 
+`candidates/outside-envelope.json` is 3 mm of copper on 60 mm of aluminium:
+63 mm total, beyond the screen record's 50 mm bound. Running it (both steps)
+refuses only what that record covers — the finite-element record bounds no
+thickness, so its enclosure requirement still evaluates:
+
+```text
+[PASS] THERM-R1-screen — nominal.le.within (nominal 415.375 K; …)
+[PASS] THERM-R2-hotspot — enclosure.le.within ([324.827, 324.845] K; …)
+[NOT_EVALUATED] THERM-R3-mass — not_evaluated.outside_qualification
+   because: CORE-A4401 (owner method_owner); screen-areal-mass: outside_qualification (avila-labs.thermal/screen-arithmetic rev 1): {"fact":{"name":"plate.total_thickness","op":"le",…"value":{"unit":"mm","value":"50"}}} -> False
+[NOT_EVALUATED] THERM-R4-thickness — not_evaluated.outside_qualification
+   because: CORE-A4401 (owner method_owner); screen-thickness: outside_qualification (avila-labs.thermal/screen-arithmetic rev 1): {"fact":{"name":"plate.total_thickness","op":"le",…"value":{"unit":"mm","value":"50"}}} -> False
+```
+
+`candidates/outside-envelope-four-layers.json` isolates the layer-count term
+both records share: four 12 mm aluminium layers, 48 mm total, inside the
+50 mm bound. Both steps still run and report; both envelopes refuse the
+geometry anyway, so every bounded or enclosure requirement stays
+unevaluated:
+
+```text
+[PASS] THERM-R1-screen — nominal.le.within (nominal 412 K; …)
+[NOT_EVALUATED] THERM-R2-hotspot — not_evaluated.outside_qualification
+   because: CORE-A4401 (owner method_owner); fe-hotspot-temperature: outside_qualification (avila-labs.thermal/spreader-fe-skfem rev 1): {"fact":{"name":"plate.layer_count","op":"le",…"value":3}} -> False
+[NOT_EVALUATED] THERM-R3-mass — not_evaluated.outside_qualification
+   because: CORE-A4401 (owner method_owner); screen-areal-mass: outside_qualification (avila-labs.thermal/screen-arithmetic rev 1): {"fact":{"name":"plate.layer_count","op":"le",…"value":3}} -> False
+[NOT_EVALUATED] THERM-R4-thickness — not_evaluated.outside_qualification
+   because: CORE-A4401 (owner method_owner); screen-thickness: outside_qualification (avila-labs.thermal/screen-arithmetic rev 1): {"fact":{"name":"plate.layer_count","op":"le",…"value":3}} -> False
+```
+
+R1, the nominal screen guide, is unaffected either way: qualification only
+ever governs a bounded or enclosure requirement (ADR-0008 clause 4), and
+`hotspot-temperature` is not among the screen record's covered output slots.
+
 ## Coverage of the library requirement set
 
 `examples/libraries/thermal/requirement-set.json` names five things a

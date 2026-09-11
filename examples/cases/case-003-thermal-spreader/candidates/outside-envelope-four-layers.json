@@ -1,0 +1,11 @@
+{
+  "schema": "avila.thermal/candidate/v1",
+  "candidate_id": "outside-envelope-four-layers",
+  "description": "Four 12 mm aluminium layers: 48 mm total, inside the 50 mm the screen envelope covers, but four layers rather than the at-most-three both geometry envelopes state. Both steps still run and report; Core refuses to let either establish a bounded or enclosure requirement.",
+  "layers": [
+    { "material": "aluminium", "thickness_mm": "12" },
+    { "material": "aluminium", "thickness_mm": "12" },
+    { "material": "aluminium", "thickness_mm": "12" },
+    { "material": "aluminium", "thickness_mm": "12" }
+  ]
+}

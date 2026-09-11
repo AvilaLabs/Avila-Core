@@ -1,0 +1,9 @@
+{
+  "schema": "avila.thermal/candidate/v1",
+  "candidate_id": "outside-envelope-63",
+  "description": "3 mm of copper on 60 mm of aluminium: 63 mm total, beyond the 50 mm the screen's envelope covers. The screen still computes mass and thickness; Core refuses to let either establish its bounded requirement. The finite-element record does not bound total thickness, so the requirement its output feeds still evaluates.",
+  "layers": [
+    { "material": "copper", "thickness_mm": "3" },
+    { "material": "aluminium", "thickness_mm": "60" }
+  ]
+}

@@ -106,8 +106,14 @@ proposal against the code; see the
 2. Strict qualification is landed: mechanism (S-035), candidate validation
    at the design boundary (S-036), per-output-slot scope and the screen
    geometry records with `require_qualification` set on CASE-001, CASE-002
-   and CASE-003 (S-039). Remaining: the same explicit outside-envelope
-   candidate for CASE-002 and CASE-003 that CASE-001 carries, and a second
+   and CASE-003 (S-039). CASE-003 now carries the same explicit
+   outside-envelope pair CASE-001 has — a 63 mm candidate outside the
+   screen record's thickness bound (its enclosure requirement still
+   evaluates, since the finite-element record bounds no thickness) and a
+   four-layer candidate inside the thickness bound that trips the shared
+   layer-count term in both records; both run clean and produce the
+   intended `not_evaluated.outside_qualification` results. Remaining: the
+   same candidate for CASE-002, gated on its actinv re-pin, and a second
    look at the screen envelopes' numeric bounds, which are case-author
    judgment.
 3. Runner integrity fixes are landed: process-group kill on timeout and one

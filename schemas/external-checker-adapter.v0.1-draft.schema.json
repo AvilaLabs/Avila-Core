@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.avilalabs.com/core/external-checker-adapter/v0.1-draft.schema.json",
   "title": "Avila Core external checker adapter v0.1 draft",
-  "description": "A package-bound mapping from typed Core slots to one exact command-line invocation and from authoritative JSON outputs back to exact or categorical claims. The runner invokes the executable directly with no shell.",
+  "description": "A package-bound mapping from typed Core slots to one exact command-line invocation and from authoritative JSON outputs to exact, interval, numeric unquantified, or categorical claims. The runner invokes the executable directly with no shell. Interval bounds and nominal values are provider assertions, not runner-created uncertainty or qualification.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -114,6 +114,32 @@
     },
     "claim": {
       "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["model", "output_slot", "output_id", "lower_pointer", "upper_pointer", "unit"],
+          "properties": {
+            "model": { "const": "interval" },
+            "output_slot": { "$ref": "#/$defs/nonemptyString" },
+            "output_id": { "$ref": "#/$defs/nonemptyString" },
+            "lower_pointer": { "$ref": "#/$defs/jsonPointer" },
+            "upper_pointer": { "$ref": "#/$defs/jsonPointer" },
+            "nominal_pointer": { "$ref": "#/$defs/jsonPointer" },
+            "unit": { "$ref": "#/$defs/nonemptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["model", "output_slot", "output_id", "pointer", "unit"],
+          "properties": {
+            "model": { "const": "unquantified" },
+            "output_slot": { "$ref": "#/$defs/nonemptyString" },
+            "output_id": { "$ref": "#/$defs/nonemptyString" },
+            "pointer": { "$ref": "#/$defs/jsonPointer" },
+            "unit": { "$ref": "#/$defs/nonemptyString" }
+          }
+        },
         {
           "type": "object",
           "additionalProperties": false,

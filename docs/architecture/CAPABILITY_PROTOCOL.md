@@ -152,11 +152,37 @@ hashed `external_checker_adapter` document. Its document id and internal
 `adapter_id` must equal the execution's adapter id. The descriptor fixes the
 capability type, complete input-slot set, literal/input/output argument vector,
 output paths and media types, timeout, limitations, and JSON Pointer mappings
-to exact or closed-set categorical claims. Its raw-byte digest enters the
+to exact, interval, numeric unquantified or closed-set categorical claims. Its raw-byte digest enters the
 invocation and memoization identity. Core invokes the executable directly
 without a shell, accepts only authoritative JSON for extraction, and never
 interprets the checker-specific category. The executable remains the domain
 validator; the descriptor is only a transport boundary.
+
+Numeric extraction preserves the producer's uncertainty model (ADR-0017):
+
+| Model | JSON Pointer fields | Numeric claim |
+|---|---|---|
+| `exact` | `pointer` | One exact quantity |
+| `interval` | `lower_pointer`, `upper_pointer`, optional `nominal_pointer` | Declared lower/upper bounds, with a nominal only when supplied |
+| `unquantified` | `pointer` | A nominal estimate with no quantified uncertainty |
+
+Each numeric descriptor fixes a `unit`. Each selected number must be a safe
+JSON integer or canonical exact-number string; the whole extraction output
+must be authoritative JSON. An optional pointer is omitted rather than null.
+Bounds are assertions by the producing method. Existing claim admission checks
+their model, order, units and nominal containment; qualification and the kernel
+still determine whether they can support the authored requirement. An estimate
+does not become exact merely because it is serialized without floating-point
+JSON. See the visibly synthetic descriptor/output pair under
+`fixtures/external-checkers/` for the transport shape.
+
+Exact and categorical claims may also declare `optional: true`
+(ADR-0016): a pointer that resolves to no value leaves the claim absent
+rather than failing extraction, so a checker that ran correctly and
+produced no result of that kind is reported as missing evidence to
+dependent requirements instead of as a rejected step. A present but
+malformed value still fails extraction, and the absent slot names are
+recorded in the step's report.
 
 Package-integrity re-hashing of large operator-supplied artifacts (bulk
 nuclear-data libraries, vendored release binaries) is the dominant cost of a

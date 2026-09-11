@@ -3,6 +3,9 @@
 - Status: accepted for the local case runner; both schemas remain drafts
 - Date: 2026-09-03
 - Refines: ADR-0007 and ADR-0006 SC-3/SC-11 A6
+- Extraction extended by [ADR-0017](0017-external-checker-numeric-uncertainty.md)
+  with interval and numeric unquantified claims; the original decision below
+  records the first exact/categorical boundary.
 
 ## Context
 

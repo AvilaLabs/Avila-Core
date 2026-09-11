@@ -135,6 +135,15 @@ descriptor's raw-byte digest is part of the invocation identity, so changing
 the extraction map invalidates receipt reuse even when the executable and
 inputs are unchanged.
 
+Package-declared checkers also extract numeric `interval` and `unquantified`
+claims (ADR-0017). An interval selects explicit lower/upper quantities and an
+optional nominal; an unquantified numeric claim selects only its nominal.
+Authoritative number serialization preserves values, not scientific exactness.
+The producing method owns its bounds and uncertainty rationale. Core preserves
+the declared model through receipts and reuse, then applies the existing
+admission, qualification and verdict rules. No error allowance or midpoint is
+created by the adapter.
+
 After campaign evaluation the runner also realizes each configured presentation
 dossier from those exact claims. It content-identifies a request containing
 the compiled snapshot and campaign, evidence sources and artifact digests,

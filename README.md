@@ -55,8 +55,8 @@ regulatory review. It makes their boundaries explicit and inspectable.
   bounded next actions.
 - Controlled local execution over staged inputs with cleared environments,
   content hashes, receipts, replay checks, and selective reuse.
-- Hash-bound, package-declared command-line checkers with closed numeric and
-  categorical claim extraction.
+- Hash-bound, package-declared command-line checkers with exact, interval,
+  numeric unquantified and closed-set categorical claim extraction.
 - An execution policy that can require a qualification assessment behind
   every bounded or enclosure verdict, refusing unqualified evidence outright
   or, at its default, evaluating it while visibly flagging the gap. A qualification record may scope

@@ -1,0 +1,33 @@
+{
+  "schema_version": "avila.core/external-checker-adapter/v0.1-draft",
+  "adapter_id": "test/numeric-check@1",
+  "capability_type": { "id": "test.numeric-check", "major": 1 },
+  "input_slots": ["candidate"],
+  "arguments": [
+    { "kind": "input_path", "input_slot": "candidate" },
+    { "kind": "output_path", "output_id": "report" }
+  ],
+  "outputs": [
+    { "output_id": "report", "workspace_path": "outputs/report.json", "media_type": "application/json" }
+  ],
+  "claims": [
+    {
+      "model": "interval",
+      "output_slot": "measurement",
+      "output_id": "report",
+      "lower_pointer": "/measurement/lower",
+      "upper_pointer": "/measurement/upper",
+      "nominal_pointer": "/measurement/nominal",
+      "unit": "1"
+    },
+    {
+      "model": "unquantified",
+      "output_slot": "estimate",
+      "output_id": "report",
+      "pointer": "/estimate",
+      "unit": "1"
+    }
+  ],
+  "timeout_ms": 1000,
+  "limitations": ["Synthetic transport fixture only; no scientific model or qualification."]
+}

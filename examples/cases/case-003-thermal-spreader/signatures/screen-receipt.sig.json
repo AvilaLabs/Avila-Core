@@ -3,10 +3,10 @@
   "signed_document": {
     "role": "execution_receipt",
     "document_id": "screen",
-    "sha256": "sha256:962939298639eb44065619691acb1b49ff8cb7ac589c54a4f0e7694696b4bfa0"
+    "sha256": "sha256:cc95133af8f3197c4fc88685579af8f4ae7522bdda0c299012bddf2f04002d4d"
   },
   "key_id": "49104f3eb2b3489e8b26bc1ebb0934637e43aacf515719b1698758532c6daf62",
   "algorithm": "ed25519",
-  "signature_hex": "fc056831089a7ee93a81b55a90894fe8b0b71a5d8102101b7d0b6ece9a6879d30b4fca3d264c608403e299e4a798471f2ebc7e33ccab1ff81a78510b7435f406",
+  "signature_hex": "d965689a8a1a88f07f9314055e7169da1f42ba6c6e1c7c0e182b9340d1a2e495e48f7f04bdd3567ad0ba3a8b9d8a708b88aecc10ff2fcbda2a95d6b983debd00",
   "notice": "A signature proves possession of a key at signing time. It does not establish the correctness of what was signed, qualification, review, or regulatory suitability."
 }

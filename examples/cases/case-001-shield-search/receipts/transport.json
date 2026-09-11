@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/execution-receipt/v0.1-draft",
   "case_id": "CASE-001",
-  "compiled_snapshot_sha256": "sha256:9817e10fc8abc0aab1cd21888b75735a3a5ceec87084b4e84b98fd633c529a7d",
+  "compiled_snapshot_sha256": "sha256:a59390be0b07da6173886b9b987ace0e71a847fc83a7c09862b5269f684947d5",
   "step_id": "transport",
   "capability_type": {
     "id": "shielding.slab-transport",
@@ -98,9 +98,9 @@
   },
   "invocation_sha256": "sha256:06ec7d8ab3ee1273760887ebff1aa941d82b92b4c249f3af79578009c649adfb",
   "process": {
-    "started_at": "2026-09-02T19:52:03.382Z",
-    "finished_at": "2026-09-02T19:52:55.964Z",
-    "duration_ms": 52581,
+    "started_at": "2026-09-11T19:07:49.257Z",
+    "finished_at": "2026-09-11T19:10:58.256Z",
+    "duration_ms": 188998,
     "exit_status": 0,
     "timed_out": false
   },
@@ -137,7 +137,7 @@
   "limitations": [
     "Exit status and output digests are process evidence, not scientific success.",
     "The executable digest identifies the bytes that ran; it does not qualify the method.",
-    "No sandbox, resource accounting, or signature was applied; the environment was cleared and the working directory confined to the workspace."
+    "No sandbox or resource accounting was applied beyond a cleared environment, a working directory confined to the workspace, and terminating the child's Unix process group or Windows Job Object on timeout; nothing here is signed."
   ],
   "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, practical suitability, or regulatory suitability."
 }

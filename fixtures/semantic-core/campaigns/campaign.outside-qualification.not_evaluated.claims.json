@@ -57,7 +57,21 @@
             "predicate": "{\"fact\":{\"name\":\"model.range\",\"op\":\"le\",\"value\":1}}",
             "result": "false"
           }
-        ]
+        ],
+        "context": {
+          "facts": {
+            "model.range": {
+              "value": 2,
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:fixture",
+                "validator": "fixture/adapter",
+                "receipt": "plan:fixture"
+              }
+            }
+          },
+          "inputs": {}
+        }
       }
     }
   ]

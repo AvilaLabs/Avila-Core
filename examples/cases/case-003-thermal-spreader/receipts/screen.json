@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/execution-receipt/v0.1-draft",
   "case_id": "CASE-003",
-  "compiled_snapshot_sha256": "sha256:d88507c757a9ce1801fc145d9c820d8acfa1b57eba68b63ddd5813164a664e7b",
+  "compiled_snapshot_sha256": "sha256:b699fff3a5fe1312d9812ad3b7df046903d7de25a1da06f43cb96db4fa6b5822",
   "step_id": "screen",
   "capability_type": {
     "id": "thermal.spreader-screen",
@@ -49,7 +49,7 @@
     }
   ],
   "invocation": {
-    "program": "python3.14",
+    "program": "python",
     "arguments": [
       "tools/thermal_screen.py",
       "--candidate",
@@ -67,8 +67,8 @@
   },
   "invocation_sha256": "sha256:feb94838acdb20e68c84ab049a04caa0bd9ba5e7c3d78b2537fbe0da1885f9c3",
   "process": {
-    "started_at": "2026-09-03T17:08:19.845Z",
-    "finished_at": "2026-09-03T17:08:19.906Z",
+    "started_at": "2026-09-11T19:12:48.474Z",
+    "finished_at": "2026-09-11T19:12:48.535Z",
     "duration_ms": 60,
     "exit_status": 0,
     "timed_out": false
@@ -106,7 +106,7 @@
   "limitations": [
     "Exit status and output digests are process evidence, not scientific success.",
     "The executable digest identifies the bytes that ran; it does not qualify the method.",
-    "No sandbox, resource accounting, or signature was applied; the environment was cleared and the working directory confined to the workspace."
+    "No sandbox or resource accounting was applied beyond a cleared environment, a working directory confined to the workspace, and terminating the child's Unix process group or Windows Job Object on timeout; nothing here is signed."
   ],
   "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, practical suitability, or regulatory suitability."
 }

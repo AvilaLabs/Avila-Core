@@ -620,33 +620,71 @@ class TestScopePredicateVectors(unittest.TestCase):
 
 
 class TestQualificationEnvelopeConsistency(unittest.TestCase):
-    CASES = ["case-001-shield-search", "case-002-coupled-shield", "case-003-thermal-spreader"]
+    # CASE-002 is excluded while its committed claims predate ADR-0018: its
+    # pinned ACTINV binary no longer resolves on this machine, so its
+    # claims cannot be regenerated to carry `context`; the next test pins
+    # that known state by name rather than silently skipping it.
+    CASES = ["case-001-shield-search", "case-003-thermal-spreader"]
 
-    def test_every_qualifying_claim_is_self_consistent_with_its_bound_record(self):
+    @staticmethod
+    def _case_inputs(case_dir: Path):
+        package = load(case_dir / "package.json")
+        docs_by_role: dict = {}
+        for d in package.get("documents", []):
+            docs_by_role.setdefault(d["role"], []).append(d)
+        receipts_by_step = {
+            d.get("step_id", d["document_id"]): load(case_dir / d["path"])
+            for d in docs_by_role.get("execution_receipt", [])
+            if (case_dir / d["path"]).is_file()
+        }
+        return package, docs_by_role, receipts_by_step
+
+    def test_every_qualifying_claim_re_derives_from_its_persisted_context(self):
         total_checked = 0
         for case_name in self.CASES:
             case_dir = EXAMPLES / case_name
-            package = load(case_dir / "package.json")
-            docs_by_role: dict = {}
-            for d in package.get("documents", []):
-                docs_by_role.setdefault(d["role"], []).append(d)
+            package, docs_by_role, receipts_by_step = self._case_inputs(case_dir)
             claims = load(case_dir / "claims.json")
 
             report = v.Report(case_name)
-            v.verify_case_qualification_envelopes(case_dir, package, docs_by_role, claims, v.kinds_from_registry_doc(load(case_dir / "registry.json")), report)
+            v.verify_case_qualification_envelopes(
+                case_dir, package, docs_by_role, claims,
+                v.kinds_from_registry_doc(load(case_dir / "registry.json")),
+                receipts_by_step, report,
+            )
 
-            qualification_checks = [c for c in report.checks if c.check.startswith("qualification.") and c.check != "qualification.envelope_predicate_over_facts"]
+            qualification_checks = [c for c in report.checks if c.check.startswith("qualification.")]
             self.assertGreater(len(qualification_checks), 0, case_name)
             for check in qualification_checks:
                 self.assertEqual(check.status, "verified", f"{case_name}: {check.to_dict()}")
+                self.assertIn("re-derive", check.detail)
             total_checked += len(qualification_checks)
 
-            disclosure = [c for c in report.checks if c.check == "qualification.envelope_predicate_over_facts"]
-            self.assertEqual(len(disclosure), 1)
-            self.assertEqual(disclosure[0].status, "not_checked")
-            self.assertIn("never persisted", disclosure[0].reason)
+        self.assertGreaterEqual(total_checked, 8, "screen mass/thickness + transport claims on CASE-001, screen/fe claims on CASE-003")
 
-        self.assertGreaterEqual(total_checked, 9, "screen mass/thickness + transport/activation/fe claims across the three cases")
+    def test_case_002_qualifying_claims_pending_actinv_re_pin(self):
+        # CASE-002's committed claims still predate ADR-0018 (its pinned
+        # ACTINV binary no longer resolves, so claims cannot be re-blessed):
+        # every qualification-carrying claim must be named for the missing
+        # context, never silently passed. When CASE-002 is re-blessed this
+        # test is removed and the case rejoins CASES above.
+        case_name = "case-002-coupled-shield"
+        case_dir = EXAMPLES / case_name
+        package, docs_by_role, receipts_by_step = self._case_inputs(case_dir)
+        claims = load(case_dir / "claims.json")
+
+        report = v.Report(case_name)
+        v.verify_case_qualification_envelopes(
+            case_dir, package, docs_by_role, claims,
+            v.kinds_from_registry_doc(load(case_dir / "registry.json")),
+            receipts_by_step, report,
+        )
+
+        qualification_checks = [c for c in report.checks if c.check.startswith("qualification.")]
+        self.assertEqual(len(qualification_checks), 9)
+        for check in qualification_checks:
+            self.assertEqual(check.status, "mismatch", f"{case_name}: {check.to_dict()}")
+            self.assertIn("no persisted applicability context", check.detail)
 
     def test_evaluate_envelope_terms_splits_case_001_screen_scope_exactly_as_committed(self):
         # A term-splitting cross-check independent of verify_case_qualification_envelopes
@@ -728,7 +766,11 @@ class TestPositivePathOnRealCases(unittest.TestCase):
     CASES = [
         "case-000-actinv-aftermatter",
         "case-001-shield-search",
-        "case-002-coupled-shield",
+        # case-002-coupled-shield is excluded: its pinned ACTINV binary no
+        # longer resolves on this machine, so its committed claims still
+        # predate ADR-0018 (no persisted applicability context) and are
+        # reported as mismatches by name — see
+        # TestQualificationEnvelopeConsistency.test_case_002_qualifying_claims_pending_actinv_re_pin.
         "case-003-thermal-spreader",
         "case-008-mode-selective-quench",
         "case-009-ncsx-copper-discharge",
@@ -984,11 +1026,108 @@ class TestMutations(unittest.TestCase):
         for d in package.get("documents", []):
             docs_by_role.setdefault(d["role"], []).append(d)
         v.verify_case_qualification_envelopes(
-            case_dir, package, docs_by_role, claims, v.kinds_from_registry_doc(json.loads((case_dir / "registry.json").read_text())), report
+            case_dir, package, docs_by_role, claims,
+            v.kinds_from_registry_doc(json.loads((case_dir / "registry.json").read_text())),
+            TestQualificationEnvelopeConsistency._case_inputs(case_dir)[2], report,
         )
         by_check = {c.check: c for c in report.checks}
         self.assertEqual(by_check["qualification.screen-mass"].status, "mismatch")
         self.assertIn("do not match the bound record's own scope", by_check["qualification.screen-mass"].detail)
+
+    # -----------------------------------------------------------------
+    # ADR-0018's own mutations: an edited fact, a missing context, an
+    # edited context input identity, and a context lifted from the
+    # sibling step — each self-consistent under a re-hashed manifest, so
+    # only re-derivation catches it.
+    # -----------------------------------------------------------------
+
+    def _qualification_report(self, case_dir: Path) -> dict:
+        package, docs_by_role, receipts_by_step = TestQualificationEnvelopeConsistency._case_inputs(case_dir)
+        claims = load(case_dir / "claims.json")
+        report = v.Report(str(case_dir))
+        v.verify_case_qualification_envelopes(
+            case_dir, package, docs_by_role, claims,
+            v.kinds_from_registry_doc(load(case_dir / "registry.json")),
+            receipts_by_step, report,
+        )
+        return {c.check: c for c in report.checks}
+
+    def _mutate_case_001_claims(self, mutate) -> Path:
+        """Copy CASE-001, apply `mutate(claims)`, re-hash the claims and
+        manifest documents so the package stays self-consistent."""
+        case_dir = self._copy_case("case-001-shield-search")
+        claims_path = case_dir / "claims.json"
+        claims = json.loads(claims_path.read_text())
+        mutate(claims)
+        _write_json(claims_path, claims)
+        package_path = case_dir / "package.json"
+        package = json.loads(package_path.read_text())
+        _rehash_document(package, "case-001-claims", v.sha256_file(claims_path))
+        _write_json(package_path, package)
+        return case_dir
+
+    def test_edited_applicability_fact_is_named_by_re_derivation(self):
+        # The screen envelope requires slab.total_thickness <= 120 cm from
+        # the screen adapter; the candidate measures 90. Raising the
+        # persisted fact past the threshold must flip the re-derived term
+        # against the recorded one.
+        def mutate(claims):
+            for claim in claims["claims"]:
+                if claim["claim_id"] == "screen-mass":
+                    fact = claim["qualification"]["context"]["facts"]["slab.total_thickness"]
+                    self.assertEqual(fact["value"]["value"], "90")
+                    fact["value"]["value"] = "150"
+        case_dir = self._mutate_case_001_claims(mutate)
+
+        by_check = self._qualification_report(case_dir)
+        self.assertEqual(by_check["qualification.screen-mass"].status, "mismatch")
+        self.assertIn("re-derive", by_check["qualification.screen-mass"].detail)
+        # Each claim carries its own copy of the step's context, so the
+        # edit names exactly the mutated claim and the sibling stays clean.
+        self.assertEqual(by_check["qualification.screen-thickness"].status, "verified")
+
+    def test_missing_applicability_context_is_named(self):
+        def mutate(claims):
+            for claim in claims["claims"]:
+                if claim["claim_id"] == "screen-mass":
+                    del claim["qualification"]["context"]
+        case_dir = self._mutate_case_001_claims(mutate)
+
+        by_check = self._qualification_report(case_dir)
+        self.assertEqual(by_check["qualification.screen-mass"].status, "mismatch")
+        self.assertIn("no persisted applicability context", by_check["qualification.screen-mass"].detail)
+        self.assertEqual(by_check["qualification.screen-thickness"].status, "verified")
+
+    def test_edited_context_input_digest_is_named_by_receipt_binding(self):
+        def mutate(claims):
+            for claim in claims["claims"]:
+                if claim["claim_id"] == "screen-mass":
+                    attrs = claim["qualification"]["context"]["inputs"]["candidate"]["attributes"]
+                    real = attrs["sha256"]
+                    attrs["sha256"] = "sha256:" + ("0" * 63 + ("1" if real[-1] != "1" else "2"))
+        case_dir = self._mutate_case_001_claims(mutate)
+
+        by_check = self._qualification_report(case_dir)
+        self.assertEqual(by_check["qualification.screen-mass"].status, "mismatch")
+        self.assertIn("the receipt binds", by_check["qualification.screen-mass"].detail)
+
+    def test_context_lifted_from_a_sibling_step_is_named_by_receipt_binding(self):
+        # transport's context cites plan:<transport's invocation>; copied
+        # onto screen-mass it contradicts the screen receipt's own
+        # invocation identity and staged input digests.
+        def mutate(claims):
+            transport_context = next(
+                c["qualification"]["context"] for c in claims["claims"]
+                if c["claim_id"] == "transport-dose-rate"
+            )
+            for claim in claims["claims"]:
+                if claim["claim_id"] == "screen-mass":
+                    claim["qualification"]["context"] = transport_context
+        case_dir = self._mutate_case_001_claims(mutate)
+
+        by_check = self._qualification_report(case_dir)
+        self.assertEqual(by_check["qualification.screen-mass"].status, "mismatch")
+        self.assertIn("planned invocation", by_check["qualification.screen-mass"].detail)
 
 
 if __name__ == "__main__":

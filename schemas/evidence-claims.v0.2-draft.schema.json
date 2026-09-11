@@ -62,17 +62,42 @@
         "qualification": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["qualification_id", "revision", "sha256", "state"],
-          "description": "The producing capability's qualification envelope evaluated for this run.",
+          "required": ["qualification_id", "revision", "sha256", "state", "context"],
+          "description": "The producing capability's qualification envelope evaluated for this run, together with the applicability context it was evaluated over so the assessment can be re-derived independently (ADR-0018).",
           "properties": {
             "qualification_id": { "$ref": "#/$defs/nonemptyString" },
             "revision": { "type": "integer", "minimum": 1 },
             "sha256": { "$ref": "#/$defs/sha256" },
             "state": { "enum": ["inside", "outside", "unknown"] },
+            "context": { "$ref": "#/$defs/applicabilityContext" },
             "terms": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["predicate", "result"],
               "properties": { "predicate": { "type": "string" }, "result": { "enum": ["true", "false", "unknown"] } } } }
           }
         }
+      }
+    },
+    "applicabilityContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["facts", "inputs"],
+      "description": "The kernel's applicability context (predicate.rs `ApplicabilityContext` as JSON): the facts the adapter extracted from the staged, digest-verified inputs, each carrying its declared source, plus each staged input's media type and SHA-256 as attributes of its slot. These are producer assertions with provenance, not universal facts.",
+      "properties": {
+        "params": { "type": "object", "additionalProperties": { "$ref": "#/$defs/quantityValue" } },
+        "environment": { "type": "object", "additionalProperties": false, "required": ["image_digest"],
+          "properties": { "image_digest": { "$ref": "#/$defs/nonemptyString" } } },
+        "inputs": { "type": "object", "additionalProperties": { "type": "object", "additionalProperties": false,
+          "required": ["attributes"], "properties": { "attributes": { "type": "object" } } } },
+        "facts": { "type": "object", "additionalProperties": { "type": "object", "additionalProperties": false,
+          "required": ["value", "source"],
+          "properties": {
+            "value": { "description": "A FactValue: a quantity {value, unit}, string, boolean, or integer.", "type": ["object", "string", "boolean", "integer"] },
+            "source": { "type": "object", "additionalProperties": false, "required": ["class", "identity", "validator", "receipt"],
+              "properties": {
+                "class": { "$ref": "#/$defs/nonemptyString" },
+                "identity": { "$ref": "#/$defs/nonemptyString" },
+                "validator": { "$ref": "#/$defs/nonemptyString" },
+                "receipt": { "$ref": "#/$defs/nonemptyString" } } }
+          } } }
       }
     },
     "claimValue": {

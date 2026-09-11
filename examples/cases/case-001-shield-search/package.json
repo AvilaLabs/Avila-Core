@@ -19,7 +19,7 @@
       "document_id": "case-001-claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:4d7ac00e6eda234610066654232a45975cec57e086f5a9b4ddb7c8a75202e289"
+      "sha256": "sha256:deed9145dd9f486d7aee49e6e901580b3f02323f40ee15a8594c4a4f7b7de04a"
     },
     {
       "document_id": "case-001-requirement-set",
@@ -55,39 +55,39 @@
       "document_id": "case-001-expected-campaign",
       "role": "expected_campaign_report",
       "path": "campaign-report.json",
-      "sha256": "sha256:36fb146f19ec615ab1c4b3b13b3847a1f38049f9d4fb877f2af774b4e9b005b0"
+      "sha256": "sha256:620374c14ca387f41813863926de9ac78bc36107fa02114c2d183fd91159d400"
     },
     {
       "document_id": "case-001-screen-receipt",
       "role": "execution_receipt",
       "path": "receipts/screen.json",
-      "sha256": "sha256:c0563a263988ee1c1c0b34600ef1319bcaf9b16a544787ad6cba15567884443c",
+      "sha256": "sha256:1b105bfab457582573bf2ecdcd5c432eb1b2b1da5004ea1c3ef5bfa79fb2e2b0",
       "step_id": "screen"
     },
     {
       "document_id": "case-001-transport-receipt",
       "role": "execution_receipt",
       "path": "receipts/transport.json",
-      "sha256": "sha256:793c11d941878753af17db5fe1f576ecff3172198e291df9411ea26c31351841",
+      "sha256": "sha256:1d606a7d26c81bb1281c6b92e1a9aec8ee1b171b8a8061ddf5498fad5e781eda",
       "step_id": "transport"
     },
     {
       "document_id": "signature-receipt-screen",
       "role": "signature",
       "path": "signatures/screen-receipt.sig.json",
-      "sha256": "sha256:d6a3f4494e1d3cb89f6700c454b54873ce4f1b7e74a52349a766f951ac7bc413"
+      "sha256": "sha256:d329cfa1503757f6387879cb250ff8e762af4fcdda73cb7e60f619393b9099d2"
     },
     {
       "document_id": "signature-receipt-transport",
       "role": "signature",
       "path": "signatures/transport-receipt.sig.json",
-      "sha256": "sha256:0fbfa509322021f7420758f1ff6951c8e7887b934e8aca06f894d16e39076020"
+      "sha256": "sha256:98a52056570a41192fbcfcb9120042c333d61a5fb3c77a50362f1e7fc5252c3a"
     },
     {
       "document_id": "signature-manifest",
       "role": "signature",
       "path": "signatures/manifest.sig.json",
-      "sha256": "sha256:17df3e06e293180979843624171b891c0b9f71ae7e16cb92904a2d5050d05546"
+      "sha256": "sha256:4375c6208b1d5ccf744f0798d106d792125f0f15507748422cee9564a7d4fd84"
     }
   ],
   "artifacts": [

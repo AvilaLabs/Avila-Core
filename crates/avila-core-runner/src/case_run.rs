@@ -3597,7 +3597,7 @@ mod tests {
         assert_eq!(stage.readiness, PresentationGateReadiness::ReadyForAgent);
         assert_eq!(
             stage.request_sha256,
-            "sha256:907ff3ff739332d2d0d3586936017a52967fc7a699b1088c1eb93afaff517ab7"
+            "sha256:a9bbd8680910f6fcc9c642eaba748a233b4b94155d8cf2b6b3863bf13a13a7cd"
         );
         assert_eq!(
             stage
@@ -4015,5 +4015,105 @@ mod tests {
         assert_eq!(value["attempt"]["attempt_id"], "contested-root");
 
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// ADR-0018: every qualification-carrying claim in a committed claims
+    /// document persists the applicability context its assessment was
+    /// evaluated over, so re-evaluating the bound record's scope against
+    /// that context reproduces the recorded per-term results and state.
+    /// CASE-001 is the committed fixture; CASE-002's claims predate
+    /// ADR-0018 until its pinned ACTINV binary resolves again.
+    #[test]
+    fn committed_qualification_contexts_re_derive_the_recorded_assessment() {
+        let case = case_001();
+        let claims_bytes = fs::read(case.join("claims.json")).unwrap();
+        let claims: ClaimsDocument = serde_json::from_slice(&claims_bytes).unwrap();
+        let registry = fs::read(case.join("registry.json")).unwrap();
+        let kinds = registry_kinds(&registry).unwrap();
+        let records = [
+            avila_core_compiler::parse_qualification(
+                &fs::read(case.join("qualification.json")).unwrap(),
+            )
+            .unwrap(),
+            avila_core_compiler::parse_qualification(
+                &fs::read(case.join("qualification-screen.json")).unwrap(),
+            )
+            .unwrap(),
+        ];
+
+        let mut checked = 0;
+        for claim in &claims.claims {
+            let Some(qualification) = &claim.qualification else {
+                continue;
+            };
+            let record = records
+                .iter()
+                .find(|record| {
+                    record.qualification_id == qualification.qualification_id
+                        && record.revision == qualification.revision
+                })
+                .expect("claim's qualification must name a bound record");
+            let derived = evaluate_envelope(
+                record,
+                &qualification.sha256,
+                &kinds,
+                &qualification.context,
+            );
+            assert_eq!(
+                derived.state, qualification.state,
+                "claim {} state must re-derive from its persisted context",
+                claim.claim_id
+            );
+            assert_eq!(
+                derived
+                    .terms
+                    .iter()
+                    .map(|term| term.result)
+                    .collect::<Vec<_>>(),
+                qualification
+                    .terms
+                    .iter()
+                    .map(|term| term.result)
+                    .collect::<Vec<_>>(),
+                "claim {} per-term results must re-derive from its persisted context",
+                claim.claim_id
+            );
+            // The persisted context names the step's own staged inputs by
+            // digest, bound through the step's committed receipt.
+            let receipt: ExecutionReceipt = serde_json::from_slice(
+                &fs::read(
+                    case.join("receipts")
+                        .join(format!("{}.json", claim.step_id)),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+            for (slot, input) in qualification.context["inputs"]
+                .as_object()
+                .expect("context inputs is an object")
+            {
+                let staged = receipt
+                    .inputs
+                    .iter()
+                    .find(|input| input.input_slot == *slot)
+                    .expect("context input slot must be staged in the receipt");
+                assert_eq!(
+                    input["attributes"]["sha256"].as_str().unwrap(),
+                    staged.sha256
+                );
+            }
+            for (name, fact) in qualification.context["facts"]
+                .as_object()
+                .expect("context facts is an object")
+            {
+                assert_eq!(
+                    fact["source"]["receipt"].as_str().unwrap(),
+                    format!("plan:{}", receipt.invocation_sha256),
+                    "fact {name} must cite this step's planned invocation"
+                );
+            }
+            checked += 1;
+        }
+        assert_eq!(checked, 4, "CASE-001 carries four qualified claims");
     }
 }

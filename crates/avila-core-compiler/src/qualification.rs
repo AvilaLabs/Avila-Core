@@ -103,6 +103,12 @@ pub struct EnvelopeAssessment {
     /// Identity of the qualification record's bytes.
     pub sha256: String,
     pub state: EnvelopeState,
+    /// The kernel applicability context (as JSON) this assessment was
+    /// evaluated over: every fact the adapter reported, with its declared
+    /// source, and the staged inputs' media types and identities. Persisted
+    /// so an independent verifier can re-derive the per-term results and
+    /// state rather than trusting the recorded outcome (ADR-0018).
+    pub context: Value,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub terms: Vec<EnvelopeTerm>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -117,6 +123,9 @@ pub struct ClaimQualification {
     pub revision: u64,
     pub sha256: String,
     pub state: EnvelopeState,
+    /// The applicability context the assessment was evaluated over; carrying
+    /// it on the claim binds the recorded state to the recorded facts.
+    pub context: Value,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub terms: Vec<EnvelopeTerm>,
 }
@@ -138,6 +147,7 @@ impl From<&EnvelopeAssessment> for ClaimQualification {
             revision: assessment.revision,
             sha256: assessment.sha256.clone(),
             state: assessment.state,
+            context: assessment.context.clone(),
             terms: assessment.terms.clone(),
         }
     }
@@ -209,6 +219,7 @@ pub fn evaluate_envelope(
         revision: record.revision,
         sha256: record_sha256.into(),
         state: EnvelopeState::Unknown,
+        context: context.clone(),
         terms: Vec::new(),
         issues: Vec::new(),
     };
@@ -344,6 +355,10 @@ mod tests {
         assert_eq!(outside.terms[0].result, TruthValue::False);
         let claim = ClaimQualification::from(&outside);
         assert_eq!(claim.failed_terms().len(), 1);
+        // ADR-0018: the assessment and the claim both persist the exact
+        // context the scope was evaluated over.
+        assert_eq!(outside.context, context("150", "polyethylene"));
+        assert_eq!(claim.context, outside.context);
 
         let unknown = evaluate_envelope(&record, "sha256:q", &kinds, &json!({ "facts": {} }));
         assert_eq!(unknown.state, EnvelopeState::Unknown);

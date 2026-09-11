@@ -55,10 +55,12 @@ agreement against); in short:
 7. **Mutation tests** — `test_verifier.py`'s `TestMutations` corrupts one
    claim value, one receipt output digest, one manifest entry, one log
    line, one verdict margin, one signature byte, one signature's key id,
-   one manifest (without re-signing it), and one qualification envelope
-   term, each in a scratch copy of a real case with everything *else*
-   re-hashed to stay self-consistent, and asserts this verifier names
-   exactly the corrupted layer.
+   one manifest (without re-signing it), one qualification envelope term,
+   one persisted applicability-fact value, one qualification context (by
+   removal), one context input identity, and one context (by lifting it
+   from a sibling step), each in a scratch copy of a real case with
+   everything *else* re-hashed to stay self-consistent, and asserts this
+   verifier names exactly the corrupted layer.
 8. **ADR-0015 signatures** — a from-scratch, standard-library Ed25519 (RFC
    8032), proved against every RFC 8032 section 7.1 test vector and every
    ADR-0015 signature document committed under `examples/cases/*/signatures/`.
@@ -69,25 +71,33 @@ agreement against); in short:
    that plain does not verify), or `unsigned` per signature. `--trust-root
    FILE` supplies the accepted keys (e.g. `examples/keys/trust-root.json`);
    without it, every signature is `not_checked` and never `verified`.
-9. **Qualification envelopes** (ADR-0008, S-039) — a from-scratch
-   Strong-Kleene predicate evaluator, proved against every vector in
-   `fixtures/semantic-core/vectors/scope-predicates.v1.json`. For CASE-001,
-   002, and 003's committed claims, independently checks that each
-   qualification-carrying claim's recorded per-term predicate text matches,
-   in order, the bound qualification record's own scope terms; that its
-   recorded `state` is the correct aggregate of its own recorded per-term
-   results; and that `covered_output_slots` is respected. It does **not**
-   re-derive a term's recorded boolean from the real extracted
-   applicability fact that produced it — Core does not persist that fact in
-   any committed document — and says so by name
-   (`qualification.envelope_predicate_over_facts`) rather than silently
-   trusting the recorded outcome.
+9. **Qualification envelopes** (ADR-0008, S-039, ADR-0018, S-046) — a
+   from-scratch Strong-Kleene predicate evaluator, proved against every
+   vector in `fixtures/semantic-core/vectors/scope-predicates.v1.json`.
+   For CASE-001 and 003's committed claims, independently re-evaluates
+   each qualification-carrying claim's per-term scope predicate over the
+   claim's persisted applicability context and compares every derived
+   term result and the aggregate state against the recorded ones; checks
+   each recorded term's predicate text against the bound qualification
+   record's own scope; and binds the context to the step's execution
+   receipt — every context input's identity equals a receipt input's,
+   every fact's `plan:<invocation>` source equals the receipt's own
+   invocation identity, and every fact's source identity is either
+   `runner:local` or a staged input the receipt names. What it does
+   **not** establish, by name: that the adapter extracted the facts
+   correctly from the bytes — the context remains the producer's
+   assertion about verified inputs, not independent proof of its truth.
+   CASE-002's committed claims are in the pre-ADR-0018 shape (its pinned
+   ACTINV executable no longer resolves on this machine, so its claims
+   cannot be regenerated); every one of its qualified claims' missing
+   context is reported as a mismatch until the case is deliberately
+   re-pinned and re-blessed.
 
 Explicitly **out of scope**, refused by name wherever the check would
 otherwise silently pass or silently mismatch:
 
-- re-deriving a qualification-envelope term's boolean from a run's real
-  extracted applicability facts (item 9's own boundary above);
+- proving a persisted applicability fact was extracted correctly from the
+  staged bytes (item 9's own boundary above);
 - coverage-set evaluation against a `requirement_set` document;
 - presentation-gate / staged-review realisation or content;
 - recompiling a contract + registry into a compiled-snapshot identity
@@ -162,9 +172,12 @@ or committed example case it proves agreement against — see
 - `TestMarginRendering`: every `margin` value in every committed
   `campaign-log.jsonl` / `attempts.jsonl` in this repository (several
   thousand) reproduces exactly.
-- `TestPositivePathOnRealCases`: CASE-000, 001, 002, 003, 008, 009 each
-  verify with zero `mismatch` (CASE-001, 002, 003 additionally with
-  `--trust-root`, asserting every manifest/receipt signature `verified`).
+- `TestPositivePathOnRealCases`: CASE-000, 001, 003, 008, 009 each verify
+  with zero `mismatch` (CASE-001 and 003 additionally with
+  `--trust-root`, asserting every manifest/receipt signature `verified`);
+  CASE-002 is exercised separately by name — its pre-ADR-0018 claims
+  report the missing qualification contexts as mismatches and nothing
+  else does.
 - `TestEd25519RFC8032Vectors`: all 5 RFC 8032 section 7.1 vectors (public
   key derivation, signing, and verification), plus the curve constants
   cross-checked against RFC 8032 Table 1's own literals.
@@ -179,10 +192,11 @@ or committed example case it proves agreement against — see
 - `TestScopePredicateVectors`: all 19 vectors in `scope-predicates.v1.json`,
   plus hand-written cases for the string/bool/integer fact and structural-
   error paths those 19 vectors don't happen to reach.
-- `TestQualificationEnvelopeConsistency`: every qualification-carrying claim
-  in CASE-001, 002, and 003 is self-consistent with its bound qualification
-  record.
-- `TestMutations`: the nine corruption scenarios in item 7 above.
+- `TestQualificationEnvelopeConsistency`: every qualification-carrying
+  claim in CASE-001 and 003 re-derives from its persisted context and
+  binds to its step's receipt; CASE-002's pre-ADR-0018 claims are named
+  as mismatches by the missing context.
+- `TestMutations`: the thirteen corruption scenarios in item 7 above.
 
 ## What this is not
 

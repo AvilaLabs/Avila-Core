@@ -1,6 +1,7 @@
 # ADR-0008: Qualification envelopes
 
-**Status:** accepted 2026-09-02 (decision S-025)
+**Status:** accepted 2026-09-02 (decision S-025); the applicability context
+is persisted on the assessment and claim by ADR-0018
 
 ## Context
 

@@ -134,31 +134,32 @@ reported as ``not_checked`` with a reason; it is never silently skipped.
      nothing to cryptographically check it against) and never
      ``verified`` — ADR-0015 clause 3.
 
-  9. Qualification envelopes (ADR-0008, S-039) — a from-scratch Strong-
-     Kleene predicate evaluator (ADR-0006 SC-7; the same three-valued
-     ``always`` / ``all`` / ``any`` / ``not`` / ``param_in_range`` /
-     ``input_attribute_in`` / ``environment_image_in`` / ``fact`` grammar
-     the kernel's applicability evaluator implements), proved against every
-     vector in ``fixtures/semantic-core/vectors/scope-predicates.v1.json``.
-     For every qualification-carrying claim in CASE-001, CASE-002, and
-     CASE-003's committed reports, independently re-derives and checks:
-     that its recorded qualification identity (id/revision/sha256) names a
-     qualification document the package actually binds; that its recorded
-     per-term predicate text is, in order, exactly the bound record's own
-     scope terms (catches an edited, reordered, or substituted term); that
-     its recorded overall ``state`` is the correct Inside/Outside/Unknown
-     aggregate of its own recorded per-term results (catches a state that
-     contradicts its own terms); and that it never carries an assessment on
+  9. Qualification envelopes (ADR-0008 as refined by ADR-0018, S-039,
+     S-046) — a from-scratch Strong-Kleene predicate evaluator (ADR-0006
+     SC-7; the same three-valued ``always`` / ``all`` / ``any`` / ``not`` /
+     ``param_in_range`` / ``input_attribute_in`` / ``environment_image_in``
+     / ``fact`` grammar the kernel's applicability evaluator implements),
+     proved against every vector in
+     ``fixtures/semantic-core/vectors/scope-predicates.v1.json``.
+     For every qualification-carrying claim, independently re-derives and
+     checks: that its recorded qualification identity (id/revision/sha256)
+     names a qualification document the package actually binds; that its
+     recorded per-term predicate text is, in order, exactly the bound
+     record's own scope terms (catches an edited, reordered, or substituted
+     term); that the persisted applicability context the claim is required
+     to carry (``qualification.context``, ADR-0018) re-evaluates each scope
+     term to the recorded per-term result and the recorded aggregate state
+     (catches a fact, term result, or state edited after the runner
+     assessed them, and a context lifted from another step); that each
+     context input's recorded sha256/media_type equals the step receipt's
+     bound input for that slot and every fact's source.receipt equals
+     ``plan:`` + the receipt's invocation identity (binds the facts to the
+     exact planned invocation); and that it never carries an assessment on
      an output slot the record's ``covered_output_slots`` excludes (S-039).
-     Explicitly NOT_CHECKED and named as such
-     (``UNSUPPORTED_NOTES["qualification_facts"]``): re-deriving a term's
-     recorded boolean itself from the real extracted applicability fact
-     (e.g., the candidate's actual measured thickness) that produced it —
-     Core does not persist that fact in any committed document (the
-     execution receipt is process evidence only; a claim's recorded term
-     text is the record's own authored threshold, not the measured value
-     compared against it), so this profile says precisely that rather than
-     trusting the recorded outcome under a different name.
+     What is still not proved: that the adapter extracted those facts
+     correctly from the staged bytes — the persisted facts are producer
+     assertions with provenance, and re-derivation proves the recorded
+     assessment is what those facts imply, not that the facts are right.
      ``candidates/outside-envelope*.json`` in CASE-001 are free-input search
      candidates, not runs of their own with a committed campaign report (a
      supplied free input invalidates every step it reaches, per S-023);
@@ -166,10 +167,6 @@ reported as ``not_checked`` with a reason; it is never silently skipped.
      checks none, rather than fabricating one.
 
 Explicitly refused (outside this profile, by name, never silently):
-  - re-deriving a qualification-envelope term's boolean from a run's real
-    extracted applicability facts (see item 9's own boundary above — this
-    is narrower than "signed manifests/receipts", which item 8 now
-    implements in full);
   - coverage-set evaluation against a requirement_set document;
   - presentation-gate / staged-review realisation or content;
   - archive/package-root canonicalisation beyond the flat document+artifact
@@ -201,22 +198,6 @@ VERIFIER_PROFILE = "avila.core/independent-verifier-profile/v1"
 SEMANTIC_PROFILE = "avila.core/semantic/0.2-draft"
 
 UNSUPPORTED_NOTES = {
-    "qualification_predicate": "verdict re-derivation reads each claim's recorded qualification.state as given, exactly as CAMPAIGN_EVALUATION.md describes the real evaluator doing; see the dedicated qualification-envelope section (and qualification_facts below) for how much of that state this profile independently re-derives instead of trusting, and why",
-    "qualification_facts": (
-        "the applicability facts a qualification envelope is evaluated over (the actual measured "
-        "slab.total_thickness, layer materials, source energy, etc. -- not the scope's authored threshold) "
-        "are never persisted in any committed document: the execution receipt is process evidence only "
-        "(schemas/execution-receipt.v0.1-draft.schema.json; every committed receipt's own notice field says so) "
-        "and a claim's qualification.terms[].predicate records the bound qualification record's own scope-term "
-        "text (the threshold), not the extracted value that was compared against it at plan time (ADR-0008 "
-        "clauses 2-3: the adapter reports that context to the runner and it is discarded once evaluate_envelope "
-        "runs; nothing binds it into the receipt or claims schema). This profile instead re-derives what committed "
-        "documents do carry: that each qualification-carrying claim's recorded per-term predicate text matches, "
-        "in order, the bound qualification record's own scope terms; that its recorded state is the correct "
-        "Inside/Outside/Unknown aggregate of its own recorded per-term results; and that covered_output_slots "
-        "(S-039) is respected. It cannot independently tell whether a given term's boolean is the one the real "
-        "candidate's facts should have produced."
-    ),
     "coverage": "coverage-set evaluation against a requirement_set document is not implemented",
     "presentation_gate": "presentation-gate / staged-review realisation and content are not implemented",
     "compiled_snapshot": "the compiler is not implemented; compiled_snapshot_sha256 equality is checked, never recomputed",
@@ -1546,7 +1527,6 @@ def verify_case_verdicts(
     if campaign_report is None:
         report.not_checked("verdict.campaign_report", "no committed campaign-report.json supplied to compare against")
     report.not_checked("verdict.campaign_sha256", UNSUPPORTED_NOTES["campaign_sha256"])
-    report.not_checked("verdict.qualification_predicate", UNSUPPORTED_NOTES["qualification_predicate"])
     report.not_checked("verdict.coverage", UNSUPPORTED_NOTES["coverage"])
     report.not_checked("verdict.presentation_gate", UNSUPPORTED_NOTES["presentation_gate"])
 
@@ -2177,7 +2157,8 @@ def verify_case_signatures(
 
 
 # ---------------------------------------------------------------------------
-# Section 10: qualification envelopes (ADR-0008, S-039)
+# Section 10: qualification envelopes (ADR-0008 as refined by ADR-0018,
+# S-039, S-046)
 #
 # Rule source: crates/avila-core-kernel/src/predicate.rs's documented
 # Strong-Kleene semantics (ADR-0006 SC-7) and
@@ -2189,31 +2170,38 @@ def verify_case_signatures(
 # fixtures/semantic-core/vectors/scope-predicates.v1.json (every vector;
 # see TestScopePredicateVectors) for the generic evaluator itself.
 #
-# What this section does NOT do, precisely: it does not feed that evaluator
-# a run's real applicability facts to reproduce a claim's recorded
-# Inside/Outside/Unknown from scratch, because Core does not persist them
-# in any committed document. The execution-receipt schema is process
-# evidence only (schemas/execution-receipt.v0.1-draft.schema.json; every
-# committed receipt's own `notice` field disclaims qualification), and a
-# claim's `qualification.terms[].predicate` records the bound qualification
-# record's own scope-term text — the threshold the case author authored —
-# not the extracted fact value the runner compared it against at plan time
-# (ADR-0008 clause 2: the adapter reports that context to the runner; ADR-
-# 0008/S-039 never say it is bound into any document). See
-# UNSUPPORTED_NOTES["qualification_facts"], reported by name below rather
-# than silently trusting a claim's recorded `state`.
+# ADR-0018 binds the applicability context itself into the evidence-claims
+# schema: every claim's `qualification.context` carries the facts the
+# adapter reported (each with its declared source class, source identity,
+# validator, and `plan:<invocation>` receipt reference) plus each staged
+# input's media type and SHA-256 as slot attributes. So this section DOES
+# feed the evaluator a run's real extracted facts: for every
+# qualification-carrying claim it re-evaluates each scope term over the
+# persisted context and compares per-term results and the aggregate
+# Inside/Outside/Unknown state against what the claim records — a recorded
+# `inside` whose own facts re-derive `outside` or `unknown` is a mismatch,
+# as is a claim whose qualification carries no context at all. It also
+# binds the context to the step's committed execution receipt: every
+# context input's sha256/media_type must equal the receipt's bound input
+# for that slot, and every fact's source.receipt must equal
+# `plan:` + the receipt's invocation identity (so a context copied from
+# another step or run is detected).
 #
-# What IS independently re-derivable from committed documents alone, and
-# checked for every qualification-carrying claim in CASE-001, 002, and 003
+# Still structural, checked for every qualification-carrying claim
 # (TestQualificationEnvelopeConsistency): that its recorded qualification
 # identity (id/revision/sha256) names a qualification document this
 # package actually binds; that its recorded per-term predicate text is,
 # in order, exactly the bound record's own scope terms (an edited,
-# reordered, or substituted term is a mismatch); that its recorded overall
-# `state` is the correct Inside/Outside/Unknown aggregate of its own
-# recorded per-term results (a state that contradicts its own terms is a
-# mismatch); and that it never carries an assessment on an output slot the
-# record's `covered_output_slots` excludes (S-039).
+# reordered, or substituted term is a mismatch); and that it never carries
+# an assessment on an output slot the record's `covered_output_slots`
+# excludes (S-039).
+#
+# Boundary kept: the persisted facts are the adapter's assertions about
+# the staged bytes with their declared provenance. Re-deriving the
+# envelope from them proves the recorded assessment is what those facts
+# imply; it does not prove the adapter read the bytes correctly — that is
+# what the receipt's byte-identity binding and the qualification record's
+# named validation evidence are for.
 # ---------------------------------------------------------------------------
 
 
@@ -2412,12 +2400,55 @@ def evaluate_envelope_terms(record: dict, context: dict, kinds: dict) -> tuple[s
     return _aggregate_envelope_state([term["result"] for term in terms]), terms, issues
 
 
+def _check_context_receipt_binding(context: dict, receipt: dict, problems: list) -> None:
+    """The persisted applicability context must name the step's own staged
+    inputs and its own planned invocation: each context input's recorded
+    sha256/media_type equals the receipt's bound input for that slot, and
+    every fact's source.receipt is `plan:` + the receipt's invocation
+    identity (so a context lifted from another step or run is detected)."""
+    staged = {
+        entry.get("input_slot"): entry
+        for entry in receipt.get("inputs", [])
+        if isinstance(entry, dict)
+    }
+    staged_digests = {entry.get("sha256") for entry in staged.values()}
+    for slot, input_ctx in context.get("inputs", {}).items():
+        attributes = input_ctx.get("attributes", {}) if isinstance(input_ctx, dict) else {}
+        bound = staged.get(slot)
+        if bound is None:
+            problems.append(
+                f"context names input slot {slot!r} that the step's receipt does not stage"
+            )
+            continue
+        for attribute, key in (("sha256", "sha256"), ("media_type", "media_type")):
+            if attributes.get(attribute) != bound.get(key):
+                problems.append(
+                    f"context input {slot!r} records {attribute} {attributes.get(attribute)!r}, "
+                    f"the receipt binds {bound.get(key)!r}"
+                )
+    expected_receipt = f"plan:{receipt.get('invocation_sha256')}"
+    for name, fact in context.get("facts", {}).items():
+        source = fact.get("source", {}) if isinstance(fact, dict) else {}
+        if source.get("receipt") != expected_receipt:
+            problems.append(
+                f"fact {name!r} cites receipt {source.get('receipt')!r}, this step's "
+                f"planned invocation is {expected_receipt!r}"
+            )
+        identity = source.get("identity")
+        if identity != "runner:local" and identity not in staged_digests:
+            problems.append(
+                f"fact {name!r} cites source identity {identity!r}, which is neither "
+                "'runner:local' nor a staged input identity in the step's receipt"
+            )
+
+
 def verify_case_qualification_envelopes(
     case_dir: Path,
     package: dict,
     docs_by_role: dict,
     claims: Optional[dict],
     kinds: dict,
+    receipts_by_step: dict,
     report: Report,
 ) -> None:
     qualification_docs: list[tuple[dict, str]] = []
@@ -2490,16 +2521,51 @@ def verify_case_qualification_envelopes(
                 f"recorded per-term results imply ({recomputed_state!r})"
             )
 
+        context = qualification.get("context")
+        if not isinstance(context, dict):
+            problems.append(
+                "claim's qualification carries no persisted applicability context "
+                "(ADR-0018): the recorded assessment cannot be re-derived"
+            )
+        else:
+            derived_state, derived_terms, derived_issues = evaluate_envelope_terms(
+                record, context, kinds
+            )
+            if len(derived_terms) == len(actual_terms):
+                for actual_term, derived_term in zip(actual_terms, derived_terms):
+                    if actual_term.get("result") != derived_term.get("result"):
+                        problems.append(
+                            f"term {actual_term.get('predicate')!r} records "
+                            f"{actual_term.get('result')!r} but the persisted facts re-derive "
+                            f"{derived_term.get('result')!r}"
+                        )
+            elif not problems:
+                problems.append(
+                    f"persisted context re-derives {len(derived_terms)} terms but the claim "
+                    f"records {len(actual_terms)}"
+                )
+            if derived_state != qualification.get("state"):
+                problems.append(
+                    f"persisted facts re-derive envelope state {derived_state!r}, "
+                    f"the claim records {qualification.get('state')!r}"
+                )
+            if derived_issues:
+                problems.append(
+                    f"persisted context does not re-evaluate cleanly: {'; '.join(derived_issues)}"
+                )
+            receipt = receipts_by_step.get(claim.get("step_id"))
+            if receipt is not None:
+                _check_context_receipt_binding(context, receipt, problems)
+
         if problems:
             report.mismatch(check, "; ".join(problems))
         else:
             report.verified(
                 check,
                 f"{len(actual_predicates)} recorded terms match the bound qualification record's "
-                f"scope; recorded state {qualification['state']!r} is the correct aggregate of its own terms",
+                f"scope and re-derive {qualification['state']!r} from the persisted facts, "
+                "whose input digests and plan identity bind the step's receipt",
             )
-
-    report.not_checked("qualification.envelope_predicate_over_facts", UNSUPPORTED_NOTES["qualification_facts"])
 
 
 # ---------------------------------------------------------------------------
@@ -2548,6 +2614,7 @@ def verify_case(
         report.not_checked("claims.binding", "no claims document declared in package.json")
         claims_by_id = {}
 
+    receipts_by_step: dict[str, dict] = {}
     for receipt_doc in docs_by_role.get("execution_receipt", []):
         step_id = receipt_doc.get("step_id", receipt_doc["document_id"])
         path = case_dir / receipt_doc["path"]
@@ -2555,6 +2622,7 @@ def verify_case(
             report.not_checked(f"receipt.{step_id}", f"receipt file missing: {path}")
             continue
         receipt = load_json(path)
+        receipts_by_step[step_id] = receipt
         verify_receipt(case_dir, step_id, receipt, package, claims_by_id, report)
 
     if contract is not None and registry is not None and claims is not None:
@@ -2563,7 +2631,8 @@ def verify_case(
         report.not_checked("verdict.all", "contract.json, registry.json, or claims.json missing/undeclared for this case")
 
     verify_case_qualification_envelopes(
-        case_dir, package, docs_by_role, claims, kinds_from_registry_doc(registry) if registry is not None else {}, report
+        case_dir, package, docs_by_role, claims, kinds_from_registry_doc(registry) if registry is not None else {},
+        receipts_by_step, report
     )
 
     log_path = case_dir / "search" / "attempts.jsonl"

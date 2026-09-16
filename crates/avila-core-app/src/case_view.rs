@@ -158,6 +158,12 @@ pub struct CaseSetup {
     /// The free input the lineage snapshots as its candidate. Empty means
     /// `candidate`, matching the CLI's `--attempt` convention.
     pub candidate_input: String,
+    /// The design revision this run is evidence for (ADR-0019). Empty
+    /// means the run cites none.
+    pub revision_id: String,
+    /// The contract amendment a new root attempt cites when it
+    /// deliberately continues a case under changed fixed identities.
+    pub amendment_id: String,
 }
 
 impl CaseSetup {
@@ -203,6 +209,8 @@ impl CaseSetup {
                 "--attempt" => setup.attempt_id = value()?,
                 "--parent-attempt" => setup.parent_attempt_id = value()?,
                 "--candidate-input" => setup.candidate_input = value()?,
+                "--revision" => setup.revision_id = value()?,
+                "--amendment" => setup.amendment_id = value()?,
                 "--tool" => {
                     let name = value()?;
                     if crate::tools_view::Tool::by_name(&name).is_none() {
@@ -308,6 +316,10 @@ impl CaseSetup {
                 } else {
                     self.candidate_input.trim().to_string()
                 },
+                revision_id: (!self.revision_id.trim().is_empty())
+                    .then(|| self.revision_id.trim().to_string()),
+                amendment_id: (!self.amendment_id.trim().is_empty())
+                    .then(|| self.amendment_id.trim().to_string()),
             }),
             ..CaseRunOptions::default()
         }
@@ -835,13 +847,31 @@ impl CaseView {
                     });
             }
         });
+        ui.horizontal(|ui| {
+            ui.label("Design revision");
+            ui.add(
+                egui::TextEdit::singleline(&mut self.setup.revision_id)
+                    .hint_text("optional revision ID this run is evidence for")
+                    .desired_width(f32::INFINITY),
+            );
+        });
+        ui.horizontal(|ui| {
+            ui.label("Amendment");
+            ui.add(
+                egui::TextEdit::singleline(&mut self.setup.amendment_id)
+                    .hint_text("roots only: amendment ID for a changed question")
+                    .desired_width(f32::INFINITY),
+            );
+        });
         if self.setup.attempt_id.trim().is_empty() {
             if !self.setup.parent_attempt_id.trim().is_empty()
                 || !self.setup.candidate_input.trim().is_empty()
+                || !self.setup.revision_id.trim().is_empty()
+                || !self.setup.amendment_id.trim().is_empty()
             {
                 ui.colored_label(
                     AMBER,
-                    "An attempt ID is required for lineage; without it the parent and candidate fields are not sent.",
+                    "An attempt ID is required for lineage; without it the parent, candidate, revision, and amendment fields are not sent.",
                 );
             }
         } else {
@@ -851,6 +881,15 @@ impl CaseView {
             );
             if !self.setup.parent_attempt_id.trim().is_empty() {
                 intent += &format!(" descending from `{}`", self.setup.parent_attempt_id.trim());
+            }
+            if !self.setup.revision_id.trim().is_empty() {
+                intent += &format!(
+                    ", as evidence for revision `{}`",
+                    self.setup.revision_id.trim()
+                );
+            }
+            if !self.setup.amendment_id.trim().is_empty() {
+                intent += &format!(", citing amendment `{}`", self.setup.amendment_id.trim());
             }
             intent += &format!(", tracking input `{candidate}`");
             match self

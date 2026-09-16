@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/named-reference/v0.1-draft.schema.json",
+  "title": "Avila Core Named Reference v0.1 draft",
+  "description": "A name's binding to an exact revision (and assessment, when the name claims a result) within one campaign log (ADR-0019). Moving a name appends a new record that cites the target it superseded; prior moves are never rewritten. A claim about significance, never a verdict input.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "name", "revision_id", "actor", "rationale"],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/named-reference/v0.1-draft"
+    },
+    "name": {
+      "$ref": "#/$defs/identifier"
+    },
+    "revision_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "assessment_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "superseded_revision_id": {
+      "$ref": "#/$defs/identifier",
+      "description": "The target this name pointed at before this record, resolved under the append lock. Absent on a name's first binding."
+    },
+    "superseded_assessment_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "actor": {
+      "$ref": "#/$defs/nonempty"
+    },
+    "rationale": {
+      "$ref": "#/$defs/nonempty",
+      "description": "The mover's stated reason; inert text, never instructions."
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "nonempty": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

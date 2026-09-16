@@ -1,11 +1,10 @@
 # ADR-0019: Design revisions, assessments, and named references
 
-- Status: proposed 2026-09-16; not accepted, not implemented
+- Status: accepted 2026-09-16; the unresolved choices are decided below
 - Refines: ADR-0014 (identity-bound attempt lineage), ADR-0004 (four-state
   verdicts), ADR-0010 (verdicts independent of review), ADR-0015 (signed
   records), ADR-0018 (persisted applicability contexts)
-- Implements: the DH-01–03 portion of `docs/product/DESIGN_HISTORY.md`, if
-  accepted after the unresolved choices below are decided
+- Implements: the DH-01–03 portion of `docs/product/DESIGN_HISTORY.md`
 
 ## Context
 
@@ -155,22 +154,72 @@ clients; neither parses log text, derives changes, nor compares margins.
 
 ## Unresolved choices
 
-- **Migration mechanics:** in-place rewrite, new file, or lazy read-time
-  projection. Each has a different failure surface; the verification
-  rule is settled either way.
-- **Reference namespace:** are names per-log, per-case, or
-  per-repository? Per-log is smallest and matches today's boundaries;
-  cross-log references would need identity rules not yet specified.
-- **Revision existence without a run** needs an append path that is not
-  `run`: a minimal `avila-core revision create` (or equivalent) is
-  required for DH-01's pre-execution revision. Its signature policy on
-  unsigned appends is undecided.
-- **Multiple candidate inputs:** today's lineage nominates one free
-  input; a revision addressing several inputs is future work, not this
-  ADR.
-- **Assessment of partial failure** (some steps executed, some refused):
-  the assessment binds whatever the run recorded; whether a "partial"
-  assessment deserves a distinct flag is open.
+Decided at acceptance:
+
+- **Migration mechanics → lazy read-time projection.** An attempt row
+  that cites no revision projects a *derived* revision (its id is the
+  attempt id) and a *derived* assessment (same id) citing its own row.
+  No logged byte changes; legacy logs gain the revision/assessment view
+  without migration, and the derived identities are exactly what named
+  references and revision parents may cite. The verification rule —
+  every derived record re-derives the attempt's identities — holds
+  because derivation copies fields verbatim under lineage validation.
+- **Reference namespace → per-log.** Names resolve within one campaign
+  log. Cross-log references would need identity rules not yet specified
+  and are not admitted.
+- **Revision existence without a run → `avila-core revision create`.**
+  A non-run append path taking the candidate file, fixed manifest and
+  compiled snapshot identities, optional parent revision and amendment,
+  actor (`--by`), and optional intent. Signature policy matches run
+  rows: appended unsigned unless `--runner-key` signs, and a supplied
+  `--trust-root` verifies the parent line's signature. Unsigned appends
+  are accepted; `created_by` remains a stated claim.
+- **Multiple candidate inputs:** unchanged — future work.
+- **Assessment of partial failure → no distinct flag.** The assessment
+  binds the cited run row's verdicts verbatim; the row's status and
+  findings already distinguish an execution failure's `not_evaluated`
+  verdicts from a technical FAIL.
+
+Additional decisions settled at acceptance:
+
+- **Row envelope.** Non-run records append as
+  `{"schema_version":"avila.core/log-record/v0.1-draft","recorded_at":…,
+  "record_kind":<kind>,"record":{…},"signature"?:…}` under the same
+  append lock, revalidation, and optional line signature as run rows.
+  Run rows gain optional `revision_id`, `assessment_id`, and
+  `amendment_id` members.
+- **Assessment id equals its run's attempt id.** Every assessment —
+  explicit or derived — is named by the attempt row that produced its
+  evidence, so the assessment namespace inherits attempt-id uniqueness
+  for free and a run row's `assessment_id` is self-describing.
+- **Revision/assessment resolution space.** A revision id resolves to an
+  explicit revision record or to a revision-less attempt row's derived
+  revision. An explicit revision id must not equal any attempt id in
+  the log, keeping resolution unambiguous.
+- **Attempt↔revision edge agreement.** A run citing a revision is
+  refused when the two parentage edges disagree: the attempt's parent
+  must resolve to the revision's `parent_revision_id` (through the
+  parent's own citation or its derived id), and a root attempt may cite
+  only a root revision. Their `amendment_id` edges must likewise match
+  exactly.
+- **Amendment is an admission rule, not a history rule.** A *root*
+  attempt whose `case_id` already has roots in the log under different
+  fixed identities is refused (CORE-X1201) unless the row cites an
+  amendment whose new identities match and whose superseded root is an
+  earlier same-case root. History validation never refuses old logs for
+  lacking amendments; it only checks that cited amendments exist
+  earlier with matching identities. Revision roots carry no `case_id`
+  and may cite an amendment voluntarily.
+- **Amendment summary is manifest-derived.** `avila-core amend`
+  requires both manifest files: the prior file's hash must equal the
+  superseded root's recorded manifest identity (a stated file that
+  disagrees is refused), and `changed_elements` is Core's typed diff of
+  the two canonical manifests. The new compiled-snapshot identity is
+  caller-supplied from the new contract's compile report.
+- **Assessment stores verbatim verdicts.** The assessment record copies
+  the cited run row's verdicts so the record is citable alone;
+  validation requires the copy to equal the cited row exactly, so the
+  duplication cannot drift. Comparisons are still derived on read.
 
 ## Boundary
 

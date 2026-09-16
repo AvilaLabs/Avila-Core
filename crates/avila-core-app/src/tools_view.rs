@@ -20,11 +20,14 @@ pub(crate) enum Tool {
     History,
     Attempt,
     Constellation,
+    Revision,
+    Assessment,
+    Reference,
     Diagnostic,
 }
 
 impl Tool {
-    const ALL: [Self; 11] = [
+    const ALL: [Self; 14] = [
         Self::Overview,
         Self::Requirements,
         Self::Findings,
@@ -35,6 +38,9 @@ impl Tool {
         Self::History,
         Self::Attempt,
         Self::Constellation,
+        Self::Revision,
+        Self::Assessment,
+        Self::Reference,
         Self::Diagnostic,
     ];
     fn name(self) -> &'static str {
@@ -49,6 +55,9 @@ impl Tool {
             Self::History => "core_history",
             Self::Attempt => "core_attempt",
             Self::Constellation => "core_constellation",
+            Self::Revision => "core_revision",
+            Self::Assessment => "core_assessment",
+            Self::Reference => "core_reference",
             Self::Diagnostic => "core_explain",
         }
     }
@@ -64,6 +73,9 @@ impl Tool {
             Self::History => "Run history",
             Self::Attempt => "Compare with parent",
             Self::Constellation => "Attempt constellation",
+            Self::Revision => "Design revision",
+            Self::Assessment => "Assessment",
+            Self::Reference => "Named reference",
             Self::Diagnostic => "Explain a diagnostic",
         }
     }
@@ -89,6 +101,15 @@ impl Tool {
             Self::Constellation => {
                 "See one campaign log's whole recorded constellation: attempts, lineage edges, candidate states, and verdicts."
             }
+            Self::Revision => {
+                "Read one design revision with its assessments and children, or the revision a legacy run row derives."
+            }
+            Self::Assessment => {
+                "Read one assessment: its cited run row, verdicts verbatim, and the derived comparison."
+            }
+            Self::Reference => {
+                "Read named-reference bindings: one name's current binding and move history, or every name's."
+            }
             Self::Diagnostic => "Look up a diagnostic code and its next action in Core's catalog.",
         }
     }
@@ -102,11 +123,20 @@ impl Tool {
     fn report(self) -> bool {
         !matches!(
             self,
-            Self::History | Self::Attempt | Self::Constellation | Self::Diagnostic
+            Self::History
+                | Self::Attempt
+                | Self::Constellation
+                | Self::Revision
+                | Self::Assessment
+                | Self::Reference
+                | Self::Diagnostic
         )
     }
     fn paginated(self) -> bool {
-        !matches!(self, Self::Overview | Self::Attempt | Self::Diagnostic)
+        !matches!(
+            self,
+            Self::Overview | Self::Attempt | Self::Revision | Self::Assessment | Self::Diagnostic
+        )
     }
     fn id_label(self) -> Option<&'static str> {
         match self {
@@ -115,6 +145,9 @@ impl Tool {
             Self::Steps => Some("Step ID (optional)"),
             Self::Attempt => Some("Attempt ID"),
             Self::Constellation => Some("Attempt ID (optional)"),
+            Self::Revision => Some("Revision ID"),
+            Self::Assessment => Some("Assessment ID"),
+            Self::Reference => Some("Reference name (optional)"),
             Self::Diagnostic => Some("Diagnostic code"),
             _ => None,
         }
@@ -194,8 +227,11 @@ impl ToolsView {
         if self.tool.id_label().is_some() {
             if !self.id.trim().is_empty() {
                 args["id"] = json!(self.id.trim());
-            } else if matches!(self.tool, Tool::Attempt | Tool::Diagnostic) {
-                return Err("Enter the attempt ID or diagnostic code.".into());
+            } else if matches!(
+                self.tool,
+                Tool::Attempt | Tool::Revision | Tool::Assessment | Tool::Diagnostic
+            ) {
+                return Err("Enter the record ID or diagnostic code.".into());
             }
         }
         if self.tool == Tool::History && !self.invocation.trim().is_empty() {

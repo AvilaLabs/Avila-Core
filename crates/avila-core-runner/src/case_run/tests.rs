@@ -547,8 +547,8 @@ fn log_test_dir(label: &str) -> PathBuf {
 fn append_log_line_writes_the_row_and_newline_in_one_call() {
     let dir = log_test_dir("single-write");
     let path = dir.join("attempts.jsonl");
-    append_log_line(&path, None, r#"{"a":1}"#, None).unwrap();
-    append_log_line(&path, None, r#"{"b":2}"#, None).unwrap();
+    append_log_line(&path, r#"{"a":1}"#, |_| Ok(())).unwrap();
+    append_log_line(&path, r#"{"b":2}"#, |_| Ok(())).unwrap();
     let bytes = fs::read(&path).unwrap();
     assert_eq!(bytes, b"{\"a\":1}\n{\"b\":2}\n".to_vec());
     let _ = fs::remove_dir_all(&dir);
@@ -585,6 +585,8 @@ fn concurrent_appends_racing_one_attempt_id_admit_exactly_one() {
                     attempt_id: "contested-root".into(),
                     parent_attempt_id: None,
                     candidate_input: "candidate".into(),
+                    revision_id: None,
+                    amendment_id: None,
                 };
                 barrier.wait();
                 let attempt = prepare_attempt(
@@ -594,6 +596,7 @@ fn concurrent_appends_racing_one_attempt_id_admit_exactly_one() {
                     Some(&candidate_sha256),
                     &manifest_sha256,
                     &snapshot_sha256,
+                    "race-case",
                     None,
                 )?;
                 let line = serde_json::json!({
@@ -602,8 +605,20 @@ fn concurrent_appends_racing_one_attempt_id_admit_exactly_one() {
                     "compiled_snapshot_sha256": snapshot_sha256,
                 })
                 .to_string();
-                append_log_line(&log_path, Some(&attempt), &line, None)
-                    .map_err(|error| error.to_string())
+                append_log_line(&log_path, &line, {
+                    let log_path = log_path.clone();
+                    move |content| {
+                        crate::attempt::revalidate_before_append(
+                            &log_path,
+                            content,
+                            &attempt,
+                            &request,
+                            "race-case",
+                            None,
+                        )
+                    }
+                })
+                .map_err(|error| error.to_string())
             })
         })
         .collect();

@@ -51,7 +51,7 @@ use crate::execute::{
 #[cfg(test)]
 use avila_core_kernel::VerdictStatus;
 
-mod log;
+pub(crate) mod log;
 #[cfg(test)]
 use log::append_log_line;
 use log::{append_error_log, append_log};
@@ -65,9 +65,9 @@ mod inputs;
 use inputs::{steps_reached_by_inputs, supply_free_inputs, validate_free_inputs};
 mod compare;
 pub use compare::VerdictMargin;
-pub(crate) use compare::compare_attempt_results;
 #[cfg(test)]
 use compare::write_attempt_comparison;
+pub(crate) use compare::{compare_attempt_results, compare_verdict_sets};
 use compare::{compare_attempt_to_parent, margins};
 mod gates;
 use gates::build_presentation_gates;
@@ -687,13 +687,9 @@ pub fn execute_case(
                 SourceLocation::new("case-run", ""),
                 error.to_string(),
             );
-            if let Err(log_error) = append_error_log(
-                options,
-                case_or_manifest,
-                &finding,
-                trust_root.as_ref(),
-                runner_key,
-            ) {
+            if let Err(log_error) =
+                append_error_log(options, case_or_manifest, &finding, runner_key)
+            {
                 return Err(format!(
                     "{error}; additionally, the run attempt could not be logged: {log_error}"
                 )
@@ -950,6 +946,7 @@ fn execute_case_inner(
             supplied_candidate_sha256,
             &report.integrity.manifest_sha256,
             &compiled.snapshot_sha256,
+            &report.case_id,
             trust_root,
         ) {
             Ok(attempt) => report.attempt = Some(attempt),

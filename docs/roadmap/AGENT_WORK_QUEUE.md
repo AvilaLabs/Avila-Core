@@ -208,10 +208,11 @@ repetitions each; fresh execution is recorded UNAVAILABLE because the pinned
 capability executable (`sha256:b8d828…`) does not resolve and `skfem` is
 absent — no substitution. Agent orchestration is explicitly out of scope.
 The ADR proposal is `docs/adr/0019-design-revisions-assessments-and-named-references.md`
-(status: proposed): revision/assessment/named-reference records in the
-existing log, explicit contract amendments, derived migration from attempt
-logs, shared-operation ownership, and five unresolved choices stated
-plainly.
+(now accepted and implemented; see the ADR-0019 increment entry below):
+revision/assessment/named-reference records in the existing log, explicit
+contract amendments, derived migration from attempt logs,
+shared-operation ownership, and the five unresolved choices resolved in
+the ADR's decision section.
 
 Two bounded deliverables:
 
@@ -237,10 +238,77 @@ acceptance examples. Link the artifacts and proposal from this queue.
 
 ## Review point after the ready queue
 
-The next product increment is the full persistent revision/assessment model,
-followed by local workflow starters and easier capability setup. The ADR from
-CQ-05 should make that increment concrete. Resolve its identity and migration
-choices and record any change to S-034's sequencing before implementation.
+### ADR-0019 increment — implemented 2026-09-16
+
+The persistent revision/assessment model (DH-01–03) is implemented per the
+accepted ADR. ADR-0019's five choices were resolved in its decision section
+before implementation; S-034's sequencing is unchanged (attempt lineage
+remains the run record; revisions and assessments are records in the same
+log, not a new store).
+
+**What landed:**
+
+- `crates/avila-core-runner/src/history.rs` — the unified log view
+  (`LogView`) and four record kinds: `design_revision`, `assessment`,
+  `named_reference`, `contract_amendment`, each inside a
+  `log-record/v0.1-draft` envelope with optional ADR-0015 signature.
+  Append operations (`create_revision`, `append_assessment`,
+  `set_reference`, `record_amendment`) run through the same lock +
+  revalidation critical section as run rows. `validate_log` checks every
+  record kind fail-closed.
+- `attempt.rs` — `AttemptLineageRequest` gains `revision_id` and
+  `amendment_id`; admission refuses a child citing an amendment, an
+  unresolved revision, a candidate/fixed-identity mismatch with the cited
+  revision, a changed-manifest root without an amendment, and an
+  amendment whose stated identities disagree with the run's.
+- `case_run/log.rs` — run rows carry `revision_id` / `assessment_id` /
+  `amendment_id`; a revision-bound run's assessment row is appended after
+  the run row lands, citing the exact run line's sha256 with verdicts
+  copied verbatim.
+- `query.rs` — `core_revision`, `core_assessment`, `core_reference` join
+  the shared catalog; `core_constellation` and `core_history` project all
+  record kinds with `record_kind`, the verbatim `record` payload, and
+  `record_sha256`. Revision-less run rows read as derived revisions and
+  derived assessments named by their attempt id.
+- CLI — `avila-core revision create`, `reference set|show`, and `amend`
+  verbs; `run` accepts `--revision` and `--amendment`; `tools call`
+  reaches the three new queries.
+- Workbench — the history view lists the four record kinds in recorded
+  order with their verbatim payloads; the attempt setup panel accepts a
+  revision id and (roots only) an amendment id; `tools_view` has an entry
+  point for every shared tool.
+- `schemas/` — `log-record`, `design-revision`, `assessment`,
+  `named-reference`, and `contract-amendment` v0.1-draft JSON schemas.
+
+**Validation evidence:**
+
+- `cargo test --workspace` green (runner suite 141 tests incl. 14
+  history-module tests: revision admission, duplicate ids, exact-parent
+  binding, child-change derivation, amendment identity checks, reference
+  supersession chains, legacy-row derivation, tampered-assessment and
+  forged-id fail-closed validation).
+- Two end-to-end tests drive `execute_case` with `revision_id` set: the
+  bound run names its revision and appends an assessment row citing the
+  run line's sha256; an unknown or mismatched revision is refused before
+  execution.
+- `design_history_records_are_queryable_with_their_exact_identities`
+  exercises one log holding all four record kinds plus a legacy run
+  through `core_revision`, `core_assessment`, `core_reference`, and
+  `core_constellation`, including the cross-amendment comparison edge.
+- `cargo fmt --all -- --check` and
+  `cargo clippy --workspace --all-targets -- -D warnings` clean.
+- CLI smoke-verified end to end: `revision create` → `reference set` →
+  `amend` → amended-root `revision create` → `reference show` /
+  `tools call core_revision` / `constellation` over the real log.
+
+**Limits:** named references are per-log only (no cross-log resolution);
+assessment comparison is always derived on read — nothing stored claims a
+delta; the workbench displays record payloads verbatim and owns no
+domain logic. A revision's `intent`, reference `rationale`, and amendment
+`rationale` are inert attribution text.
+
+**Next product increment** (unchanged from before): local workflow
+starters and easier capability setup.
 
 A public catalog, package installation, browser client, cloud/HPC scheduling,
 organization governance, autonomous search orchestration, and comprehensive

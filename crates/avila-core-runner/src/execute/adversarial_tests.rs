@@ -395,6 +395,8 @@ fn lineage_options(
         attempt_id: attempt_id.into(),
         parent_attempt_id: parent_attempt_id.map(str::to_owned),
         candidate_input: "aftermatter-case".into(),
+        revision_id: None,
+        amendment_id: None,
     });
     options
 }
@@ -809,6 +811,165 @@ fn attempt_lineage_derives_typed_changes_and_binds_the_exact_parent_record() {
 }
 
 #[test]
+fn a_revision_bound_run_names_its_revision_and_appends_an_assessment() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    enable_free_input(&synthetic, "aftermatter-case");
+    let candidate = dir.0.join("candidate.json");
+    write_lineage_candidate(&candidate, "rev-design", "5", false);
+    let log = dir.0.join("lineage.jsonl");
+
+    // The revision is recorded before any run cites it, under the
+    // identities the blessed case's next run will evaluate.
+    let identities = run(&synthetic, dir.workspace());
+    let manifest = identities.integrity.manifest_sha256.clone();
+    let snapshot = identities
+        .compile
+        .as_ref()
+        .unwrap()
+        .compiled
+        .as_ref()
+        .unwrap()
+        .snapshot_sha256
+        .clone();
+    crate::create_revision(
+        &log,
+        &crate::RevisionRequest {
+            revision_id: "rev-1".into(),
+            parent_revision_id: None,
+            amendment_id: None,
+            candidate_input: "aftermatter-case".into(),
+            candidate: candidate.clone(),
+            fixed_manifest_sha256: manifest,
+            fixed_compiled_snapshot_sha256: snapshot,
+            created_by: "designer".into(),
+            intent: Some("proposed thickness".into()),
+        },
+        None,
+        None,
+    )
+    .unwrap();
+
+    let mut options = lineage_options(
+        &synthetic,
+        dir.workspace(),
+        log.clone(),
+        candidate,
+        "try-001",
+        None,
+    );
+    options.attempt.as_mut().unwrap().revision_id = Some("rev-1".into());
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(
+        report.status,
+        CaseRunStatus::Evaluated,
+        "{}",
+        human_summary(&report)
+    );
+
+    let raw = fs::read_to_string(&log).unwrap();
+    let lines: Vec<&str> = raw.lines().collect();
+    assert_eq!(lines.len(), 3, "{raw}");
+    let entries: Vec<Value> = lines
+        .iter()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(entries[0]["record_kind"], "design_revision");
+    assert_eq!(entries[0]["record"]["revision_id"], "rev-1");
+    assert_eq!(entries[1]["revision_id"], "rev-1");
+    assert_eq!(entries[1]["assessment_id"], "try-001");
+    let run_sha = format!("sha256:{}", sha256_hex(lines[1].as_bytes()));
+    assert_eq!(entries[2]["record_kind"], "assessment");
+    assert_eq!(entries[2]["record"]["assessment_id"], "try-001");
+    assert_eq!(entries[2]["record"]["revision_id"], "rev-1");
+    assert_eq!(entries[2]["record"]["run_record_sha256"], run_sha);
+    // The assessment's verdicts are the run row's, verbatim.
+    assert_eq!(entries[2]["record"]["verdicts"], entries[1]["verdicts"]);
+}
+
+#[test]
+fn a_run_naming_an_unknown_or_mismatched_revision_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    enable_free_input(&synthetic, "aftermatter-case");
+    let candidate = dir.0.join("candidate.json");
+    write_lineage_candidate(&candidate, "rev-design", "5", false);
+    let log = dir.0.join("lineage.jsonl");
+
+    let mut options = lineage_options(
+        &synthetic,
+        dir.workspace(),
+        log.clone(),
+        candidate.clone(),
+        "try-001",
+        None,
+    );
+    options.attempt.as_mut().unwrap().revision_id = Some("absent".into());
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(report.status, CaseRunStatus::Rejected);
+    assert!(report.execution.is_none());
+    // The refusal itself is recorded as a rejected run row; the attempt
+    // and its assessment never land.
+    let refusal_log = fs::read_to_string(&log).unwrap();
+    let refusal_rows: Vec<Value> = refusal_log
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(refusal_rows.len(), 1);
+    assert_eq!(refusal_rows[0]["status"], "rejected");
+    assert!(refusal_rows[0].get("attempt").is_none());
+    assert!(refusal_rows[0].get("revision_id").is_none());
+
+    // A revision recorded under a different candidate state cannot be
+    // cited by a run whose candidate disagrees.
+    let other = dir.0.join("other.json");
+    write_lineage_candidate(&other, "other-design", "9", true);
+    let identities = run(&synthetic, dir.workspace());
+    crate::create_revision(
+        &log,
+        &crate::RevisionRequest {
+            revision_id: "rev-1".into(),
+            parent_revision_id: None,
+            amendment_id: None,
+            candidate_input: "aftermatter-case".into(),
+            candidate: other,
+            fixed_manifest_sha256: identities.integrity.manifest_sha256.clone(),
+            fixed_compiled_snapshot_sha256: identities
+                .compile
+                .as_ref()
+                .unwrap()
+                .compiled
+                .as_ref()
+                .unwrap()
+                .snapshot_sha256
+                .clone(),
+            created_by: "designer".into(),
+            intent: None,
+        },
+        None,
+        None,
+    )
+    .unwrap();
+    let mut options = lineage_options(
+        &synthetic,
+        dir.workspace(),
+        log.clone(),
+        candidate,
+        "try-001",
+        None,
+    );
+    options.attempt.as_mut().unwrap().revision_id = Some("rev-1".into());
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(report.status, CaseRunStatus::Rejected);
+    let log_text = fs::read_to_string(&log).unwrap();
+    let lines: Vec<&str> = log_text.lines().collect();
+    assert_eq!(lines.len(), 3, "two refusals bracket the revision row");
+    let refusal: Value = serde_json::from_str(lines[2]).unwrap();
+    assert_eq!(refusal["status"], "rejected");
+    assert!(refusal.get("attempt").is_none());
+}
+
+#[test]
 fn attempt_lineage_refuses_changed_goalposts_before_execution() {
     let dir = TestDir::new();
     let synthetic = blessed(&dir);
@@ -1001,6 +1162,8 @@ fn attempt_lineage_requires_a_log_before_execution() {
         attempt_id: "try-001".into(),
         parent_attempt_id: None,
         candidate_input: "aftermatter-case".into(),
+        revision_id: None,
+        amendment_id: None,
     });
 
     let report = execute_case(&synthetic.case_dir, &options).unwrap();

@@ -41,6 +41,25 @@ enum Command {
     /// Read one campaign log's recorded constellation: every run in order
     /// with its lineage edge, candidate state, verdicts, and a summary.
     Constellation(queries::ConstellationArgs),
+    /// Record a design revision: a proposed state that exists in the
+    /// campaign log before any run cites it (ADR-0019).
+    Revision {
+        #[command(subcommand)]
+        command: RevisionCommand,
+    },
+    /// Bind or read a named reference such as `baseline` in one campaign
+    /// log (ADR-0019). A claim about significance, never a verdict input.
+    Reference {
+        #[command(subcommand)]
+        command: ReferenceCommand,
+    },
+    /// Record a contract amendment: the deliberate question change that
+    /// lets a new lineage root continue a case under changed fixed
+    /// identities (ADR-0019).
+    Amend(AmendArgs),
+    /// Read one assessment: the run row it cites, verdicts verbatim, and
+    /// the derived comparison including cross-amendment edges (ADR-0019).
+    Assessment(queries::AssessmentShowArgs),
     /// Discover and call shared Core query tools, or print integration instructions.
     Tools {
         #[command(subcommand)]
@@ -148,6 +167,138 @@ enum KeysCommand {
 }
 
 #[derive(Debug, Subcommand)]
+enum RevisionCommand {
+    /// Append a design revision to a campaign log without executing.
+    /// Returns the recorded revision id and its exact line identity.
+    Create(Box<RevisionCreateArgs>),
+    /// Read one revision's record, its assessments, and its children. A
+    /// revision-less attempt's derived revision is named by its attempt id.
+    Show(queries::RevisionShowArgs),
+}
+
+#[derive(Debug, Args)]
+struct RevisionCreateArgs {
+    /// The new revision's id.
+    revision_id: String,
+    /// The campaign JSONL log the revision is appended to.
+    #[arg(long, value_name = "FILE")]
+    log: PathBuf,
+    /// The canonical-profile JSON candidate file this revision proposes.
+    #[arg(long, value_name = "FILE")]
+    candidate: PathBuf,
+    /// The supplied input this candidate occupies when the revision runs.
+    #[arg(
+        long = "candidate-input",
+        value_name = "NAME",
+        default_value = "candidate"
+    )]
+    candidate_input: String,
+    /// The fixed package manifest identity this revision is stated under.
+    #[arg(long = "manifest", value_name = "SHA256")]
+    manifest_sha256: String,
+    /// The fixed compiled snapshot identity this revision is stated under.
+    #[arg(long = "compiled-snapshot", value_name = "SHA256")]
+    compiled_snapshot_sha256: String,
+    /// An existing revision this one descends from. The derived revision
+    /// of a revision-less attempt is named by that attempt's id.
+    #[arg(long = "parent-revision", value_name = "ID")]
+    parent_revision_id: Option<String>,
+    /// The contract amendment a root revision cites when it continues a
+    /// lineage under changed fixed identities. Children never cite one.
+    #[arg(long, value_name = "ID")]
+    amendment_id: Option<String>,
+    /// The actor this record attributes the revision to — a stated claim.
+    #[arg(long = "by", value_name = "ACTOR")]
+    created_by: String,
+    /// Inert intent text stored with the revision; never instructions.
+    #[arg(long, value_name = "TEXT")]
+    intent: Option<String>,
+    /// Sign the appended log line with this runner seed (32 raw bytes).
+    #[arg(long = "runner-key", value_name = "FILE")]
+    runner_key: Option<PathBuf>,
+    /// Verify the log's signature-bearing history against this trust root
+    /// before the revision is admitted.
+    #[arg(long = "trust-root", value_name = "FILE")]
+    trust_root: Option<PathBuf>,
+}
+
+#[derive(Debug, Subcommand)]
+enum ReferenceCommand {
+    /// Bind or move a name to an exact revision — and an assessment of it
+    /// when the name claims a result. Moves keep their history.
+    Set(ReferenceSetArgs),
+    /// Read one name's current binding and move history, or every current
+    /// binding when NAME is omitted.
+    Show(queries::ReferenceShowArgs),
+}
+
+#[derive(Debug, Args)]
+struct ReferenceSetArgs {
+    /// The name to bind, such as `baseline` or `review-target`.
+    name: String,
+    /// The campaign JSONL log the reference is appended to.
+    #[arg(long, value_name = "FILE")]
+    log: PathBuf,
+    /// The exact revision id the name binds.
+    #[arg(long, value_name = "ID")]
+    revision: String,
+    /// An assessment of that revision; required when the name claims a
+    /// recorded result rather than only a proposed state.
+    #[arg(long, value_name = "ID")]
+    assessment: Option<String>,
+    /// The actor this record attributes the binding to — a stated claim.
+    #[arg(long = "by", value_name = "ACTOR")]
+    actor: String,
+    /// The reason for the binding or move; inert text, never instructions.
+    #[arg(long, value_name = "TEXT")]
+    rationale: String,
+    /// Sign the appended log line with this runner seed (32 raw bytes).
+    #[arg(long = "runner-key", value_name = "FILE")]
+    runner_key: Option<PathBuf>,
+    /// Verify the log's signature-bearing history against this trust root
+    /// before the reference is admitted.
+    #[arg(long = "trust-root", value_name = "FILE")]
+    trust_root: Option<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+struct AmendArgs {
+    /// The new amendment's id.
+    amendment_id: String,
+    /// The campaign JSONL log the amendment is appended to.
+    #[arg(long, value_name = "FILE")]
+    log: PathBuf,
+    /// The lineage root revision this amendment supersedes — an explicit
+    /// revision id or a revision-less root attempt's id.
+    #[arg(long, value_name = "ID")]
+    supersedes: String,
+    /// The manifest the superseded root was fixed under; its canonical
+    /// digest must equal the recorded identity.
+    #[arg(long = "prior-manifest", value_name = "FILE")]
+    prior_manifest: PathBuf,
+    /// The manifest the amendment admits as the case's new fixed question.
+    /// Core derives the typed change list between the two files.
+    #[arg(long = "new-manifest", value_name = "FILE")]
+    new_manifest: PathBuf,
+    /// The compiled snapshot identity the new manifest produces.
+    #[arg(long = "compiled-snapshot", value_name = "SHA256")]
+    new_compiled_snapshot_sha256: String,
+    /// The actor this record attributes the amendment to — a stated claim.
+    #[arg(long = "by", value_name = "ACTOR")]
+    actor: String,
+    /// The reason the fixed question changed; inert text, never instructions.
+    #[arg(long, value_name = "TEXT")]
+    rationale: String,
+    /// Sign the appended log line with this runner seed (32 raw bytes).
+    #[arg(long = "runner-key", value_name = "FILE")]
+    runner_key: Option<PathBuf>,
+    /// Verify the log's signature-bearing history against this trust root
+    /// before the amendment is admitted.
+    #[arg(long = "trust-root", value_name = "FILE")]
+    trust_root: Option<PathBuf>,
+}
+
+#[derive(Debug, Subcommand)]
 enum SignCommand {
     /// Sign CASE's package manifest with a requester (or other) seed key,
     /// writing `signatures/manifest.sig.json` and binding it into
@@ -245,6 +396,18 @@ struct RunArgs {
     /// Defaults to `candidate` when --attempt is present.
     #[arg(long = "candidate-input", value_name = "NAME")]
     candidate_input: Option<String>,
+    /// The design revision this run is evidence for (ADR-0019). The
+    /// revision must already exist in --log and must agree with this
+    /// attempt's parentage, fixed identities, and candidate state; the
+    /// run row names it and an assessment record is appended citing the
+    /// exact row.
+    #[arg(long, value_name = "ID")]
+    revision: Option<String>,
+    /// The contract amendment a new root attempt cites when it
+    /// deliberately continues a case under changed fixed identities
+    /// (ADR-0019). Children never cite one.
+    #[arg(long, value_name = "ID")]
+    amendment: Option<String>,
     /// The requester and runner public keys this run accepts (ADR-0015).
     /// With it, the manifest signature must verify against a listed
     /// requester key or the run is refused before compilation, and a
@@ -280,6 +443,25 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
         Command::History(args) => queries::history(args)?,
         Command::Attempt(args) => queries::attempt(args)?,
         Command::Constellation(args) => queries::constellation(args)?,
+        Command::Revision { command } => match command {
+            RevisionCommand::Create(args) => {
+                println!("{}", serde_json::to_string_pretty(&run_revision(*args)?)?);
+            }
+            RevisionCommand::Show(args) => queries::revision(args)?,
+        },
+        Command::Reference { command } => match command {
+            ReferenceCommand::Set(args) => {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&run_reference_set(args)?)?
+                );
+            }
+            ReferenceCommand::Show(args) => queries::reference(args)?,
+        },
+        Command::Amend(args) => {
+            println!("{}", serde_json::to_string_pretty(&run_amend(args)?)?);
+        }
+        Command::Assessment(args) => queries::assessment(args)?,
         Command::Tools { command } => queries::tools(command)?,
         Command::Mcp { command } => mcp::run(command)?,
         Command::SemanticProfile => {
@@ -363,11 +545,19 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 attempt_id,
                 parent_attempt_id,
                 candidate_input,
+                revision,
+                amendment,
                 trust_root,
                 runner_key,
                 json,
             } = *args;
-            let attempt = attempt_request(attempt_id, parent_attempt_id, candidate_input)?;
+            let attempt = attempt_request(
+                attempt_id,
+                parent_attempt_id,
+                candidate_input,
+                revision,
+                amendment,
+            )?;
             let options = avila_core_runner::CaseRunOptions {
                 source_roots: avila_core_runner::parse_source_roots(&source_roots)?,
                 capabilities: avila_core_runner::parse_capabilities(&capabilities)?,
@@ -798,18 +988,144 @@ fn attempt_request(
     attempt_id: Option<String>,
     parent_attempt_id: Option<String>,
     candidate_input: Option<String>,
+    revision_id: Option<String>,
+    amendment_id: Option<String>,
 ) -> Result<Option<avila_core_runner::AttemptLineageRequest>, Box<dyn Error>> {
     match attempt_id {
         Some(attempt_id) => Ok(Some(avila_core_runner::AttemptLineageRequest {
             attempt_id,
             parent_attempt_id,
             candidate_input: candidate_input.unwrap_or_else(|| "candidate".into()),
+            revision_id,
+            amendment_id,
         })),
-        None if parent_attempt_id.is_some() || candidate_input.is_some() => {
-            Err("`--parent-attempt` and `--candidate-input` require `--attempt ID`".into())
+        None if parent_attempt_id.is_some()
+            || candidate_input.is_some()
+            || revision_id.is_some()
+            || amendment_id.is_some() =>
+        {
+            Err(
+                "`--parent-attempt`, `--candidate-input`, `--revision`, and `--amendment` require `--attempt ID`"
+                    .into(),
+            )
         }
         None => Ok(None),
     }
+}
+
+/// Load a `--runner-key FILE` seed, if supplied: 32 raw bytes, as written
+/// by `avila-core keys generate`. Never printed or logged.
+fn load_runner_seed(path: Option<&PathBuf>) -> Result<Option<[u8; 32]>, Box<dyn Error>> {
+    let Some(path) = path else {
+        return Ok(None);
+    };
+    let bytes =
+        fs::read(path).map_err(|error| format!("runner key `{}`: {error}", path.display()))?;
+    Ok(Some(signature::parse_seed_bytes(&bytes).map_err(
+        |error| format!("runner key `{}`: {error}", path.display()),
+    )?))
+}
+
+/// Load a `--trust-root FILE`, if supplied.
+fn load_trust(path: Option<&PathBuf>) -> Result<Option<signature::TrustRoot>, Box<dyn Error>> {
+    let Some(path) = path else {
+        return Ok(None);
+    };
+    let bytes =
+        fs::read(path).map_err(|error| format!("trust root `{}`: {error}", path.display()))?;
+    Ok(Some(signature::TrustRoot::parse(&bytes).map_err(
+        |error| format!("trust root `{}`: {error}", path.display()),
+    )?))
+}
+
+/// Performs a `revision create` subcommand and returns exactly the JSON
+/// document the CLI prints, so a test can assert on its fields without
+/// capturing stdout.
+fn run_revision(args: RevisionCreateArgs) -> Result<serde_json::Value, Box<dyn Error>> {
+    let runner_key = load_runner_seed(args.runner_key.as_ref())?;
+    let trust_root = load_trust(args.trust_root.as_ref())?;
+    let (record, record_sha256) = avila_core_runner::create_revision(
+        &args.log,
+        &avila_core_runner::RevisionRequest {
+            revision_id: args.revision_id,
+            parent_revision_id: args.parent_revision_id,
+            amendment_id: args.amendment_id,
+            candidate_input: args.candidate_input,
+            candidate: args.candidate,
+            fixed_manifest_sha256: args.manifest_sha256,
+            fixed_compiled_snapshot_sha256: args.compiled_snapshot_sha256,
+            created_by: args.created_by,
+            intent: args.intent,
+        },
+        runner_key,
+        trust_root.as_ref(),
+    )?;
+    Ok(serde_json::json!({
+        "recorded": "design_revision",
+        "revision_id": record.revision_id,
+        "generation": record.generation,
+        "parent_revision_id": record.parent_revision_id,
+        "amendment_id": record.amendment_id,
+        "record_sha256": record_sha256,
+        "log": args.log.display().to_string(),
+    }))
+}
+
+/// Performs a `reference set` subcommand and returns exactly the JSON
+/// document the CLI prints, so a test can assert on its fields without
+/// capturing stdout.
+fn run_reference_set(args: ReferenceSetArgs) -> Result<serde_json::Value, Box<dyn Error>> {
+    let runner_key = load_runner_seed(args.runner_key.as_ref())?;
+    let trust_root = load_trust(args.trust_root.as_ref())?;
+    let (record, record_sha256) = avila_core_runner::set_reference(
+        &args.log,
+        &args.name,
+        &args.revision,
+        args.assessment.as_deref(),
+        &args.actor,
+        &args.rationale,
+        runner_key,
+        trust_root.as_ref(),
+    )?;
+    Ok(serde_json::json!({
+        "recorded": "named_reference",
+        "name": record.name,
+        "revision_id": record.revision_id,
+        "assessment_id": record.assessment_id,
+        "superseded_revision_id": record.superseded_revision_id,
+        "superseded_assessment_id": record.superseded_assessment_id,
+        "record_sha256": record_sha256,
+        "log": args.log.display().to_string(),
+    }))
+}
+
+/// Performs an `amend` subcommand and returns exactly the JSON document
+/// the CLI prints, so a test can assert on its fields without capturing
+/// stdout.
+fn run_amend(args: AmendArgs) -> Result<serde_json::Value, Box<dyn Error>> {
+    let runner_key = load_runner_seed(args.runner_key.as_ref())?;
+    let trust_root = load_trust(args.trust_root.as_ref())?;
+    let (record, record_sha256) = avila_core_runner::record_amendment(
+        &args.log,
+        &args.amendment_id,
+        &args.supersedes,
+        &args.prior_manifest,
+        &args.new_manifest,
+        &args.new_compiled_snapshot_sha256,
+        &args.actor,
+        &args.rationale,
+        runner_key,
+        trust_root.as_ref(),
+    )?;
+    Ok(serde_json::json!({
+        "recorded": "contract_amendment",
+        "amendment_id": record.amendment_id,
+        "superseded_root_id": record.superseded_root_id,
+        "new_manifest_sha256": record.new_manifest_sha256,
+        "changed_elements": record.changed_elements,
+        "record_sha256": record_sha256,
+        "log": args.log.display().to_string(),
+    }))
 }
 
 #[cfg(test)]
@@ -867,14 +1183,32 @@ mod tests {
 
     #[test]
     fn attempt_flags_form_one_explicit_lineage_request() {
-        let request = attempt_request(Some("try-002".into()), Some("try-001".into()), None)
-            .unwrap()
-            .unwrap();
+        let request = attempt_request(
+            Some("try-002".into()),
+            Some("try-001".into()),
+            None,
+            Some("rev-002".into()),
+            None,
+        )
+        .unwrap()
+        .unwrap();
         assert_eq!(request.attempt_id, "try-002");
         assert_eq!(request.parent_attempt_id.as_deref(), Some("try-001"));
         assert_eq!(request.candidate_input, "candidate");
-        assert!(attempt_request(None, Some("try-001".into()), None).is_err());
-        assert!(attempt_request(None, None, Some("design".into())).is_err());
+        assert_eq!(request.revision_id.as_deref(), Some("rev-002"));
+        assert!(request.amendment_id.is_none());
+        for extra in [
+            (Some("try-001".into()), None, None, None),
+            (None, Some("design".into()), None, None),
+            (None, None, Some("rev-001".into()), None),
+            (None, None, None, Some("amend-001".into())),
+        ] {
+            let (parent, input, revision, amendment) = extra;
+            assert!(
+                attempt_request(None, parent, input, revision, amendment).is_err(),
+                "attempt-less flags must be refused"
+            );
+        }
     }
 
     // --- ADR-0015: `keys` and `sign` (S-043) --------------------------
@@ -1264,5 +1598,147 @@ mod tests {
         })
         .unwrap_err();
         assert!(error.to_string().contains("rehash before signing"));
+    }
+
+    // --- ADR-0019: design-history record verbs -----------------------
+
+    /// The canonical-byte sha256 the runner computes over a file's JSON —
+    /// `avila-core canonicalize` output hashed, matching `create_revision`
+    /// and `record_amendment`'s view of a manifest or candidate.
+    fn canonical_sha256(path: &std::path::Path) -> String {
+        let canonical = canonicalize_json(&fs::read(path).unwrap()).unwrap();
+        format!("sha256:{}", sha256_hex(&canonical))
+    }
+
+    #[test]
+    fn revision_reference_and_amend_verbs_append_queryable_records() {
+        let scratch = ScratchDir::new("design-history-verbs");
+        let log = scratch.join("campaign.jsonl");
+        let candidate = scratch.join("candidate.json");
+        fs::write(&candidate, br#"{"thickness":"1"}"#).unwrap();
+        let prior = scratch.join("prior-manifest.json");
+        fs::write(&prior, br#"{"question":"v1"}"#).unwrap();
+        let new = scratch.join("new-manifest.json");
+        fs::write(&new, br#"{"question":"v2"}"#).unwrap();
+        let manifest = canonical_sha256(&prior);
+        let new_manifest = canonical_sha256(&new);
+        let snapshot = format!("sha256:{}", "a".repeat(64));
+        let new_snapshot = format!("sha256:{}", "b".repeat(64));
+
+        let revision = run_revision(RevisionCreateArgs {
+            revision_id: "rev-a".into(),
+            log: log.clone(),
+            candidate: candidate.clone(),
+            candidate_input: "candidate".into(),
+            manifest_sha256: manifest.clone(),
+            compiled_snapshot_sha256: snapshot.clone(),
+            parent_revision_id: None,
+            amendment_id: None,
+            created_by: "designer".into(),
+            intent: Some("first proposal".into()),
+            runner_key: None,
+            trust_root: None,
+        })
+        .unwrap();
+        assert_eq!(revision["recorded"], "design_revision");
+        assert_eq!(revision["revision_id"], "rev-a");
+        assert_eq!(revision["generation"], 0);
+
+        let reference = run_reference_set(ReferenceSetArgs {
+            name: "proposal".into(),
+            log: log.clone(),
+            revision: "rev-a".into(),
+            assessment: None,
+            actor: "designer".into(),
+            rationale: "first candidate".into(),
+            runner_key: None,
+            trust_root: None,
+        })
+        .unwrap();
+        assert_eq!(reference["recorded"], "named_reference");
+        assert_eq!(reference["name"], "proposal");
+        assert_eq!(reference["revision_id"], "rev-a");
+
+        let amendment = run_amend(AmendArgs {
+            amendment_id: "amend-1".into(),
+            log: log.clone(),
+            supersedes: "rev-a".into(),
+            prior_manifest: prior.clone(),
+            new_manifest: new.clone(),
+            new_compiled_snapshot_sha256: new_snapshot.clone(),
+            actor: "designer".into(),
+            rationale: "question changed deliberately".into(),
+            runner_key: None,
+            trust_root: None,
+        })
+        .unwrap();
+        assert_eq!(amendment["recorded"], "contract_amendment");
+        assert_eq!(amendment["amendment_id"], "amend-1");
+        assert_eq!(amendment["superseded_root_id"], "rev-a");
+        assert_eq!(amendment["new_manifest_sha256"], new_manifest);
+        assert_eq!(
+            amendment["changed_elements"][0]["kind"].as_str().unwrap(),
+            "replaced"
+        );
+
+        let amended = run_revision(RevisionCreateArgs {
+            revision_id: "rev-b".into(),
+            log: log.clone(),
+            candidate: candidate.clone(),
+            candidate_input: "candidate".into(),
+            manifest_sha256: new_manifest.clone(),
+            compiled_snapshot_sha256: new_snapshot,
+            parent_revision_id: None,
+            amendment_id: Some("amend-1".into()),
+            created_by: "designer".into(),
+            intent: None,
+            runner_key: None,
+            trust_root: None,
+        })
+        .unwrap();
+        assert_eq!(amended["revision_id"], "rev-b");
+        assert_eq!(amended["amendment_id"], "amend-1");
+
+        // Every record is queryable through the shared operations the CLI
+        // verbs wrap.
+        let lines: Vec<serde_json::Value> = fs::read_to_string(&log)
+            .unwrap()
+            .lines()
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect();
+        let kinds: Vec<&str> = lines
+            .iter()
+            .map(|line| line["record_kind"].as_str().unwrap())
+            .collect();
+        assert_eq!(
+            kinds,
+            [
+                "design_revision",
+                "named_reference",
+                "contract_amendment",
+                "design_revision"
+            ]
+        );
+        for line in &lines {
+            assert_eq!(line["schema_version"], "avila.core/log-record/v0.1-draft");
+        }
+
+        // A second `revision create` with a duplicate id is refused.
+        let error = run_revision(RevisionCreateArgs {
+            revision_id: "rev-a".into(),
+            log: log.clone(),
+            candidate,
+            candidate_input: "candidate".into(),
+            manifest_sha256: manifest,
+            compiled_snapshot_sha256: snapshot,
+            parent_revision_id: None,
+            amendment_id: None,
+            created_by: "designer".into(),
+            intent: None,
+            runner_key: None,
+            trust_root: None,
+        })
+        .unwrap_err();
+        assert!(error.to_string().contains("rev-a"), "{error}");
     }
 }

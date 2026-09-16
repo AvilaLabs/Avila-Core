@@ -161,8 +161,9 @@ vector-set identities, `v0.2-draft` compilation with a nonzero exit status for
 a rejected contract, campaign evaluation over a claims document, the
 diagnostic catalog through `explain`, and the composed case workflow through
 `run`, printed as a concise staged view or as the complete JSON report. It
-also exposes the eleven shared read-only queries over saved reports and
-campaign logs (`inspect`, `history`, `attempt`, `constellation`, `tools`, and
+also exposes the fourteen shared read-only queries over saved reports and
+campaign logs (`inspect`, `history`, `attempt`, `constellation`,
+`revision`, `reference`, `assessment`, `amend`, `tools`, and
 a local stdio `mcp serve`), and the ADR-0015 key and signing operations
 (`keys`, `sign`). All output explicitly distinguishes software conformance,
 structural validity, and process provenance from scientific validity.
@@ -178,7 +179,7 @@ execution with reuse and change classes, generated claims and binding,
 verdicts with their complete boundaries, optional presentation-gate readiness
 and instructions, and replay. The specimen view compiles the embedded specimen
 and renders its findings with owners and repairs. The Tools workspace exposes
-the same eleven shared read-only queries as the CLI and MCP server — over a
+the same fourteen shared read-only queries as the CLI and MCP server — over a
 saved report, the current workbench run, or one explicit campaign log — with
 the recorded-only verification boundary stated beside every result. Every
 badge and number is read from a report; the client performs no calculation

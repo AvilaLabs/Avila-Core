@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/assessment/v0.1-draft.schema.json",
+  "title": "Avila Core Assessment v0.1 draft",
+  "description": "The binding between one design revision and the evidence one exact run row produced (ADR-0019). The verdicts are a verbatim copy of the cited row's, so the record is citable alone and the copy can be checked for drift; the parent comparison is still derived on read, never stored.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "assessment_id",
+    "revision_id",
+    "revision_record_sha256",
+    "run_record_sha256",
+    "manifest_sha256",
+    "compiled_snapshot_sha256",
+    "verdicts"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/assessment/v0.1-draft"
+    },
+    "assessment_id": {
+      "$ref": "#/$defs/identifier",
+      "description": "Always the attempt id of the run row this assessment cites."
+    },
+    "revision_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "revision_record_sha256": {
+      "$ref": "#/$defs/sha256",
+      "description": "The exact revision row (or revision-defining attempt row) this assessment bound at append time."
+    },
+    "run_record_sha256": {
+      "$ref": "#/$defs/sha256",
+      "description": "The exact run row this assessment cites as its evidence."
+    },
+    "manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "compiled_snapshot_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "campaign_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "requirement_set_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "requirement_set_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "verdicts": {
+      "type": "array",
+      "description": "The cited run row's verdicts, copied verbatim at append time.",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}

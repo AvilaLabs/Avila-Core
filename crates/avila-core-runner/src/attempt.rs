@@ -30,6 +30,15 @@ pub struct AttemptLineageRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parent_attempt_id: Option<String>,
     pub candidate_input: String,
+    /// ADR-0019: the design revision this run is evidence for. When set,
+    /// the run row names it and an assessment record is appended citing
+    /// this exact row.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub revision_id: Option<String>,
+    /// ADR-0019: the contract amendment a new root cites when it
+    /// deliberately continues a case under changed fixed identities.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub amendment_id: Option<String>,
 }
 
 /// A typed change derived by Core from the parent's and child's canonical
@@ -167,54 +176,38 @@ pub struct AttemptMarginUnavailable {
 
 #[derive(Debug)]
 pub(crate) struct PriorAttempt {
-    record: AttemptRecord,
-    record_sha256: String,
+    pub(crate) record: AttemptRecord,
+    pub(crate) record_sha256: String,
     pub(crate) line: usize,
-    top_level_manifest_sha256: Option<String>,
-    top_level_compiled_snapshot_sha256: Option<String>,
-    verdicts: Option<Value>,
+    pub(crate) top_level_manifest_sha256: Option<String>,
+    pub(crate) top_level_compiled_snapshot_sha256: Option<String>,
+    pub(crate) verdicts: Option<Value>,
     /// The complete raw JSON of this line, retained so a parent's own
     /// `signature` member can be verified (ADR-0015 clause 6) without
     /// re-reading the log file.
-    full_line: Value,
+    pub(crate) full_line: Value,
+    /// ADR-0019 row-level members: the revision this run is evidence for,
+    /// the assessment id it names (always the attempt id), and the
+    /// amendment a superseding root cites.
+    pub(crate) case_id: Option<String>,
+    pub(crate) revision_id: Option<String>,
+    pub(crate) assessment_id: Option<String>,
+    pub(crate) amendment_id: Option<String>,
 }
 
-pub(crate) fn prepare_attempt(
-    request: &AttemptLineageRequest,
-    log_path: Option<&Path>,
-    candidate_path: Option<&Path>,
+/// Hash, bound-check, and canonicalize one nominated candidate file the
+/// same way attempts and revisions do.
+pub(crate) fn load_candidate(
+    candidate_path: &Path,
     supplied_candidate_sha256: Option<&str>,
-    manifest_sha256: &str,
-    compiled_snapshot_sha256: &str,
-    trust_root: Option<&TrustRoot>,
-) -> Result<AttemptRecord, String> {
-    validate_identifier("attempt", &request.attempt_id)?;
-    validate_identifier("candidate input", &request.candidate_input)?;
-    if let Some(parent) = &request.parent_attempt_id {
-        validate_identifier("parent attempt", parent)?;
-        if parent == &request.attempt_id {
-            return Err("an attempt cannot name itself as its parent".into());
-        }
-    }
-    let log_path = log_path.ok_or("attempt lineage requires `--log FILE`")?;
-    let candidate_path = candidate_path.ok_or_else(|| {
-        format!(
-            "candidate input `{}` was not supplied with `--input {}=PATH`",
-            request.candidate_input, request.candidate_input
-        )
-    })?;
-    let supplied_candidate_sha256 = supplied_candidate_sha256.ok_or_else(|| {
-        format!(
-            "candidate input `{}` did not become a verified supplied input",
-            request.candidate_input
-        )
-    })?;
-
+) -> Result<(String, String, Value), String> {
     let (candidate_artifact_sha256, bytes) = sha256_file(candidate_path)
         .map_err(|error| format!("candidate `{}`: {error}", candidate_path.display()))?;
-    if candidate_artifact_sha256 != supplied_candidate_sha256 {
+    if let Some(supplied) = supplied_candidate_sha256
+        && candidate_artifact_sha256 != supplied
+    {
         return Err(format!(
-            "candidate `{}` changed while the attempt was being planned: supplied identity {supplied_candidate_sha256}, observed {candidate_artifact_sha256}",
+            "candidate `{}` changed while the attempt was being planned: supplied identity {supplied}, observed {candidate_artifact_sha256}",
             candidate_path.display()
         ));
     }
@@ -238,10 +231,61 @@ pub(crate) fn prepare_attempt(
             candidate_path.display()
         )
     })?;
-    let candidate_state_sha256 = digest(&canonical);
+    Ok((
+        candidate_artifact_sha256,
+        digest(&canonical),
+        candidate_state,
+    ))
+}
 
-    let attempts = read_attempts(log_path)?;
-    validate_history(&attempts, trust_root)?;
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn prepare_attempt(
+    request: &AttemptLineageRequest,
+    log_path: Option<&Path>,
+    candidate_path: Option<&Path>,
+    supplied_candidate_sha256: Option<&str>,
+    manifest_sha256: &str,
+    compiled_snapshot_sha256: &str,
+    case_id: &str,
+    trust_root: Option<&TrustRoot>,
+) -> Result<AttemptRecord, String> {
+    validate_identifier("attempt", &request.attempt_id)?;
+    validate_identifier("candidate input", &request.candidate_input)?;
+    if let Some(parent) = &request.parent_attempt_id {
+        validate_identifier("parent attempt", parent)?;
+        if parent == &request.attempt_id {
+            return Err("an attempt cannot name itself as its parent".into());
+        }
+    }
+    let log_path = log_path.ok_or("attempt lineage requires `--log FILE`")?;
+    let candidate_path = candidate_path.ok_or_else(|| {
+        format!(
+            "candidate input `{}` was not supplied with `--input {}=PATH`",
+            request.candidate_input, request.candidate_input
+        )
+    })?;
+    let supplied_candidate_sha256 = supplied_candidate_sha256.ok_or_else(|| {
+        format!(
+            "candidate input `{}` did not become a verified supplied input",
+            request.candidate_input
+        )
+    })?;
+    let (candidate_artifact_sha256, candidate_state_sha256, candidate_state) =
+        load_candidate(candidate_path, Some(supplied_candidate_sha256))?;
+
+    let content = match fs::read_to_string(log_path) {
+        Ok(content) => content,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(error) => {
+            return Err(format!(
+                "cannot read lineage log `{}`: {error}",
+                log_path.display()
+            ));
+        }
+    };
+    let view = crate::history::parse_log(&content, log_path)?;
+    crate::history::validate_log(&view, trust_root)?;
+    let attempts = &view.attempts;
     if attempts.contains_key(&request.attempt_id) {
         return Err(format!(
             "attempt id `{}` already exists in `{}`",
@@ -296,6 +340,19 @@ pub(crate) fn prepare_attempt(
         (0, None, Vec::new())
     };
 
+    // ADR-0019: the revision citation must agree with this attempt's own
+    // parentage edge, and a root continuing a case under changed fixed
+    // identities must cite a recorded amendment.
+    crate::history::check_attempt_binding(
+        &view,
+        request,
+        case_id,
+        manifest_sha256,
+        compiled_snapshot_sha256,
+        &candidate_state_sha256,
+        log_path,
+    )?;
+
     Ok(AttemptRecord {
         schema_version: ATTEMPT_LINEAGE_SCHEMA_VERSION.into(),
         attempt_id: request.attempt_id.clone(),
@@ -321,10 +378,13 @@ pub(crate) fn revalidate_before_append(
     log_path: &Path,
     content: &str,
     attempt: &AttemptRecord,
+    request: &AttemptLineageRequest,
+    case_id: &str,
     trust_root: Option<&TrustRoot>,
 ) -> Result<(), String> {
-    let attempts = parse_attempts(content, log_path)?;
-    validate_history(&attempts, trust_root)?;
+    let view = crate::history::parse_log(content, log_path)?;
+    crate::history::validate_log(&view, trust_root)?;
+    let attempts = &view.attempts;
     if attempts.contains_key(&attempt.attempt_id) {
         return Err(format!(
             "attempt id `{}` appeared in `{}` while this run was in progress",
@@ -357,7 +417,15 @@ pub(crate) fn revalidate_before_append(
             return Err("attempt parent id and parent record identity must appear together".into());
         }
     }
-    Ok(())
+    crate::history::check_attempt_binding(
+        &view,
+        request,
+        case_id,
+        &attempt.fixed_manifest_sha256,
+        &attempt.fixed_compiled_snapshot_sha256,
+        &attempt.candidate_state_sha256,
+        log_path,
+    )
 }
 
 /// Return the verdict-margin surface from the exact parent line already bound
@@ -374,11 +442,22 @@ pub(crate) fn parent_verdict_values(
         .parent_record_sha256
         .as_deref()
         .ok_or("a child attempt is missing its parent record identity")?;
-    let attempts = read_attempts(log_path)?;
+    let content = match fs::read_to_string(log_path) {
+        Ok(content) => content,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(error) => {
+            return Err(format!(
+                "cannot read lineage log `{}`: {error}",
+                log_path.display()
+            ));
+        }
+    };
+    let view = crate::history::parse_log(&content, log_path)?;
+    let attempts = &view.attempts;
     // Read-only comparison rendering, not an admission gate: signatures are
     // not re-verified here (they already were, when this lineage was
     // admitted or last revalidated under a trust root).
-    validate_history(&attempts, None)?;
+    crate::history::validate_log(&view, None)?;
     let parent = attempts.get(parent_id).ok_or_else(|| {
         format!(
             "parent attempt `{parent_id}` disappeared from `{}` before comparison",
@@ -406,71 +485,55 @@ pub(crate) fn parent_verdict_values(
     Ok(Some(verdicts.clone()))
 }
 
-fn read_attempts(path: &Path) -> Result<BTreeMap<String, PriorAttempt>, String> {
-    let content = match fs::read_to_string(path) {
-        Ok(content) => content,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(BTreeMap::new()),
-        Err(error) => {
-            return Err(format!(
-                "cannot read lineage log `{}`: {error}",
-                path.display()
-            ));
-        }
-    };
-    parse_attempts(&content, path)
-}
-
-pub(crate) fn parse_attempts(
-    content: &str,
+/// Build the prior-attempt entry for one already-parsed log line that
+/// carries an `attempt` member. Shared by the attempt-only parse and the
+/// unified `history::parse_log`.
+pub(crate) fn attempt_entry(
+    entry: Value,
+    raw_line: &str,
+    line: usize,
     path: &Path,
-) -> Result<BTreeMap<String, PriorAttempt>, String> {
-    let mut attempts = BTreeMap::new();
-    for (index, raw_line) in content.split('\n').enumerate() {
-        if raw_line.trim().is_empty() {
-            continue;
-        }
-        let line = index + 1;
-        let entry: Value = serde_json::from_str(raw_line).map_err(|error| {
-            format!(
-                "line {line} of lineage log `{}` is not valid JSON: {error}",
-                path.display()
-            )
-        })?;
-        let Some(attempt_value) = entry.get("attempt") else {
-            continue;
-        };
-        let record: AttemptRecord =
-            serde_json::from_value(attempt_value.clone()).map_err(|error| {
-                format!(
-                    "line {line} of lineage log `{}` has an invalid attempt record: {error}",
-                    path.display()
-                )
-            })?;
-        let attempt_id = record.attempt_id.clone();
-        let prior = PriorAttempt {
-            record,
-            record_sha256: digest(raw_line.as_bytes()),
-            line,
-            top_level_manifest_sha256: entry
-                .get("manifest_sha256")
-                .and_then(Value::as_str)
-                .map(str::to_owned),
-            top_level_compiled_snapshot_sha256: entry
-                .get("compiled_snapshot_sha256")
-                .and_then(Value::as_str)
-                .map(str::to_owned),
-            verdicts: entry.get("verdicts").cloned(),
-            full_line: entry,
-        };
-        if let Some(first) = attempts.insert(attempt_id.clone(), prior) {
-            return Err(format!(
-                "attempt id `{attempt_id}` occurs on both lines {} and {line} of `{}`",
-                first.line,
-                path.display()
-            ));
-        }
-    }
-    Ok(attempts)
+) -> Result<(String, PriorAttempt), String> {
+    let attempt_value = entry.get("attempt").expect("caller checked");
+    let record: AttemptRecord = serde_json::from_value(attempt_value.clone()).map_err(|error| {
+        format!(
+            "line {line} of lineage log `{}` has an invalid attempt record: {error}",
+            path.display()
+        )
+    })?;
+    let attempt_id = record.attempt_id.clone();
+    let prior = PriorAttempt {
+        record,
+        record_sha256: digest(raw_line.as_bytes()),
+        line,
+        top_level_manifest_sha256: entry
+            .get("manifest_sha256")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        top_level_compiled_snapshot_sha256: entry
+            .get("compiled_snapshot_sha256")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        verdicts: entry.get("verdicts").cloned(),
+        case_id: entry
+            .get("case_id")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        revision_id: entry
+            .get("revision_id")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        assessment_id: entry
+            .get("assessment_id")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        amendment_id: entry
+            .get("amendment_id")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        full_line: entry,
+    };
+    Ok((attempt_id, prior))
 }
 
 /// Query one immutable in-memory log snapshot using the runner's existing
@@ -483,8 +546,9 @@ pub(crate) fn query_attempt(bytes: &[u8], id: &str) -> Result<Value, String> {
         let record: Value = serde_json::from_str(line).map_err(|e| e.to_string())?;
         crate::query::validate_history_record(&record)?;
     }
-    let attempts = parse_attempts(content, Path::new("query snapshot"))?;
-    validate_history(&attempts, None)?;
+    let view = crate::history::parse_log(content, Path::new("query snapshot"))?;
+    crate::history::validate_log(&view, None)?;
+    let attempts = &view.attempts;
     let Some(attempt) = attempts.get(id) else {
         return Ok(serde_json::json!({"match_status":"no_match_in_record"}));
     };
@@ -510,6 +574,9 @@ pub(crate) fn query_attempt(bytes: &[u8], id: &str) -> Result<Value, String> {
     Ok(
         serde_json::json!({"match_status":"found","line":attempt.line,
         "record_sha256":attempt.record_sha256,"attempt":attempt.record,
+        "revision_id":crate::history::attempt_revision_id(attempt),
+        "revision_source":if attempt.revision_id.is_some() {"recorded"} else {"derived"},
+        "amendment_id":attempt.amendment_id,
         "comparison":comparison,"lineage_validation":"consistent",
         "signature_verification":"not_checked"}),
     )
@@ -634,7 +701,7 @@ pub(crate) fn validate_history(
     Ok(())
 }
 
-fn candidate_state_identity(state: &Value) -> Result<String, String> {
+pub(crate) fn candidate_state_identity(state: &Value) -> Result<String, String> {
     let bytes = serde_json::to_vec(state)
         .map_err(|error| format!("candidate state cannot be serialized: {error}"))?;
     let canonical = canonicalize_json(&bytes)
@@ -642,7 +709,7 @@ fn candidate_state_identity(state: &Value) -> Result<String, String> {
     Ok(digest(&canonical))
 }
 
-fn digest(bytes: impl AsRef<[u8]>) -> String {
+pub(crate) fn digest(bytes: impl AsRef<[u8]>) -> String {
     format!("sha256:{}", sha256_hex(bytes))
 }
 
@@ -650,7 +717,10 @@ fn digest(bytes: impl AsRef<[u8]>) -> String {
 /// root (ADR-0015 clause 6): the canonical form of the line with its
 /// `signature` member removed must reproduce the digest that member names,
 /// and the signature must verify against a listed runner key.
-fn verify_log_line_signature(line: &Value, trust_root: &TrustRoot) -> Result<String, String> {
+pub(crate) fn verify_log_line_signature(
+    line: &Value,
+    trust_root: &TrustRoot,
+) -> Result<String, String> {
     let mut without_signature = line.clone();
     let object = without_signature
         .as_object_mut()
@@ -671,7 +741,7 @@ fn verify_log_line_signature(line: &Value, trust_root: &TrustRoot) -> Result<Str
         .map_err(|error| format!("log line signature does not verify: {error}"))
 }
 
-fn validate_identifier(kind: &str, value: &str) -> Result<(), String> {
+pub(crate) fn validate_identifier(kind: &str, value: &str) -> Result<(), String> {
     let mut characters = value.chars();
     let Some(first) = characters.next() else {
         return Err(format!("{kind} id must not be empty"));
@@ -691,7 +761,7 @@ fn validate_identifier(kind: &str, value: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn diff_candidate_states(before: &Value, after: &Value) -> Vec<AttemptChange> {
+pub(crate) fn diff_candidate_states(before: &Value, after: &Value) -> Vec<AttemptChange> {
     let mut changes = Vec::new();
     diff_value(before, after, "", &mut changes);
     changes

@@ -160,6 +160,20 @@ pub(crate) fn compare_attempt_results(
         .parent_record_sha256
         .clone()
         .ok_or("a child attempt is missing its parent record identity")?;
+    compare_verdict_sets(&parent_attempt_id, &parent_record_sha256, parent, child)
+}
+
+/// The verdict/margin comparison core: transitions, exact deltas, and
+/// explicit unavailability reasons between two verdict surfaces. The
+/// parent identity fields name the run row the parent surface came
+/// from — a bound attempt parent, or an assessment's cited run when a
+/// comparison crosses an amendment (ADR-0019).
+pub(crate) fn compare_verdict_sets(
+    parent_attempt_id: &str,
+    parent_record_sha256: &str,
+    parent: &[VerdictMargin],
+    child: &[VerdictMargin],
+) -> Result<AttemptComparison, String> {
     let parent = index_verdict_margins("parent", parent)?;
     let child = index_verdict_margins("child", child)?;
     let requirement_ids: BTreeSet<&str> = parent
@@ -253,8 +267,8 @@ pub(crate) fn compare_attempt_results(
 
     Ok(AttemptComparison {
         schema_version: ATTEMPT_COMPARISON_SCHEMA_VERSION.into(),
-        parent_attempt_id,
-        parent_record_sha256,
+        parent_attempt_id: parent_attempt_id.into(),
+        parent_record_sha256: parent_record_sha256.into(),
         verdicts_compared,
         unchanged_verdicts,
         verdict_transitions,

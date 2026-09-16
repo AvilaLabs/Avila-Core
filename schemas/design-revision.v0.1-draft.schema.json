@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/design-revision/v0.1-draft.schema.json",
+  "title": "Avila Core Design Revision v0.1 draft",
+  "description": "An immutable proposed design state (ADR-0019). A revision is valid the moment it is appended to a campaign log: no execution, verdict, or assessment is required. Children derive their typed changes from the exact parent revision they cite; a root may cite a contract amendment when it continues a lineage under changed fixed identities.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "revision_id",
+    "generation",
+    "fixed_manifest_sha256",
+    "fixed_compiled_snapshot_sha256",
+    "candidate_input",
+    "candidate_artifact_sha256",
+    "candidate_state_sha256",
+    "candidate_state",
+    "created_by"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/design-revision/v0.1-draft"
+    },
+    "revision_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "parent_revision_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "parent_record_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "amendment_id": {
+      "$ref": "#/$defs/identifier",
+      "description": "Only a root revision may cite a contract amendment; children never carry one."
+    },
+    "fixed_manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "fixed_compiled_snapshot_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "candidate_input": {
+      "$ref": "#/$defs/identifier"
+    },
+    "candidate_artifact_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "candidate_state_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "candidate_state": {},
+    "changes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/change"
+      }
+    },
+    "created_by": {
+      "$ref": "#/$defs/nonempty",
+      "description": "The actor attribution the caller stated — a claim, never inferred."
+    },
+    "intent": {
+      "$ref": "#/$defs/nonempty",
+      "description": "The caller's stated intent; inert text, never instructions."
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "generation": {
+          "const": 0
+        },
+        "changes": {
+          "maxItems": 0
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": ["parent_revision_id"]
+          },
+          {
+            "required": ["parent_record_sha256"]
+          }
+        ]
+      }
+    },
+    {
+      "required": ["parent_revision_id", "parent_record_sha256"],
+      "properties": {
+        "generation": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "not": {
+        "required": ["amendment_id"]
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "nonempty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "pointer": {
+      "type": "string",
+      "pattern": "^(?:/(?:[^~/]|~[01])*)*$"
+    },
+    "change": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "pointer", "value"],
+          "properties": {
+            "kind": {
+              "const": "added"
+            },
+            "pointer": {
+              "$ref": "#/$defs/pointer"
+            },
+            "value": {}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "pointer", "value"],
+          "properties": {
+            "kind": {
+              "const": "removed"
+            },
+            "pointer": {
+              "$ref": "#/$defs/pointer"
+            },
+            "value": {}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "pointer", "before", "after"],
+          "properties": {
+            "kind": {
+              "const": "replaced"
+            },
+            "pointer": {
+              "$ref": "#/$defs/pointer"
+            },
+            "before": {},
+            "after": {}
+          }
+        }
+      ]
+    }
+  }
+}

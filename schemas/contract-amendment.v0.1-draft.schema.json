@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/contract-amendment/v0.1-draft.schema.json",
+  "title": "Avila Core Contract Amendment v0.1 draft",
+  "description": "The deliberate question change linking a superseded lineage root to the new root that continues the campaign under changed fixed identities (ADR-0019, DH-03). A new root whose fixed manifest or compiled snapshot differs from its predecessor's must cite an amendment; the amendment's stated identities must match the new root's exactly.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "amendment_id",
+    "superseded_root_id",
+    "superseded_record_sha256",
+    "superseded_manifest_sha256",
+    "superseded_compiled_snapshot_sha256",
+    "new_manifest_sha256",
+    "new_compiled_snapshot_sha256",
+    "changed_elements",
+    "actor",
+    "rationale"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/contract-amendment/v0.1-draft"
+    },
+    "amendment_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "superseded_root_id": {
+      "$ref": "#/$defs/identifier",
+      "description": "The superseded root's revision id — an explicit revision record or a revision-less root attempt's derived id."
+    },
+    "superseded_record_sha256": {
+      "$ref": "#/$defs/sha256",
+      "description": "The exact log line that defines the superseded root."
+    },
+    "superseded_manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "superseded_compiled_snapshot_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "new_manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "new_compiled_snapshot_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "changed_elements": {
+      "type": "array",
+      "description": "Core's typed diff of the two canonical package manifests.",
+      "items": {
+        "$ref": "#/$defs/change"
+      }
+    },
+    "actor": {
+      "$ref": "#/$defs/nonempty"
+    },
+    "rationale": {
+      "$ref": "#/$defs/nonempty",
+      "description": "The amender's stated reason; inert text, never instructions."
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "nonempty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "pointer": {
+      "type": "string",
+      "pattern": "^(?:/(?:[^~/]|~[01])*)*$"
+    },
+    "change": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "pointer", "value"],
+          "properties": {
+            "kind": {
+              "const": "added"
+            },
+            "pointer": {
+              "$ref": "#/$defs/pointer"
+            },
+            "value": {}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "pointer", "value"],
+          "properties": {
+            "kind": {
+              "const": "removed"
+            },
+            "pointer": {
+              "$ref": "#/$defs/pointer"
+            },
+            "value": {}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "pointer", "before", "after"],
+          "properties": {
+            "kind": {
+              "const": "replaced"
+            },
+            "pointer": {
+              "$ref": "#/$defs/pointer"
+            },
+            "before": {},
+            "after": {}
+          }
+        }
+      ]
+    }
+  }
+}

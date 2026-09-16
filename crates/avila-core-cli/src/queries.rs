@@ -147,6 +147,62 @@ pub fn attempt(args: AttemptArgs) -> Result<(), Box<dyn Error>> {
     )
 }
 
+#[derive(Debug, Args)]
+pub struct ReferenceShowArgs {
+    /// The campaign JSONL log to read.
+    #[arg(long, value_name = "FILE")]
+    log: PathBuf,
+    /// One name to read; omit for every current binding.
+    name: Option<String>,
+    #[arg(long)]
+    json: bool,
+}
+
+pub fn reference(args: ReferenceShowArgs) -> Result<(), Box<dyn Error>> {
+    let mut values = json!({"path":args.log});
+    put(&mut values, "id", args.name);
+    invoke("core_reference", values, args.json)
+}
+
+#[derive(Debug, Args)]
+pub struct RevisionShowArgs {
+    /// The campaign JSONL log to read.
+    #[arg(long, value_name = "FILE")]
+    log: PathBuf,
+    /// The revision to read; a revision-less attempt's derived revision is
+    /// named by that attempt's id.
+    id: String,
+    #[arg(long)]
+    json: bool,
+}
+
+pub fn revision(args: RevisionShowArgs) -> Result<(), Box<dyn Error>> {
+    invoke(
+        "core_revision",
+        json!({"path":args.log,"id":args.id}),
+        args.json,
+    )
+}
+
+#[derive(Debug, Args)]
+pub struct AssessmentShowArgs {
+    /// The campaign JSONL log to read.
+    #[arg(long, value_name = "FILE")]
+    log: PathBuf,
+    /// The assessment to read — the attempt id of the run row it cites.
+    id: String,
+    #[arg(long)]
+    json: bool,
+}
+
+pub fn assessment(args: AssessmentShowArgs) -> Result<(), Box<dyn Error>> {
+    invoke(
+        "core_assessment",
+        json!({"path":args.log,"id":args.id}),
+        args.json,
+    )
+}
+
 pub fn constellation(args: ConstellationArgs) -> Result<(), Box<dyn Error>> {
     let mut values = json!({"path":args.log});
     put(&mut values, "id", args.id);

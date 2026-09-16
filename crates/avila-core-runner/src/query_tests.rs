@@ -319,6 +319,8 @@ fn planned_and_executed_attempts_form_a_queryable_lineage() {
             attempt_id: attempt_id.into(),
             parent_attempt_id: parent.map(str::to_string),
             candidate_input: "candidate".into(),
+            revision_id: None,
+            amendment_id: None,
         })
     };
     let candidate_a = fixture.write(
@@ -707,6 +709,354 @@ fn pre_schema_campaign_logs_read_as_their_own_profile() {
         assert!(
             history(bytes.as_bytes(), &QueryArgs::default()).is_err(),
             "{bad}"
+        );
+    }
+}
+
+/// ADR-0019: one log carrying every record kind — explicit revisions,
+/// revision-bound runs with their assessment rows, a named reference, a
+/// contract amendment, and a legacy revision-less run — is queryable
+/// through `core_revision`, `core_assessment`, `core_reference`, and the
+/// expanded `core_constellation`.
+#[test]
+fn design_history_records_are_queryable_with_their_exact_identities() {
+    use crate::attempt::{AttemptRecord, candidate_state_identity, digest};
+    let fixture = Fixture::new();
+    let log = fixture.0.join("campaign.jsonl");
+
+    let write_doc = |name: &str, value: Value| -> (PathBuf, String) {
+        let canonical = canonicalize_json(&serde_json::to_vec(&value).unwrap()).unwrap();
+        let path = fixture.write(name, &canonical);
+        (path, digest(&canonical))
+    };
+    let (candidate, _) = write_doc("candidate.json", json!({"thickness":"1"}));
+    let candidate_state: Value = serde_json::from_slice(&fs::read(&candidate).unwrap()).unwrap();
+    let state_sha = candidate_state_identity(&candidate_state).unwrap();
+    let (prior_manifest, manifest_old) = write_doc("m1.json", json!({"question":"v1"}));
+    let (new_manifest, manifest_new) = write_doc("m2.json", json!({"question":"v2"}));
+    let snapshot_old = digest("snapshot-old");
+    let snapshot_new = digest("snapshot-new");
+
+    crate::create_revision(
+        &log,
+        &crate::RevisionRequest {
+            revision_id: "rev-001".into(),
+            parent_revision_id: None,
+            amendment_id: None,
+            candidate_input: "candidate".into(),
+            candidate: candidate.clone(),
+            fixed_manifest_sha256: manifest_old.clone(),
+            fixed_compiled_snapshot_sha256: snapshot_old.clone(),
+            created_by: "operator".into(),
+            intent: Some("first proposal".into()),
+        },
+        None,
+        None,
+    )
+    .unwrap();
+
+    let run_row = |attempt_id: &str,
+                   revision: &str,
+                   amendment: Option<&str>,
+                   manifest: &str,
+                   snapshot: &str,
+                   verdicts: Vec<Value>| {
+        let record = AttemptRecord {
+            schema_version: crate::ATTEMPT_LINEAGE_SCHEMA_VERSION.into(),
+            attempt_id: attempt_id.into(),
+            generation: 0,
+            parent_attempt_id: None,
+            parent_record_sha256: None,
+            fixed_manifest_sha256: manifest.into(),
+            fixed_compiled_snapshot_sha256: snapshot.into(),
+            candidate_input: "candidate".into(),
+            candidate_artifact_sha256: digest("candidate bytes"),
+            candidate_state_sha256: state_sha.clone(),
+            candidate_state: candidate_state.clone(),
+            changes: Vec::new(),
+        };
+        let mut row = json!({
+            "schema_version": "avila.core/run-attempt/v0.3-draft",
+            "recorded_at": "2026-01-01T00:00:00Z",
+            "case_path": "case",
+            "case_id": "case",
+            "status": "evaluated",
+            "manifest_sha256": manifest,
+            "compiled_snapshot_sha256": snapshot,
+            "attempt": record,
+            "verdicts": verdicts,
+            "steps": [],
+            "findings": [],
+            "supplied_inputs": [],
+            "revision_id": revision,
+            "assessment_id": attempt_id,
+        });
+        if let Some(amendment) = amendment {
+            row["amendment_id"] = json!(amendment);
+        }
+        let request = crate::AttemptLineageRequest {
+            attempt_id: attempt_id.into(),
+            parent_attempt_id: None,
+            candidate_input: "candidate".into(),
+            revision_id: Some(revision.into()),
+            amendment_id: amendment.map(str::to_owned),
+        };
+        (row.to_string(), request, record)
+    };
+    let margin = |value: &str| json!({"requirement_id":"r","status":"pass","rule":"test","unit":"m","margin":value});
+    fn append_run(
+        log: &Path,
+        line: &str,
+        request: &crate::AttemptLineageRequest,
+        attempt: &AttemptRecord,
+    ) {
+        let attempt = attempt.clone();
+        let request = request.clone();
+        crate::case_run::log::append_log_line(log, line, move |content| {
+            crate::attempt::revalidate_before_append(log, content, &attempt, &request, "case", None)
+        })
+        .unwrap()
+    }
+    fn bind(
+        log: &Path,
+        attempt: AttemptRecord,
+        revision: &str,
+        run_sha256: String,
+        manifest: &str,
+        snapshot: &str,
+        verdicts: Vec<Value>,
+    ) {
+        crate::history::append_assessment(
+            log,
+            crate::history::AssessmentBinding {
+                attempt,
+                revision_id: revision.into(),
+                run_record_sha256: run_sha256,
+                manifest_sha256: manifest.into(),
+                compiled_snapshot_sha256: snapshot.into(),
+                campaign_sha256: None,
+                requirement_set_id: None,
+                requirement_set_sha256: None,
+                verdicts,
+            },
+            None,
+            None,
+        )
+        .unwrap()
+    }
+
+    let (line, request, attempt) = run_row(
+        "run-001",
+        "rev-001",
+        None,
+        &manifest_old,
+        &snapshot_old,
+        vec![margin("1/3")],
+    );
+    let run_sha = digest(line.as_bytes());
+    append_run(&log, &line, &request, &attempt);
+    bind(
+        &log,
+        attempt,
+        "rev-001",
+        run_sha,
+        &manifest_old,
+        &snapshot_old,
+        vec![margin("1/3")],
+    );
+
+    crate::set_reference(
+        &log,
+        "baseline",
+        "rev-001",
+        Some("run-001"),
+        "operator",
+        "first passing proposal",
+        None,
+        None,
+    )
+    .unwrap();
+
+    // A revision-less legacy run derives its revision and assessment ids.
+    let (line, request, attempt) = {
+        let (line, mut request, record) = run_row(
+            "legacy-001",
+            "rev-001",
+            None,
+            &manifest_old,
+            &snapshot_old,
+            vec![margin("2/3")],
+        );
+        let mut row: Value = serde_json::from_str(&line).unwrap();
+        row.as_object_mut().unwrap().remove("revision_id");
+        row.as_object_mut().unwrap().remove("assessment_id");
+        request.revision_id = None;
+        (row.to_string(), request, record)
+    };
+    append_run(&log, &line, &request, &attempt);
+
+    // The deliberate question change: an amendment record, then a new
+    // root revision and a run citing it across the boundary.
+    crate::record_amendment(
+        &log,
+        "amend-001",
+        "rev-001",
+        &prior_manifest,
+        &new_manifest,
+        &snapshot_new,
+        "operator",
+        "requirement threshold changed deliberately",
+        None,
+        None,
+    )
+    .unwrap();
+    crate::create_revision(
+        &log,
+        &crate::RevisionRequest {
+            revision_id: "rev-002".into(),
+            parent_revision_id: None,
+            amendment_id: Some("amend-001".into()),
+            candidate_input: "candidate".into(),
+            candidate,
+            fixed_manifest_sha256: manifest_new.clone(),
+            fixed_compiled_snapshot_sha256: snapshot_new.clone(),
+            created_by: "operator".into(),
+            intent: None,
+        },
+        None,
+        None,
+    )
+    .unwrap();
+    let (line, request, attempt) = run_row(
+        "run-002",
+        "rev-002",
+        Some("amend-001"),
+        &manifest_new,
+        &snapshot_new,
+        vec![margin("1/4")],
+    );
+    let run_sha = digest(line.as_bytes());
+    append_run(&log, &line, &request, &attempt);
+    bind(
+        &log,
+        attempt,
+        "rev-002",
+        run_sha,
+        &manifest_new,
+        &snapshot_new,
+        vec![margin("1/4")],
+    );
+
+    let context = QueryContext::unrestricted();
+    let revision = call_tool(
+        &context,
+        "core_revision",
+        json!({"path": log, "id": "rev-001"}),
+    )
+    .unwrap();
+    assert_eq!(revision["result"]["match_status"], "found");
+    assert_eq!(revision["result"]["source"], "recorded");
+    assert_eq!(revision["result"]["revision"]["intent"], "first proposal");
+    assert_eq!(
+        revision["result"]["assessments"][0]["assessment_id"],
+        "run-001"
+    );
+
+    // The legacy attempt reads as a derived revision and a derived
+    // assessment, both named by its attempt id.
+    let derived = call_tool(
+        &context,
+        "core_revision",
+        json!({"path": log, "id": "legacy-001"}),
+    )
+    .unwrap();
+    assert_eq!(derived["result"]["source"], "derived");
+    assert_eq!(derived["result"]["revision"]["revision_id"], "legacy-001");
+    let derived_assessment = call_tool(
+        &context,
+        "core_assessment",
+        json!({"path": log, "id": "legacy-001"}),
+    )
+    .unwrap();
+    assert_eq!(derived_assessment["result"]["source"], "derived");
+    assert_eq!(derived_assessment["result"]["verdicts"][0]["margin"], "2/3");
+
+    let assessment = call_tool(
+        &context,
+        "core_assessment",
+        json!({"path": log, "id": "run-001"}),
+    )
+    .unwrap();
+    assert_eq!(assessment["result"]["source"], "recorded");
+    assert_eq!(assessment["result"]["revision_id"], "rev-001");
+    assert_eq!(assessment["result"]["verdicts"][0]["margin"], "1/3");
+
+    // The amended root's assessment compares across the amendment to the
+    // superseded root's latest assessment.
+    let crossed = call_tool(
+        &context,
+        "core_assessment",
+        json!({"path": log, "id": "run-002"}),
+    )
+    .unwrap();
+    assert_eq!(
+        crossed["result"]["crosses_amendment"]["amendment_id"],
+        "amend-001"
+    );
+    assert_eq!(crossed["result"]["comparison"]["basis"], "superseded_root");
+    assert_eq!(
+        crossed["result"]["comparison"]["parent_assessment_id"],
+        "run-001"
+    );
+
+    let reference = call_tool(
+        &context,
+        "core_reference",
+        json!({"path": log, "id": "baseline"}),
+    )
+    .unwrap();
+    assert_eq!(reference["result"]["current"]["revision_id"], "rev-001");
+    assert_eq!(reference["result"]["current"]["assessment_id"], "run-001");
+    assert_eq!(reference["result"]["moves"].as_array().unwrap().len(), 1);
+
+    let constellation = call_tool(&context, "core_constellation", json!({"path": log})).unwrap();
+    let summary = &constellation["result"]["summary"];
+    assert_eq!(summary["design_revision_records"], 2);
+    assert_eq!(summary["assessment_records"], 2);
+    assert_eq!(summary["named_reference_records"], 1);
+    assert_eq!(summary["contract_amendment_records"], 1);
+    assert_eq!(summary["references"]["baseline"]["revision_id"], "rev-001");
+    assert_eq!(
+        summary["revision_ids"],
+        json!(["rev-001", "rev-002", "legacy-001"])
+    );
+    let kinds: Vec<&str> = constellation["result"]["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| item["record_kind"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        kinds,
+        [
+            "design_revision",
+            "run",
+            "assessment",
+            "named_reference",
+            "run",
+            "contract_amendment",
+            "design_revision",
+            "run",
+            "assessment",
+        ]
+    );
+    let history_items = history(fs::read(&log).unwrap().as_slice(), &QueryArgs::default()).unwrap();
+    assert_eq!(history_items["total"], 9);
+    // An unknown revision or assessment is a scoped no-match, never an error.
+    for (tool, id) in [("core_revision", "absent"), ("core_assessment", "absent")] {
+        assert_eq!(
+            call_tool(&context, tool, json!({"path": log, "id": id})).unwrap()["result"]["match_status"],
+            "no_match_in_record"
         );
     }
 }

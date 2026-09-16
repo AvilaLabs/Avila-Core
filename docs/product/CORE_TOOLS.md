@@ -24,7 +24,20 @@ avila-core history campaign.jsonl --case-id CASE_ID --limit 20
 avila-core history campaign.jsonl --invocation sha256:EXACT_64_HEX_DIGEST
 avila-core attempt campaign.jsonl CHILD_ATTEMPT_ID
 avila-core constellation campaign.jsonl
-# Optional: --id ATTEMPT_ID, --case-id CASE_ID, --offset/--limit
+avila-core revision show --log campaign.jsonl REVISION_ID
+avila-core assessment --log campaign.jsonl ASSESSMENT_ID
+avila-core reference show --log campaign.jsonl [NAME]
+# Optional on constellation: --id ATTEMPT_ID, --case-id CASE_ID, --offset/--limit
+
+# Design-history writes append signed records to the same log (ADR-0019):
+avila-core revision create REVISION_ID --log campaign.jsonl \
+  --candidate FILE --manifest SHA256 --compiled-snapshot SHA256 --by ACTOR
+avila-core reference set NAME --log campaign.jsonl --revision ID --by ACTOR --rationale TEXT
+avila-core amend AMENDMENT_ID --log campaign.jsonl --supersedes ROOT_REVISION_ID \
+  --prior-manifest FILE --new-manifest FILE --compiled-snapshot SHA256 \
+  --by ACTOR --rationale TEXT
+# A run binds its attempt to a revision with run --attempt ID --revision ID;
+# a superseding root names its amendment with --amendment ID.
 
 # Current checks already belong to the execution path:
 avila-core run CASE --plan --capability NAME=EXECUTABLE --input NAME=FILE
@@ -39,7 +52,7 @@ The response includes the total and next offset. A single entry can still be
 large; pagination limits entry count, not tokens.
 
 `avila-core tools list --json` publishes names and argument schemas for all
-eleven queries. `avila-core tools call core_requirements --arguments
+fourteen queries. `avila-core tools call core_requirements --arguments
 '{"path":"report.json","id":"REQUIREMENT_ID"}' --json` calls the same operation
 as `inspect --view requirements`. `tools instructions` prints the concise
 integration guidance that the MCP server also supplies at initialization.
@@ -68,7 +81,7 @@ Use **Open saved results…** on Cases to browse a saved run report in Tools
 without running the case. This expects a full runner report, not a package’s
 `campaign-report.json`.
 
-Open **Tools** next to **Current case** and **Specimen compiler**. All eleven
+Open **Tools** next to **Current case** and **Specimen compiler**. All fourteen
 queries have named entries with the relevant filter fields; no JSON arguments
 or terminal commands are needed.
 
@@ -111,7 +124,9 @@ selection sits earlier; an attempt the file never recorded is
 `no_match_in_record`, not an absent attempt.
 
 Queries currently support run-report envelopes v0.2–v0.5, run-attempt logs
-v0.1–v0.3, and the pre-schema campaign records the example campaigns wrote
+v0.1–v0.3, ADR-0019 `log-record` envelopes (design revisions, assessments,
+named references, contract amendments), and the pre-schema campaign records
+the example campaigns wrote
 (a distinct recognized profile — the exact recorded fields are required, an
 `attempt` member contradicts the format, and anything else is refused). This is a projection of recorded fields, not full schema conformance
 or scientific verification. Inputs are capped at 64 MiB; history scans the

@@ -348,10 +348,43 @@ impl HistoryView {
             {
                 ui.label(format!("{untracked} untracked"));
             }
+            for (field, label) in [
+                ("design_revision_records", "revisions"),
+                ("assessment_records", "assessments"),
+                ("named_reference_records", "references"),
+                ("contract_amendment_records", "amendments"),
+            ] {
+                if let Some(count) = summary[field].as_u64()
+                    && count > 0
+                {
+                    ui.label(format!("{count} {label}"));
+                }
+            }
             if let Some(generation) = summary["max_generation"].as_u64() {
                 ui.label(format!("max generation {generation}"));
             }
         });
+        if let Some(references) = summary["references"].as_object()
+            && !references.is_empty()
+        {
+            ui.horizontal_wrapped(|ui| {
+                ui.label(
+                    egui::RichText::new("references:")
+                        .size(11.0)
+                        .color(muted(ui)),
+                );
+                for (name, binding) in references {
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{name} -> {}",
+                            binding["revision_id"].as_str().unwrap_or("?")
+                        ))
+                        .monospace()
+                        .size(11.0),
+                    );
+                }
+            });
+        }
         if let Some(source) = value.get("source") {
             ui.add(
                 egui::Label::new(
@@ -401,12 +434,48 @@ impl HistoryView {
             });
             return None;
         }
-        let (roots, children, untracked) = tree(items);
-        if roots.is_empty() && untracked.is_empty() {
+        let (roots, children, untracked, records) = tree(items);
+        if roots.is_empty() && untracked.is_empty() && records.is_empty() {
             ui.label("No attempts or recorded runs were found.");
             return None;
         }
         let mut picked = None;
+        if !records.is_empty() {
+            ui.label(
+                egui::RichText::new("DESIGN HISTORY")
+                    .size(10.0)
+                    .strong()
+                    .color(muted(ui)),
+            );
+            ui.label(
+                egui::RichText::new(
+                    "Revisions, assessments, named references, and amendments recorded in this log.",
+                )
+                .size(11.0)
+                .color(muted(ui)),
+            );
+            for index in records {
+                let item = &items[index];
+                let line = item["line"].as_u64().unwrap_or(0);
+                let kind = item["record_kind"].as_str().unwrap_or("");
+                let id = ["revision_id", "assessment_id", "name", "amendment_id"]
+                    .iter()
+                    .find_map(|field| item[field].as_str())
+                    .unwrap_or("record");
+                let row = ui
+                    .horizontal_wrapped(|ui| {
+                        let selected = self.selected == Some(Selection::Record(line));
+                        let response = ui.selectable_label(selected, format!("line {line} · {id}"));
+                        badge(ui, &kind.to_uppercase().replace('_', " "), muted(ui));
+                        response
+                    })
+                    .inner;
+                if row.clicked() {
+                    picked = Some(Selection::Record(line));
+                }
+            }
+            ui.add_space(10.0);
+        }
         if !roots.is_empty() {
             ui.label(
                 egui::RichText::new("ATTEMPTS")
@@ -782,14 +851,30 @@ fn fetch_attempt(path: &str, id: &str) -> Result<Value, String> {
     )
 }
 
-/// Partition items into roots, a parent→children map, and untracked runs, all
-/// in recorded (file) order.
-fn tree(items: &[Value]) -> (Vec<usize>, BTreeMap<String, Vec<usize>>, Vec<usize>) {
+/// Partition items into roots, a parent→children map, untracked runs, and
+/// the ADR-0019 design-history records (revisions, assessments, named
+/// references, amendments), all in recorded (file) order.
+#[allow(clippy::type_complexity)]
+fn tree(
+    items: &[Value],
+) -> (
+    Vec<usize>,
+    BTreeMap<String, Vec<usize>>,
+    Vec<usize>,
+    Vec<usize>,
+) {
     let mut roots = Vec::new();
     let mut children: BTreeMap<String, Vec<usize>> = BTreeMap::new();
     let mut untracked = Vec::new();
+    let mut records = Vec::new();
     for (index, item) in items.iter().enumerate() {
         match item["attempt_id"].as_str() {
+            None if item["record_kind"]
+                .as_str()
+                .is_some_and(|kind| kind != "run") =>
+            {
+                records.push(index)
+            }
             None => untracked.push(index),
             Some(_) => match item["parent_attempt_id"].as_str() {
                 Some(parent) => children.entry(parent.to_string()).or_default().push(index),
@@ -797,7 +882,7 @@ fn tree(items: &[Value]) -> (Vec<usize>, BTreeMap<String, Vec<usize>>, Vec<usize
             },
         }
     }
-    (roots, children, untracked)
+    (roots, children, untracked, records)
 }
 
 fn status_badge(ui: &mut egui::Ui, status: &str) {
@@ -942,8 +1027,14 @@ fn outcome_detail(ui: &mut egui::Ui, item: &Value) {
 }
 
 /// An untracked run's detail: the whole recorded row, with its missing
-/// ancestry stated rather than guessed.
+/// ancestry stated rather than guessed. ADR-0019 design-history records
+/// instead show their exact recorded payload.
 fn record_detail(ui: &mut egui::Ui, item: &Value) {
+    let kind = item["record_kind"].as_str().unwrap_or("run");
+    if kind != "run" {
+        design_record_detail(ui, item, kind);
+        return;
+    }
     card(ui, |ui| {
         ui.horizontal_wrapped(|ui| {
             ui.label(
@@ -965,6 +1056,40 @@ fn record_detail(ui: &mut egui::Ui, item: &Value) {
     });
     ui.add_space(8.0);
     outcome_detail(ui, item);
+}
+
+/// One design-history record's detail: kind, identity, and the recorded
+/// payload verbatim — the view interprets nothing in it.
+fn design_record_detail(ui: &mut egui::Ui, item: &Value, kind: &str) {
+    card(ui, |ui| {
+        ui.horizontal_wrapped(|ui| {
+            let id = ["revision_id", "assessment_id", "name", "amendment_id"]
+                .iter()
+                .find_map(|field| item[field].as_str())
+                .unwrap_or("record");
+            ui.label(
+                egui::RichText::new(format!("{id} · line {}", item["line"]))
+                    .size(19.0)
+                    .strong(),
+            );
+            badge(ui, &kind.to_uppercase().replace('_', " "), CORE_ORANGE);
+        });
+        key_row(ui, "Record", item["record_sha256"].as_str().unwrap_or(""));
+        if let Some(recorded_at) = item["recorded_at"].as_str() {
+            key_row(ui, "Recorded at", recorded_at);
+        }
+        ui.label(
+            egui::RichText::new(
+                "Recorded exactly as appended; this view does not recheck signatures or artifact bytes.",
+            )
+            .small()
+            .color(muted(ui)),
+        );
+        if let Some(record) = item.get("record") {
+            ui.add_space(6.0);
+            render_object(ui, record);
+        }
+    });
 }
 
 /// Core's typed candidate diff: added, removed, or replaced JSON pointers.
@@ -1231,8 +1356,9 @@ mod tests {
             "pagination merged the whole 203-line log"
         );
         assert!(items.iter().all(|item| item["attempt_id"].is_null()));
-        let (_, _, untracked) = tree(items);
+        let (_, _, untracked, records) = tree(items);
         assert_eq!(untracked.len(), items.len());
+        assert!(records.is_empty());
     }
 
     #[test]

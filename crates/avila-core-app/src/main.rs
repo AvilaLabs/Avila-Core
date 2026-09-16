@@ -44,7 +44,7 @@ fn main() -> eframe::Result {
         Ok(setup) => setup,
         Err(error) => {
             eprintln!(
-                "error: {error}\nusage: avila-core-app [--case DIR] [--source-root NAME=PATH]... [--capability NAME=PATH]... [--input NAME=PATH]... [--env KEY=VALUE]... [--workspace DIR] [--log FILE] [--attempt ID] [--parent-attempt ID] [--candidate-input NAME] [--no-reuse] [--trust-root FILE] [--runner-key FILE] [--auto-run | --auto-plan] [--tools REPORT_OR_LOG] [--tool NAME] [--history CAMPAIGN_LOG] [--history-select ID|line:N] [--screenshot PNG] [--tab NAME]"
+                "error: {error}\nusage: avila-core-app [--case DIR] [--source-root NAME=PATH]... [--capability NAME=PATH]... [--input NAME=PATH]... [--env KEY=VALUE]... [--workspace DIR] [--log FILE] [--attempt ID] [--parent-attempt ID] [--candidate-input NAME] [--revision ID] [--amendment ID] [--no-reuse] [--trust-root FILE] [--runner-key FILE] [--auto-run | --auto-plan] [--tools REPORT_OR_LOG] [--tool NAME] [--history CAMPAIGN_LOG] [--history-select ID|line:N] [--screenshot PNG] [--tab NAME]"
             );
             std::process::exit(2);
         }

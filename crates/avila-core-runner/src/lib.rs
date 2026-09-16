@@ -15,6 +15,7 @@ mod attempt;
 mod case_run;
 mod diagnostic;
 mod execute;
+mod history;
 pub mod query;
 
 pub use attempt::{
@@ -43,3 +44,9 @@ pub use execute::external_checker::{
     ExternalCheckerAdapter, ExternalClaim, ExternalOutput,
 };
 pub use execute::{Adapter, AdapterOutput, ExtractedClaim, RUNNER_ID, StepContext};
+pub use history::{
+    ASSESSMENT_SCHEMA_VERSION, AssessmentRecord, CONTRACT_AMENDMENT_SCHEMA_VERSION,
+    ContractAmendment, DESIGN_REVISION_SCHEMA_VERSION, DesignRevision, LOG_RECORD_SCHEMA_VERSION,
+    NAMED_REFERENCE_SCHEMA_VERSION, NamedReference, RevisionRequest, create_revision,
+    record_amendment, set_reference,
+};

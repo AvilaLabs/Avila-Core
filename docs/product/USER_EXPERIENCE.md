@@ -15,10 +15,10 @@ package requests, plans or runs the workflow through the same runner the CLI
 uses, and renders integrity, compilation, execution (reused, executed,
 planned, not run, refused, failed, with every change named by class),
 generated claims, requirement verdicts with their complete boundaries, and
-replay. A Tools workspace exposes the eleven shared read-only queries over a
+replay. A Tools workspace exposes the fourteen shared read-only queries over a
 saved report, the current workbench run, or one explicit campaign log —
 inspection, requirements, findings, artifacts, workflow, evidence, steps,
-history, attempt comparison, constellation, and diagnostic lookup — with the
+history, attempt comparison, constellation, design revision, assessment, named reference, and diagnostic lookup — with the
 recorded-only verification boundary stated beside every result. Guided help
 is built in: contextual explanations per view, bundled
 answers to the questions the interface itself raises, and spotlight

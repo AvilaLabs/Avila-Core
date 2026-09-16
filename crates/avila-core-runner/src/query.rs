@@ -132,6 +132,21 @@ const TOOLS: &[(&str, &str, bool)] = &[
         true,
     ),
     (
+        "core_revision",
+        "Read one design revision — an explicit record or the revision a revision-less attempt row derives — with its assessments and children. Requires id.",
+        true,
+    ),
+    (
+        "core_assessment",
+        "Read one assessment: the run row it cites, verdicts verbatim, and the derived comparison including cross-amendment edges. Requires id.",
+        true,
+    ),
+    (
+        "core_reference",
+        "Read named-reference bindings in one campaign log. Optional id selects one name's current binding and move history; omitted lists every name's current binding.",
+        true,
+    ),
+    (
         "core_explain",
         "Explain a stable Core diagnostic code. Requires id; no file access.",
         true,
@@ -148,7 +163,7 @@ pub fn tool_catalog() -> Vec<Value> {
         }
         if *has_id {
             properties.insert("id".into(), json!({"type":"string","minLength":1}));
-            if matches!(*name, "core_attempt" | "core_explain") { required.push("id"); }
+            if matches!(*name, "core_attempt" | "core_explain" | "core_revision" | "core_assessment") { required.push("id"); }
         }
         if matches!(*name, "core_history" | "core_constellation") {
             properties.insert("case_id".into(), json!({"type":"string"}));
@@ -270,7 +285,13 @@ fn validate_arguments(
 pub fn call_report_tool(name: &str, arguments: Value, bytes: &[u8]) -> Result<Value, String> {
     if matches!(
         name,
-        "core_history" | "core_attempt" | "core_constellation" | "core_explain"
+        "core_history"
+            | "core_attempt"
+            | "core_constellation"
+            | "core_revision"
+            | "core_assessment"
+            | "core_reference"
+            | "core_explain"
     ) {
         return Err("this tool does not inspect a workbench report".into());
     }
@@ -311,6 +332,12 @@ fn call_validated_tool(
         crate::attempt::query_attempt(&bytes, args.id.as_deref().ok_or("id is required")?)?
     } else if name == "core_constellation" {
         constellation(&bytes, &args)?
+    } else if name == "core_revision" {
+        revision(&bytes, args.id.as_deref().ok_or("id is required")?)?
+    } else if name == "core_assessment" {
+        assessment(&bytes, args.id.as_deref().ok_or("id is required")?)?
+    } else if name == "core_reference" {
+        reference(&bytes, &args)?
     } else {
         let record = parse_json(&bytes)?;
         validate_report(&record)?;
@@ -446,6 +473,18 @@ fn report_view(record: &Value, name: &str, args: &QueryArgs) -> Result<Value, St
 }
 
 pub(crate) fn validate_history_record(record: &Value) -> Result<(), String> {
+    if record["schema_version"].as_str() == Some(crate::history::LOG_RECORD_SCHEMA_VERSION) {
+        // ADR-0019 non-run records: kind member plus a record object;
+        // structural validation happens in `history::validate_log`.
+        if !matches!(
+            record["record_kind"].as_str(),
+            Some("design_revision" | "assessment" | "named_reference" | "contract_amendment")
+        ) || !record["record"].is_object()
+        {
+            return Err("unsupported or malformed Core history record".into());
+        }
+        return Ok(());
+    }
     if record.get("schema_version").is_none() {
         // Pre-schema run records (the CASE-001/002 campaign logs) are a
         // distinct recognized profile, not a tolerated omission: the exact
@@ -550,10 +589,25 @@ fn history(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
                 "workspace",
             ],
         );
+        item["record_kind"] = json!(record["record_kind"].as_str().unwrap_or("run"));
         item["line"] = json!(index + 1);
         item["record_sha256"] = json!(format!("sha256:{}", sha256_hex(line.as_bytes())));
         item["attempt_id"] = record["attempt"]["attempt_id"].clone();
         item["steps"] = json!(matching_steps.iter().map(project_step).collect::<Vec<_>>());
+        if let Some(record_value) = record.get("record") {
+            item["record"] = record_value.clone();
+            for field in [
+                "revision_id",
+                "parent_revision_id",
+                "assessment_id",
+                "name",
+                "amendment_id",
+            ] {
+                if let Some(value) = record_value.get(field) {
+                    item[field] = value.clone();
+                }
+            }
+        }
         items.push(item);
     }
     Ok(page(items, args))
@@ -561,9 +615,11 @@ fn history(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
 
 /// One campaign log's recorded constellation: every run in order, the ADR-0014
 /// lineage edge and candidate state where the line carries an attempt record,
-/// and a derived summary over the whole file. The lineage validator runs over
-/// the log first, so a tampered or corrupt line fails the query rather than
-/// silently dropping out of view; signatures are named, never re-verified.
+/// the ADR-0019 record kinds (revisions, assessments, references, amendments)
+/// where the line carries a log-record envelope, and a derived summary over
+/// the whole file. The lineage validator runs over the log first, so a
+/// tampered or corrupt line fails the query rather than silently dropping out
+/// of view; signatures are named, never re-verified.
 fn constellation(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
     let content = std::str::from_utf8(bytes).map_err(|e| e.to_string())?;
     let mut records = Vec::new();
@@ -576,8 +632,9 @@ fn constellation(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
         validate_history_record(&record).map_err(|e| format!("{e} on line {}", index + 1))?;
         records.push((index + 1, line, record));
     }
-    let attempts = crate::attempt::parse_attempts(content, Path::new("query snapshot"))?;
-    crate::attempt::validate_history(&attempts, None)?;
+    let view = crate::history::parse_log(content, Path::new("query snapshot"))?;
+    crate::history::validate_log(&view, None)?;
+    let attempts = &view.attempts;
 
     let mut items = Vec::new();
     let mut case_ids = std::collections::BTreeSet::new();
@@ -641,6 +698,7 @@ fn constellation(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
                 serde_json::from_value(attempt_value.clone()).map_err(|e| {
                     format!("line {line_number} has an invalid attempt record: {e}")
                 })?;
+            item["record_kind"] = json!("run");
             item["attempt_id"] = json!(attempt.attempt_id);
             item["generation"] = json!(attempt.generation);
             item["candidate_input"] = json!(attempt.candidate_input);
@@ -649,6 +707,25 @@ fn constellation(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
             if !attempt.changes.is_empty() {
                 item["changes"] =
                     serde_json::to_value(&attempt.changes).map_err(|e| e.to_string())?;
+            }
+            // ADR-0019: the revision this run is evidence for, cited or
+            // derived, and the assessment that names it.
+            let prior = &attempts[&attempt.attempt_id];
+            item["revision_id"] = json!(crate::history::attempt_revision_id(prior));
+            item["revision_source"] = json!(if prior.revision_id.is_some() {
+                "recorded"
+            } else {
+                "derived"
+            });
+            item["assessment_id"] = json!(attempt.attempt_id);
+            item["assessment_source"] =
+                json!(if view.assessments.contains_key(&attempt.attempt_id) {
+                    "recorded"
+                } else {
+                    "derived"
+                });
+            if let Some(amendment_id) = &prior.amendment_id {
+                item["amendment_id"] = json!(amendment_id);
             }
             max_generation = max_generation.max(attempt.generation);
             candidate_states.insert(attempt.candidate_state_sha256.clone());
@@ -663,7 +740,22 @@ fn constellation(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
             }
             attempt_ids.push(attempt.attempt_id);
         } else {
+            item["record_kind"] = json!(record["record_kind"].as_str().unwrap_or("run"));
             item["attempt_id"] = Value::Null;
+            if let Some(record_value) = record.get("record") {
+                item["record"] = record_value.clone();
+                for field in [
+                    "revision_id",
+                    "parent_revision_id",
+                    "assessment_id",
+                    "name",
+                    "amendment_id",
+                ] {
+                    if let Some(value) = record_value.get(field) {
+                        item[field] = value.clone();
+                    }
+                }
+            }
         }
         items.push(item);
     }
@@ -678,11 +770,47 @@ fn constellation(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
     if let Some(id) = &args.id {
         items.retain(|item| item["attempt_id"].as_str() == Some(id));
     }
+    let current_references: std::collections::BTreeMap<String, Value> = view
+        .references
+        .iter()
+        .filter_map(|(name, entries)| {
+            entries.last().map(|entry| {
+                (
+                    name.clone(),
+                    json!({
+                        "revision_id": entry.record.revision_id,
+                        "assessment_id": entry.record.assessment_id,
+                        "line": entry.line,
+                    }),
+                )
+            })
+        })
+        .collect();
+    let revision_ids: Vec<String> = view
+        .revisions
+        .keys()
+        .cloned()
+        .chain(
+            view.attempts
+                .values()
+                .filter(|attempt| attempt.revision_id.is_none())
+                .map(|attempt| attempt.record.attempt_id.clone()),
+        )
+        .collect();
     let mut result = page(items, args);
     result["summary"] = json!({
         "lines": records.len(),
         "attempt_records": attempt_ids.len(),
-        "untracked_records": records.len() - attempt_ids.len(),
+        "untracked_records": records.len() - attempt_ids.len()
+            - view.revisions.len() - view.assessments.len()
+            - view.references.values().map(Vec::len).sum::<usize>()
+            - view.amendments.len(),
+        "design_revision_records": view.revisions.len(),
+        "assessment_records": view.assessments.len(),
+        "named_reference_records": view.references.values().map(Vec::len).sum::<usize>(),
+        "contract_amendment_records": view.amendments.len(),
+        "revision_ids": revision_ids,
+        "references": current_references,
         "case_ids": case_ids,
         "roots": roots,
         "leaves": leaves,
@@ -693,6 +821,280 @@ fn constellation(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
     result["lineage_validation"] = json!("consistent");
     result["signature_verification"] = json!("not_checked");
     Ok(result)
+}
+
+/// The log lines every log-campaign query validates against: parse plus the
+/// full multi-kind lineage validation, signatures named never re-verified.
+fn validated_view(content: &str) -> Result<crate::history::LogView, String> {
+    let view = crate::history::parse_log(content, Path::new("query snapshot"))?;
+    crate::history::validate_log(&view, None)?;
+    Ok(view)
+}
+
+/// One design revision: its explicit record or the projection a revision-less
+/// attempt row derives, plus every assessment citing it and its children.
+fn revision(bytes: &[u8], id: &str) -> Result<Value, String> {
+    let content = std::str::from_utf8(bytes).map_err(|e| e.to_string())?;
+    for line in content.split('\n').filter(|line| !line.trim().is_empty()) {
+        canonicalize_json(line.as_bytes()).map_err(|e| e.to_string())?;
+        let record: Value = serde_json::from_str(line).map_err(|e| e.to_string())?;
+        validate_history_record(&record)?;
+    }
+    let view = validated_view(content)?;
+    let Some(revision) = crate::history::resolve_revision(&view, id) else {
+        return Ok(json!({"match_status":"no_match_in_record"}));
+    };
+    let (record, source) = match revision {
+        crate::history::RevisionRef::Recorded(entry) => (
+            serde_json::to_value(&entry.record).map_err(|e| e.to_string())?,
+            "recorded",
+        ),
+        crate::history::RevisionRef::Derived(attempt) => (
+            json!({
+                "schema_version": crate::history::DESIGN_REVISION_SCHEMA_VERSION,
+                "revision_id": attempt.record.attempt_id,
+                "generation": attempt.record.generation,
+                "parent_revision_id": attempt.record.parent_attempt_id.as_ref().map(|parent_id| {
+                    view.attempts[parent_id]
+                        .revision_id
+                        .clone()
+                        .unwrap_or_else(|| parent_id.clone())
+                }),
+                "parent_record_sha256": revision.parent_record_sha256(&view),
+                "amendment_id": attempt.amendment_id,
+                "fixed_manifest_sha256": attempt.record.fixed_manifest_sha256,
+                "fixed_compiled_snapshot_sha256": attempt.record.fixed_compiled_snapshot_sha256,
+                "candidate_input": attempt.record.candidate_input,
+                "candidate_artifact_sha256": attempt.record.candidate_artifact_sha256,
+                "candidate_state_sha256": attempt.record.candidate_state_sha256,
+                "candidate_state": attempt.record.candidate_state,
+                "changes": attempt.record.changes,
+            }),
+            "derived",
+        ),
+    };
+    let mut assessments = Vec::new();
+    for entry in view.assessments.values() {
+        if entry.record.revision_id == id {
+            assessments.push(json!({
+                "assessment_id": entry.record.assessment_id,
+                "line": entry.line,
+                "record_sha256": entry.record_sha256,
+                "run_record_sha256": entry.record.run_record_sha256,
+                "source": "recorded",
+            }));
+        }
+    }
+    if let crate::history::RevisionRef::Derived(attempt) = revision {
+        assessments.push(json!({
+            "assessment_id": attempt.record.attempt_id,
+            "line": attempt.line,
+            "run_record_sha256": attempt.record_sha256,
+            "source": "derived",
+        }));
+    }
+    assessments.sort_by_key(|entry| entry["line"].as_u64().unwrap_or(0));
+    let children: Vec<String> = view
+        .revisions
+        .values()
+        .filter(|entry| entry.record.parent_revision_id.as_deref() == Some(id))
+        .map(|entry| entry.record.revision_id.clone())
+        .chain(
+            view.attempts
+                .values()
+                .filter(|attempt| {
+                    attempt.revision_id.is_none()
+                        && attempt
+                            .record
+                            .parent_attempt_id
+                            .as_ref()
+                            .and_then(|parent_id| view.attempts.get(parent_id))
+                            .is_some_and(|parent| crate::history::attempt_revision_id(parent) == id)
+                })
+                .map(|attempt| attempt.record.attempt_id.clone()),
+        )
+        .collect();
+    Ok(json!({
+        "match_status": "found",
+        "revision_id": id,
+        "source": source,
+        "defining_line": revision.line(),
+        "record_sha256": revision.record_sha256(),
+        "revision": record,
+        "assessments": assessments,
+        "children": children,
+    }))
+}
+
+/// One assessment: its record or the projection a revision-less attempt row
+/// derives, the run row it cites, verbatim verdicts, and the derived
+/// comparison — against the bound parent's assessment, or across a cited
+/// amendment to the superseded root's latest assessment.
+fn assessment(bytes: &[u8], id: &str) -> Result<Value, String> {
+    let content = std::str::from_utf8(bytes).map_err(|e| e.to_string())?;
+    for line in content.split('\n').filter(|line| !line.trim().is_empty()) {
+        canonicalize_json(line.as_bytes()).map_err(|e| e.to_string())?;
+        let record: Value = serde_json::from_str(line).map_err(|e| e.to_string())?;
+        validate_history_record(&record)?;
+    }
+    let view = validated_view(content)?;
+    let verdicts_of =
+        |attempt: &crate::attempt::PriorAttempt| -> Result<Vec<crate::VerdictMargin>, String> {
+            serde_json::from_value(
+                attempt
+                    .verdicts
+                    .clone()
+                    .ok_or("attempt has no recorded verdict collection")?,
+            )
+            .map_err(|e| format!("invalid attempt verdict collection: {e}"))
+        };
+    let (run_id, record, source, line) = if let Some(entry) = view.assessments.get(id) {
+        let run_id = view
+            .attempts
+            .values()
+            .find(|attempt| attempt.record_sha256 == entry.record.run_record_sha256)
+            .map(|attempt| attempt.record.attempt_id.clone())
+            .ok_or("assessment cites a run record not in this log")?;
+        (
+            run_id,
+            Some(serde_json::to_value(&entry.record).map_err(|e| e.to_string())?),
+            "recorded",
+            entry.line,
+        )
+    } else if let Some(attempt) = view.attempts.get(id)
+        && attempt.revision_id.is_none()
+    {
+        (id.to_string(), None, "derived", attempt.line)
+    } else {
+        return Ok(json!({"match_status":"no_match_in_record"}));
+    };
+    let run = &view.attempts[&run_id];
+    let verdicts = verdicts_of(run)?;
+    let revision_id = crate::history::attempt_revision_id(run);
+
+    let mut comparison = None;
+    let mut crosses_amendment = Value::Null;
+    if let Some(parent_id) = &run.record.parent_attempt_id {
+        let parent = &view.attempts[parent_id];
+        let mut value = serde_json::to_value(crate::case_run::compare_attempt_results(
+            &run.record,
+            &verdicts_of(parent)?,
+            &verdicts_of(run)?,
+        )?)
+        .map_err(|e| e.to_string())?;
+        value["basis"] = json!("bound_parent");
+        value["parent_assessment_id"] = json!(parent_id);
+        comparison = Some(value);
+    } else if let Some(amendment_id) = &run.amendment_id {
+        // Cross-amendment comparison: the superseded root's latest
+        // assessment supplies the parent surface; the existing
+        // unavailability machinery states why margins that crossed the
+        // boundary cannot delta.
+        let amendment = &view.amendments[amendment_id];
+        let superseded = &amendment.record.superseded_root_id;
+        let parent_assessment = view
+            .assessments
+            .values()
+            .filter(|entry| entry.record.revision_id == *superseded)
+            .max_by_key(|entry| entry.line)
+            .map(|entry| entry.record.assessment_id.clone())
+            .or_else(|| {
+                (view
+                    .attempts
+                    .get(superseded)
+                    .is_some_and(|a| a.revision_id.is_none()))
+                .then(|| superseded.clone())
+            });
+        crosses_amendment = json!({
+            "amendment_id": amendment_id,
+            "amendment_record_sha256": amendment.record_sha256,
+            "superseded_root_id": superseded,
+            "changed_elements": amendment.record.changed_elements,
+            "actor": amendment.record.actor,
+            "rationale": amendment.record.rationale,
+        });
+        if let Some(parent_assessment_id) = parent_assessment {
+            let parent_run = &view.attempts[&parent_assessment_id];
+            let mut value = serde_json::to_value(crate::case_run::compare_verdict_sets(
+                &parent_assessment_id,
+                &parent_run.record_sha256,
+                &verdicts_of(parent_run)?,
+                &verdicts,
+            )?)
+            .map_err(|e| e.to_string())?;
+            value["basis"] = json!("superseded_root");
+            value["parent_assessment_id"] = json!(parent_assessment_id);
+            comparison = Some(value);
+        }
+    }
+    Ok(json!({
+        "match_status": "found",
+        "assessment_id": id,
+        "source": source,
+        "line": line,
+        "revision_id": revision_id,
+        "record": record,
+        "run": {
+            "attempt_id": run.record.attempt_id,
+            "line": run.line,
+            "record_sha256": run.record_sha256,
+            "recorded_status": run.full_line["status"],
+            "recorded_at": run.full_line["recorded_at"],
+        },
+        "verdicts": verdicts,
+        "comparison": comparison,
+        "crosses_amendment": crosses_amendment,
+        "lineage_validation": "consistent",
+        "signature_verification": "not_checked",
+    }))
+}
+
+/// Named references in one campaign log: one name's current binding and move
+/// history when `id` is supplied, or every name's current binding.
+fn reference(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
+    let content = std::str::from_utf8(bytes).map_err(|e| e.to_string())?;
+    for line in content.split('\n').filter(|line| !line.trim().is_empty()) {
+        canonicalize_json(line.as_bytes()).map_err(|e| e.to_string())?;
+        let record: Value = serde_json::from_str(line).map_err(|e| e.to_string())?;
+        validate_history_record(&record)?;
+    }
+    let view = validated_view(content)?;
+    if let Some(name) = &args.id {
+        let Some(entries) = view.references.get(name) else {
+            return Ok(json!({"match_status":"no_match_in_record"}));
+        };
+        let current = entries.last().expect("name key implies an entry");
+        return Ok(json!({
+            "match_status": "found",
+            "name": name,
+            "current": current.record,
+            "current_record_sha256": current.record_sha256,
+            "moves": entries.iter().map(|entry| json!({
+                "line": entry.line,
+                "record_sha256": entry.record_sha256,
+                "record": entry.record,
+            })).collect::<Vec<_>>(),
+        }));
+    }
+    let bindings: Vec<Value> = view
+        .references
+        .iter()
+        .filter_map(|(name, entries)| {
+            entries.last().map(|entry| {
+                json!({
+                    "name": name,
+                    "revision_id": entry.record.revision_id,
+                    "assessment_id": entry.record.assessment_id,
+                    "line": entry.line,
+                    "moves": entries.len(),
+                })
+            })
+        })
+        .collect();
+    Ok(json!({
+        "match_status": if bindings.is_empty() { "no_match_in_record" } else { "found" },
+        "references": bindings,
+    }))
 }
 
 /// Compact readable rendering; retains the source identity and all boundaries.

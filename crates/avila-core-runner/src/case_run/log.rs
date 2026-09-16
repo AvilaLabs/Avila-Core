@@ -8,7 +8,7 @@ use std::path::Path;
 
 use avila_core_compiler::{CampaignStatus, CompilationStatus, ReviewerRole};
 use avila_core_evidence::signature::{SignatureDocument, TrustRoot, build_signature_document};
-use avila_core_evidence::{PackageIntegrityStatus, sha256_file};
+use avila_core_evidence::{PackageIntegrityStatus, sha256_file, sha256_hex};
 use avila_core_kernel::canonicalize_json;
 use serde::Serialize;
 use serde_json::Value;
@@ -69,6 +69,15 @@ pub(crate) fn append_log(
         attempt: Option<&'a AttemptRecord>,
         #[serde(skip_serializing_if = "Option::is_none")]
         attempt_comparison: Option<&'a AttemptComparison>,
+        /// ADR-0019: the design revision this run is evidence for, the
+        /// assessment id it names (always the attempt id), and the
+        /// amendment a superseding root cites.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        revision_id: Option<&'a str>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        assessment_id: Option<&'a str>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        amendment_id: Option<&'a str>,
         integrity_status: PackageIntegrityStatus,
         #[serde(skip_serializing_if = "Option::is_none")]
         compilation_status: Option<CompilationStatus>,
@@ -157,6 +166,22 @@ pub(crate) fn append_log(
         },
         attempt: report.attempt.as_ref(),
         attempt_comparison: report.attempt_comparison.as_ref(),
+        revision_id: options
+            .attempt
+            .as_ref()
+            .and_then(|request| request.revision_id.as_deref())
+            .filter(|_| report.attempt.is_some()),
+        assessment_id: options
+            .attempt
+            .as_ref()
+            .filter(|request| request.revision_id.is_some())
+            .and(report.attempt.as_ref())
+            .map(|attempt| attempt.attempt_id.as_str()),
+        amendment_id: options
+            .attempt
+            .as_ref()
+            .and_then(|request| request.amendment_id.as_deref())
+            .filter(|_| report.attempt.is_some()),
         integrity_status: report.integrity.status,
         compilation_status: report.compile.as_ref().map(|compile| compile.status),
         execution_status: report.execution.as_ref().map(|execution| execution.status),
@@ -251,7 +276,56 @@ pub(crate) fn append_log(
         signature: None,
     };
     let line = sign_log_line(serde_json::to_string(&entry)?, runner_key)?;
-    append_log_line(path, report.attempt.as_ref(), &line, trust_root)
+    let run_record_sha256 = format!("sha256:{}", sha256_hex(line.as_bytes()));
+    let attempt = report.attempt.clone();
+    let request = options.attempt.clone();
+    let case_id = report.case_id.clone();
+    append_log_line(path, &line, move |content| match (&attempt, &request) {
+        (Some(attempt), Some(request)) => crate::attempt::revalidate_before_append(
+            path, content, attempt, request, &case_id, trust_root,
+        ),
+        _ => Ok(()),
+    })?;
+    // ADR-0019: a run bound to a design revision is evidence for it, so
+    // its assessment record is appended citing the exact run row.
+    if let (Some(attempt), Some(request)) = (&report.attempt, &options.attempt)
+        && let Some(revision_id) = &request.revision_id
+    {
+        crate::history::append_assessment(
+            path,
+            crate::history::AssessmentBinding {
+                attempt: attempt.clone(),
+                revision_id: revision_id.clone(),
+                run_record_sha256,
+                manifest_sha256: report.integrity.manifest_sha256.clone(),
+                compiled_snapshot_sha256: report
+                    .compile
+                    .as_ref()
+                    .and_then(|compile| compile.compiled.as_ref())
+                    .map(|compiled| compiled.snapshot_sha256.clone())
+                    .unwrap_or_default(),
+                campaign_sha256: report
+                    .campaign
+                    .as_ref()
+                    .and_then(|campaign| campaign.campaign_sha256.clone()),
+                requirement_set_id: report
+                    .coverage
+                    .as_ref()
+                    .map(|coverage| coverage.set_id.clone()),
+                requirement_set_sha256: report
+                    .coverage
+                    .as_ref()
+                    .map(|coverage| coverage.set_sha256.clone()),
+                verdicts: serde_json::to_value(&report.margins)?
+                    .as_array()
+                    .cloned()
+                    .unwrap_or_default(),
+            },
+            runner_key,
+            trust_root,
+        )?;
+    }
+    Ok(())
 }
 
 /// Sign a JSON-object log line already serialized with its trailing
@@ -259,7 +333,7 @@ pub(crate) fn append_log(
 /// digest of its canonical form, sign it when a runner key is supplied, and
 /// splice the `signature` member into the same JSON text without disturbing
 /// any other field's literal representation.
-fn sign_log_line(
+pub(crate) fn sign_log_line(
     unsigned_line: String,
     runner_key: Option<[u8; 32]>,
 ) -> Result<String, Box<dyn Error>> {
@@ -294,7 +368,6 @@ pub(crate) fn append_error_log(
     options: &CaseRunOptions,
     case_or_manifest: &Path,
     finding: &RunFinding,
-    trust_root: Option<&TrustRoot>,
     runner_key: Option<[u8; 32]>,
 ) -> Result<(), Box<dyn Error>> {
     let Some(path) = &options.log else {
@@ -322,7 +395,23 @@ pub(crate) fn append_error_log(
     // `AttemptRecord` to revalidate; only `attempt_request` (the caller's
     // unvalidated ask) is available, and it is already carried in `entry`.
     let line = sign_log_line(serde_json::to_string(&entry)?, runner_key)?;
-    append_log_line(path, None, &line, trust_root)
+    append_log_line(path, &line, |_| Ok(()))
+}
+
+/// Serialize one ADR-0019 non-run record into its log-line envelope and
+/// sign it when a runner key is supplied.
+pub(crate) fn record_line(
+    record_kind: &str,
+    record: &impl Serialize,
+    runner_key: Option<[u8; 32]>,
+) -> Result<String, Box<dyn Error>> {
+    let entry = serde_json::json!({
+        "schema_version": crate::history::LOG_RECORD_SCHEMA_VERSION,
+        "recorded_at": rfc3339_now(),
+        "record_kind": record_kind,
+        "record": record,
+    });
+    sign_log_line(serde_json::to_string(&entry)?, runner_key)
 }
 
 /// Append one line to the run-attempt log as a single write, holding an
@@ -338,9 +427,8 @@ pub(crate) fn append_error_log(
 /// clause 6): a child is refused if its exact parent line does not verify.
 pub(crate) fn append_log_line(
     path: &Path,
-    attempt: Option<&AttemptRecord>,
     line: &str,
-    trust_root: Option<&TrustRoot>,
+    revalidate: impl FnOnce(&str) -> Result<(), String>,
 ) -> Result<(), Box<dyn Error>> {
     if let Some(parent) = path
         .parent()
@@ -366,18 +454,16 @@ pub(crate) fn append_log_line(
     lock_handle.lock()?;
     let _lock = LogFileLock(lock_handle);
 
-    if let Some(attempt) = attempt {
-        // Read the history through the locked handle itself. Windows
-        // byte-range locks are mandatory: a second open of the same file
-        // would fail with ERROR_LOCK_VIOLATION while we hold this lock.
-        // Append mode still forces the write below to end-of-file.
-        use std::io::{Read, Seek, SeekFrom};
-        file.seek(SeekFrom::Start(0))?;
-        let mut history = String::new();
-        file.read_to_string(&mut history)?;
-        crate::attempt::revalidate_before_append(path, &history, attempt, trust_root)
-            .map_err(|issue| format!("attempt lineage changed before append: {issue}"))?;
-    }
+    // Read the history through the locked handle itself. Windows
+    // byte-range locks are mandatory: a second open of the same file
+    // would fail with ERROR_LOCK_VIOLATION while we hold this lock.
+    // Append mode still forces the write below to end-of-file.
+    use std::io::{Read, Seek, SeekFrom};
+    file.seek(SeekFrom::Start(0))?;
+    let mut history = String::new();
+    file.read_to_string(&mut history)?;
+    revalidate(&history)
+        .map_err(|issue| format!("attempt lineage changed before append: {issue}"))?;
 
     let mut buffer = Vec::with_capacity(line.len() + 1);
     buffer.extend_from_slice(line.as_bytes());

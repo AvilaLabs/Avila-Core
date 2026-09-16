@@ -82,7 +82,7 @@ regulatory review. It makes their boundaries explicit and inspectable.
   identities, claims binding, and every requirement verdict from the same
   fixture vectors, importing no Core crate.
 - A headless CLI and a thin native workbench over the same Rust implementation.
-- Eleven shared read-only queries for recorded results, available through a
+- Fourteen shared read-only queries for recorded results, available through a
   human-readable CLI, the native workbench's Tools workspace, and a local stdio MCP server. See the
   [Core tools guide](docs/product/CORE_TOOLS.md) for usage and verification boundaries.
 

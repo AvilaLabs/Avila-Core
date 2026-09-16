@@ -6,10 +6,15 @@ rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 publish.workspace = true
+default-run = "avila-core-app"
 
 [[bin]]
 name = "avila-core-app"
 path = "src/main.rs"
+
+[[bin]]
+name = "avila-core-product-preview"
+path = "src/product_preview.rs"
 
 [dependencies]
 avila-core-compiler.workspace = true

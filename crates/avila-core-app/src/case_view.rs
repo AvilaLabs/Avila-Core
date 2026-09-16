@@ -12,9 +12,10 @@ use avila_core_compiler::CompileReport;
 use avila_core_evidence::{CasePackageManifest, IntegrityCheckState, PackageIntegrityStatus};
 use avila_core_kernel::VerdictStatus;
 use avila_core_runner::{
-    AttemptLineageRequest, BindingStatus, CapabilityCheckState, CaseRunOptions, CaseRunReport,
-    CaseRunStatus, ExecutionStatus, PresentationGateReadiness, SignatureStatus, StepExecutionState,
-    execute_case, human_summary,
+    AttemptLineageRequest, BindingStatus, CapabilityCandidate, CapabilityCheckState,
+    CaseRunOptions, CaseRunReport, CaseRunStatus, ExecutionStatus, PresentationGateReadiness,
+    SCAN_LIMIT, SignatureStatus, StepExecutionState, candidates_on_path, execute_case,
+    human_summary, probe_capability, scan_dir,
 };
 use eframe::egui;
 
@@ -100,6 +101,192 @@ fn display(text: &str) -> String {
 pub struct NamedPath {
     pub name: String,
     pub path: String,
+}
+
+/// Where a file-picker result should land.
+enum PickerTarget {
+    /// Fill row `index` of the source roots (folder) or capabilities (file).
+    Location { folder: bool, index: usize },
+    /// Scan the picked folder's files against every declared capability.
+    CapabilityScan,
+}
+
+/// Probe work handed to a background thread. Hash-only: candidates are
+/// never executed, and the check/run path verifies the chosen bytes again.
+enum ProbeJob {
+    /// Hash one capability row's current path (name, path text).
+    Typed(String, String),
+    /// Search PATH for every declared capability's name.
+    OnPath,
+    /// Scan a folder once and offer its files to every capability.
+    ScanDir(PathBuf),
+}
+
+/// What a finished probe reports back to the view.
+enum ProbeReport {
+    /// The row's typed path, hashed on demand; carries the text probed so a
+    /// later edit is not mistaken for this result.
+    Typed {
+        name: String,
+        text: String,
+        candidate: Option<CapabilityCandidate>,
+    },
+    /// Candidates a PATH or folder search found, per capability.
+    Found {
+        source: String,
+        outcomes: Vec<(String, Vec<CapabilityCandidate>)>,
+    },
+}
+
+/// Latest probe outcome for one capability row.
+#[derive(Default)]
+struct ProbeRow {
+    /// An on-demand check of the row's path: the text probed and its result.
+    typed: Option<(String, CapabilityCandidate)>,
+    /// Candidates a PATH or folder search found: a source label and the
+    /// probed files.
+    found: Option<(String, Vec<CapabilityCandidate>)>,
+}
+
+/// Run a probe job against the capabilities `manifest` declares. Hash-only
+/// and read-only: candidates are hashed, never executed.
+fn run_probe(job: ProbeJob, manifest: &CasePackageManifest) -> ProbeReport {
+    match job {
+        ProbeJob::Typed(name, text) => {
+            let candidate = manifest
+                .capabilities
+                .iter()
+                .find(|declared| declared.capability_id == name)
+                .and_then(|declared| {
+                    probe_capability(declared, &[PathBuf::from(&text)])
+                        .into_iter()
+                        .next()
+                });
+            ProbeReport::Typed {
+                name,
+                text,
+                candidate,
+            }
+        }
+        ProbeJob::OnPath => ProbeReport::Found {
+            source: "PATH".into(),
+            outcomes: manifest
+                .capabilities
+                .iter()
+                .map(|declared| {
+                    let found = candidates_on_path(&declared.capability_id);
+                    (
+                        declared.capability_id.clone(),
+                        probe_capability(declared, &found),
+                    )
+                })
+                .collect(),
+        },
+        ProbeJob::ScanDir(dir) => {
+            let scanned = scan_dir(&dir, SCAN_LIMIT);
+            ProbeReport::Found {
+                source: format!("scan of {}", dir.display()),
+                outcomes: manifest
+                    .capabilities
+                    .iter()
+                    .map(|declared| {
+                        (
+                            declared.capability_id.clone(),
+                            probe_capability(declared, &scanned),
+                        )
+                    })
+                    .collect(),
+            }
+        }
+    }
+}
+
+/// The probe lines under one capability row: the on-demand check of the
+/// row's path, the latest PATH/folder search outcome, and the actions that
+/// queue a background hash job. A found match is only offered, never
+/// applied silently.
+fn capability_probe_row(
+    ui: &mut egui::Ui,
+    probes: &mut BTreeMap<String, ProbeRow>,
+    probing: bool,
+    row: &mut NamedPath,
+    probe_job: &mut Option<ProbeJob>,
+) {
+    let probe = probes.get(&row.name);
+    if let Some((text, candidate)) = probe.and_then(|probe| probe.typed.as_ref()) {
+        if text == row.path.trim() {
+            let (label, color) = match candidate.state {
+                CapabilityCheckState::Verified => {
+                    ("This file matches the pinned program.".to_string(), GREEN)
+                }
+                CapabilityCheckState::Mismatch => (
+                    "This file's bytes differ from the pinned program.".to_string(),
+                    RED,
+                ),
+                CapabilityCheckState::Missing => {
+                    ("This path is not a readable file.".to_string(), AMBER)
+                }
+                CapabilityCheckState::NotSupplied => {
+                    ("This file was not supplied.".to_string(), muted(ui))
+                }
+            };
+            ui.colored_label(color, label);
+        } else {
+            ui.small("Location changed since it was last checked.");
+        }
+    }
+    // Extract the search outcome as owned data so the borrow on `probes`
+    // ends before the Use button below mutates it.
+    let found = probe
+        .and_then(|probe| probe.found.as_ref())
+        .map(|(source, candidates)| {
+            let verified: Vec<CapabilityCandidate> = candidates
+                .iter()
+                .filter(|candidate| candidate.state == CapabilityCheckState::Verified)
+                .cloned()
+                .collect();
+            (source.clone(), candidates.len(), verified)
+        });
+    if let Some((source, count, verified)) = found {
+        let verified_count = verified.len();
+        if let Some(first) = verified.into_iter().next() {
+            let mut message = format!("{source} found {}", first.path.display());
+            if verified_count > 1 {
+                message += &format!(" (+{} more)", verified_count - 1);
+            }
+            ui.horizontal(|ui| {
+                ui.small(message);
+                if ui
+                    .small_button("Use this program")
+                    .on_hover_text(
+                        "Fill this row with the found path; check or run verifies its bytes again.",
+                    )
+                    .clicked()
+                {
+                    row.path = first.path.display().to_string();
+                    probes.entry(row.name.clone()).or_default().typed =
+                        Some((row.path.trim().to_string(), first));
+                }
+            });
+        } else if count == 0 {
+            ui.small(format!("{source} offered no candidates."));
+        } else {
+            ui.small(format!(
+                "{source} offered {count} candidate(s); none matches the pinned identity."
+            ));
+        }
+    }
+    if !row.path.trim().is_empty()
+        && ui
+            .add_enabled(!probing, egui::Button::new("Check file").small())
+            .on_hover_text("Hash this file and compare it with the capability's pinned identity. The file is not executed; check or run verifies it again.")
+            .clicked()
+    {
+        *probe_job = Some(ProbeJob::Typed(
+            row.name.clone(),
+            row.path.trim().to_string(),
+        ));
+    }
 }
 
 /// Launch-time configuration, from the command line or the package.
@@ -350,7 +537,11 @@ pub struct CaseView {
     pub info: Option<crate::case_browser::CaseInfo>,
     pub show_setup: bool,
     picker: crate::case_browser::FilePicker,
-    picker_target: Option<(bool, usize)>,
+    picker_target: Option<PickerTarget>,
+    /// A background hash-only probe, if one is running.
+    probing: Option<Receiver<ProbeReport>>,
+    /// Latest probe outcome per capability name.
+    probes: BTreeMap<String, ProbeRow>,
     tab: CaseTab,
     manifest: Option<CasePackageManifest>,
     inspect_error: Option<String>,
@@ -395,6 +586,8 @@ impl CaseView {
             show_setup: setup.show_setup,
             picker: Default::default(),
             picker_target: None,
+            probing: None,
+            probes: BTreeMap::new(),
             setup,
             tab,
             manifest,
@@ -542,6 +735,60 @@ impl CaseView {
         })
     }
 
+    /// Dispatch a hash-only capability probe to a background thread. The
+    /// probe never executes a candidate; the check/run path verifies the
+    /// chosen bytes again.
+    fn start_probe(&mut self, job: ProbeJob) {
+        if self.probing.is_some() {
+            return;
+        }
+        let Some(manifest) = self.manifest.clone() else {
+            return;
+        };
+        let (sender, receiver) = channel();
+        std::thread::spawn(move || {
+            let _ = sender.send(run_probe(job, &manifest));
+        });
+        self.probing = Some(receiver);
+    }
+
+    fn poll_probe(&mut self, context: &egui::Context) {
+        let Some(receiver) = &self.probing else {
+            return;
+        };
+        match receiver.try_recv() {
+            Ok(report) => {
+                self.apply_probe(report);
+                self.probing = None;
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => {
+                context.request_repaint_after(Duration::from_millis(120));
+            }
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                self.probing = None;
+            }
+        }
+    }
+
+    fn apply_probe(&mut self, report: ProbeReport) {
+        match report {
+            ProbeReport::Typed {
+                name,
+                text,
+                candidate,
+            } => {
+                if let Some(candidate) = candidate {
+                    self.probes.entry(name).or_default().typed = Some((text, candidate));
+                }
+            }
+            ProbeReport::Found { source, outcomes } => {
+                for (name, candidates) in outcomes {
+                    self.probes.entry(name).or_default().found = Some((source.clone(), candidates));
+                }
+            }
+        }
+    }
+
     fn start(&mut self, plan_only: bool) {
         if self.running.is_some() || self.info.is_none() {
             return;
@@ -647,19 +894,25 @@ impl CaseView {
 
     pub(crate) fn tick(&mut self, context: &egui::Context) {
         if let Some(path) = self.picker.poll()
-            && let Some((folder, index)) = self.picker_target.take()
+            && let Some(target) = self.picker_target.take()
         {
-            let rows = if folder {
-                &mut self.setup.source_roots
-            } else {
-                &mut self.setup.capabilities
-            };
-            if let Some(row) = rows.get_mut(index) {
-                row.path = path.display().to_string();
+            match target {
+                PickerTarget::Location { folder, index } => {
+                    let rows = if folder {
+                        &mut self.setup.source_roots
+                    } else {
+                        &mut self.setup.capabilities
+                    };
+                    if let Some(row) = rows.get_mut(index) {
+                        row.path = path.display().to_string();
+                    }
+                }
+                PickerTarget::CapabilityScan => self.start_probe(ProbeJob::ScanDir(path)),
             }
         }
         self.start_automatic();
         self.poll(context);
+        self.poll_probe(context);
     }
 
     pub(crate) fn report(&self) -> Option<&CaseRunReport> {
@@ -691,6 +944,31 @@ impl CaseView {
         let capabilities = ui.scope(|ui| {
             ui.strong("Programs");
             ui.small("Select executables to run new steps. Verified saved steps may be reused without them.");
+            if !self.setup.capabilities.is_empty() {
+                ui.horizontal(|ui| {
+                    let idle = self.probing.is_none() && !self.picker.busy();
+                    if ui
+                        .add_enabled(idle, egui::Button::new("Search PATH").small())
+                        .on_hover_text("Hash executables on this computer's PATH named like the declared capabilities against their pinned identities. Nothing is executed.")
+                        .clicked()
+                    {
+                        self.start_probe(ProbeJob::OnPath);
+                    }
+                    if ui
+                        .add_enabled(idle, egui::Button::new("Scan folder…").small())
+                        .on_hover_text("Choose a folder; its files are hashed against every declared capability's pinned identity. Nothing is executed.")
+                        .clicked()
+                    {
+                        self.picker_target = Some(PickerTarget::CapabilityScan);
+                        self.picker
+                            .start(ui.ctx(), true, "Scan a folder for programs");
+                    }
+                    if self.probing.is_some() {
+                        ui.spinner();
+                        ui.small("Hashing candidates…");
+                    }
+                });
+            }
             self.location_rows(ui, false);
         });
         targets.set(TourTarget::Capabilities, capabilities.response.rect);
@@ -918,6 +1196,7 @@ impl CaseView {
         if rows.is_empty() {
             ui.small("None declared by this case.");
         }
+        let mut probe_job = None;
         for (index, row) in rows.iter_mut().enumerate() {
             ui.push_id((folder, index), |ui| {
                 ui.add_space(6.0);
@@ -939,7 +1218,7 @@ impl CaseView {
                         .add_enabled(!self.picker.busy(), egui::Button::new("Browse…").wrap_mode(egui::TextWrapMode::Extend))
                         .clicked()
                     {
-                        self.picker_target = Some((folder, index));
+                        self.picker_target = Some(PickerTarget::Location { folder, index });
                         self.picker
                             .start(ui.ctx(), folder, &format!("Locate {}", row.name));
                     }
@@ -949,7 +1228,19 @@ impl CaseView {
                 } else {
                     "Location selected · identity checked when you check or run"
                 });
+                if !folder {
+                    capability_probe_row(
+                        ui,
+                        &mut self.probes,
+                        self.probing.is_some(),
+                        row,
+                        &mut probe_job,
+                    );
+                }
             });
+        }
+        if let Some(job) = probe_job {
+            self.start_probe(job);
         }
     }
 
@@ -2462,5 +2753,226 @@ mod tests {
         let unset = CaseSetup::default().options(false);
         assert_eq!(unset.trust_root, None);
         assert_eq!(unset.runner_key, None);
+    }
+
+    // --- capability probing --------------------------------------------
+
+    /// A manifest declaring one capability pinned to `digest`, so a probe
+    /// knows the expected identity without a shipped package.
+    fn probe_manifest(capability_id: &str, digest: &str) -> CasePackageManifest {
+        CasePackageManifest {
+            schema_version: avila_core_evidence::CASE_PACKAGE_SCHEMA_VERSION.into(),
+            case_id: "PROBE-CASE".into(),
+            title: "Workbench capability probe fixture".into(),
+            documents: Vec::new(),
+            artifacts: Vec::new(),
+            capabilities: vec![avila_core_evidence::PackageCapability {
+                capability_id: capability_id.into(),
+                package_id: format!("test/{capability_id}@1"),
+                source_repository: None,
+                source_commit: None,
+                executable_sha256: digest.into(),
+            }],
+            executions: Vec::new(),
+            free_inputs: Vec::new(),
+            coverage: None,
+            limitations: Vec::new(),
+        }
+    }
+
+    fn probe_scratch(tag: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("avila-app-probe-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn a_typed_probe_hashes_the_rows_path_against_the_pinned_identity() {
+        let dir = probe_scratch("typed");
+        let program = dir.join("stub");
+        std::fs::write(&program, b"the pinned executable").unwrap();
+        let digest = avila_core_evidence::sha256_file(&program).unwrap().0;
+        let manifest = probe_manifest("stub", &digest);
+
+        let ProbeReport::Typed {
+            name,
+            text,
+            candidate,
+        } = run_probe(
+            ProbeJob::Typed("stub".into(), program.display().to_string()),
+            &manifest,
+        )
+        else {
+            panic!("a typed job reports a typed outcome")
+        };
+        assert_eq!(name, "stub");
+        assert_eq!(text, program.display().to_string());
+        let candidate = candidate.unwrap();
+        assert_eq!(candidate.state, CapabilityCheckState::Verified);
+        assert_eq!(candidate.sha256.as_deref(), Some(digest.as_str()));
+
+        // A wrong file reports mismatch and a missing path reports missing;
+        // an undeclared name has no pinned identity and reports nothing.
+        let wrong = dir.join("wrong");
+        std::fs::write(&wrong, b"other bytes").unwrap();
+        let ProbeReport::Typed { candidate, .. } = run_probe(
+            ProbeJob::Typed("stub".into(), wrong.display().to_string()),
+            &manifest,
+        ) else {
+            panic!("a typed job reports a typed outcome")
+        };
+        assert_eq!(candidate.unwrap().state, CapabilityCheckState::Mismatch);
+        let ProbeReport::Typed { candidate, .. } = run_probe(
+            ProbeJob::Typed("stub".into(), dir.join("absent").display().to_string()),
+            &manifest,
+        ) else {
+            panic!("a typed job reports a typed outcome")
+        };
+        assert_eq!(candidate.unwrap().state, CapabilityCheckState::Missing);
+        let ProbeReport::Typed { candidate, .. } = run_probe(
+            ProbeJob::Typed("mystery".into(), program.display().to_string()),
+            &manifest,
+        ) else {
+            panic!("a typed job reports a typed outcome")
+        };
+        assert!(candidate.is_none());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_folder_scan_offers_matches_to_every_declared_capability() {
+        let dir = probe_scratch("scan");
+        let program = dir.join("stub-1.0");
+        std::fs::write(&program, b"the pinned executable").unwrap();
+        std::fs::write(dir.join("other"), b"other bytes").unwrap();
+        let digest = avila_core_evidence::sha256_file(&program).unwrap().0;
+        let mut manifest = probe_manifest("stub", &digest);
+        manifest
+            .capabilities
+            .push(avila_core_evidence::PackageCapability {
+                capability_id: "absent".into(),
+                package_id: "test/absent@1".into(),
+                source_repository: None,
+                source_commit: None,
+                executable_sha256: format!("sha256:{}", "0".repeat(64)),
+            });
+        let ProbeReport::Found { source, outcomes } =
+            run_probe(ProbeJob::ScanDir(dir.clone()), &manifest)
+        else {
+            panic!("a scan reports found outcomes")
+        };
+        assert!(source.contains("scan"), "{source}");
+        assert_eq!(outcomes.len(), 2);
+        let (name, candidates) = &outcomes[0];
+        assert_eq!(name, "stub");
+        assert!(candidates.iter().any(|candidate| {
+            candidate.state == CapabilityCheckState::Verified
+                && candidate.path == program.canonicalize().unwrap()
+        }));
+        let (name, candidates) = &outcomes[1];
+        assert_eq!(name, "absent");
+        assert!(
+            candidates
+                .iter()
+                .all(|candidate| candidate.state == CapabilityCheckState::Mismatch)
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn applying_probe_reports_updates_each_named_row() {
+        let mut view = CaseView::new(CaseSetup::default());
+        let candidate = CapabilityCandidate {
+            path: PathBuf::from("/opt/stub"),
+            sha256: Some("sha256:aa".into()),
+            state: CapabilityCheckState::Verified,
+        };
+        view.apply_probe(ProbeReport::Typed {
+            name: "stub".into(),
+            text: "/opt/stub".into(),
+            candidate: Some(candidate.clone()),
+        });
+        assert_eq!(
+            view.probes["stub"].typed.as_ref().unwrap().1.state,
+            CapabilityCheckState::Verified
+        );
+        view.apply_probe(ProbeReport::Found {
+            source: "PATH".into(),
+            outcomes: vec![
+                ("stub".into(), vec![candidate]),
+                ("absent".into(), Vec::new()),
+            ],
+        });
+        assert_eq!(view.probes["stub"].found.as_ref().unwrap().0, "PATH");
+        assert!(view.probes["absent"].found.as_ref().unwrap().1.is_empty());
+        // A typed probe that names no declared capability is dropped.
+        view.apply_probe(ProbeReport::Typed {
+            name: "mystery".into(),
+            text: "x".into(),
+            candidate: None,
+        });
+        assert!(!view.probes.contains_key("mystery"));
+    }
+
+    /// The Programs section offers PATH and folder searches, shows the
+    /// on-demand check verdict under the row, and offers a found match for
+    /// the operator to take — never applying it silently.
+    #[test]
+    fn the_setup_panel_surfaces_probe_results_and_search_controls() {
+        let context = egui::Context::default();
+        crate::configure_style(&context);
+        let mut view = CaseView::new(CaseSetup::default());
+        view.select_case(example("case-000-actinv-aftermatter"), None)
+            .unwrap();
+        let verified = CapabilityCandidate {
+            path: PathBuf::from("/opt/bin/python3"),
+            sha256: Some("sha256:aa".into()),
+            state: CapabilityCheckState::Verified,
+        };
+        let row = &mut view.setup.capabilities[0];
+        assert_eq!(row.name, "python3");
+        row.path = "/opt/bin/python3".into();
+        view.probes.insert(
+            "python3".into(),
+            ProbeRow {
+                typed: Some(("/opt/bin/python3".into(), verified.clone())),
+                found: Some(("PATH".into(), vec![verified])),
+            },
+        );
+        let mut targets = TourTargets::default();
+        let mut output = context.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(370.0, 900.0),
+                )),
+                ..Default::default()
+            },
+            |ui| view.setup_panel(ui, &mut targets),
+        );
+        output.textures_delta.clear();
+        let texts: Vec<String> = output
+            .shapes
+            .iter()
+            .filter_map(|shape| match &shape.shape {
+                egui::Shape::Text(text) => Some(text.galley.text().to_string()),
+                _ => None,
+            })
+            .collect();
+        for expected in [
+            "Search PATH",
+            "Scan folder",
+            "Check file",
+            "This file matches the pinned program.",
+            "PATH found /opt/bin/python3",
+            "Use this program",
+        ] {
+            assert!(
+                texts.iter().any(|text| text.contains(expected)),
+                "{expected} missing from the setup panel"
+            );
+        }
     }
 }

@@ -114,6 +114,11 @@ enum Command {
     /// Boxed only to keep this enum's variants close in size; `RunArgs`
     /// carries the actual argument set.
     Run(Box<RunArgs>),
+    /// Probe local files against a case's pinned capability executables.
+    /// Hash-only: reports which candidate paths satisfy each bound digest
+    /// without executing anything; a check or run verifies the chosen
+    /// bytes again.
+    Capabilities(CapabilitiesArgs),
     /// Explain a stable finding code from the diagnostic catalog.
     Explain {
         /// A code such as `CORE-R3102`. Omit it and pass `--all` for the whole catalog.
@@ -427,6 +432,26 @@ struct RunArgs {
     json: bool,
 }
 
+#[derive(Debug, Args)]
+struct CapabilitiesArgs {
+    /// Case directory containing package.json, or the manifest path itself.
+    case: PathBuf,
+    /// Probe an explicit file for a declared capability as NAME=PATH.
+    /// Repeat as needed, once per capability; use --scan to offer a whole
+    /// folder of candidates to every capability.
+    #[arg(long = "candidate", value_name = "NAME=PATH")]
+    candidates: Vec<String>,
+    /// Scan a folder for files satisfying any declared capability. Repeat
+    /// as needed; each folder contributes its regular files as candidates
+    /// to every capability.
+    #[arg(long = "scan", value_name = "DIR")]
+    scan_dirs: Vec<PathBuf>,
+    /// Also search PATH for executables named after each capability, so
+    /// `python3` or `python3.14` are tried for `python3-numpy`.
+    #[arg(long = "on-path")]
+    on_path: bool,
+}
+
 fn main() -> ExitCode {
     match run() {
         Ok(code) => code,
@@ -583,6 +608,12 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 return Ok(ExitCode::from(1));
             }
         }
+        Command::Capabilities(args) => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&run_capabilities(args)?)?
+            );
+        }
         Command::Explain { code, all } => match (code, all) {
             (None, true) => {
                 let mut entries: Vec<_> = DIAGNOSTIC_CATALOG
@@ -611,6 +642,91 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
         }
     }
     Ok(ExitCode::SUCCESS)
+}
+
+/// Performs a `capabilities` probe and returns exactly the JSON document
+/// the CLI prints, so a test can assert on its fields without capturing
+/// stdout. Read-only: candidates are hashed, never executed.
+fn run_capabilities(args: CapabilitiesArgs) -> Result<serde_json::Value, Box<dyn Error>> {
+    let manifest_path = if args.case.is_dir() {
+        args.case.join("package.json")
+    } else {
+        args.case.clone()
+    };
+    let manifest_bytes = fs::read(&manifest_path)
+        .map_err(|error| format!("case package `{}`: {error}", manifest_path.display()))?;
+    let manifest: avila_core_evidence::CasePackageManifest =
+        serde_json::from_slice(&manifest_bytes)
+            .map_err(|error| format!("case package `{}`: {error}", manifest_path.display()))?;
+    let named = avila_core_runner::parse_named_paths(
+        &args.candidates,
+        "candidate",
+        "python3=/usr/bin/python3",
+    )?;
+    for name in named.keys() {
+        if !manifest
+            .capabilities
+            .iter()
+            .any(|capability| &capability.capability_id == name)
+        {
+            let declared: Vec<&str> = manifest
+                .capabilities
+                .iter()
+                .map(|capability| capability.capability_id.as_str())
+                .collect();
+            return Err(format!(
+                "candidate `{name}` is not a declared capability of this package; declared: [{}]",
+                declared.join(", ")
+            )
+            .into());
+        }
+    }
+    let mut scanned = Vec::new();
+    for dir in &args.scan_dirs {
+        if !dir.is_dir() {
+            return Err(format!(
+                "scan folder `{}` is not a readable directory",
+                dir.display()
+            )
+            .into());
+        }
+        scanned.extend(avila_core_runner::scan_dir(
+            dir,
+            avila_core_runner::SCAN_LIMIT,
+        ));
+    }
+    let capabilities: Vec<serde_json::Value> = manifest
+        .capabilities
+        .iter()
+        .map(|declared| {
+            let mut candidates: Vec<PathBuf> = Vec::new();
+            if let Some(path) = named.get(&declared.capability_id) {
+                candidates.push(path.clone());
+            }
+            candidates.extend(scanned.iter().cloned());
+            if args.on_path {
+                candidates.extend(avila_core_runner::candidates_on_path(
+                    &declared.capability_id,
+                ));
+            }
+            let probed = avila_core_runner::probe_capability(declared, &candidates);
+            serde_json::json!({
+                "capability_id": declared.capability_id,
+                "package_id": declared.package_id,
+                "expected_sha256": declared.executable_sha256,
+                "satisfied": probed
+                    .iter()
+                    .any(|candidate| candidate.state
+                        == avila_core_runner::CapabilityCheckState::Verified),
+                "candidates": probed,
+            })
+        })
+        .collect();
+    Ok(serde_json::json!({
+        "schema_version": "avila.core/capability-probe/v0.1-draft",
+        "case": manifest_path,
+        "capabilities": capabilities,
+    }))
 }
 
 /// Performs a `keys` subcommand and returns exactly the JSON document the
@@ -1740,5 +1856,162 @@ mod tests {
         })
         .unwrap_err();
         assert!(error.to_string().contains("rev-a"), "{error}");
+    }
+
+    // --- `capabilities` probing --------------------------------------
+
+    /// A case declaring two capabilities, plus one on-disk program that
+    /// satisfies the first. Returns the case folder, the satisfying
+    /// program, and its pinned digest.
+    fn write_probe_case(scratch: &ScratchDir) -> (PathBuf, PathBuf, String) {
+        let case_dir = scratch.join("probe-case");
+        fs::create_dir_all(&case_dir).unwrap();
+        let programs = scratch.join("programs");
+        fs::create_dir_all(&programs).unwrap();
+        let program = programs.join("stub-1.0");
+        fs::write(&program, b"the pinned executable").unwrap();
+        let digest = format!("sha256:{}", sha256_hex(b"the pinned executable"));
+        let capability =
+            |capability_id: &str, executable_sha256: &str| avila_core_evidence::PackageCapability {
+                capability_id: capability_id.into(),
+                package_id: format!("test/{capability_id}@1"),
+                source_repository: None,
+                source_commit: None,
+                executable_sha256: executable_sha256.into(),
+            };
+        let manifest = avila_core_evidence::CasePackageManifest {
+            schema_version: avila_core_evidence::CASE_PACKAGE_SCHEMA_VERSION.into(),
+            case_id: "PROBE-CASE".into(),
+            title: "CLI capability probe fixture".into(),
+            documents: Vec::new(),
+            artifacts: Vec::new(),
+            capabilities: vec![
+                capability("stub", &digest),
+                capability("absent", &format!("sha256:{}", "0".repeat(64))),
+            ],
+            executions: Vec::new(),
+            free_inputs: Vec::new(),
+            coverage: None,
+            limitations: Vec::new(),
+        };
+        let mut bytes = serde_json::to_vec_pretty(&manifest).unwrap();
+        bytes.push(b'\n');
+        fs::write(case_dir.join("package.json"), bytes).unwrap();
+        (case_dir, program, digest)
+    }
+
+    #[test]
+    fn capabilities_reports_named_candidates_scans_and_missing_state() {
+        let scratch = ScratchDir::new("capabilities-probe");
+        let (case_dir, program, digest) = write_probe_case(&scratch);
+        let report = run_capabilities(CapabilitiesArgs {
+            case: case_dir.clone(),
+            candidates: vec![format!("stub={}", program.display())],
+            scan_dirs: Vec::new(),
+            on_path: false,
+        })
+        .unwrap();
+        assert_eq!(
+            report["schema_version"],
+            "avila.core/capability-probe/v0.1-draft"
+        );
+        let stub = &report["capabilities"][0];
+        assert_eq!(stub["capability_id"], "stub");
+        assert_eq!(stub["expected_sha256"], digest);
+        assert_eq!(stub["satisfied"], true);
+        assert_eq!(stub["candidates"][0]["state"], "verified");
+        assert_eq!(stub["candidates"][0]["sha256"], digest);
+        // A capability with no candidates is unsatisfied, not an error.
+        let absent = &report["capabilities"][1];
+        assert_eq!(absent["satisfied"], false);
+        assert_eq!(absent["candidates"].as_array().unwrap().len(), 0);
+
+        // A wrong file reports mismatch; a missing path reports missing.
+        fs::write(
+            scratch.join("programs").join("package-placeholder"),
+            b"wrong",
+        )
+        .unwrap();
+        let report = run_capabilities(CapabilitiesArgs {
+            case: case_dir.clone(),
+            candidates: vec![
+                format!(
+                    "stub={}",
+                    scratch
+                        .join("programs")
+                        .join("package-placeholder")
+                        .display()
+                ),
+                "absent=/definitely/not/there".into(),
+            ],
+            scan_dirs: Vec::new(),
+            on_path: false,
+        })
+        .unwrap();
+        assert_eq!(
+            report["capabilities"][0]["candidates"][0]["state"],
+            "mismatch"
+        );
+        assert_eq!(
+            report["capabilities"][1]["candidates"][0]["state"],
+            "missing"
+        );
+        assert!(
+            report["capabilities"][1]["candidates"][0]
+                .get("sha256")
+                .is_none()
+        );
+
+        // A folder scan offers every regular file to every capability.
+        let report = run_capabilities(CapabilitiesArgs {
+            case: case_dir.clone(),
+            candidates: Vec::new(),
+            scan_dirs: vec![scratch.join("programs")],
+            on_path: false,
+        })
+        .unwrap();
+        assert_eq!(report["capabilities"][0]["satisfied"], true);
+        assert!(
+            report["capabilities"][0]["candidates"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|candidate| candidate["state"] == "verified")
+        );
+        assert_eq!(report["capabilities"][1]["satisfied"], false);
+    }
+
+    #[test]
+    fn capabilities_refuses_undeclared_names_and_unreadable_scans() {
+        let scratch = ScratchDir::new("capabilities-refusals");
+        let (case_dir, program, _) = write_probe_case(&scratch);
+        let error = run_capabilities(CapabilitiesArgs {
+            case: case_dir.clone(),
+            candidates: vec![format!("mystery={}", program.display())],
+            scan_dirs: Vec::new(),
+            on_path: false,
+        })
+        .unwrap_err();
+        assert!(error.to_string().contains("mystery"), "{error}");
+        assert!(error.to_string().contains("stub"), "{error}");
+
+        let error = run_capabilities(CapabilitiesArgs {
+            case: case_dir.clone(),
+            candidates: Vec::new(),
+            scan_dirs: vec![scratch.join("no-such-folder")],
+            on_path: false,
+        })
+        .unwrap_err();
+        assert!(error.to_string().contains("no-such-folder"), "{error}");
+
+        // The manifest path itself is accepted in place of the folder.
+        let report = run_capabilities(CapabilitiesArgs {
+            case: case_dir.join("package.json"),
+            candidates: vec![format!("stub={}", program.display())],
+            scan_dirs: Vec::new(),
+            on_path: false,
+        })
+        .unwrap();
+        assert_eq!(report["capabilities"][0]["satisfied"], true);
     }
 }

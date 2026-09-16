@@ -73,6 +73,11 @@ mod gates;
 use gates::build_presentation_gates;
 mod replay;
 use replay::{replay_expected, verify_bindings};
+mod probe;
+pub use probe::{
+    CapabilityCandidate, SCAN_LIMIT, candidates_named, candidates_on_path, probe_capability,
+    scan_dir,
+};
 mod runner;
 use runner::Runner;
 mod report;

@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/bound-plan/v0.1-draft.schema.json",
+  "title": "Avila Core Bound Plan v0.1 draft",
+  "description": "The strict, content-identified reading of `avila-core run --plan`: per step, the decision the run could actually take against the operator supplies given. `execute` requires the declared capability's bytes to verify at the supplied path and every required environment key to be valued; anything short is `blocked` with named reasons. Deriving a bound plan hashes bytes and never executes; only the normal run path executes or reuses.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "case_id", "manifest_sha256", "status"],
+  "properties": {
+    "schema_version": { "const": "avila.core/bound-plan/v0.1-draft" },
+    "case_id": { "$ref": "#/$defs/nonemptyString" },
+    "manifest_sha256": { "$ref": "#/$defs/sha256" },
+    "compiled_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+    "status": {
+      "enum": ["ready", "blocked", "refused", "unavailable"],
+      "description": "ready: every declared step is reuse_committed or execute. blocked: at least one step is blocked on an operator supply. refused: at least one step is refused outright. unavailable: planning never produced an execution section."
+    },
+    "steps": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/boundStep" }
+    },
+    "unresolved": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/unresolved" }
+    },
+    "note": { "type": "string" }
+  },
+  "$defs": {
+    "nonemptyString": { "type": "string", "minLength": 1 },
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "boundStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["step_id", "decision"],
+      "properties": {
+        "step_id": { "$ref": "#/$defs/nonemptyString" },
+        "adapter": { "$ref": "#/$defs/nonemptyString" },
+        "capability_id": { "$ref": "#/$defs/nonemptyString" },
+        "decision": {
+          "enum": ["reuse_committed", "execute", "blocked", "refused", "not_executed"]
+        },
+        "planned_invocation_sha256": { "$ref": "#/$defs/sha256" },
+        "changes": {
+          "type": "array",
+          "description": "For execute: the SC-12 change classes that defeated committed-receipt reuse.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["class", "detail"],
+            "properties": {
+              "class": { "$ref": "#/$defs/nonemptyString" },
+              "detail": { "type": "string" }
+            }
+          }
+        },
+        "reused_receipt": { "$ref": "#/$defs/nonemptyString" },
+        "blockers": {
+          "type": "array",
+          "description": "Named reasons a blocked step cannot run — capability_not_supplied, capability_missing, capability_mismatch, inputs_unverified, environment_not_supplied — or the finding codes a refused step carries.",
+          "items": { "$ref": "#/$defs/nonemptyString" }
+        },
+        "missing_environment": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nonemptyString" }
+        },
+        "capability_state": { "enum": ["verified", "mismatch", "missing", "not_supplied"] },
+        "note": { "type": "string" }
+      }
+    },
+    "unresolved": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name", "state"],
+      "properties": {
+        "kind": { "enum": ["source_root", "capability"] },
+        "name": { "$ref": "#/$defs/nonemptyString" },
+        "state": { "enum": ["not_checked", "not_supplied", "missing", "mismatch"] }
+      }
+    }
+  }
+}

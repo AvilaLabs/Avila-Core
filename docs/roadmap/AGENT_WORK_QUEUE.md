@@ -376,8 +376,67 @@ case folder and supply every root. External roots such as `simsopt` remain
 explicitly the operator's. The needs line previews the manifest and
 verifies nothing.
 
-**Next product increment:** no named successor; the larger roadmap tracks
-below remain.
+### Bound plans and blocked states — implemented 2026-09-17
+
+The "Deterministic planning and blocked states" build gate's evidence
+landed: a content-identified bound plan inside every `run --plan` report
+plus state fixtures pinning each decision.
+
+**What landed:**
+
+- `crates/avila-core-runner/src/case_run/plan.rs` — the
+  `avila.core/bound-plan/v0.1-draft` document: `manifest_sha256` and
+  `compiled_snapshot_sha256` identities, a plan-level
+  `ready`/`blocked`/`refused`/`unavailable` status, ordered step
+  decisions, and an `unresolved` list naming the roots and capabilities
+  the plan still needs. `BoundPlan::unavailable` covers runs rejected
+  before execution planning and packages declaring no executions.
+- `Runner::bound_plan` — derives each step's decision from the plan-mode
+  report the same `run_all` produced, then binds the operator supplies the
+  report's `planned` never checks: the declared capability's bytes are
+  hashed at the supplied path (never executed) and the environment keys
+  its adapter and package declaration require are checked by name. A step
+  reported `planned` becomes `execute` only when every supply verifies;
+  otherwise it is `blocked` with named reasons — `inputs_unverified`,
+  `capability_not_supplied`, `capability_missing`, `capability_mismatch`,
+  `environment_not_supplied` — plus the missing key names. `reused` maps
+  to `reuse_committed` (a verified committed receipt needs no executable),
+  `refused` carries its finding codes, and compiled steps without a
+  declared execution are `not_executed` with their reason.
+- `schemas/bound-plan.v0.1-draft.schema.json` — the published schema;
+  real `--plan` output validates against it.
+- Human rendering: a `planned` step the bound plan blocks prints
+  `[BLOCKED] step would execute but is blocked: <reasons>` instead of the
+  misleading "would execute", and the outcome gains a `Bound plan:` line
+  naming the status and unresolved supplies.
+- State fixtures: six adversarial tests over the synthetic package pin
+  `reuse_committed`, `execute` (plus byte-for-byte determinism across two
+  bindings), `blocked` on unsupplied/missing/mismatched capability bytes,
+  `blocked` on unverified inputs and a missing environment key,
+  `refused` for an execution outside the compiled workflow, and
+  `unavailable` for a manifest-pin rejection; `case_run::tests` adds the
+  real-fixture contrast — CASE-004's report says `planned` while the bound
+  plan says `blocked: capability_not_supplied`, and its committed receipt
+  reuses without the executable.
+
+**Validation evidence:**
+
+- `cargo test --workspace` green; `cargo fmt --all -- --check` and
+  `cargo clippy --workspace --all-targets -- -D warnings` clean.
+- CLI smoke-verified on the real CASE-004 package in four states
+  (reuse→ready, no-reuse→blocked/capability_not_supplied, wrong
+  executable→capability_mismatch, no roots→inputs_unverified with named
+  roots), and on CASE-003 for the rejected-early `unavailable` path.
+- The emitted document validates against the published schema.
+
+**Limits:** a bound plan is a projection of the run report for one set of
+operator supplies — it is not persisted as its own artifact and it does
+not schedule, rank, or estimate anything; those belong to the planning and
+selection roadmap track. A `ready` plan is not a run authorization, and an
+executed run still re-verifies every byte the plan hashed.
+
+**Next product increment:** question-first authoring and preflight
+editing, the remaining named workbench gate.
 
 A public catalog, package installation, browser client, cloud/HPC scheduling,
 organization governance, autonomous search orchestration, and comprehensive

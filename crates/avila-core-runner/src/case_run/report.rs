@@ -18,8 +18,8 @@ use serde_json::Value;
 
 use super::compare::write_attempt_comparison;
 use super::{
-    BindingStatus, CaseRunReport, CaseRunStatus, ExecutionStatus, PresentationGateReadiness,
-    StepExecutionState,
+    BindingStatus, BoundDecision, BoundPlanStatus, CaseRunReport, CaseRunStatus, ExecutionStatus,
+    PresentationGateReadiness, StepExecutionState, UnresolvedKind,
 };
 use crate::attempt::AttemptChange;
 use crate::diagnostic::RunStage;
@@ -460,12 +460,40 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                         }
                     }
                     StepExecutionState::Planned => {
-                        let _ = writeln!(
-                            out,
-                            "   [PLANNED] {} would execute (invocation {})",
-                            step.step_id,
-                            step.planned_invocation_sha256.as_deref().unwrap_or("?")
-                        );
+                        let bound = report.bound_plan.as_ref().and_then(|plan| {
+                            plan.steps
+                                .iter()
+                                .find(|bound| bound.step_id == step.step_id)
+                        });
+                        match bound.map(|bound| bound.decision) {
+                            Some(BoundDecision::Blocked) => {
+                                let _ = writeln!(
+                                    out,
+                                    "   [BLOCKED] {} would execute but is blocked: {} (invocation {})",
+                                    step.step_id,
+                                    bound.map_or_else(String::new, |bound| bound
+                                        .blockers
+                                        .join(", ")),
+                                    step.planned_invocation_sha256.as_deref().unwrap_or("?")
+                                );
+                            }
+                            Some(BoundDecision::Execute) => {
+                                let _ = writeln!(
+                                    out,
+                                    "   [PLANNED] {} would execute (invocation {}); supplies bound and verified",
+                                    step.step_id,
+                                    step.planned_invocation_sha256.as_deref().unwrap_or("?")
+                                );
+                            }
+                            _ => {
+                                let _ = writeln!(
+                                    out,
+                                    "   [PLANNED] {} would execute (invocation {})",
+                                    step.step_id,
+                                    step.planned_invocation_sha256.as_deref().unwrap_or("?")
+                                );
+                            }
+                        }
                     }
                     StepExecutionState::NotRun => {
                         if report.invalidated_steps.contains(&step.step_id) {
@@ -879,6 +907,53 @@ pub fn human_summary(report: &CaseRunReport) -> String {
             "no requirement result was produced."
         },
     );
+    if let Some(plan) = &report.bound_plan {
+        match plan.status {
+            BoundPlanStatus::Ready => {
+                let _ = writeln!(
+                    out,
+                    "Bound plan: ready — every declared step could run or be reused as bound."
+                );
+            }
+            BoundPlanStatus::Blocked | BoundPlanStatus::Refused => {
+                let _ = writeln!(
+                    out,
+                    "Bound plan: {} — {}",
+                    match plan.status {
+                        BoundPlanStatus::Blocked => "blocked",
+                        _ => "refused",
+                    },
+                    if plan.unresolved.is_empty() {
+                        "the findings above name the refusal".to_string()
+                    } else {
+                        format!(
+                            "unresolved: {}",
+                            plan.unresolved
+                                .iter()
+                                .map(|item| format!(
+                                    "{} {} ({})",
+                                    match item.kind {
+                                        UnresolvedKind::SourceRoot => "root",
+                                        UnresolvedKind::Capability => "capability",
+                                    },
+                                    item.name,
+                                    item.state
+                                ))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        )
+                    }
+                );
+            }
+            BoundPlanStatus::Unavailable => {
+                let _ = writeln!(
+                    out,
+                    "Bound plan: unavailable — {}",
+                    plan.note.as_deref().unwrap_or("no execution plan exists")
+                );
+            }
+        }
+    }
     out
 }
 

@@ -10,6 +10,7 @@
 //! recorded on the step report; a later step never runs over the output of a
 //! failed or invalidated earlier one.
 
+use super::plan::BOUND_PLAN_SCHEMA_VERSION;
 use super::replay::changes_since;
 use super::stderr::{DiagnosticStderrFeedback, read_diagnostic_stderr};
 use super::*;
@@ -265,6 +266,281 @@ impl<'a> Runner<'a> {
             steps,
             not_executed,
         })
+    }
+
+    /// The strict reading of a plan-mode execution report: every workflow
+    /// step's bound decision plus the supplies the plan still needs. A step
+    /// reported `planned` would attempt execution; the bound plan checks
+    /// whether it could — hashing the supplied capability path (never
+    /// executing it) and checking the required environment keys by name.
+    pub(super) fn bound_plan(&self, execution: &ExecutionReport) -> BoundPlan {
+        let declared: BTreeMap<&str, &PackageExecution> = self
+            .package
+            .manifest
+            .executions
+            .iter()
+            .map(|execution| (execution.step_id.as_str(), execution))
+            .collect();
+        let reported: BTreeMap<&str, &StepExecutionReport> = execution
+            .steps
+            .iter()
+            .map(|step| (step.step_id.as_str(), step))
+            .collect();
+        let skipped: BTreeMap<&str, &NotExecutedStep> = execution
+            .not_executed
+            .iter()
+            .map(|step| (step.step_id.as_str(), step))
+            .collect();
+        let mut steps = Vec::new();
+        for workflow_step in &self.compiled.workflow {
+            if let Some(step) = reported.get(workflow_step.step_id.as_str()) {
+                steps.push(self.bound_step(step, declared.get(step.step_id.as_str()).copied()));
+            } else if let Some(skip) = skipped.get(workflow_step.step_id.as_str()) {
+                steps.push(BoundStep {
+                    step_id: skip.step_id.clone(),
+                    adapter: None,
+                    capability_id: None,
+                    decision: BoundDecision::NotExecuted,
+                    planned_invocation_sha256: None,
+                    changes: Vec::new(),
+                    reused_receipt: None,
+                    blockers: Vec::new(),
+                    missing_environment: Vec::new(),
+                    capability_state: None,
+                    note: Some(skip.reason.clone()),
+                });
+            }
+        }
+        // Declared executions with no compiled workflow step are refused
+        // reports not reachable through the workflow order.
+        for step in &execution.steps {
+            if !self
+                .compiled
+                .workflow
+                .iter()
+                .any(|workflow_step| workflow_step.step_id == step.step_id)
+            {
+                steps.push(self.bound_step(step, declared.get(step.step_id.as_str()).copied()));
+            }
+        }
+        let unresolved = self.unresolved_requirements(&steps);
+        let status = if steps
+            .iter()
+            .any(|step| step.decision == BoundDecision::Refused)
+        {
+            BoundPlanStatus::Refused
+        } else if steps
+            .iter()
+            .any(|step| step.decision == BoundDecision::Blocked)
+        {
+            BoundPlanStatus::Blocked
+        } else {
+            BoundPlanStatus::Ready
+        };
+        BoundPlan {
+            schema_version: BOUND_PLAN_SCHEMA_VERSION.to_string(),
+            case_id: self.package.manifest.case_id.clone(),
+            manifest_sha256: self.package.integrity.manifest_sha256.clone(),
+            compiled_snapshot_sha256: Some(self.compiled.snapshot_sha256.clone()),
+            status,
+            steps,
+            unresolved,
+            note: None,
+        }
+    }
+
+    /// The bound decision for one declared-execution step report: reuse and
+    /// refusal carry over; a step that would execute is blocked unless its
+    /// capability bytes verify and its required environment is valued.
+    fn bound_step(
+        &self,
+        step: &StepExecutionReport,
+        execution: Option<&PackageExecution>,
+    ) -> BoundStep {
+        let mut bound = BoundStep {
+            step_id: step.step_id.clone(),
+            adapter: Some(step.adapter.clone()),
+            capability_id: Some(step.capability_id.clone()),
+            decision: BoundDecision::Blocked,
+            planned_invocation_sha256: step.planned_invocation_sha256.clone(),
+            changes: step.changes.clone(),
+            reused_receipt: step.reused_receipt.clone(),
+            blockers: Vec::new(),
+            missing_environment: Vec::new(),
+            capability_state: step.capability.as_ref().map(|check| check.state),
+            note: None,
+        };
+        match step.state {
+            StepExecutionState::Reused => bound.decision = BoundDecision::ReuseCommitted,
+            StepExecutionState::Refused => {
+                bound.decision = BoundDecision::Refused;
+                bound.blockers = step
+                    .findings
+                    .iter()
+                    .map(|finding| finding.code.to_string())
+                    .collect();
+            }
+            StepExecutionState::NotRun => {
+                self.bind_supplies(&mut bound, step, execution);
+            }
+            StepExecutionState::Planned => {
+                self.bind_supplies(&mut bound, step, execution);
+                if bound.blockers.is_empty() {
+                    bound.decision = BoundDecision::Execute;
+                }
+            }
+            // Unreachable in plan mode; kept honest if the report is bound
+            // under other circumstances.
+            StepExecutionState::Executed => bound.decision = BoundDecision::Execute,
+            StepExecutionState::Failed => {
+                bound.blockers.push("execution_failed".to_string());
+            }
+        }
+        bound
+    }
+
+    /// Bind an execution-shaped step's operator supplies into the bound
+    /// decision: unverified bound inputs, the declared capability's bytes at
+    /// the supplied path (hashed, never executed), and the environment keys
+    /// its adapter and package declaration require.
+    fn bind_supplies(
+        &self,
+        bound: &mut BoundStep,
+        step: &StepExecutionReport,
+        execution: Option<&PackageExecution>,
+    ) {
+        if step.inputs.iter().any(|input| {
+            !matches!(
+                input.integrity,
+                IntegrityCheckState::Verified | IntegrityCheckState::VerifiedCached
+            )
+        }) {
+            bound.blockers.push("inputs_unverified".to_string());
+        }
+        let capability_state = step
+            .capability
+            .as_ref()
+            .map(|check| check.state)
+            .or_else(|| self.probe_supplied_capability(&step.capability_id));
+        bound.capability_state = capability_state;
+        match capability_state {
+            Some(CapabilityCheckState::Verified) => {}
+            Some(CapabilityCheckState::Mismatch) => {
+                bound.blockers.push("capability_mismatch".to_string())
+            }
+            Some(CapabilityCheckState::Missing) => {
+                bound.blockers.push("capability_missing".to_string())
+            }
+            Some(CapabilityCheckState::NotSupplied) | None => {
+                bound.blockers.push("capability_not_supplied".to_string())
+            }
+        }
+        if let Some(execution) = execution {
+            let adapter_keys: Vec<&'static str> = self
+                .resolve_adapter(&execution.adapter)
+                .map(|adapter| adapter.required_environment().to_vec())
+                .unwrap_or_default();
+            let required: BTreeSet<&str> = adapter_keys
+                .iter()
+                .copied()
+                .chain(execution.environment.iter().map(String::as_str))
+                .collect();
+            for key in required {
+                if !self.options.environment.contains_key(key) {
+                    bound.missing_environment.push(key.to_string());
+                }
+            }
+            if !bound.missing_environment.is_empty() {
+                bound.blockers.push("environment_not_supplied".to_string());
+            }
+        }
+    }
+
+    /// Hash the path supplied for `capability_id` against the declared
+    /// executable digest. `None` when nothing was supplied; `Missing` when
+    /// the supplied path cannot be read as a regular file.
+    fn probe_supplied_capability(&self, capability_id: &str) -> Option<CapabilityCheckState> {
+        let path = self.options.capabilities.get(capability_id)?;
+        let declared = self
+            .package
+            .manifest
+            .capabilities
+            .iter()
+            .find(|capability| capability.capability_id == capability_id)?;
+        Some(match sha256_file(path) {
+            Ok((digest, _)) if digest == declared.executable_sha256 => {
+                CapabilityCheckState::Verified
+            }
+            Ok(_) => CapabilityCheckState::Mismatch,
+            Err(_) => CapabilityCheckState::Missing,
+        })
+    }
+
+    /// The roots and capabilities the plan still needs: roots whose
+    /// artifacts did not all verify, and capabilities whose bytes a blocked
+    /// step requires. One entry per name, keeping the most severe state.
+    fn unresolved_requirements(&self, steps: &[BoundStep]) -> Vec<UnresolvedRequirement> {
+        let mut roots: BTreeMap<&str, IntegrityCheckState> = BTreeMap::new();
+        for check in &self.package.integrity.artifacts {
+            roots
+                .entry(check.source_root.as_str())
+                .and_modify(|state| {
+                    if integrity_rank(check.state) > integrity_rank(*state) {
+                        *state = check.state;
+                    }
+                })
+                .or_insert(check.state);
+        }
+        let mut unresolved = Vec::new();
+        for (name, state) in roots {
+            let state = match state {
+                IntegrityCheckState::Mismatch => "mismatch",
+                IntegrityCheckState::Missing => "missing",
+                IntegrityCheckState::Verified | IntegrityCheckState::VerifiedCached => continue,
+                IntegrityCheckState::NotChecked => "not_checked",
+            };
+            unresolved.push(UnresolvedRequirement {
+                kind: UnresolvedKind::SourceRoot,
+                name: name.to_string(),
+                state: state.to_string(),
+            });
+        }
+        let mut capabilities: BTreeMap<&str, CapabilityCheckState> = BTreeMap::new();
+        for step in steps {
+            if step.decision != BoundDecision::Blocked {
+                continue;
+            }
+            let state = step
+                .capability_state
+                .unwrap_or(CapabilityCheckState::NotSupplied);
+            if state == CapabilityCheckState::Verified {
+                continue;
+            }
+            let Some(name) = step.capability_id.as_deref() else {
+                continue;
+            };
+            capabilities
+                .entry(name)
+                .and_modify(|kept| {
+                    if capability_rank(state) > capability_rank(*kept) {
+                        *kept = state;
+                    }
+                })
+                .or_insert(state);
+        }
+        for (name, state) in capabilities {
+            let state = match state {
+                CapabilityCheckState::Mismatch => "mismatch",
+                CapabilityCheckState::Missing => "missing",
+                _ => "not_supplied",
+            };
+            unresolved.push(UnresolvedRequirement {
+                kind: UnresolvedKind::Capability,
+                name: name.to_string(),
+                state: state.to_string(),
+            });
+        }
+        unresolved
     }
 
     fn run_step(
@@ -1504,5 +1780,25 @@ impl<'a> Runner<'a> {
             matches: differences.is_empty(),
             differences,
         }))
+    }
+}
+
+/// Severity order for collapsing a root's per-artifact states into one:
+/// a wrong file outranks an absent one, which outranks an unchecked one.
+fn integrity_rank(state: IntegrityCheckState) -> u8 {
+    match state {
+        IntegrityCheckState::Mismatch => 3,
+        IntegrityCheckState::Missing => 2,
+        IntegrityCheckState::NotChecked => 1,
+        IntegrityCheckState::Verified | IntegrityCheckState::VerifiedCached => 0,
+    }
+}
+
+fn capability_rank(state: CapabilityCheckState) -> u8 {
+    match state {
+        CapabilityCheckState::Mismatch => 3,
+        CapabilityCheckState::Missing => 2,
+        CapabilityCheckState::NotSupplied => 1,
+        CapabilityCheckState::Verified => 0,
     }
 }

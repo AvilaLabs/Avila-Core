@@ -43,6 +43,13 @@ avila-core amend AMENDMENT_ID --log campaign.jsonl --supersedes ROOT_REVISION_ID
 avila-core run CASE --plan --capability NAME=EXECUTABLE --input NAME=FILE
 avila-core run CASE --capability NAME=EXECUTABLE --input NAME=FILE --log campaign.jsonl
 # Add --no-reuse for an intentionally fresh execution.
+# --plan also emits a bound plan: per step, the decision the run could
+# actually take against the supplies given — reuse_committed, execute,
+# blocked, refused, or not_executed — with named blockers and an
+# `unresolved` list of the roots and capabilities still needed. A step
+# decided `execute` has verified capability bytes and every required
+# environment key; the report's `planned` only means the step would
+# attempt execution.
 
 # Hash-only setup probing — reports which local files match each bound
 # capability digest without executing anything; a check or run verifies the

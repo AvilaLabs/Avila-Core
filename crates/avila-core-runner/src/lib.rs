@@ -25,14 +25,15 @@ pub use attempt::{
     AttemptVerdictUnavailable, AttemptVerdictUnavailableReason,
 };
 pub use case_run::{
-    BindingReport, BindingStatus, CapabilityCandidate, CapabilityCheck, CapabilityCheckState,
-    CaseRunOptions, CaseRunReport, CaseRunStatus, ChangeClass, ChangeRecord, ClaimsReport,
-    ExecutionReport, ExecutionStatus, NotExecutedStep, OutputReport, PresentationGateReadiness,
-    PresentationGateReport, PresentedEvidence, ReceiptReplayReport, ReceiptSummary, ReplayReport,
-    SCAN_LIMIT, SignatureStatus, StagedInputReport, StepExecutionReport, StepExecutionState,
-    SuppliedInput, VerdictMargin, candidates_named, candidates_on_path, display_number,
-    execute_case, human_summary, parse_capabilities, parse_environment, parse_inputs,
-    parse_named_paths, parse_source_roots, probe_capability, scan_dir,
+    BindingReport, BindingStatus, BoundDecision, BoundPlan, BoundPlanStatus, BoundStep,
+    CapabilityCandidate, CapabilityCheck, CapabilityCheckState, CaseRunOptions, CaseRunReport,
+    CaseRunStatus, ChangeClass, ChangeRecord, ClaimsReport, ExecutionReport, ExecutionStatus,
+    NotExecutedStep, OutputReport, PresentationGateReadiness, PresentationGateReport,
+    PresentedEvidence, ReceiptReplayReport, ReceiptSummary, ReplayReport, SCAN_LIMIT,
+    SignatureStatus, StagedInputReport, StepExecutionReport, StepExecutionState, SuppliedInput,
+    UnresolvedKind, UnresolvedRequirement, VerdictMargin, candidates_named, candidates_on_path,
+    display_number, execute_case, human_summary, parse_capabilities, parse_environment,
+    parse_inputs, parse_named_paths, parse_source_roots, probe_capability, scan_dir,
 };
 pub use diagnostic::{
     CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1004, CORE_X1005, CORE_X1101, CORE_X1201, CORE_X2001,

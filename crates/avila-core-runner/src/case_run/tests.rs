@@ -759,3 +759,90 @@ fn committed_qualification_contexts_re_derive_the_recorded_assessment() {
     }
     assert_eq!(checked, 4, "CASE-001 carries four qualified claims");
 }
+
+fn case_004() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/cases/case-004-magnetic-compliance")
+}
+
+fn case_004_roots() -> BTreeMap<String, PathBuf> {
+    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+    BTreeMap::from([
+        ("case".to_string(), case_004()),
+        (
+            "magnetic-compliance".to_string(),
+            manifest.join("../../examples/capabilities/magnetic-compliance"),
+        ),
+    ])
+}
+
+/// The bound plan's reason for existing, over the real committed fixture:
+/// `run --plan` reports `planned` — the step *would* execute — without
+/// checking the executable an operator supplied, while the bound plan
+/// decides `blocked` and names the unmet supply. With reuse allowed the
+/// committed receipt is reused instead: reuse needs no executable.
+#[test]
+fn case_004_bound_plan_blocks_where_the_plan_would_execute() {
+    let roots = case_004_roots();
+
+    let reuse = execute_case(
+        &case_004(),
+        &CaseRunOptions {
+            plan_only: true,
+            source_roots: roots.clone(),
+            ..CaseRunOptions::default()
+        },
+    )
+    .unwrap();
+    let plan = reuse.bound_plan.as_ref().unwrap();
+    assert_eq!(plan.status, BoundPlanStatus::Ready);
+    assert_eq!(plan.schema_version, "avila.core/bound-plan/v0.1-draft");
+    let step = &plan.steps[0];
+    assert_eq!(step.step_id, "feasibility");
+    assert_eq!(step.decision, BoundDecision::ReuseCommitted);
+    assert_eq!(
+        step.reused_receipt.as_deref(),
+        Some("case-004-feasibility-receipt")
+    );
+    assert!(plan.unresolved.is_empty());
+
+    let no_reuse = execute_case(
+        &case_004(),
+        &CaseRunOptions {
+            plan_only: true,
+            reuse: false,
+            source_roots: roots,
+            ..CaseRunOptions::default()
+        },
+    )
+    .unwrap();
+    let report_step = &no_reuse.execution.as_ref().unwrap().steps[0];
+    assert_eq!(report_step.state, StepExecutionState::Planned);
+    assert!(report_step.capability.is_none());
+    let plan = no_reuse.bound_plan.as_ref().unwrap();
+    assert_eq!(plan.status, BoundPlanStatus::Blocked);
+    let step = &plan.steps[0];
+    assert_eq!(step.decision, BoundDecision::Blocked);
+    assert_eq!(step.blockers, ["capability_not_supplied"]);
+    assert_eq!(
+        step.planned_invocation_sha256,
+        report_step.planned_invocation_sha256
+    );
+    assert_eq!(
+        plan.unresolved
+            .iter()
+            .map(|item| (item.kind, item.name.as_str(), item.state.as_str()))
+            .collect::<Vec<_>>(),
+        [(UnresolvedKind::Capability, "python3-numpy", "not_supplied")]
+    );
+
+    // A non-plan run carries no bound plan.
+    let run = execute_case(
+        &case_004(),
+        &CaseRunOptions {
+            source_roots: case_004_roots(),
+            ..CaseRunOptions::default()
+        },
+    )
+    .unwrap();
+    assert!(run.bound_plan.is_none());
+}

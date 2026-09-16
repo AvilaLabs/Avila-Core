@@ -24,8 +24,9 @@ use serde_json::{Value, json};
 
 use crate::AttemptLineageRequest;
 use crate::case_run::{
-    BindingStatus, CapabilityCheckState, CaseRunOptions, CaseRunReport, CaseRunStatus, ChangeClass,
-    ExecutionStatus, StepExecutionState, execute_case, human_summary,
+    BindingStatus, BoundDecision, BoundPlanStatus, CapabilityCheckState, CaseRunOptions,
+    CaseRunReport, CaseRunStatus, ChangeClass, ExecutionStatus, StepExecutionState, UnresolvedKind,
+    execute_case, human_summary,
 };
 use crate::diagnostic::{
     CORE_X1001, CORE_X1004, CORE_X1005, CORE_X1201, CORE_X1301, CORE_X2501, CORE_X2601, CORE_X9001,
@@ -3499,4 +3500,255 @@ fn require_signatures_evaluates_a_fully_signed_case() {
             .is_verified(),
         "{summary}"
     );
+}
+
+// Bound-plan state fixtures: the strict reading of `run --plan`. A step
+// the report calls `planned` is decided `execute` only when the supplied
+// capability bytes hash to the bound digest and every required environment
+// key is valued; anything short is `blocked` with named reasons.
+fn plan_options(synthetic: &Synthetic, workspace: PathBuf) -> CaseRunOptions {
+    let mut options = run_options(synthetic, workspace);
+    options.plan_only = true;
+    options
+}
+
+fn bound_step<'a>(
+    plan: &'a crate::case_run::BoundPlan,
+    step_id: &str,
+) -> &'a crate::case_run::BoundStep {
+    plan.steps
+        .iter()
+        .find(|step| step.step_id == step_id)
+        .unwrap()
+}
+
+#[test]
+fn a_bound_plan_reuses_the_committed_receipt_without_the_capability() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let mut options = plan_options(&synthetic, dir.workspace());
+    options.reuse = true;
+    // Reuse needs the verified receipt, not the executable: the capability
+    // is deliberately left unsupplied.
+    options.capabilities.clear();
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let plan = report.bound_plan.as_ref().unwrap();
+    assert_eq!(plan.status, BoundPlanStatus::Ready);
+    let step = bound_step(plan, "classification");
+    assert_eq!(step.decision, BoundDecision::ReuseCommitted);
+    assert_eq!(step.reused_receipt.as_deref(), Some("receipt"));
+    assert!(step.planned_invocation_sha256.is_some());
+    assert!(step.blockers.is_empty());
+    // `activation` declares no execution: an attestation step, named as such.
+    let activation = bound_step(plan, "activation");
+    assert_eq!(activation.decision, BoundDecision::NotExecuted);
+    assert!(activation.note.is_some());
+    assert!(plan.unresolved.is_empty());
+}
+
+#[test]
+fn a_bound_plan_executes_only_when_the_capability_bytes_verify() {
+    let dir = TestDir::new();
+    let stub = dir.0.join("stub.sh");
+    let canned = dir.0.join("canned-route-result.json");
+    fs::write(&canned, canned_route_result("0.5")).unwrap();
+    write_copy_stub(&stub, &canned);
+    let synthetic = build_package(&dir.0, &stub);
+    let options = plan_options(&synthetic, dir.workspace());
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let plan = report.bound_plan.as_ref().unwrap();
+    assert_eq!(plan.status, BoundPlanStatus::Ready);
+    let step = bound_step(plan, "classification");
+    assert_eq!(step.decision, BoundDecision::Execute);
+    assert_eq!(step.capability_state, Some(CapabilityCheckState::Verified));
+    assert!(
+        step.changes
+            .iter()
+            .any(|change| change.class == ChangeClass::NoCommittedReceipt)
+    );
+    assert!(step.blockers.is_empty());
+    // The same plan is deterministic: binding again yields the same document.
+    let again = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(
+        serde_json::to_value(plan).unwrap(),
+        serde_json::to_value(again.bound_plan.as_ref().unwrap()).unwrap()
+    );
+}
+
+#[test]
+fn a_bound_plan_blocks_on_unsupplied_missing_and_wrong_capabilities() {
+    let dir = TestDir::new();
+    let stub = dir.0.join("stub.sh");
+    let canned = dir.0.join("canned-route-result.json");
+    fs::write(&canned, canned_route_result("0.5")).unwrap();
+    write_copy_stub(&stub, &canned);
+    let synthetic = build_package(&dir.0, &stub);
+
+    // Nothing supplied: the step the plan calls `planned` is blocked.
+    let mut options = plan_options(&synthetic, dir.workspace());
+    options.capabilities.clear();
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let plan = report.bound_plan.as_ref().unwrap();
+    assert_eq!(plan.status, BoundPlanStatus::Blocked);
+    let step = bound_step(plan, "classification");
+    assert_eq!(step.decision, BoundDecision::Blocked);
+    assert_eq!(step.blockers, ["capability_not_supplied"]);
+    assert_eq!(
+        plan.unresolved
+            .iter()
+            .map(|item| (item.kind, item.name.as_str(), item.state.as_str()))
+            .collect::<Vec<_>>(),
+        [(UnresolvedKind::Capability, "stub", "not_supplied")]
+    );
+
+    // A supplied path that is not a readable file is `capability_missing`.
+    let mut options = plan_options(&synthetic, dir.workspace());
+    options
+        .capabilities
+        .insert("stub".into(), dir.0.join("no-such-file"));
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let plan = report.bound_plan.as_ref().unwrap();
+    let step = bound_step(plan, "classification");
+    assert_eq!(step.decision, BoundDecision::Blocked);
+    assert_eq!(step.blockers, ["capability_missing"]);
+    assert_eq!(step.capability_state, Some(CapabilityCheckState::Missing));
+
+    // A supplied file whose bytes differ is `capability_mismatch`.
+    let wrong = dir.0.join("wrong.sh");
+    fs::write(&wrong, b"#!/bin/sh\nexit 1\n").unwrap();
+    let mut options = plan_options(&synthetic, dir.workspace());
+    options.capabilities.insert("stub".into(), wrong);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let plan = report.bound_plan.as_ref().unwrap();
+    let step = bound_step(plan, "classification");
+    assert_eq!(step.decision, BoundDecision::Blocked);
+    assert_eq!(step.blockers, ["capability_mismatch"]);
+    assert_eq!(step.capability_state, Some(CapabilityCheckState::Mismatch));
+    assert_eq!(plan.unresolved[0].state, "mismatch");
+}
+
+#[test]
+fn a_bound_plan_names_unverified_inputs_and_missing_environment() {
+    let dir = TestDir::new();
+    let stub = dir.0.join("stub.sh");
+    let canned = dir.0.join("canned-route-result.json");
+    fs::write(&canned, canned_route_result("0.5")).unwrap();
+    write_copy_stub(&stub, &canned);
+    let synthetic = build_package(&dir.0, &stub);
+    // Declare a required environment key on the classification execution.
+    let package_path = synthetic.case_dir.join("package.json");
+    let mut package: Value = serde_json::from_slice(&fs::read(&package_path).unwrap()).unwrap();
+    package["executions"][0]["environment"] = json!(["STUB_REQUIRED"]);
+    fs::write(&package_path, serde_json::to_vec_pretty(&package).unwrap()).unwrap();
+
+    // Roots and capability unsupplied, the declared environment key
+    // unvalued: every missing supply is named, and the roots are listed.
+    let mut options = plan_options(&synthetic, dir.workspace());
+    options.source_roots.clear();
+    options.capabilities.clear();
+    options.environment.clear();
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let plan = report.bound_plan.as_ref().unwrap();
+    assert_eq!(plan.status, BoundPlanStatus::Blocked);
+    let step = bound_step(plan, "classification");
+    assert_eq!(step.decision, BoundDecision::Blocked);
+    assert_eq!(
+        step.blockers,
+        [
+            "inputs_unverified",
+            "capability_not_supplied",
+            "environment_not_supplied"
+        ]
+    );
+    assert_eq!(step.missing_environment, ["STUB_REQUIRED"]);
+    assert!(
+        plan.unresolved
+            .iter()
+            .any(|item| item.kind == UnresolvedKind::SourceRoot
+                && item.name == "stub"
+                && item.state == "not_checked")
+    );
+
+    // Everything supplied except the environment key: that alone blocks.
+    let mut options = plan_options(&synthetic, dir.workspace());
+    options.environment.clear();
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let plan = report.bound_plan.as_ref().unwrap();
+    let step = bound_step(plan, "classification");
+    assert_eq!(step.decision, BoundDecision::Blocked);
+    assert_eq!(step.blockers, ["environment_not_supplied"]);
+    assert_eq!(step.missing_environment, ["STUB_REQUIRED"]);
+
+    // Supply the key: the step is bound to execute.
+    let mut options = plan_options(&synthetic, dir.workspace());
+    options
+        .environment
+        .insert("STUB_REQUIRED".to_string(), "value".to_string());
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let plan = report.bound_plan.as_ref().unwrap();
+    let step = bound_step(plan, "classification");
+    assert_eq!(step.decision, BoundDecision::Execute);
+    assert!(step.blockers.is_empty());
+    assert!(step.missing_environment.is_empty());
+}
+
+#[test]
+fn a_bound_plan_refuses_an_execution_outside_the_compiled_workflow() {
+    let dir = TestDir::new();
+    let stub = dir.0.join("stub.sh");
+    let canned = dir.0.join("canned-route-result.json");
+    fs::write(&canned, canned_route_result("0.5")).unwrap();
+    write_copy_stub(&stub, &canned);
+    let synthetic = build_package(&dir.0, &stub);
+    let package_path = synthetic.case_dir.join("package.json");
+    let mut package: Value = serde_json::from_slice(&fs::read(&package_path).unwrap()).unwrap();
+    package["artifacts"].as_array_mut().unwrap().push(json!({
+        "artifact_id": "bogus-out",
+        "evidence_ids": ["bogus-claim"],
+        "source_root": "stub",
+        "path": "route-result.json",
+        "sha256": digest(&synthetic.root.join("route-result.json"))
+    }));
+    package["executions"].as_array_mut().unwrap().push(json!({
+        "step_id": "no-such-step",
+        "adapter": "avila-labs.aftermatter/evaluate@1",
+        "capability_id": "stub",
+        "inputs": [],
+        "outputs": [{ "output_slot": "x", "claim_id": "bogus-claim" }]
+    }));
+    fs::write(&package_path, serde_json::to_vec_pretty(&package).unwrap()).unwrap();
+    let report = execute_case(
+        &synthetic.case_dir,
+        &plan_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let plan = report.bound_plan.as_ref().unwrap();
+    assert_eq!(plan.status, BoundPlanStatus::Refused);
+    let refused = bound_step(plan, "no-such-step");
+    assert_eq!(refused.decision, BoundDecision::Refused);
+    assert_eq!(refused.blockers, ["CORE-X2001"]);
+    // The declared step is unaffected by the bogus one.
+    assert_eq!(
+        bound_step(plan, "classification").decision,
+        BoundDecision::Execute
+    );
+}
+
+#[test]
+fn a_bound_plan_is_unavailable_when_the_run_is_rejected_before_planning() {
+    let dir = TestDir::new();
+    let stub = dir.0.join("stub.sh");
+    let canned = dir.0.join("canned-route-result.json");
+    fs::write(&canned, canned_route_result("0.5")).unwrap();
+    write_copy_stub(&stub, &canned);
+    let synthetic = build_package(&dir.0, &stub);
+    let mut options = plan_options(&synthetic, dir.workspace());
+    options.expected_manifest_sha256 =
+        Some("sha256:0000000000000000000000000000000000000000000000000000000000000000".into());
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(report.status, CaseRunStatus::Rejected);
+    let plan = report.bound_plan.as_ref().unwrap();
+    assert_eq!(plan.status, BoundPlanStatus::Unavailable);
+    assert!(plan.steps.is_empty());
+    assert!(plan.note.is_some());
 }

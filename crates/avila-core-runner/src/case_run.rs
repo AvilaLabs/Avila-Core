@@ -78,6 +78,10 @@ pub use probe::{
     CapabilityCandidate, SCAN_LIMIT, candidates_named, candidates_on_path, probe_capability,
     scan_dir,
 };
+mod plan;
+pub use plan::{
+    BoundDecision, BoundPlan, BoundPlanStatus, BoundStep, UnresolvedKind, UnresolvedRequirement,
+};
 mod runner;
 use runner::Runner;
 mod report;
@@ -534,6 +538,11 @@ pub struct CaseRunReport {
     pub rendered_findings: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub execution: Option<ExecutionReport>,
+    /// A `--plan` run's strict bound reading of the execution section: what
+    /// each step could actually do against the operator supplies given,
+    /// with named blockers. Present only when `plan_only` was requested.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bound_plan: Option<BoundPlan>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub claims: Option<ClaimsReport>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -667,6 +676,9 @@ pub fn execute_case(
     match execute_case_inner(case_or_manifest, options, trust_root.as_ref(), runner_key) {
         Ok(mut report) => {
             collect_run_findings(&mut report);
+            if options.plan_only && report.bound_plan.is_none() {
+                report.bound_plan = Some(BoundPlan::unavailable(&report));
+            }
             report.attempt_comparison = compare_attempt_to_parent(options, &report)?;
             let workspace = report
                 .execution
@@ -787,6 +799,7 @@ fn execute_case_inner(
         coverage: None,
         rendered_findings: None,
         execution: None,
+        bound_plan: None,
         claims: None,
         bindings: None,
         campaign: None,
@@ -996,6 +1009,9 @@ fn execute_case_inner(
             runner_key,
         );
         let execution = runner.run_all()?;
+        if options.plan_only {
+            report.bound_plan = Some(runner.bound_plan(&execution));
+        }
         executed_claims = runner.claims;
         workspace = runner.workspace;
 

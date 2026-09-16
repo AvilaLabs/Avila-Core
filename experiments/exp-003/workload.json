@@ -1,0 +1,37 @@
+{
+  "workload": "EXP-003 local CASE-003 path",
+  "frozen_at": "2026-09-15",
+  "description": "The non-agent portion of EXP-003's launch-to-final-report path on the frozen CASE-003 package: integrity verification and reuse checking (run --plan), an evaluated run with committed-receipt reuse (run), and fresh execution (run --no-reuse). The agent and unattended-orchestration portions of EXP-003 are not part of this workload and are not claimed.",
+  "case_dir": "examples/cases/case-003-thermal-spreader",
+  "package_sha256": "sha256:5c97e1c12856a667c320bae9a6de5187fd498ca25e97d8028b974f37d80478cd",
+  "contract_sha256": "sha256:18fe3a4a9d454a8f554e6ae403230d58b2ea94ca89ac7185595ca0b4db959b89",
+  "requirement_set_sha256": "sha256:260f6ccbfe3d505af4b4fcc848662d0cc7e8a31d156b2381d1b8639c5a40c66f",
+  "candidate_sha256": "sha256:4f90e6c3690930b4ed5ffe45fb9d4ee64bddbf7b2ac246d9d19cc4b98b92232e",
+  "candidate": "candidates/reference.json (the committed reference specimen, supplied as the free input `candidate`)",
+  "source_roots": {
+    "case": "examples/cases/case-003-thermal-spreader",
+    "thermal": "examples/capabilities/thermal"
+  },
+  "capabilities": {
+    "python3": {
+      "package_id": "org.python/cpython@3.14.4",
+      "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+    },
+    "thermal-python": {
+      "package_id": "org.python/cpython@3.14.4+scikit-fem-12.0.2",
+      "executable_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+      "module_probe": "import skfem"
+    }
+  },
+  "trust_root": "examples/keys/trust-root.json",
+  "runner_key": "examples/keys/runner.seed",
+  "cache_policy": "committed-receipt reuse on by default; no hash cache; the scratch campaign log lives in the results directory, never in the case",
+  "repetitions": 3,
+  "build": "cargo build --release -p avila-core-cli (workspace default release profile)",
+  "phases": {
+    "verify": "avila-core run --plan: package integrity, compile, coverage, and current reuse check without launching solver steps",
+    "reuse": "avila-core run: the same path plus claim generation, binding, and evaluation against committed receipts",
+    "fresh": "avila-core run --no-reuse: full step execution; requires the pinned capability executables to resolve",
+    "manual_setup": "human work outside the timed path: locating source roots, keys, and candidate file (performed once, documented, not repeated)"
+  }
+}

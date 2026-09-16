@@ -98,6 +98,19 @@ unavailable. Do not infer a stage transition from test counts.
 ### CQ-02 — Give recorded attempts a dedicated history view
 
 **Dependency:** CQ-01. **Initial status:** ready after dependency.
+**Status:** done 2026-09-15, commit `f064ee4`.
+
+`crates/avila-core-app/src/history_view.rs` adds a History workspace over
+`core_constellation` + `core_attempt`: explicit log open/browse/drop, roots
+and children tree, untracked legacy rows, attempt detail (identities,
+candidate state, typed changes, recorded verdicts, lineage/signature
+status), source path + sha256 strip, and the recorded-only boundary
+statement. `core_constellation` items gained `findings` and
+`attempt_request` at the shared-query boundary. Validation:
+`cargo test -p avila-core-app` — 30 tests including malformed/tampered-log
+regression and narrow-window selection; screenshots
+`target/history-view.png`, `history-detail.png`, `history-legacy.png`
+exercised the real case-009 log and an untracked log.
 
 Build a thin egui history view over the existing shared query operations. Open
 one explicit log, show roots and children, select an attempt, and display its
@@ -117,6 +130,18 @@ Add focused interaction and malformed-record regression coverage.
 ### CQ-03 — Make parent comparisons legible
 
 **Dependency:** CQ-02. **Initial status:** ready after dependency.
+**Status:** done 2026-09-15, commit `10538b0`.
+
+The attempt detail now renders the recorded comparison as a changed-result
+view: bound-parent identity and parent record hash (labeled "bound parent —
+not an approved baseline"), all verdict transitions among the four states,
+exact parent/child margins with Core's delta and unit (sign-coloured, never
+recomputed), and every declined comparison with its stated reason.
+Validation: `comparison_renders_all_states_deltas_and_reasons` covers all
+four verdict states, mixed-sign deltas, and every unavailability reason;
+`unavailable_reason_names_every_core_value` pins the reason table. The real
+case-009 specimen (`copper-ratio4-r1` vs `copper-ratio2-r0`) shows the
+PASS→FAIL transition and 15 exact margin comparisons.
 
 Present the selected attempt's existing authoritative parent comparison as a
 clear changed-input and changed-result view. Preserve four-state verdicts,
@@ -133,6 +158,23 @@ query gap at its owner boundary rather than parsing log text inside the UI.
 ### CQ-04 — Connect a new candidate to the existing lineage runner
 
 **Dependency:** CQ-03. **Initial status:** ready after dependency.
+**Status:** done 2026-09-15, commit `5280293`.
+
+Machine setup gained a Design attempt section (attempt ID, parent attempt,
+candidate input over the declared free inputs) that assembles the same
+`AttemptLineageRequest` as the CLI `--attempt` flags and previews the exact
+intent — parent, tracked input and its supplied file, and the missing-log
+requirement — before any plan or run. History's "Plan a child of this
+attempt" prefills parent + candidate input only when the open case declares
+that input and the viewed log is the workbench's log (or none is set). The
+report overview shows the recorded attempt row and comparison counts.
+Validation: `attempt_fields_assemble_one_explicit_lineage_request`,
+`the_setup_panel_shows_the_intended_lineage_before_execution`,
+`parent_prefill_is_offered_only_when_the_relationship_can_hold`, and the
+end-to-end `planned_and_executed_attempts_form_a_queryable_lineage`
+(real case-003: missing-log refusal, root run, plan with all-verdicts
+child_missing, executed child, duplicate-ID and missing-parent refusals,
+lineage read back through `core_constellation`/`core_attempt`).
 
 Extend the real case workbench's existing candidate input and Plan/Run setup to
 supply `AttemptLineageRequest`: explicit attempt ID, optional parent ID, and
@@ -155,6 +197,21 @@ existing fixtures and capabilities rather than building another scientific demo.
 ### CQ-05 — Measure the local workflow and specify the next model increment
 
 **Dependency:** CQ-04. **Initial status:** ready after dependency.
+**Status:** done 2026-09-16.
+
+`experiments/exp-003/` holds the harness: `workload.json` (frozen CASE-003
+identities), `measure.sh` (release build, manifest capture, timed phases),
+`README.md` (phases, availability, limits), and
+`results/run-20260916T033739Z/result.json` (recorded evidence). On the
+measured machine, verify and reuse phases ran 22–67 ms wall over 3
+repetitions each; fresh execution is recorded UNAVAILABLE because the pinned
+capability executable (`sha256:b8d828…`) does not resolve and `skfem` is
+absent — no substitution. Agent orchestration is explicitly out of scope.
+The ADR proposal is `docs/adr/0019-design-revisions-assessments-and-named-references.md`
+(status: proposed): revision/assessment/named-reference records in the
+existing log, explicit contract amendments, derived migration from attempt
+logs, shared-operation ownership, and five unresolved choices stated
+plainly.
 
 Two bounded deliverables:
 

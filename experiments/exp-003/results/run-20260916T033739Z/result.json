@@ -1,0 +1,57 @@
+{
+  "recorded_at": "2026-09-16T03:37:39Z",
+  "machine": {
+    "kernel": "Linux 7.0.0-31-generic x86_64",
+    "cpu": "Intel(R) Core(TM) i3-N305",
+    "host": "connoravila"
+  },
+  "build": {
+    "commit": "528029348b7f5e3186b8b2a374ba8e748711d1c1",
+    "cli_sha256": "sha256:149682655436458259eba9b5a1d6de9d4dd6e9f7773ea96aa3cc33490d1d2746",
+    "rustc": "rustc 1.95.0 (59807616e 2026-04-14)"
+  },
+  "workload_identities": {
+    "package_sha256": "sha256:5c97e1c12856a667c320bae9a6de5187fd498ca25e97d8028b974f37d80478cd",
+    "contract_sha256": "sha256:18fe3a4a9d454a8f554e6ae403230d58b2ea94ca89ac7185595ca0b4db959b89",
+    "requirement_set_sha256": "sha256:260f6ccbfe3d505af4b4fcc848662d0cc7e8a31d156b2381d1b8639c5a40c66f",
+    "candidate_sha256": "sha256:4f90e6c3690930b4ed5ffe45fb9d4ee64bddbf7b2ac246d9d19cc4b98b92232e"
+  },
+  "cache_policy": "committed-receipt reuse unless stated; no hash cache; scratch log experiments/exp-003/results/run-20260916T033739Z/campaign.jsonl",
+  "repetitions": 3,
+  "executables": [
+    {
+      "capability_id": "python3",
+      "resolved_path": "/usr/bin/python3",
+      "resolved_sha256": "sha256:52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41",
+      "resolved_version": "Python 3.14.4",
+      "module_probe": "absent",
+      "pinned_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+      "pinned_match": false
+    },
+    {
+      "capability_id": "thermal-python",
+      "resolved_path": "/usr/bin/python3",
+      "resolved_sha256": "sha256:52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41",
+      "resolved_version": "Python 3.14.4",
+      "module_probe": "absent",
+      "pinned_sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+      "pinned_match": false
+    }
+  ],
+  "phases": {
+    "verify": { "command": "run --plan", "runs": [
+    { "repetition": 1, "wall_ms": 22 },
+    { "repetition": 2, "wall_ms": 67 },
+    { "repetition": 3, "wall_ms": 29 }
+    ] },
+    "reuse": { "command": "run", "runs": [
+    { "repetition": 1, "wall_ms": 22 },
+    { "repetition": 2, "wall_ms": 24 },
+    { "repetition": 3, "wall_ms": 64 }
+    ] },
+    "fresh": { "command": "run --no-reuse", "status": "UNAVAILABLE", "reason": "pinned capability executables do not resolve on this machine; see executables" },
+    "agent_orchestration": { "status": "UNAVAILABLE", "reason": "no agent harness in this measurement; EXP-003's agent and unattended portions are not claimed" },
+    "manual_setup": { "status": "performed once, not timed", "steps": "open case, point source roots at case/ and examples/capabilities/thermal, select trust root, runner key, and candidate file" }
+  },
+  "scratch_log": "experiments/exp-003/results/run-20260916T033739Z/campaign.jsonl"
+}

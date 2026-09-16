@@ -1,0 +1,37 @@
+Avila Core case workflow
+CASE-003 — Thermal spreader search: screen -> finite-element conduction -> Avila Core
+
+1. PACKAGE INTEGRITY
+   [VERIFIED] 12/12 package documents re-hashed
+   [COMPLETE] 7/7 external artifacts verified (11/11 evidence records)
+   supplied: input `candidate` = /home/connoravila/Documents/Avila-Labs/project-north-star/examples/cases/case-003-thermal-spreader/candidates/reference.json sha256:4f90e6c3690930b4ed5ffe45fb9d4ee64bddbf7b2ac246d9d19cc4b98b92232e
+
+2. COMPILE
+   [COMPILED] case-003.thermal-spreader-search revision 2
+   ├─ fe [thermal.spreader-fe@1]
+   └─ screen [thermal.spreader-screen@1]
+   4 requirement(s); snapshot sha256:b699fff3a5fe1312d9812ad3b7df046903d7de25a1da06f43cb96db4fa6b5822
+   coverage of requirement set avila-labs.thermal/spreader revision 1 (sha256:260f6ccbfe3d505af4b4fcc848662d0cc7e8a31d156b2381d1b8639c5a40c66f): [COMPLETE] 3 covered, 2 omitted with a stated reason, 0 omissible, 0 unstated, 0 covered only on a weaker basis
+      [COVERED] hotspot-temperature — THERM-R1-screen (nominal, below the set's minimum basis); THERM-R2-hotspot (enclosure)
+      [COVERED] areal-mass — THERM-R3-mass (bounded)
+      [COVERED] total-thickness — THERM-R4-thickness (bounded)
+      [OMITTED] interface-temperature — No interface limit is declared for these materials; every interface is modelled as perfect and no adhesive or solder is represented, so the entry cannot be evaluated in this specimen. (accepted by Connor Avila, case author (research specimen; no design use))
+      [OMITTED] transient-overshoot — The model is steady state; no transient is declared and no transient capability is bound. (accepted by Connor Avila, case author (research specimen; no design use))
+
+3. EXECUTE
+   [REUSED] fe — committed receipt receipts/fe.json matches the planned invocation sha256:cd50dc5d8610dbd33d6924dd9e4352e6db2b84d5c8e630eb23b6fa598c7bd7b0; 1 output(s) verified at their bound identities; nothing ran
+      envelope avila-labs.thermal/spreader-fe-skfem rev 1: [INSIDE] 8/8 terms hold
+   [REUSED] screen — committed receipt receipts/screen.json matches the planned invocation sha256:feb94838acdb20e68c84ab049a04caa0bd9ba5e7c3d78b2537fbe0da1885f9c3; 1 output(s) verified at their bound identities; nothing ran
+      envelope avila-labs.thermal/screen-arithmetic rev 1: [INSIDE] 5/5 terms hold
+
+4. CLAIMS
+   [NOT RUN] plan only
+
+5. EVALUATE
+   [NOT RUN] plan only
+
+ACTIONABLE FEEDBACK (1 finding(s))
+   [CORE-A4404 · compilation · owner policy_owner] this contract's execution policy requires signed manifests and receipts; `avila-core run` for this contract must be given `--trust-root` and will refuse an unsigned package or unsigned reuse
+      next: This is informational and never blocks compilation. Sign the package with a requester key (`avila-core sign manifest`), sign every step's receipt with a runner key, and run with `--trust-root FILE` naming both.
+
+Outcome: workflow planned, not run. Byte integrity is complete for every declared artifact; every declared step was reused from a committed receipt whose invocation identity and outputs still verify, so nothing ran; no requirement result was produced.

@@ -128,7 +128,7 @@ const TOOLS: &[(&str, &str, bool)] = &[
     ),
     (
         "core_constellation",
-        "Read one campaign JSONL log as the recorded constellation slice: every run in order with its lineage edge, candidate state, and verdicts, plus a derived lineage summary. Optional id selects one attempt. Absence means no match in this file only.",
+        "Read one campaign JSONL log as the recorded constellation slice: every run in order with its lineage edge, candidate state, and verdicts, plus a derived lineage summary and a supervision roll-up (run/step state counts, records needing attention, latest verdict per requirement). Optional id selects one attempt. Absence means no match in this file only.",
         true,
     ),
     (
@@ -770,6 +770,9 @@ fn constellation(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
     if let Some(id) = &args.id {
         items.retain(|item| item["attempt_id"].as_str() == Some(id));
     }
+    // The supervision roll-up reads the filtered items before pagination so a
+    // case_id or attempt filter scopes it consistently with the listing.
+    let supervision = supervision(&items);
     let current_references: std::collections::BTreeMap<String, Value> = view
         .references
         .iter()
@@ -818,9 +821,86 @@ fn constellation(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
         "distinct_candidate_states": candidate_states.len(),
         "requirement_status_counts": requirement_statuses,
     });
+    result["supervision"] = supervision;
     result["lineage_validation"] = json!("consistent");
     result["signature_verification"] = json!("not_checked");
     Ok(result)
+}
+
+/// The campaign-supervision reading of one log's filtered items: where the
+/// recorded runs stand in decision-relevant states, which records need
+/// attention, and the latest recorded verdict per requirement. Derived
+/// strictly from what the log records — nothing is verified, inferred, or
+/// extrapolated.
+fn supervision(items: &[Value]) -> Value {
+    let mut run_states: std::collections::BTreeMap<String, usize> =
+        std::collections::BTreeMap::new();
+    let mut step_states: std::collections::BTreeMap<String, usize> =
+        std::collections::BTreeMap::new();
+    let mut attention = Vec::new();
+    let mut latest_requirements: std::collections::BTreeMap<String, Value> =
+        std::collections::BTreeMap::new();
+    let mut latest_by_case: std::collections::BTreeMap<String, Value> =
+        std::collections::BTreeMap::new();
+    for item in items {
+        if item["record_kind"].as_str() != Some("run") {
+            continue;
+        }
+        let status = item["status"].as_str().unwrap_or("unknown");
+        *run_states.entry(status.to_string()).or_default() += 1;
+        for step in item["steps"].as_array().into_iter().flatten() {
+            if let Some(state) = step["state"].as_str() {
+                *step_states.entry(state.to_string()).or_default() += 1;
+            }
+        }
+        for verdict in item["verdicts"].as_array().into_iter().flatten() {
+            let Some(requirement) = verdict["requirement_id"].as_str() else {
+                continue;
+            };
+            latest_requirements.insert(
+                requirement.to_string(),
+                json!({
+                    "status": verdict["status"],
+                    "line": item["line"],
+                    "attempt_id": item["attempt_id"],
+                }),
+            );
+        }
+        if let Some(case_id) = item["case_id"].as_str() {
+            latest_by_case.insert(
+                case_id.to_string(),
+                json!({
+                    "line": item["line"],
+                    "attempt_id": item["attempt_id"],
+                    "status": item["status"],
+                    "execution_status": item["execution_status"],
+                }),
+            );
+        }
+        if status != "evaluated" {
+            let finding_codes: Vec<_> = item["findings"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|finding| finding["code"].as_str())
+                .collect();
+            attention.push(json!({
+                "line": item["line"],
+                "attempt_id": item["attempt_id"],
+                "case_id": item["case_id"],
+                "status": item["status"],
+                "execution_status": item["execution_status"],
+                "finding_codes": finding_codes,
+            }));
+        }
+    }
+    json!({
+        "run_states": run_states,
+        "step_states": step_states,
+        "attention": attention,
+        "latest_requirements": latest_requirements,
+        "latest_by_case": latest_by_case,
+    })
 }
 
 /// The log lines every log-campaign query validates against: parse plus the

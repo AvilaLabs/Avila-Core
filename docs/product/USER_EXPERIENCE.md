@@ -37,10 +37,14 @@ edits the contract and registry as JSON (or opens a contract file and its
 `registry.json` sibling), Check recompiles through the same compiler the
 case runner uses, and each finding carries its class, owner, location, and
 repair candidates — a candidate the compiler can state exactly applies to
-the buffer with one click. Nothing writes to disk until Save. Structured
-question-first authoring (form fields over every contract element), plan
-approval, a dedicated design-history view over recorded lineage, and
-campaign supervision beyond one run are not implemented; nothing in the
+the buffer with one click. Nothing writes to disk until Save. A campaign
+log's History view also carries a supervision roll-up: run-state counts
+(evaluated / planned / rejected), step-state tallies, the latest recorded
+verdict per requirement, and the records needing attention — all derived
+from the log, never inferred. Structured question-first authoring (form
+fields over every contract element), plan approval, a dedicated
+design-history view over recorded lineage, live in-progress supervision,
+and cross-campaign dashboards are not implemented; nothing in the
 interface has semantics the runner and kernel do not.
 
 ## Design premise

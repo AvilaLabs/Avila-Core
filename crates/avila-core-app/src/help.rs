@@ -618,7 +618,7 @@ fn view_help(view: HelpView) -> (&'static str, &'static str) {
         ),
         HelpView::History => (
             "Recorded history",
-            "Open one campaign log to see its recorded attempts, runs, and lineage. Select an attempt to read its candidate state, Core's typed changes from its parent, findings, and recorded verdicts. Everything shown is a recorded observation: this view does not recheck artifacts, signatures, or current reuse. Runs without an attempt record have no recorded ancestry — an unknown, not a root.",
+            "Open one campaign log to see its recorded attempts, runs, and lineage. The header reads the campaign's supervision state: run-state counts, step tallies, the latest recorded verdict per requirement, and the records needing attention. Select an attempt to read its candidate state, Core's typed changes from its parent, findings, and recorded verdicts. Everything shown is a recorded observation: this view does not recheck artifacts, signatures, or current reuse. Runs without an attempt record have no recorded ancestry — an unknown, not a root.",
         ),
         HelpView::Tools => (
             "Tools",

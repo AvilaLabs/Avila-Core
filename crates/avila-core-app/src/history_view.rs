@@ -385,6 +385,92 @@ impl HistoryView {
                 }
             });
         }
+        // The supervision roll-up: where the recorded campaign stands in
+        // decision-relevant states, and which records need attention.
+        let supervision = &result["supervision"];
+        if let Some(run_states) = supervision["run_states"].as_object()
+            && !run_states.is_empty()
+        {
+            ui.horizontal_wrapped(|ui| {
+                for (state, count) in run_states {
+                    badge(
+                        ui,
+                        &format!("{} {}", state.to_uppercase().replace('_', " "), count),
+                        match state.as_str() {
+                            "evaluated" => egui::Color32::from_rgb(76, 175, 80),
+                            "rejected" => RED,
+                            _ => muted(ui),
+                        },
+                    );
+                }
+                if let Some(step_states) = supervision["step_states"].as_object() {
+                    let summary = step_states
+                        .iter()
+                        .map(|(state, count)| format!("{state} {count}"))
+                        .collect::<Vec<_>>()
+                        .join(" · ");
+                    ui.label(
+                        egui::RichText::new(format!("steps: {summary}"))
+                            .size(11.0)
+                            .color(muted(ui)),
+                    );
+                }
+            });
+            if let Some(latest) = supervision["latest_requirements"].as_object()
+                && !latest.is_empty()
+            {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(
+                        egui::RichText::new("latest verdicts:")
+                            .size(11.0)
+                            .color(muted(ui)),
+                    );
+                    for (requirement, reading) in latest {
+                        let status = reading["status"].as_str().unwrap_or("?");
+                        let attempt = reading["attempt_id"].as_str().unwrap_or("-");
+                        ui.label(
+                            egui::RichText::new(format!("{requirement} {status} ({attempt})"))
+                                .size(11.0)
+                                .monospace(),
+                        );
+                    }
+                });
+            }
+            if let Some(attention) = supervision["attention"].as_array()
+                && !attention.is_empty()
+            {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(
+                        egui::RichText::new("attention:")
+                            .size(11.0)
+                            .color(CORE_ORANGE),
+                    );
+                    for record in attention {
+                        let name = record["attempt_id"]
+                            .as_str()
+                            .or_else(|| record["case_id"].as_str())
+                            .unwrap_or("?");
+                        let status = record["status"].as_str().unwrap_or("?");
+                        let codes = record["finding_codes"]
+                            .as_array()
+                            .into_iter()
+                            .flatten()
+                            .filter_map(|code| code.as_str())
+                            .collect::<Vec<_>>()
+                            .join(",");
+                        ui.label(
+                            egui::RichText::new(if codes.is_empty() {
+                                format!("{name} {status}")
+                            } else {
+                                format!("{name} {status} ({codes})")
+                            })
+                            .size(11.0)
+                            .color(CORE_ORANGE),
+                        );
+                    }
+                });
+            }
+        }
         if let Some(source) = value.get("source") {
             ui.add(
                 egui::Label::new(

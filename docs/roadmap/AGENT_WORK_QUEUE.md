@@ -513,9 +513,40 @@ by this slice.
 verified against `execute/adversarial_tests.rs` and `execute/mod.rs`; no
 code changed (documentation-only increment).
 
-**Next product increment:** campaign-level views beyond one run's lineage,
-then the evidence-package remainder (package-root semantics; naming
-redaction/retention as owner-gated).
+### Campaign supervision roll-up — implemented 2026-09-17
+
+The named gap "campaign supervision beyond one run" now has a slice:
+`core_constellation` returns a `supervision` section over the filtered
+items — run-state counts (`evaluated`/`planned`/`rejected`), step-state
+tallies, the latest recorded verdict per requirement, the newest record
+per case, and an `attention` list naming every non-evaluated run with its
+finding codes. The roll-up respects `case_id`/`id` filters and stays
+strictly recorded-only.
+
+The History view renders it under the source strip: state badges, step
+tallies, latest verdicts, and the attention list. CLI and MCP get the
+same section through the shared query; the human renderer shows it
+unmodified.
+
+**Validation evidence:**
+
+- `cargo test --workspace` green; a new query test pins the roll-up —
+  including that a rejected record lands in `attention` and becomes the
+  case's latest record without moving a requirement's latest verdict,
+  and that an attempt filter scopes the roll-up.
+- `cargo fmt --all -- --check` and
+  `cargo clippy --workspace --all-targets -- -D warnings` clean.
+- CLI smoke on `case-002`'s 127-line campaign log returns the full
+  roll-up; a real screenshot exercises the History strip.
+
+**Limits:** supervision reads a single log — a cross-campaign or
+cross-case dashboard is not implemented; "waiting for input / running"
+are live states the log cannot record, so the strip is a recorded-state
+reading, not a progress monitor.
+
+**Next product increment:** the evidence-package remainder —
+package-root semantics, with redaction/retention named as owner-gated —
+then the verifier named-outs assessment.
 
 A public catalog, package installation, browser client, cloud/HPC scheduling,
 organization governance, autonomous search orchestration, and comprehensive

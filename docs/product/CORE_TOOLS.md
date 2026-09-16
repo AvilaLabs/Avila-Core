@@ -126,6 +126,10 @@ constellation, and parent comparison take a campaign log path; diagnostic
 lookup takes a code.
 Set **Campaign log** in the case workbench before running to record history
 from app runs and plans. In the history tool, **Use workbench log** selects it.
+The opened log's header reads the campaign's supervision state: run-state
+counts, step-state tallies, the latest recorded verdict per requirement, and
+the records needing attention — the same `supervision` section the
+`constellation` query returns.
 
 Queries run in the background. Results show recorded states, source identities,
 expandable details, pagination, and buttons to copy JSON or readable text.

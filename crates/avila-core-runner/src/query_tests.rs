@@ -631,6 +631,64 @@ fn constellation_reads_the_whole_recorded_lineage() {
 }
 
 #[test]
+fn constellation_supervision_reads_where_the_campaign_stands() {
+    let mut text = constellation_log();
+    // A rejected record needs attention; it carries no verdicts and cannot
+    // move the latest requirement reading.
+    let rejected = json!({"schema_version":"avila.core/run-attempt/v0.3-draft","case_id":"case",
+        "recorded_at":"2026-09-10T00:03:00Z","status":"rejected",
+        "manifest_sha256":format!("sha256:{}","a".repeat(64)),
+        "compiled_snapshot_sha256":format!("sha256:{}","b".repeat(64)),
+        "findings":[{"code":"CORE-X9001","message":"unmet"}],
+        "steps":[]});
+    text.push_str(&format!("{rejected}\n"));
+    let result = constellation(text.as_bytes(), &QueryArgs::default()).unwrap();
+    let supervision = &result["supervision"];
+    assert_eq!(supervision["run_states"]["evaluated"], 3);
+    assert_eq!(supervision["run_states"]["rejected"], 1);
+    assert_eq!(supervision["step_states"]["executed"], 3);
+    assert_eq!(
+        supervision["latest_requirements"]["R1"]["status"], "fail",
+        "the child's verdict is the latest recorded reading"
+    );
+    assert_eq!(
+        supervision["latest_requirements"]["R1"]["attempt_id"],
+        "child-b"
+    );
+    let attention = supervision["attention"].as_array().unwrap();
+    assert_eq!(attention.len(), 1);
+    assert_eq!(attention[0]["status"], "rejected");
+    assert_eq!(attention[0]["finding_codes"], json!(["CORE-X9001"]));
+    // The newest recorded line for the case is the rejection itself — where
+    // this case stands now is "rejected", with no attempt behind it.
+    assert_eq!(supervision["latest_by_case"]["case"]["status"], "rejected");
+    assert_eq!(
+        supervision["latest_by_case"]["case"]["attempt_id"],
+        Value::Null
+    );
+    // An attempt filter scopes the roll-up to that record only.
+    let one = constellation(
+        text.as_bytes(),
+        &QueryArgs {
+            id: Some("root-a".into()),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(one["supervision"]["run_states"]["evaluated"], 1);
+    assert!(
+        one["supervision"]["attention"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        one["supervision"]["latest_requirements"]["R1"]["status"],
+        "pass"
+    );
+}
+
+#[test]
 fn constellation_refuses_a_tampered_or_incomplete_lineage() {
     let good = constellation_log();
     let mut lines: Vec<String> = good.split('\n').map(str::to_owned).collect();

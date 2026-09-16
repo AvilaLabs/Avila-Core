@@ -2791,10 +2791,12 @@ mod tests {
             root_path(&view, "case").as_deref(),
             Some(view.setup.case_dir.as_str())
         );
-        assert!(
-            root_path(&view, "thermal")
+        assert_eq!(
+            PathBuf::from(root_path(&view, "thermal").unwrap()),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../examples/capabilities/thermal")
+                .canonicalize()
                 .unwrap()
-                .ends_with("examples/capabilities/thermal")
         );
         assert!(
             view.setup

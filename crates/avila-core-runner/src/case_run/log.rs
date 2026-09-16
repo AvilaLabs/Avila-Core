@@ -367,7 +367,15 @@ pub(crate) fn append_log_line(
     let _lock = LogFileLock(lock_handle);
 
     if let Some(attempt) = attempt {
-        crate::attempt::revalidate_before_append(path, attempt, trust_root)
+        // Read the history through the locked handle itself. Windows
+        // byte-range locks are mandatory: a second open of the same file
+        // would fail with ERROR_LOCK_VIOLATION while we hold this lock.
+        // Append mode still forces the write below to end-of-file.
+        use std::io::{Read, Seek, SeekFrom};
+        file.seek(SeekFrom::Start(0))?;
+        let mut history = String::new();
+        file.read_to_string(&mut history)?;
+        crate::attempt::revalidate_before_append(path, &history, attempt, trust_root)
             .map_err(|issue| format!("attempt lineage changed before append: {issue}"))?;
     }
 

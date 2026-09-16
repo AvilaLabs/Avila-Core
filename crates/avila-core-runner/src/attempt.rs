@@ -312,14 +312,18 @@ pub(crate) fn prepare_attempt(
     })
 }
 
-/// Re-read lineage immediately before append so a search cannot quietly
+/// Re-check lineage immediately before append so a search cannot quietly
 /// attach a completed run to a parent that changed while the capability ran.
+/// `content` is the log text read through the handle that already holds the
+/// append lock: a fresh `File::open` here would deadlock against our own
+/// mandatory byte-range lock on Windows (ERROR_LOCK_VIOLATION).
 pub(crate) fn revalidate_before_append(
     log_path: &Path,
+    content: &str,
     attempt: &AttemptRecord,
     trust_root: Option<&TrustRoot>,
 ) -> Result<(), String> {
-    let attempts = read_attempts(log_path)?;
+    let attempts = parse_attempts(content, log_path)?;
     validate_history(&attempts, trust_root)?;
     if attempts.contains_key(&attempt.attempt_id) {
         return Err(format!(

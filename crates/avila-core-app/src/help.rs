@@ -231,7 +231,7 @@ const EXECUTE_STEPS: [TourStep; 5] = [
         target: TourTarget::Capabilities,
         view: Some(HelpView::Case(HelpTab::Execute)),
         title: "Executables are bound by digest",
-        instruction: "Each capability the package binds is an exact executable identified by the SHA-256 of its bytes. Point each at a local path; a different build is refused before it runs.",
+        instruction: "Each capability the package binds is an exact executable identified by the SHA-256 of its bytes. Point each at a local path; a different build is refused before it runs. To find the pinned build, check a typed path, Search PATH, or Scan folder beside a row — probing only hashes candidates, it never runs them, and Check setup or Run case verifies the chosen bytes again.",
     },
     TourStep {
         target: TourTarget::Options,
@@ -614,7 +614,7 @@ fn view_help(view: HelpView) -> (&'static str, &'static str) {
     match view {
         HelpView::Cases => (
             "Opening a case",
-            "Use Open case folder to select the folder containing package.json, drop that folder onto the Cases screen, or choose an example. No programs run when you open a case. Your recent cases and their data/program locations are stored on this computer; use Forget to remove them.",
+            "Use Open case folder to select the folder containing package.json, drop that folder onto the Cases screen, or choose an example — each example card lists the folders and programs it still needs from your machine. No programs run when you open a case; a bundled example's shipped data folders are filled in for you while programs stay yours to locate. Your recent cases and their data/program locations are stored on this computer; use Forget to remove them.",
         ),
         HelpView::History => (
             "Recorded history",

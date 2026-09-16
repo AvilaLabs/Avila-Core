@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/capability-probe/v0.1-draft.schema.json",
+  "title": "Avila Core Capability Probe v0.1 draft",
+  "description": "The hash-only setup report `avila-core capabilities` prints: for each capability a case package binds, the expected executable digest, the local candidate files offered, and each candidate's state. Probing hashes bytes and never executes a candidate; a satisfied report is not a run authorization — the check and run paths verify the chosen bytes again against the package's pinned identities.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "case", "capabilities"],
+  "properties": {
+    "schema_version": { "const": "avila.core/capability-probe/v0.1-draft" },
+    "case": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path of the package manifest the probe read."
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/probedCapability" }
+    }
+  },
+  "$defs": {
+    "nonemptyString": { "type": "string", "minLength": 1 },
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "probedCapability": {
+      "type": "object",
+      "description": "One capability the package binds, with every candidate offered for it. satisfied is true only when at least one candidate's bytes hashed to the pinned digest.",
+      "additionalProperties": false,
+      "required": ["capability_id", "package_id", "expected_sha256", "satisfied", "candidates"],
+      "properties": {
+        "capability_id": { "$ref": "#/$defs/nonemptyString" },
+        "package_id": { "$ref": "#/$defs/nonemptyString" },
+        "expected_sha256": { "$ref": "#/$defs/sha256" },
+        "satisfied": { "type": "boolean" },
+        "candidates": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/candidate" }
+        }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "description": "One offered file. verified: its bytes hash to the pinned digest. mismatch: its bytes hash to something else. missing: the path cannot be read as a regular file, so no digest exists to compare. The state vocabulary is the run path's capability check states.",
+      "additionalProperties": false,
+      "required": ["path", "state"],
+      "properties": {
+        "path": { "$ref": "#/$defs/nonemptyString" },
+        "sha256": {
+          "$ref": "#/$defs/sha256",
+          "description": "The candidate's own digest when it could be read; absent for a missing candidate."
+        },
+        "state": { "enum": ["verified", "mismatch", "missing"] }
+      }
+    }
+  }
+}

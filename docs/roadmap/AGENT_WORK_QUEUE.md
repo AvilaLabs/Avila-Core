@@ -483,8 +483,39 @@ shows the compiler's message instead of a report. Plan approval,
 structured question-first authoring, and pilot-participant testing
 remain.
 
-**Next product increment:** the capability threat-model and conformance
-design slice, then campaign-level views beyond one run.
+### Capability threat model and conformance design — implemented 2026-09-17
+
+`docs/architecture/CAPABILITY_THREAT_MODEL.md` is the adversarial review the
+gate asked for, tied to the boundary as implemented rather than the target
+platform's:
+
+- A mechanism table: each threat, the actual defense (digest-pinned
+  executables, confined path resolution, `env_clear` staging, symlink-refusing
+  output collection, process-group kill, free-input schema validation,
+  ADR-0015 signature checks, invocation-identity reuse), and the named
+  adversarial test pinning it.
+- A residual-risk list kept honest: no sandbox, check-to-exec TOCTOU,
+  supplied environment values deliberately outside invocation identity
+  (ADR-0013 — a changed value cannot invalidate reuse), no resource
+  accounting, host compromise, document-level signature coverage.
+- A conformance *definition*: a conformance vector is an ordinary case
+  package binding a candidate executable to a type's declared boundary over
+  owner-fixed inputs; the suite is adversarial (wrong slot, malformed claim,
+  determinism violation, out-of-domain parameter, wrong media type), and
+  conformance is scoped to `type@major`, never global. The SDK, signed
+  provider packages, and the suite itself stay Stage 3.
+
+The status row moved to "Design documented": the review exists and names
+what's unfixed; the conformance suite is a named later track, not implied
+by this slice.
+
+**Validation evidence:** every test name cited in the mechanism table was
+verified against `execute/adversarial_tests.rs` and `execute/mod.rs`; no
+code changed (documentation-only increment).
+
+**Next product increment:** campaign-level views beyond one run's lineage,
+then the evidence-package remainder (package-root semantics; naming
+redaction/retention as owner-gated).
 
 A public catalog, package installation, browser client, cloud/HPC scheduling,
 organization governance, autonomous search orchestration, and comprehensive

@@ -344,7 +344,9 @@ The trusted computing base should remain small, I/O-free where practical, and
 covered by normative semantics plus adversarial conformance vectors. A semantic
 profile and a kernel implementation have separate identities: archived packages
 name both, and a verifier must report when it cannot replay the historical
-profile.
+profile. The adversarial review of the execution boundary as implemented —
+mechanism, falsified claim, pinning test, and residual risk — lives in
+[CAPABILITY_THREAT_MODEL](CAPABILITY_THREAT_MODEL.md).
 
 ## Non-negotiable failure behavior
 

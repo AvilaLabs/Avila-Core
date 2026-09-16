@@ -45,6 +45,18 @@ impl Selection {
     }
 }
 
+/// What the case workbench should take over from a selected record.
+pub(crate) enum HistoryAction {
+    /// Name this recorded attempt the parent of the workbench's next run.
+    /// The candidate input name is the attempt's own recorded input; the
+    /// user still supplies the new attempt's ID and candidate file.
+    UseAsParent {
+        attempt_id: String,
+        candidate_input: String,
+        log: String,
+    },
+}
+
 #[derive(Default)]
 pub(crate) struct HistoryView {
     log_path: String,
@@ -159,7 +171,16 @@ impl HistoryView {
         }
     }
 
-    pub(crate) fn ui(&mut self, ui: &mut egui::Ui, workbench_log: &str) {
+    /// `case_inputs` is the open case's declared free input IDs; `None` when
+    /// no case is open. A recorded attempt offers itself as the next run's
+    /// parent only when the open case declares its candidate input and the
+    /// viewed log is the log the workbench will append to (or none is set).
+    pub(crate) fn ui(
+        &mut self,
+        ui: &mut egui::Ui,
+        workbench_log: &str,
+        case_inputs: Option<&[String]>,
+    ) -> Option<HistoryAction> {
         self.poll();
         if std::mem::take(&mut self.auto_open) {
             self.open(ui.ctx());
@@ -201,6 +222,7 @@ impl HistoryView {
                     });
             });
 
+        let mut detail_action = None;
         egui::CentralPanel::default().show(ui, |ui| {
             ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
             section_heading(
@@ -265,6 +287,7 @@ impl HistoryView {
                 self.source_strip(ui, value);
             }
             ui.separator();
+            let mut action = None;
             egui::ScrollArea::vertical()
                 .id_salt("history-detail")
                 .auto_shrink([false, false])
@@ -279,9 +302,11 @@ impl HistoryView {
                         );
                         return;
                     }
-                    self.detail_panel(ui);
+                    action = self.detail_panel(ui, workbench_log, case_inputs);
                 });
+            detail_action = action;
         });
+        detail_action
     }
 
     /// The recorded-file identity and the recorded-only boundary, shown with
@@ -479,7 +504,12 @@ impl HistoryView {
         picked
     }
 
-    fn detail_panel(&mut self, ui: &mut egui::Ui) {
+    fn detail_panel(
+        &mut self,
+        ui: &mut egui::Ui,
+        workbench_log: &str,
+        case_inputs: Option<&[String]>,
+    ) -> Option<HistoryAction> {
         let (Some(value), Some(selection)) = (&self.result, &self.selected) else {
             if self.result.is_some() {
                 ui.add_space(16.0);
@@ -488,7 +518,7 @@ impl HistoryView {
                         .color(muted(ui)),
                 );
             }
-            return;
+            return None;
         };
         let items = value["result"]["items"].as_array();
         let Some(item) = items.and_then(|items| items.iter().find(|item| selection.matches(item)))
@@ -497,18 +527,28 @@ impl HistoryView {
                 RED,
                 "The selected record is no longer in this log's result. Reopen the log.",
             );
-            return;
+            return None;
         };
         match selection {
-            Selection::Attempt(_) => self.attempt_detail(ui, item),
-            Selection::Record(_) => record_detail(ui, item),
+            Selection::Attempt(_) => self.attempt_detail(ui, item, workbench_log, case_inputs),
+            Selection::Record(_) => {
+                record_detail(ui, item);
+                None
+            }
         }
     }
 
     /// An attempt's validated detail: the lineage record, the surrounding
     /// run's recorded outcome, and the Core-recomputed parent comparison.
-    fn attempt_detail(&self, ui: &mut egui::Ui, item: &Value) {
+    fn attempt_detail(
+        &self,
+        ui: &mut egui::Ui,
+        item: &Value,
+        workbench_log: &str,
+        case_inputs: Option<&[String]>,
+    ) -> Option<HistoryAction> {
         let id = item["attempt_id"].as_str().unwrap_or("").to_string();
+        let mut action = None;
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
                 ui.label(egui::RichText::new(&id).size(19.0).strong());
@@ -538,6 +578,29 @@ impl HistoryView {
                         egui::RichText::new("No recorded parent; this attempt starts a lineage.")
                             .color(muted(ui)),
                     );
+                }
+            }
+            // Offer this attempt as the workbench's next parent only when the
+            // relationship can hold: the open case declares the attempt's
+            // candidate input, and the workbench appends to this same log
+            // (or has no log configured yet). The runner still owns the
+            // authoritative validation at plan or run time.
+            if let Some(candidate_input) = usable_candidate_input(item, case_inputs)
+                && (workbench_log.trim().is_empty() || workbench_log.trim() == self.log_path.trim())
+            {
+                ui.add_space(4.0);
+                if ui
+                    .button("Plan a child of this attempt")
+                    .on_hover_text(
+                        "Fills the case workbench's parent attempt and candidate input. You still name the new attempt and supply its candidate file; Core validates the lineage when you check or run.",
+                    )
+                    .clicked()
+                {
+                    action = Some(HistoryAction::UseAsParent {
+                        attempt_id: id.clone(),
+                        candidate_input,
+                        log: self.log_path.trim().to_string(),
+                    });
                 }
             }
         });
@@ -665,7 +728,19 @@ impl HistoryView {
         }
         ui.add_space(8.0);
         outcome_detail(ui, item);
+        action
     }
+}
+
+/// The attempt's recorded candidate input, offered for workbench prefill
+/// only when the open case declares that input ID. Anything else would
+/// build a request the runner must refuse.
+fn usable_candidate_input(item: &Value, case_inputs: Option<&[String]>) -> Option<String> {
+    let candidate = item["candidate_input"].as_str()?;
+    case_inputs?
+        .iter()
+        .any(|input| input == candidate)
+        .then(|| candidate.to_string())
 }
 
 /// The log's full constellation: every page merged in order so the tree sees
@@ -1235,7 +1310,9 @@ mod tests {
                     )),
                     ..Default::default()
                 },
-                |ui| view.ui(ui, ""),
+                |ui| {
+                    view.ui(ui, "", None);
+                },
             );
             output.textures_delta.clear();
             // The child attempt and its parent edge are both visible.
@@ -1369,6 +1446,23 @@ mod tests {
                 "{reason} needs a stated reason"
             );
         }
+    }
+
+    /// The workbench prefill offer requires the open case to declare the
+    /// attempt's candidate input and the workbench log to be this log or
+    /// unset — anything looser would build a request the runner must refuse.
+    #[test]
+    fn parent_prefill_is_offered_only_when_the_relationship_can_hold() {
+        let item = json!({"attempt_id":"copper-ratio4-r1","candidate_input":"candidate"});
+        let case_inputs = vec!["candidate".to_string(), "other".to_string()];
+        assert_eq!(
+            usable_candidate_input(&item, Some(&case_inputs)),
+            Some("candidate".to_string())
+        );
+        // No case open, an undeclared input, or no recorded input: no offer.
+        assert!(usable_candidate_input(&item, None).is_none());
+        assert!(usable_candidate_input(&item, Some(&["other".to_string()])).is_none());
+        assert!(usable_candidate_input(&json!({"attempt_id":"x"}), Some(&case_inputs)).is_none());
     }
 
     #[test]

@@ -296,6 +296,232 @@ fn real_runner_report_and_log_are_queryable_without_mutation() {
     assert!(call_report_tool("core_inspect", json!({"path":"ignored.json"}), &bytes).is_err());
 }
 
+/// CQ-04: a real local checker case driven through plan-then-run lineage:
+/// parent selection, a modified candidate, the plan, the run, and the
+/// refusal paths the runner owns.
+#[test]
+fn planned_and_executed_attempts_form_a_queryable_lineage() {
+    let fixture = Fixture::new();
+    let log_path = fixture.0.join("attempts.jsonl");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let case = root.join("examples/cases/case-003-thermal-spreader");
+    let source_roots = || {
+        std::collections::BTreeMap::from([
+            ("case".into(), case.clone()),
+            ("thermal".into(), case.join("../../capabilities/thermal")),
+        ])
+    };
+    let inputs = |candidate: &Path| {
+        std::collections::BTreeMap::from([("candidate".into(), candidate.to_path_buf())])
+    };
+    let request = |attempt_id: &str, parent: Option<&str>| {
+        Some(crate::AttemptLineageRequest {
+            attempt_id: attempt_id.into(),
+            parent_attempt_id: parent.map(str::to_string),
+            candidate_input: "candidate".into(),
+        })
+    };
+    let candidate_a = fixture.write(
+        "candidate-a.json",
+        fs::read(case.join("candidates/reference.json")).unwrap(),
+    );
+    let mut changed: Value = serde_json::from_slice(&fs::read(&candidate_a).unwrap()).unwrap();
+    changed["candidate_id"] = json!("case-003-child");
+    changed["layers"][0]["thickness_mm"] = json!("4");
+    let candidate_b = fixture.write(
+        "candidate-b.json",
+        serde_json::to_vec_pretty(&changed).unwrap(),
+    );
+
+    // An attempt without a log is refused before any step runs.
+    let no_log = crate::execute_case(
+        &case,
+        &crate::CaseRunOptions {
+            source_roots: source_roots(),
+            inputs: inputs(&candidate_a),
+            trust_root: Some(root.join("examples/keys/trust-root.json")),
+            runner_key: Some(root.join("examples/keys/runner.seed")),
+            attempt: request("no-log", None),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(no_log.status, crate::CaseRunStatus::Rejected);
+    assert!(
+        no_log
+            .findings
+            .iter()
+            .any(|finding| finding.message.contains("requires `--log FILE`"))
+    );
+
+    // The root attempt runs and records generation 0.
+    let root_report = crate::execute_case(
+        &case,
+        &crate::CaseRunOptions {
+            log: Some(log_path.clone()),
+            source_roots: source_roots(),
+            inputs: inputs(&candidate_a),
+            trust_root: Some(root.join("examples/keys/trust-root.json")),
+            runner_key: Some(root.join("examples/keys/runner.seed")),
+            attempt: request("root-a", None),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        root_report.status,
+        crate::CaseRunStatus::Evaluated,
+        "{}",
+        crate::human_summary(&root_report)
+    );
+    let root_record = root_report.attempt.as_ref().unwrap();
+    assert_eq!(root_record.generation, 0);
+    assert!(root_record.changes.is_empty());
+    assert!(root_report.attempt_comparison.is_none());
+
+    // Planning the child keeps every verdict explicitly unrecorded on the
+    // child; the plan neither executes nor invents a child assessment.
+    let plan = crate::execute_case(
+        &case,
+        &crate::CaseRunOptions {
+            plan_only: true,
+            log: Some(log_path.clone()),
+            source_roots: source_roots(),
+            inputs: inputs(&candidate_b),
+            trust_root: Some(root.join("examples/keys/trust-root.json")),
+            runner_key: Some(root.join("examples/keys/runner.seed")),
+            attempt: request("plan-b", Some("root-a")),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(plan.status, crate::CaseRunStatus::Planned);
+    let plan_attempt = plan.attempt.as_ref().unwrap();
+    assert_eq!(plan_attempt.generation, 1);
+    assert_eq!(plan_attempt.parent_attempt_id.as_deref(), Some("root-a"));
+    assert!(!plan_attempt.changes.is_empty());
+    let plan_comparison = plan.attempt_comparison.as_ref().unwrap();
+    assert!(plan_comparison.verdict_transitions.is_empty());
+    assert!(plan_comparison.exact_margin_comparisons.is_empty());
+    assert!(
+        !plan_comparison.verdict_comparison_unavailable.is_empty(),
+        "a planned child must mark every verdict unrecorded, not fabricate"
+    );
+
+    // The executed child records real verdicts and a real comparison.
+    let child = crate::execute_case(
+        &case,
+        &crate::CaseRunOptions {
+            log: Some(log_path.clone()),
+            source_roots: source_roots(),
+            inputs: inputs(&candidate_b),
+            trust_root: Some(root.join("examples/keys/trust-root.json")),
+            runner_key: Some(root.join("examples/keys/runner.seed")),
+            attempt: request("child-b", Some("root-a")),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        child.status,
+        crate::CaseRunStatus::Evaluated,
+        "{}",
+        crate::human_summary(&child)
+    );
+    let child_record = child.attempt.as_ref().unwrap();
+    assert_eq!(child_record.generation, 1);
+    assert_eq!(child_record.parent_attempt_id.as_deref(), Some("root-a"));
+    assert!(child_record.parent_record_sha256.is_some());
+    let comparison = child.attempt_comparison.as_ref().unwrap();
+    assert_eq!(comparison.parent_attempt_id, "root-a");
+    // No solver executables are configured here: the child's steps do not
+    // run, its verdicts are honestly NOT_EVALUATED, and its margins are
+    // child_missing — never fabricated or zero.
+    assert!(comparison.verdicts_compared > 0);
+    assert!(
+        comparison
+            .verdict_transitions
+            .iter()
+            .any(|t| t.child_status == avila_core_kernel::VerdictStatus::NotEvaluated)
+    );
+    assert!(
+        comparison
+            .margin_comparison_unavailable
+            .iter()
+            .all(|m| m.reason == crate::AttemptMarginUnavailableReason::ChildMissing)
+    );
+
+    // A duplicate attempt ID is refused, not appended.
+    let duplicate = crate::execute_case(
+        &case,
+        &crate::CaseRunOptions {
+            log: Some(log_path.clone()),
+            source_roots: source_roots(),
+            inputs: inputs(&candidate_a),
+            trust_root: Some(root.join("examples/keys/trust-root.json")),
+            runner_key: Some(root.join("examples/keys/runner.seed")),
+            attempt: request("root-a", None),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(duplicate.status, crate::CaseRunStatus::Rejected);
+    assert!(
+        duplicate
+            .findings
+            .iter()
+            .any(|finding| finding.message.contains("already exists"))
+    );
+
+    // A parent that does not exist in this log is refused.
+    let orphan = crate::execute_case(
+        &case,
+        &crate::CaseRunOptions {
+            log: Some(log_path.clone()),
+            source_roots: source_roots(),
+            inputs: inputs(&candidate_b),
+            trust_root: Some(root.join("examples/keys/trust-root.json")),
+            runner_key: Some(root.join("examples/keys/runner.seed")),
+            attempt: request("orphan", Some("never-recorded")),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(orphan.status, crate::CaseRunStatus::Rejected);
+    assert!(
+        orphan
+            .findings
+            .iter()
+            .any(|finding| finding.message.contains("does not exist"))
+    );
+
+    // The recorded history shows the root, both children, and the
+    // recomputed comparison — including the plan row's honest record.
+    let constellation = call_tool(
+        &QueryContext::unrestricted(),
+        "core_constellation",
+        json!({"path":log_path}),
+    )
+    .unwrap();
+    let items = constellation["result"]["items"].as_array().unwrap();
+    let attempts: Vec<&str> = items
+        .iter()
+        .filter_map(|item| item["attempt_id"].as_str())
+        .collect();
+    assert_eq!(attempts, ["root-a", "plan-b", "child-b"]);
+    let detail = call_tool(
+        &QueryContext::unrestricted(),
+        "core_attempt",
+        json!({"path":log_path,"id":"child-b"}),
+    )
+    .unwrap();
+    assert_eq!(detail["result"]["match_status"], "found");
+    assert_eq!(
+        detail["result"]["comparison"]["parent_attempt_id"],
+        "root-a"
+    );
+}
+
 fn constellation_log() -> String {
     let manifest = format!("sha256:{}", "a".repeat(64));
     let snapshot = format!("sha256:{}", "b".repeat(64));

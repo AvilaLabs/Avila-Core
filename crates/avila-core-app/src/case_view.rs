@@ -12,9 +12,9 @@ use avila_core_compiler::CompileReport;
 use avila_core_evidence::{CasePackageManifest, IntegrityCheckState, PackageIntegrityStatus};
 use avila_core_kernel::VerdictStatus;
 use avila_core_runner::{
-    BindingStatus, CapabilityCheckState, CaseRunOptions, CaseRunReport, CaseRunStatus,
-    ExecutionStatus, PresentationGateReadiness, SignatureStatus, StepExecutionState, execute_case,
-    human_summary,
+    AttemptLineageRequest, BindingStatus, CapabilityCheckState, CaseRunOptions, CaseRunReport,
+    CaseRunStatus, ExecutionStatus, PresentationGateReadiness, SignatureStatus, StepExecutionState,
+    execute_case, human_summary,
 };
 use eframe::egui;
 
@@ -150,6 +150,14 @@ pub struct CaseSetup {
     /// Preselect an attempt ID (or `line:N`) in the History view (a
     /// development aid with `--screenshot`).
     pub history_select: Option<String>,
+    /// Record this run as a named attempt in the campaign log's lineage.
+    /// Empty means an ordinary run with no attempt record.
+    pub attempt_id: String,
+    /// The earlier attempt in the same log this run descends from.
+    pub parent_attempt_id: String,
+    /// The free input the lineage snapshots as its candidate. Empty means
+    /// `candidate`, matching the CLI's `--attempt` convention.
+    pub candidate_input: String,
 }
 
 impl CaseSetup {
@@ -192,6 +200,9 @@ impl CaseSetup {
                 "--tools" => setup.tools_path = Some(value()?),
                 "--history" => setup.history_path = Some(value()?),
                 "--history-select" => setup.history_select = Some(value()?),
+                "--attempt" => setup.attempt_id = value()?,
+                "--parent-attempt" => setup.parent_attempt_id = value()?,
+                "--candidate-input" => setup.candidate_input = value()?,
                 "--tool" => {
                     let name = value()?;
                     if crate::tools_view::Tool::by_name(&name).is_none() {
@@ -286,6 +297,18 @@ impl CaseSetup {
                 .then(|| PathBuf::from(self.trust_root.trim())),
             runner_key: (!self.runner_key.trim().is_empty())
                 .then(|| PathBuf::from(self.runner_key.trim())),
+            // The runner owns every lineage rule; this only assembles the
+            // explicit request the CLI's --attempt flags assemble.
+            attempt: (!self.attempt_id.trim().is_empty()).then(|| AttemptLineageRequest {
+                attempt_id: self.attempt_id.trim().to_string(),
+                parent_attempt_id: (!self.parent_attempt_id.trim().is_empty())
+                    .then(|| self.parent_attempt_id.trim().to_string()),
+                candidate_input: if self.candidate_input.trim().is_empty() {
+                    "candidate".into()
+                } else {
+                    self.candidate_input.trim().to_string()
+                },
+            }),
             ..CaseRunOptions::default()
         }
     }
@@ -685,6 +708,9 @@ impl CaseView {
         }
 
         ui.add_space(8.0);
+        self.attempt_panel(ui);
+
+        ui.add_space(8.0);
         let options = ui.collapsing("Advanced run options", |ui| {
             ui.label(
                 egui::RichText::new("OPTIONS")
@@ -749,6 +775,99 @@ impl CaseView {
             .color(muted(ui))
             .size(11.0),
         );
+    }
+
+    /// Optional attempt lineage: name the run, the earlier recorded attempt
+    /// it descends from, and the free input the lineage snapshots as its
+    /// candidate. The fields only assemble `AttemptLineageRequest`; Core owns
+    /// every lineage rule and refuses the plan or run when they do not hold.
+    fn attempt_panel(&mut self, ui: &mut egui::Ui) {
+        ui.strong("Design attempt");
+        ui.small("Optional. Record this plan or run as an attempt in the campaign log's lineage. Select an attempt in History to fill its parent; name the new attempt here.");
+        ui.horizontal(|ui| {
+            ui.label("Attempt ID");
+            ui.add(
+                egui::TextEdit::singleline(&mut self.setup.attempt_id)
+                    .hint_text("empty: an ordinary run, no attempt record")
+                    .desired_width(f32::INFINITY),
+            );
+        });
+        ui.horizontal(|ui| {
+            ui.label("Parent attempt");
+            ui.add(
+                egui::TextEdit::singleline(&mut self.setup.parent_attempt_id)
+                    .hint_text("optional attempt ID in the same log")
+                    .desired_width(f32::INFINITY),
+            );
+        });
+        let candidate = if self.setup.candidate_input.trim().is_empty() {
+            "candidate".to_string()
+        } else {
+            self.setup.candidate_input.trim().to_string()
+        };
+        let mut names: Vec<String> = self
+            .setup
+            .free_inputs
+            .iter()
+            .map(|row| row.name.trim().to_string())
+            .filter(|name| !name.is_empty())
+            .collect();
+        names.dedup();
+        ui.horizontal(|ui| {
+            ui.label("Candidate input");
+            if names.is_empty() {
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.setup.candidate_input)
+                        .hint_text("free input ID; `candidate` when empty")
+                        .desired_width(f32::INFINITY),
+                );
+            } else {
+                egui::ComboBox::from_id_salt("candidate-input")
+                    .selected_text(&candidate)
+                    .show_ui(ui, |ui| {
+                        for name in &names {
+                            ui.selectable_value(
+                                &mut self.setup.candidate_input,
+                                name.clone(),
+                                name,
+                            );
+                        }
+                    });
+            }
+        });
+        if self.setup.attempt_id.trim().is_empty() {
+            if !self.setup.parent_attempt_id.trim().is_empty()
+                || !self.setup.candidate_input.trim().is_empty()
+            {
+                ui.colored_label(
+                    AMBER,
+                    "An attempt ID is required for lineage; without it the parent and candidate fields are not sent.",
+                );
+            }
+        } else {
+            let mut intent = format!(
+                "Plan or run will append attempt `{}` to the log",
+                self.setup.attempt_id.trim()
+            );
+            if !self.setup.parent_attempt_id.trim().is_empty() {
+                intent += &format!(" descending from `{}`", self.setup.parent_attempt_id.trim());
+            }
+            intent += &format!(", tracking input `{candidate}`");
+            match self
+                .setup
+                .free_inputs
+                .iter()
+                .find(|row| row.name.trim() == candidate)
+                .map(|row| row.path.trim())
+            {
+                Some(path) if !path.is_empty() => intent += &format!(" = {path}"),
+                _ => intent += " — no file supplied for it yet",
+            }
+            if self.setup.log.trim().is_empty() {
+                intent += ". Lineage requires a campaign log; set Campaign log under Advanced run options";
+            }
+            ui.add(egui::Label::new(egui::RichText::new(intent).small().color(muted(ui))).wrap());
+        }
     }
 
     fn location_rows(&mut self, ui: &mut egui::Ui, folder: bool) {
@@ -1166,6 +1285,29 @@ fn show_overview(
                     coverage.set_revision
                 ),
             );
+        }
+        if let Some(attempt) = &report.attempt {
+            let mut detail = format!(
+                "`{}` generation {}{}; candidate input `{}`",
+                attempt.attempt_id,
+                attempt.generation,
+                attempt
+                    .parent_attempt_id
+                    .as_ref()
+                    .map(|parent| format!(", descends from `{parent}`"))
+                    .unwrap_or_default(),
+                attempt.candidate_input
+            );
+            if let Some(comparison) = &report.attempt_comparison {
+                detail += &format!(
+                    "; vs parent {} verdict transition(s), {} exact margin delta(s), {} unavailable",
+                    comparison.verdict_transitions.len(),
+                    comparison.exact_margin_comparisons.len(),
+                    comparison.verdict_comparison_unavailable.len()
+                        + comparison.margin_comparison_unavailable.len()
+                );
+            }
+            stage_row(ui, "2c. Attempt", "RECORDED", BLUE, &detail);
         }
         match &report.execution {
             Some(execution) => {
@@ -2138,6 +2280,92 @@ mod tests {
         assert_eq!(tools.tools_path.as_deref(), Some("run-report.json"));
         assert_eq!(tools.tool.as_deref(), Some("requirements"));
         assert!(CaseSetup::from_arguments(&["--tool".into(), "unknown-query".into()]).is_err());
+    }
+
+    /// The setup panel keeps the exact inputs and intended parent visible
+    /// before any plan or run: the attempt id, the bound parent, the tracked
+    /// input and its supplied file, and the missing-log requirement.
+    #[test]
+    fn the_setup_panel_shows_the_intended_lineage_before_execution() {
+        let context = egui::Context::default();
+        crate::configure_style(&context);
+        let mut view = CaseView::new(CaseSetup {
+            attempt_id: "child-1".into(),
+            parent_attempt_id: "copper-ratio2-r0".into(),
+            candidate_input: "candidate".into(),
+            free_inputs: vec![NamedPath {
+                name: "candidate".into(),
+                path: "candidates/reference.json".into(),
+            }],
+            ..CaseSetup::default()
+        });
+        let mut output = context.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(370.0, 700.0),
+                )),
+                ..Default::default()
+            },
+            |ui| view.attempt_panel(ui),
+        );
+        output.textures_delta.clear();
+        let texts: Vec<String> = output
+            .shapes
+            .iter()
+            .filter_map(|shape| match &shape.shape {
+                egui::Shape::Text(text) => Some(text.galley.text().to_string()),
+                _ => None,
+            })
+            .collect();
+        for expected in [
+            "child-1",
+            "copper-ratio2-r0",
+            "candidate",
+            "candidates/reference.json",
+            "requires a campaign log",
+        ] {
+            assert!(
+                texts.iter().any(|text| text.contains(expected)),
+                "{expected} missing from the setup panel"
+            );
+        }
+    }
+
+    /// The workbench assembles the same explicit `AttemptLineageRequest` the
+    /// CLI's --attempt flags do; no attempt ID means no lineage request at
+    /// all, even when the other fields are filled.
+    #[test]
+    fn attempt_fields_assemble_one_explicit_lineage_request() {
+        let setup = CaseSetup {
+            parent_attempt_id: "try-001".into(),
+            candidate_input: "design".into(),
+            ..CaseSetup::default()
+        };
+        assert!(setup.options(false).attempt.is_none());
+
+        let setup = CaseSetup::from_arguments(&[
+            "--attempt".into(),
+            "try-002".into(),
+            "--parent-attempt".into(),
+            "try-001".into(),
+            "--candidate-input".into(),
+            "candidate".into(),
+            "--log".into(),
+            "campaign.jsonl".into(),
+        ])
+        .unwrap();
+        let request = setup.options(false).attempt.unwrap();
+        assert_eq!(request.attempt_id, "try-002");
+        assert_eq!(request.parent_attempt_id.as_deref(), Some("try-001"));
+        assert_eq!(request.candidate_input, "candidate");
+
+        // An omitted candidate input defaults to `candidate`, as the CLI does.
+        let setup = CaseSetup::from_arguments(&["--attempt".into(), "root-0".into()]).unwrap();
+        let request = setup.options(true).attempt.unwrap();
+        assert_eq!(request.candidate_input, "candidate");
+        assert!(request.parent_attempt_id.is_none());
+        assert!(setup.options(true).plan_only);
     }
 
     #[test]

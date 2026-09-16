@@ -44,7 +44,7 @@ fn main() -> eframe::Result {
         Ok(setup) => setup,
         Err(error) => {
             eprintln!(
-                "error: {error}\nusage: avila-core-app [--case DIR] [--source-root NAME=PATH]... [--capability NAME=PATH]... [--workspace DIR] [--log FILE] [--no-reuse] [--trust-root FILE] [--runner-key FILE] [--auto-run | --auto-plan] [--tools REPORT_OR_LOG] [--tool NAME] [--history CAMPAIGN_LOG] [--history-select ID|line:N] [--screenshot PNG] [--tab NAME]"
+                "error: {error}\nusage: avila-core-app [--case DIR] [--source-root NAME=PATH]... [--capability NAME=PATH]... [--input NAME=PATH]... [--env KEY=VALUE]... [--workspace DIR] [--log FILE] [--attempt ID] [--parent-attempt ID] [--candidate-input NAME] [--no-reuse] [--trust-root FILE] [--runner-key FILE] [--auto-run | --auto-plan] [--tools REPORT_OR_LOG] [--tool NAME] [--history CAMPAIGN_LOG] [--history-select ID|line:N] [--screenshot PNG] [--tab NAME]"
             );
             std::process::exit(2);
         }
@@ -378,7 +378,29 @@ impl eframe::App for CoreApp {
                 }
             }
             Mode::Case => self.case.ui(ui, &mut targets),
-            Mode::History => self.history.ui(ui, &self.case.setup.log),
+            Mode::History => {
+                let case_inputs = self
+                    .case
+                    .info
+                    .as_ref()
+                    .map(|info| info.manifest.free_inputs.as_slice());
+                if let Some(history_view::HistoryAction::UseAsParent {
+                    attempt_id,
+                    candidate_input,
+                    log,
+                }) = self.history.ui(ui, &self.case.setup.log, case_inputs)
+                {
+                    // Prefill only the parent relationship; the new attempt's
+                    // ID and its candidate file stay the user's to supply.
+                    self.case.setup.parent_attempt_id = attempt_id;
+                    self.case.setup.candidate_input = candidate_input;
+                    if self.case.setup.log.trim().is_empty() {
+                        self.case.setup.log = log;
+                    }
+                    self.case.setup.show_setup = true;
+                    self.mode = Mode::Case;
+                }
+            }
             Mode::Specimen => self.specimen_ui(ui, &mut targets),
             Mode::Tools => self.tools.ui(ui, self.case.report(), &self.case.setup.log),
         }

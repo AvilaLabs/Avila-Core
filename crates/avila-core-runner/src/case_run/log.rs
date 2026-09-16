@@ -350,6 +350,10 @@ pub(crate) fn append_log_line(
     }
     let mut file = fs::OpenOptions::new()
         .create(true)
+        // `read` is required on Windows: `LockFileEx` rejects a handle
+        // opened with only `FILE_APPEND_DATA` (ERROR_ACCESS_DENIED).
+        // Append semantics still force every write to end-of-file.
+        .read(true)
         .append(true)
         .open(path)?;
     // A duplicated handle carries the lock so it can be released by a Drop

@@ -53,6 +53,7 @@ impl TourTargets {
 pub(crate) enum HelpView {
     Cases,
     Case(HelpTab),
+    History,
     Specimen,
     Tools,
 }
@@ -614,6 +615,10 @@ fn view_help(view: HelpView) -> (&'static str, &'static str) {
         HelpView::Cases => (
             "Opening a case",
             "Use Open case folder to select the folder containing package.json, drop that folder onto the Cases screen, or choose an example. No programs run when you open a case. Your recent cases and their data/program locations are stored on this computer; use Forget to remove them.",
+        ),
+        HelpView::History => (
+            "Recorded history",
+            "Open one campaign log to see its recorded attempts, runs, and lineage. Select an attempt to read its candidate state, Core's typed changes from its parent, findings, and recorded verdicts. Everything shown is a recorded observation: this view does not recheck artifacts, signatures, or current reuse. Runs without an attempt record have no recorded ancestry — an unknown, not a root.",
         ),
         HelpView::Tools => (
             "Tools",

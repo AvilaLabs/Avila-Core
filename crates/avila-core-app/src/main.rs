@@ -11,6 +11,7 @@
 mod case_browser;
 mod case_view;
 mod help;
+mod history_view;
 mod tools_view;
 
 use avila_core_compiler::{
@@ -43,7 +44,7 @@ fn main() -> eframe::Result {
         Ok(setup) => setup,
         Err(error) => {
             eprintln!(
-                "error: {error}\nusage: avila-core-app [--case DIR] [--source-root NAME=PATH]... [--capability NAME=PATH]... [--workspace DIR] [--log FILE] [--no-reuse] [--trust-root FILE] [--runner-key FILE] [--auto-run | --auto-plan] [--tools REPORT_OR_LOG] [--tool NAME] [--screenshot PNG] [--tab NAME]"
+                "error: {error}\nusage: avila-core-app [--case DIR] [--source-root NAME=PATH]... [--capability NAME=PATH]... [--workspace DIR] [--log FILE] [--no-reuse] [--trust-root FILE] [--runner-key FILE] [--auto-run | --auto-plan] [--tools REPORT_OR_LOG] [--tool NAME] [--history CAMPAIGN_LOG] [--history-select ID|line:N] [--screenshot PNG] [--tab NAME]"
             );
             std::process::exit(2);
         }
@@ -121,6 +122,7 @@ enum Mode {
     #[default]
     Case,
     Cases,
+    History,
     Specimen,
     Tools,
 }
@@ -133,6 +135,7 @@ struct CoreApp {
     case: case_view::CaseView,
     help: GuidedHelp,
     tools: tools_view::ToolsView,
+    history: history_view::HistoryView,
     browser: case_browser::CaseBrowser,
 }
 
@@ -149,7 +152,9 @@ impl CoreApp {
             help.start_tour(guide);
         }
         let tools = tools_view::ToolsView::new(setup.tools_path.clone(), setup.tool.as_deref());
-        let mode = if setup.tools_path.is_some() || setup.tool.is_some() {
+        let mode = if setup.history_path.is_some() {
+            Mode::History
+        } else if setup.tools_path.is_some() || setup.tool.is_some() {
             Mode::Tools
         } else if setup.case_dir.is_empty() {
             Mode::Cases
@@ -161,6 +166,10 @@ impl CoreApp {
             workspace: Workspace::Overview,
             logo: load_logo_texture(context).ok(),
             specimen: load_specimen(),
+            history: history_view::HistoryView::new(
+                setup.history_path.clone(),
+                setup.history_select.clone(),
+            ),
             case: case_view::CaseView::new(setup),
             help,
             tools,
@@ -172,6 +181,7 @@ impl CoreApp {
         match self.mode {
             Mode::Case => HelpView::Case(self.case.help_tab()),
             Mode::Cases => HelpView::Cases,
+            Mode::History => HelpView::History,
             Mode::Specimen => HelpView::Specimen,
             Mode::Tools => HelpView::Tools,
         }
@@ -186,6 +196,7 @@ impl CoreApp {
                 self.case.show_setup = true;
             }
             Some(HelpView::Cases) => self.mode = Mode::Cases,
+            Some(HelpView::History) => self.mode = Mode::History,
             Some(HelpView::Specimen) => self.mode = Mode::Specimen,
             Some(HelpView::Tools) => self.mode = Mode::Tools,
             None => {}
@@ -338,6 +349,7 @@ impl eframe::App for CoreApp {
             for (mode, label) in [
                 (Mode::Cases, "Cases"),
                 (Mode::Case, "Current case"),
+                (Mode::History, "History"),
                 (Mode::Specimen, "Specimen compiler"),
                 (Mode::Tools, "Tools"),
             ] {
@@ -366,12 +378,14 @@ impl eframe::App for CoreApp {
                 }
             }
             Mode::Case => self.case.ui(ui, &mut targets),
+            Mode::History => self.history.ui(ui, &self.case.setup.log),
             Mode::Specimen => self.specimen_ui(ui, &mut targets),
             Mode::Tools => self.tools.ui(ui, self.case.report(), &self.case.setup.log),
         }
         let ready = match self.mode {
             Mode::Case => self.case.settled(),
             Mode::Tools => self.tools.settled(),
+            Mode::History => self.history.settled(),
             Mode::Specimen | Mode::Cases => true,
         };
         self.case.drive_screenshot(ui.ctx(), ready);

@@ -465,7 +465,7 @@ fn render_entry(ui: &mut egui::Ui, item: &Value) {
     egui::CollapsingHeader::new("Details").show(ui, |ui| render_object(ui, item));
 }
 
-fn render_object(ui: &mut egui::Ui, value: &Value) {
+pub(crate) fn render_object(ui: &mut egui::Ui, value: &Value) {
     match value {
         Value::Object(fields) => {
             for (key, value) in fields {

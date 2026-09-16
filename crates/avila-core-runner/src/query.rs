@@ -617,6 +617,10 @@ fn constellation(bytes: &[u8], args: &QueryArgs) -> Result<Value, String> {
         );
         item["line"] = json!(line_number);
         item["record_sha256"] = json!(format!("sha256:{}", sha256_hex(raw.as_bytes())));
+        item["findings"] = json!(array_at(record, "/findings")?);
+        if let Some(request) = record.get("attempt_request") {
+            item["attempt_request"] = request.clone();
+        }
         item["steps"] = json!(
             array_at(record, "/steps")?
                 .iter()

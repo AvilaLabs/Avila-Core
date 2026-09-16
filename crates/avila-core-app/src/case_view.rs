@@ -145,6 +145,11 @@ pub struct CaseSetup {
     pub tools_path: Option<String>,
     /// Query name to select in the Tools workspace.
     pub tool: Option<String>,
+    /// Open the History view with this campaign log.
+    pub history_path: Option<String>,
+    /// Preselect an attempt ID (or `line:N`) in the History view (a
+    /// development aid with `--screenshot`).
+    pub history_select: Option<String>,
 }
 
 impl CaseSetup {
@@ -185,6 +190,8 @@ impl CaseSetup {
                 "--light" => setup.light = true,
                 "--tour" => setup.tour = Some(value()?),
                 "--tools" => setup.tools_path = Some(value()?),
+                "--history" => setup.history_path = Some(value()?),
+                "--history-select" => setup.history_select = Some(value()?),
                 "--tool" => {
                     let name = value()?;
                     if crate::tools_view::Tool::by_name(&name).is_none() {

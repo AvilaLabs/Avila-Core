@@ -79,8 +79,11 @@ avila-core-kernel            (first canonical-value semantic slice)
     │                         and execution receipts)
     └── avila-core-runner    (the case workflow: staging, execution, receipts,
         │                     reuse, claim generation, built-in and declared adapters)
-        ├── avila-core-cli   (canonicalize, compile, evaluate, explain, run)
-        └── avila-core-app   (thin egui workbench over the runner and compiler)
+        ├── avila-core-cli   (canonicalize, compile, evaluate, explain, run,
+        │                     the shared query tools, keys/sign, and local MCP)
+        └── avila-core-app   (thin egui workbench over the runner and compiler:
+                            case browser, case workbench, specimen compiler,
+                            and the shared-query Tools workspace)
 ```
 
 The `v0.1` contract model and planner were retired once the compiler's
@@ -132,9 +135,12 @@ admission conditions and derives verdicts with the kernel; see the
 
 Defines draft evidence records, SHA-256 content identities, the case-package
 manifest with its bound capabilities and executions, the execution receipt
-record with its byte-level verification (ADR-0007), and the unsigned optional
-agent routing record (ADR-0010). It has no package writer, signature system,
-lineage validator, or independent verifier yet.
+record with its byte-level verification (ADR-0007), the unsigned optional
+agent routing record (ADR-0010), and the Ed25519 signature documents, key
+roles, and trust roots of ADR-0015. The identity-bound attempt-lineage
+validator lives in the runner (ADR-0014), and the independently implemented,
+standard-library-only Python verifier lives in `verifier/` (S-041). It still
+has no package writer.
 
 ### `avila-core-runner`
 
@@ -154,21 +160,29 @@ Provides authoritative JSON canonicalization, embedded semantic-profile and
 vector-set identities, `v0.2-draft` compilation with a nonzero exit status for
 a rejected contract, campaign evaluation over a claims document, the
 diagnostic catalog through `explain`, and the composed case workflow through
-`run`, printed as a concise staged view or as the complete JSON report. All
-output explicitly distinguishes software conformance, structural validity,
-and process provenance from scientific validity.
+`run`, printed as a concise staged view or as the complete JSON report. It
+also exposes the eleven shared read-only queries over saved reports and
+campaign logs (`inspect`, `history`, `attempt`, `constellation`, `tools`, and
+a local stdio `mcp serve`), and the ADR-0015 key and signing operations
+(`keys`, `sign`). All output explicitly distinguishes software conformance,
+structural validity, and process provenance from scientific validity.
 
 ### `avila-core-app`
 
-An egui workbench with two modes. The case workbench opens a composed case,
-lists the roots and executables its package requests, runs the workflow on a
-background thread through the runner crate, and renders the report stage by
-stage: integrity, compilation, execution with reuse and change classes,
-generated claims and binding, verdicts with their complete boundaries,
-optional presentation-gate readiness and instructions, and replay. The specimen view compiles the embedded specimen and renders its
-findings with owners and repairs. Every badge and number is read from a
-report; the client performs no calculation and must never grow a separate
-scientific state model.
+An egui workbench with four modes. The Cases browser opens local and example
+case folders and remembers their data and program locations on this computer.
+The case workbench opens a composed case, lists the roots and executables its
+package requests, runs the workflow on a background thread through the runner
+crate, and renders the report stage by stage: integrity, compilation,
+execution with reuse and change classes, generated claims and binding,
+verdicts with their complete boundaries, optional presentation-gate readiness
+and instructions, and replay. The specimen view compiles the embedded specimen
+and renders its findings with owners and repairs. The Tools workspace exposes
+the same eleven shared read-only queries as the CLI and MCP server — over a
+saved report, the current workbench run, or one explicit campaign log — with
+the recorded-only verification boundary stated beside every result. Every
+badge and number is read from a report; the client performs no calculation
+and must never grow a separate scientific state model.
 
 ## Target components
 
@@ -240,16 +254,22 @@ and writes a receipt verified from bytes; built-in or narrowly declarative
 external-checker adapters extract claims from declared outputs; type-level
 admission over the generated claims and
 review-independent kernel verdicts follow. Optional presentation requests are
-materialized after evaluation. Steps 4 to 8, generic output
-validators, and step 14 do not exist yet. Any failure before step 13 yields
+materialized after evaluation. Steps 4 to 8 and generic output validators do
+not exist yet. For step 14, the committed case package already serves as the
+verifiable unit and the independent Python verifier checks it from the
+package root; a separate packager or export step does not exist. Any failure
+before step 13 yields
 no verdict. A completed method that cannot decide the requirement may yield
 `INCONCLUSIVE` when the contract permits it.
 
 ## Execution neutrality
 
-Rust provides Core’s authoritative model, planner, verifier, and application
-shell because it supports explicit types, portable binaries, and controlled
-failure behavior. Scientific software remains in its suitable ecosystem.
+Rust provides Core’s authoritative model and application shell, and is the
+intended home of the planner and verifier components listed above, because it
+supports explicit types, portable binaries, and controlled failure behavior.
+The independent verifier is the exception by design: it is standard-library
+Python precisely so it shares no implementation with what it checks.
+Scientific software remains in its suitable ecosystem.
 
 A capability may invoke:
 

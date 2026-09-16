@@ -3,7 +3,9 @@
 **Current gate:** Stage 0 — foundation and discovery  
 **Semantic profile:** `avila.core/semantic/0.2-draft`  
 **Product claim:** pre-alpha research scaffold; no scientifically qualified
-workflow or decision-grade evidence
+workflow or decision-grade evidence  
+**Reconciled:** 2026-09-15 against code at `3e6dd8f` and the executable
+reports named below
 
 This ledger is the short operational view of the roadmap. It separates an
 executable software slice from the evidence required to advance the product.
@@ -43,8 +45,8 @@ external product gate.
 | Thermal case | Implemented as an unqualified specimen | CASE-003: a strip-heated layered plate screened by a one-dimensional resistance estimate and decided by two-dimensional finite-element conduction as an enclosure-basis interval; the finite-element qualification record binds a NAFEMS T4 reproduction as validation evidence; reference blessed and verified with every step reused; a scoped screen qualification (S-039) covers its areal-mass and thickness slots and `execution_policy.require_qualification` is set | A campaign under the manifest pin; interface and transient entries of the thermal library set |
 | Evidence records | Partial spike | Minimal record types, SHA-256 helpers, confined-path case manifest with bound capabilities and executions, explicit `not_checked` states, execution receipts verified from bytes, claim/policy binding, content-identified optional presentation requests, deterministic replay, and identity-bound JSON candidate lineages with canonical snapshots, typed diffs, exact parent-record hashes, fixed-manifest/snapshot validation, verdict transitions, and exact margin comparisons; detached Ed25519 signatures over manifests, receipts and log lines verified against a trust root, with `execution_policy.require_signatures` (S-040); and an independently implemented, standard-library Python verifier that re-derives package identity, receipt identities, claims binding and every verdict without importing Core (S-041) | Canonical archive-level identity (the signatures are document-level), invalidation, constellation presentation, and the verifier's remaining named-outs (presentation-gate realisation, compiled-snapshot recomputation) |
 | Planning and selection | Planned | Static type satisfiability only | Bound plans, package discovery, admissibility before ranking, deterministic selection, and estimates |
-| Execution | Partial | Fresh workspace, staged verified bytes, cleared environment, timeout, regular-file output collection, execution receipts, claim extraction, receipt-based reuse with typed SC-12 change classes and `--plan`, purpose-built adapters, a hash-bound declarative external-checker adapter with closed exact, interval, numeric unquantified and categorical extraction (ADR-0017), including descriptor-identity invalidation before receipt reuse, and adversarial tests for modified inputs, unchecked bytes, wrong or missing executables, failing runs, drifting outputs, missing or edited receipts, wrong step types, reuse, requirement-only change, selective rerun across the two-step chain, supplied free inputs with receipt-bound outputs, withheld claims for a reached step that did not run, refusal of an undeclared free input, structural validation of every supplied free input against its role's schema before staging (S-036), a step timeout that kills the whole process group (S-037), a run-attempt log append that is one write under an exclusive lock (S-037), an opt-in verified-hash cache for operator artifact roots reported as the distinct `verified_cached` state (S-038), rendering, log append, qualification loading, free-input handling, attempt comparison and the engine core (staging, SC-12 reuse, receipt verification, replay, presentation gates, diagnostic capture) extracted into `case_run` submodules under a golden CLI-output diff (S-048), and adversarial tests pinning that SC-12 reuse never masks a registry, presentation or qualification edit; ADR-0015 signature verification against an operator-supplied trust root (S-040): a manifest signature must verify against a listed requester key before compilation and a committed receipt's signature against a listed runner key to be reused, and reuse now also checks a receipt's case_id | Sandboxing, resource accounting, artifact store, generic adapter lifecycle beyond the narrow checker descriptor, recovery, signatures, change classes a receipt cannot see (policy, qualification, advisory), and a log lock that is single-host only |
-| Application | Partial | Thin egui workbench over the runner and compiler: case setup from the package's requested roots and executables, background Plan/Run with elapsed time, an evidence view with reuse, change classes, receipts, claims, verdicts, boundaries, and optional presentation-gate readiness/instructions, guided help with five spotlight walkthroughs and bundled answers, dark and light themes; a specimen compiler view | Question-first editor, contract authoring, campaign state beyond one run, and autonomous search controls |
+| Execution | Partial | Fresh workspace, staged verified bytes, cleared environment, timeout, regular-file output collection, execution receipts, claim extraction, receipt-based reuse with typed SC-12 change classes and `--plan`, purpose-built adapters, a hash-bound declarative external-checker adapter with closed exact, interval, numeric unquantified and categorical extraction (ADR-0017), including descriptor-identity invalidation before receipt reuse, and adversarial tests for modified inputs, unchecked bytes, wrong or missing executables, failing runs, drifting outputs, missing or edited receipts, wrong step types, reuse, requirement-only change, selective rerun across the two-step chain, supplied free inputs with receipt-bound outputs, withheld claims for a reached step that did not run, refusal of an undeclared free input, structural validation of every supplied free input against its role's schema before staging (S-036), a step timeout that kills the whole process group (S-037), a run-attempt log append that is one write under an exclusive lock (S-037), an opt-in verified-hash cache for operator artifact roots reported as the distinct `verified_cached` state (S-038), rendering, log append, qualification loading, free-input handling, attempt comparison and the engine core (staging, SC-12 reuse, receipt verification, replay, presentation gates, diagnostic capture) extracted into `case_run` submodules under a golden CLI-output diff (S-048), and adversarial tests pinning that SC-12 reuse never masks a registry, presentation or qualification edit; ADR-0015 signature verification against an operator-supplied trust root (S-040): a manifest signature must verify against a listed requester key before compilation and a committed receipt's signature against a listed runner key to be reused, and reuse now also checks a receipt's case_id | Sandboxing, resource accounting, artifact store, generic adapter lifecycle beyond the narrow checker descriptor, recovery, change classes a receipt cannot see (policy, qualification, advisory), and a log lock that is single-host only |
+| Application | Partial | Thin egui workbench over the runner and compiler: a local case browser with remembered data/program locations, case setup from the package's requested roots and executables, background Plan/Run with elapsed time, an evidence view with reuse, change classes, receipts, claims, verdicts, boundaries, and optional presentation-gate readiness/instructions, a Tools workspace exposing all eleven shared recorded-result queries over saved reports, the current workbench run, and one explicit campaign log, guided help with five spotlight walkthroughs and bundled answers, dark and light themes; a specimen compiler view | Question-first editor, contract authoring, a dedicated design-history view over recorded attempt lineage, campaign state beyond one run, and autonomous search controls |
 
 ## Stage 0 build gates
 
@@ -94,9 +96,17 @@ Before that point:
 
 ## Immediate work queue
 
+For the bounded 2026-09-15 product-workbench handoff, use the
+[agent work queue](AGENT_WORK_QUEUE.md). It turns existing lineage and query
+mechanisms into a usable history workflow while retaining the experiment pause
+and infrastructure gates below. Its first task reconciles stale current-status
+descriptions; this link does not mark a gate complete.
+
 Order adopted 2026-09-04 (S-034) after checking the external architecture
 proposal against the code; see the
 [review](reviews/2026-09-04-architecture-proposal-review.md).
+
+Completed since that ordering — recorded here, not remaining work:
 
 1. EXP-002 ran on CASE-003 and is recorded as non-discriminating: every
    arm, with or without Core, reached the optimum within three evaluations.
@@ -112,10 +122,7 @@ proposal against the code; see the
    evaluates, since the finite-element record bounds no thickness) and a
    four-layer candidate inside the thickness bound that trips the shared
    layer-count term in both records; both run clean and produce the
-   intended `not_evaluated.outside_qualification` results. Remaining: the
-   same candidate for CASE-002, gated on its actinv re-pin, and a second
-   look at the screen envelopes' numeric bounds, which are case-author
-   judgment.
+   intended `not_evaluated.outside_qualification` results.
 3. Runner integrity fixes are landed: process-group kill on timeout and one
    locked write per campaign-log line (S-037), the opt-in verified-hash
    cache (S-038), the extraction of rendering, log append, qualification
@@ -133,17 +140,29 @@ proposal against the code; see the
    adversarial checker verifying log-line signatures (S-043). Each step's
    extracted applicability facts are now persisted on the claim's
    qualification assessment so an envelope verdict is re-derived from
-   outside (S-046); CASE-002's claims await an actinv re-pin before they
-   can carry it.
+   outside (S-046).
 5. `core_constellation` (S-049) projects one campaign log in record order —
    lineage edges, candidate states, verdicts, and a derived summary — under
    the same lineage validation as `core_attempt`, so a tampered tail fails
    closed; pre-`schema_version` campaign records (all fifteen example
    campaign logs) read under an explicitly named legacy profile, with
-   `[step_id, state]` pairs normalized and no lineage invented (S-050). The deeper
-   generative-loop items stand: a harder coupled search (EXP-007) once
-   EXP-002 shows the experiment discriminates, and a fresh speed-tier
-   attempt gated on agreement with the verified S_N solver (S-031, S-033).
+   `[step_id, state]` pairs normalized and no lineage invented (S-050).
+
+Open items, each with its gate:
+
+- The same outside-envelope candidate pair for CASE-002, gated on its
+  actinv re-pin; and a second look at the screen envelopes' numeric
+  bounds, which are case-author judgment.
+- CASE-002's claims await the same actinv re-pin before they can carry
+  persisted applicability contexts (S-046).
+- A harder coupled search (EXP-007) once an experiment is shown to
+  discriminate — EXP-002 did not — and a fresh speed-tier attempt gated
+  on agreement with the verified S_N solver (S-031, S-033).
+- A release-build performance baseline (EXP-003) with a frozen workload
+  and machine, cold and warm separated, and machine time separated from
+  model time; the work queue's CQ-05 prepares the local, non-agent
+  portion.
+- EXP-005 stays paused at the owner's request.
 
 The proposal's prepared session, transactional store, obligation graph and
 bounded scheduler are considered only after the scored EXP-002 result and a

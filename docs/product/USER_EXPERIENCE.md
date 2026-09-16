@@ -1,18 +1,31 @@
 # User experience
 
+See [Core as an engineering workspace](PRODUCT_EXPERIENCE.md) for the intended
+complete product form, home screen, library, and project navigation. The
+separate `avila-core-product-preview` executable simulates that direction;
+the implemented workbench described below remains distinct.
+
 ## Implemented slice
 
 The egui workbench today covers the run-and-understand half of the journey
-below for a composed case: it lists the roots and executables the case
+below for a composed case. A local case browser opens recent, example, or
+arbitrary case folders and remembers their data and program locations. The
+case view lists the roots and executables the case
 package requests, plans or runs the workflow through the same runner the CLI
 uses, and renders integrity, compilation, execution (reused, executed,
 planned, not run, refused, failed, with every change named by class),
 generated claims, requirement verdicts with their complete boundaries, and
-replay. Guided help is built in: contextual explanations per view, bundled
+replay. A Tools workspace exposes the eleven shared read-only queries over a
+saved report, the current workbench run, or one explicit campaign log —
+inspection, requirements, findings, artifacts, workflow, evidence, steps,
+history, attempt comparison, constellation, and diagnostic lookup — with the
+recorded-only verification boundary stated beside every result. Guided help
+is built in: contextual explanations per view, bundled
 answers to the questions the interface itself raises, and spotlight
 walkthroughs for the use cases above that dim everything but the control
 being explained while leaving it live. Dark and light themes are provided.
-Contract authoring, preflight editing, plan approval, and campaign
+Contract authoring, preflight editing, plan approval, a dedicated
+design-history view over recorded lineage, and campaign
 supervision beyond one run are not implemented; nothing in the interface has
 semantics the runner and kernel do not.
 
@@ -134,6 +147,20 @@ When an input, method, dataset, qualification, or policy changes, Core shows:
 This view is central to the speed advantage. It must be correct before it is
 optimized.
 
+### 8. Compare alternatives and review design history
+
+Show the path from a named baseline to a candidate: changed inputs and methods,
+requirement transitions, compatible margin deltas, reusable evidence, and work
+still needed. Let users explore branches and inspect the exact records behind
+campaign summaries. Keep stated designer rationale separate from Core-derived
+changes, and distinguish improvement under fixed requirements from a contract
+amendment. Acceptance of a baseline is separate from its technical verdicts.
+
+The [design-history requirements](DESIGN_HISTORY.md) define acceptance scenarios,
+delivery order, and the distinction between a design revision, an execution, and
+an assessment. This is a target journey built on the existing attempt and
+constellation queries, not a claim that the complete history interface exists.
+
 ## Roles
 
 ### Requester / engineer
@@ -187,8 +214,8 @@ merely by being an administrator.
 
 ## Current egui scaffold
 
-The desktop shell compiles the embedded specimen through the same compiler as
-the CLI and demonstrates six workspaces:
+The desktop shell's specimen mode compiles the embedded specimen through the
+same compiler as the CLI and demonstrates six workspaces:
 
 1. **Overview:** the question and the first blocking finding as the next action;
 2. **Contract:** inputs, workflow steps, parameters, and requirements;

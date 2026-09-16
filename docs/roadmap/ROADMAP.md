@@ -6,6 +6,25 @@ security, legal, and partner requirements become clear. Releases should occur
 along the way; version 1.0 is the long-term threshold described in the product
 definition.
 
+The [engineering-workspace product direction](../product/PRODUCT_EXPERIENCE.md)
+describes the aspirational desktop/browser experience, integrated library,
+project views, and optional agent workflows. Its separate egui product preview
+is a simulated interaction study, not new evidence of roadmap completion.
+
+Cross-stage [design-history and change-review requirements](../product/DESIGN_HISTORY.md)
+define how existing attempt lineage, comparisons, and receipt reuse should grow
+into navigable design alternatives and evidence-aware change review. They retain
+the fixed-question boundary and separate design revisions, executions,
+assessments, and accepted baselines. They do not change the stage exit gates.
+
+## Near-term implementation handoff
+
+The [agent work queue](AGENT_WORK_QUEUE.md) gives a finite, dependency-ordered
+path from existing attempt lineage to a real design-history workbench. It
+includes acceptance criteria and a copyable worker prompt. It does not resume
+paused experiments, advance stage gates, or authorize the deferred platform
+architecture.
+
 ## Stage 0 — foundation and discovery
 
 **Planning range:** now through approximately month 3–4.
@@ -57,9 +76,13 @@ harness executes 15 fixtures over the first SC-10/SC-11 slice. That slice
 performs type-level claim admission and verdict derivation. It does not perform
 full package-level evidence admission: the evaluator reads no bytes;
 artifact-byte and receipt verification exist only in the case runner for the
-steps a case declares; package binding beyond an executable digest, signatures,
-full qualification admission, trust-policy evaluation, and invalidation remain
-absent.
+steps a case declares; package binding beyond an executable digest, full
+qualification admission, trust-policy evaluation, and invalidation remain
+absent. Document-level signatures exist (ADR-0015): manifests, receipts, and
+campaign log lines can be signed and checked against an operator trust root,
+and `execution_policy.require_signatures` makes an unsigned package or reuse
+a refusal. What they do not provide is organization-governed identity, archive
+or package-root signing, or a trust policy beyond the supplied root.
 
 The repository also carries
 [CASE-000](../../examples/cases/case-000-actinv-aftermatter/README.md), a
@@ -92,6 +115,11 @@ Build only the chosen evidence chain:
 - initial human-readable and machine-verifiable evidence export; and
 - reference cases, negative cases, and fault injection.
 
+For the chosen chain, expose recorded ancestry and baseline-to-candidate
+comparisons through shared queries and a thin history view (DH-02 and the
+observational part of DH-05). Link changed values and verdicts to their source
+records and distinguish recorded results from current verification.
+
 Do not call the workflow qualified. Experimental adapters remain visibly
 experimental.
 
@@ -117,6 +145,13 @@ Build:
 - package viewer and first independent verifier;
 - on-premises deployment path; and
 - operational logging, backups, update policy, and incident basics.
+
+Apply DH-01–05 to named design alternatives, exact baselines, explicit contract
+amendments, and change-impact review. Specify new identity and semantic rules in
+ADRs before implementation; preserve ordinary iteration without mandatory human
+signoff. Extend the artifact store and history access under DH-06 as measured
+campaign workloads justify it, including retention and a declared scaling
+benchmark rather than an assumed 10,000-candidate capacity.
 
 Commercial proof:
 

@@ -243,8 +243,11 @@ An offline verifier should report, separately:
 unqualified promise.
 
 The case runner itself now performs the signature-and-trust-root half of
-this list inline, as part of `run --trust-root FILE` (ADR-0015); a verifier
-that does not import or trust the runner's own code remains open.
+this list inline, as part of `run --trust-root FILE` (ADR-0015), and
+`verifier/avila_core_verify.py` checks committed packages without importing
+or trusting the runner's own code (S-041). Its named-outs — presentation-gate
+realisation and compiled-snapshot recomputation — remain open; see the
+status ledger.
 
 ## Confidentiality and portable evidence
 

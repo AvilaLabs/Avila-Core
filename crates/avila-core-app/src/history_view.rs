@@ -949,18 +949,169 @@ fn show_changes(ui: &mut egui::Ui, changes: &[Value]) {
     }
 }
 
-/// The comparison Core recomputed between this attempt and its bound parent.
-/// CQ-03 develops this into the dedicated changed-input/changed-result view.
+/// The comparison Core recomputed between this attempt and the parent its
+/// lineage binds: verdict transitions among all four states, exact margin
+/// deltas, and every comparison Core declined to make, with its reason. All
+/// values are the recorded comparison; the view derives none.
 fn show_comparison(ui: &mut egui::Ui, comparison: &Value) {
     ui.label(
-        egui::RichText::new("RECORDED PARENT COMPARISON")
+        egui::RichText::new("RECORDED RESULTS VS PARENT")
             .size(10.0)
             .strong(),
     );
     if let Some(parent) = comparison["parent_attempt_id"].as_str() {
-        ui.label(format!("Compared with its parent attempt {parent}."));
+        ui.horizontal_wrapped(|ui| {
+            ui.label(format!("Compared with its parent {parent}."));
+            badge(ui, "BOUND PARENT — NOT AN APPROVED BASELINE", muted(ui));
+        });
     }
-    render_object(ui, comparison);
+    if let Some(sha) = comparison["parent_record_sha256"].as_str() {
+        ui.add(
+            egui::Label::new(
+                egui::RichText::new(format!("parent record {sha}"))
+                    .small()
+                    .monospace()
+                    .color(muted(ui)),
+            )
+            .wrap(),
+        );
+    }
+    ui.horizontal_wrapped(|ui| {
+        if let Some(compared) = comparison["verdicts_compared"].as_u64() {
+            ui.label(format!("{compared} requirements compared"));
+        }
+        if let Some(unchanged) = comparison["unchanged_verdicts"].as_u64() {
+            ui.label(format!("{unchanged} unchanged"));
+        }
+    });
+
+    let transitions = comparison["verdict_transitions"].as_array();
+    ui.add_space(6.0);
+    ui.label(
+        egui::RichText::new("VERDICT TRANSITIONS")
+            .size(10.0)
+            .strong(),
+    );
+    match transitions {
+        Some(transitions) if !transitions.is_empty() => {
+            for transition in transitions {
+                ui.horizontal_wrapped(|ui| {
+                    if let Some(id) = transition["requirement_id"].as_str() {
+                        ui.label(egui::RichText::new(id).strong());
+                    }
+                    if let Some(status) = transition["parent_status"].as_str() {
+                        verdict_status_badge(ui, status);
+                    }
+                    ui.label(egui::RichText::new("->").color(muted(ui)));
+                    if let Some(status) = transition["child_status"].as_str() {
+                        verdict_status_badge(ui, status);
+                    }
+                });
+            }
+        }
+        _ => {
+            ui.label("No recorded verdict changed between parent and child.");
+        }
+    }
+
+    let margins = comparison["exact_margin_comparisons"].as_array();
+    if margins.is_some_and(|margins| !margins.is_empty()) {
+        ui.add_space(6.0);
+        ui.label(egui::RichText::new("EXACT MARGINS").size(10.0).strong());
+        ui.label(
+            egui::RichText::new(
+                "Exact deltas computed by Core (child minus parent); a positive delta is more margin.",
+            )
+            .small()
+            .color(muted(ui)),
+        );
+        egui::Grid::new("margin-comparisons")
+            .num_columns(4)
+            .spacing([14.0, 5.0])
+            .show(ui, |ui| {
+                for margin in margins.into_iter().flatten() {
+                    if let Some(id) = margin["requirement_id"].as_str() {
+                        ui.label(egui::RichText::new(id).strong().size(11.0));
+                    }
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{}  ->  {}",
+                            margin["parent_margin"].as_str().unwrap_or(""),
+                            margin["child_margin"].as_str().unwrap_or("")
+                        ))
+                        .monospace()
+                        .size(11.0),
+                    );
+                    let delta = margin["delta"].as_str().unwrap_or("");
+                    let (color, note) = if delta.starts_with('-') {
+                        (RED, "less margin")
+                    } else if delta == "0" {
+                        (muted(ui), "unchanged")
+                    } else {
+                        (egui::Color32::from_rgb(95, 197, 128), "more margin")
+                    };
+                    ui.label(
+                        egui::RichText::new(format!("delta {delta}"))
+                            .monospace()
+                            .size(11.0)
+                            .color(color),
+                    );
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{note} {}",
+                            margin["unit"].as_str().unwrap_or("")
+                        ))
+                        .size(11.0)
+                        .color(muted(ui)),
+                    );
+                    ui.end_row();
+                }
+            });
+    }
+
+    for (field, heading) in [
+        (
+            "verdict_comparison_unavailable",
+            "VERDICT COMPARISONS UNAVAILABLE",
+        ),
+        (
+            "margin_comparison_unavailable",
+            "MARGIN COMPARISONS UNAVAILABLE",
+        ),
+    ] {
+        if let Some(unavailable) = comparison[field]
+            .as_array()
+            .filter(|unavailable| !unavailable.is_empty())
+        {
+            ui.add_space(6.0);
+            ui.label(egui::RichText::new(heading).size(10.0).strong());
+            for entry in unavailable {
+                ui.horizontal_wrapped(|ui| {
+                    if let Some(id) = entry["requirement_id"].as_str() {
+                        ui.label(egui::RichText::new(id).strong());
+                    }
+                    if let Some(reason) = entry["reason"].as_str() {
+                        ui.label(egui::RichText::new(unavailable_reason(reason)).color(muted(ui)));
+                    }
+                });
+            }
+        }
+    }
+}
+
+/// The recorded reason Core declined a comparison, stated plainly. Reasons are
+/// Core's typed values; this only renders them.
+fn unavailable_reason(reason: &str) -> &'static str {
+    match reason {
+        "parent_missing" => "not recorded on the parent",
+        "child_missing" => "not recorded on this attempt",
+        "both_missing" => "recorded on neither attempt",
+        "not_numeric" => "recorded margins are not exact numbers",
+        "unit_mismatch" => "recorded units differ",
+        "limit_mismatch" => "recorded limits differ",
+        "invalid_number" => "a recorded margin is not readable as a number",
+        _ => "unavailable for a reason the record does not name",
+    }
 }
 
 #[cfg(test)]
@@ -1101,6 +1252,121 @@ mod tests {
                 texts
                     .iter()
                     .any(|text| text.contains("Child of attempt copper-ratio2-r0"))
+            );
+        }
+    }
+
+    /// A comparison covering every verdict state, mixed delta signs, and every
+    /// unavailable reason must render its recorded values verbatim.
+    #[test]
+    fn comparison_renders_all_states_deltas_and_reasons() {
+        let comparison = json!({
+            "schema_version": "avila.core/attempt-comparison/v0.1-draft",
+            "parent_attempt_id": "parent-a",
+            "parent_record_sha256": "sha256:pp",
+            "verdicts_compared": 8,
+            "unchanged_verdicts": 3,
+            "verdict_transitions": [
+                {"requirement_id":"R-P2F","parent_status":"pass","child_status":"fail"},
+                {"requirement_id":"R-F2P","parent_status":"fail","child_status":"pass"},
+                {"requirement_id":"R-P2I","parent_status":"pass","child_status":"inconclusive"},
+                {"requirement_id":"R-I2N","parent_status":"inconclusive","child_status":"not_evaluated"},
+                {"requirement_id":"R-N2P","parent_status":"not_evaluated","child_status":"pass"}
+            ],
+            "verdict_comparison_unavailable": [
+                {"requirement_id":"R-PARENT-ONLY","reason":"child_missing"},
+                {"requirement_id":"R-CHILD-ONLY","reason":"parent_missing"}
+            ],
+            "exact_margin_comparisons": [
+                {"requirement_id":"R-BETTER","unit":"uSv/h","parent_margin":"-1/4","child_margin":"3/8","delta":"5/8"},
+                {"requirement_id":"R-WORSE","unit":"uSv/h","parent_margin":"3/8","child_margin":"-1/4","delta":"-5/8"},
+                {"requirement_id":"R-SAME","parent_margin":"2","child_margin":"2","delta":"0"}
+            ],
+            "margin_comparison_unavailable": [
+                {"requirement_id":"R-NONUM","reason":"not_numeric"},
+                {"requirement_id":"R-UNITS","reason":"unit_mismatch"},
+                {"requirement_id":"R-LIMITS","reason":"limit_mismatch"},
+                {"requirement_id":"R-NAN","reason":"invalid_number"},
+                {"requirement_id":"R-NEITHER","reason":"both_missing"}
+            ]
+        });
+        let context = egui::Context::default();
+        crate::configure_style(&context);
+        let mut output = context.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(920.0, 900.0),
+                )),
+                ..Default::default()
+            },
+            |ui| {
+                card(ui, |ui| show_comparison(ui, &comparison));
+            },
+        );
+        output.textures_delta.clear();
+        let texts: Vec<&str> = output
+            .shapes
+            .iter()
+            .filter_map(|shape| match &shape.shape {
+                egui::Shape::Text(text) => Some(text.galley.text()),
+                _ => None,
+            })
+            .collect();
+        // The comparison target is named as the parent, never a baseline.
+        assert!(texts.iter().any(|t| t.contains("parent parent-a")));
+        // Every verdict transition renders its four states verbatim.
+        for id in ["R-P2F", "R-F2P", "R-P2I", "R-I2N", "R-N2P"] {
+            assert!(texts.iter().any(|t| t.contains(id)), "{id} missing");
+        }
+        for status in ["PASS", "FAIL", "INCONCLUSIVE", "NOT EVALUATED"] {
+            assert!(texts.iter().any(|t| t.contains(status)), "{status} missing");
+        }
+        // Exact margins render verbatim — improved, worsened, and unchanged —
+        // and a missing delta never becomes zero.
+        for value in ["-1/4", "3/8", "delta 5/8", "delta -5/8", "delta 0"] {
+            assert!(texts.iter().any(|t| t.contains(value)), "{value} missing");
+        }
+        // Every unavailable reason is stated, none silently dropped.
+        for id in [
+            "R-PARENT-ONLY",
+            "R-CHILD-ONLY",
+            "R-NONUM",
+            "R-UNITS",
+            "R-LIMITS",
+            "R-NAN",
+            "R-NEITHER",
+        ] {
+            assert!(texts.iter().any(|t| t.contains(id)), "{id} missing");
+        }
+        for phrase in [
+            "not recorded on the parent",
+            "not recorded on this attempt",
+            "recorded on neither attempt",
+            "not exact numbers",
+            "units differ",
+            "limits differ",
+            "not readable as a number",
+        ] {
+            assert!(texts.iter().any(|t| t.contains(phrase)), "{phrase} missing");
+        }
+    }
+
+    #[test]
+    fn unavailable_reason_names_every_core_value() {
+        for reason in [
+            "parent_missing",
+            "child_missing",
+            "both_missing",
+            "not_numeric",
+            "unit_mismatch",
+            "limit_mismatch",
+            "invalid_number",
+        ] {
+            assert_ne!(
+                unavailable_reason(reason),
+                "unavailable for a reason the record does not name",
+                "{reason} needs a stated reason"
             );
         }
     }

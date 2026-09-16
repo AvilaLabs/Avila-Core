@@ -650,7 +650,7 @@ fn view_help(view: HelpView) -> (&'static str, &'static str) {
         ),
         HelpView::Specimen => (
             "Specimen compiler",
-            "Compiles the embedded draft contract and renders its findings. The specimen is deliberately incomplete; it demonstrates the diagnostic contract, not a result.",
+            "Compiles the draft contract and renders its findings. The embedded specimen is deliberately incomplete; it demonstrates the diagnostic contract, not a result. The Sources workspace edits the draft or opens a contract file (its registry.json sibling loads too), Check recompiles, an exact repair candidate applies with a click, and nothing writes to disk until Save.",
         ),
     }
 }

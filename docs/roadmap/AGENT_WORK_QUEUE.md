@@ -435,8 +435,56 @@ not schedule, rank, or estimate anything; those belong to the planning and
 selection roadmap track. A `ready` plan is not a run authorization, and an
 executed run still re-verifies every byte the plan hashed.
 
-**Next product increment:** question-first authoring and preflight
-editing, the remaining named workbench gate.
+### Contract preflight editing — implemented 2026-09-17
+
+The specimen compiler is now an authoring surface: JSON-level preflight
+editing over the contract and registry, driven by the same
+`compile_documents` the case runner uses.
+
+**What landed:**
+
+- `Specimen` is an editable draft — contract and registry buffers, the
+  paths they came from, a dirty flag, and the latest check result. It
+  loads the embedded specimen as the starting template.
+- A **Sources** workspace: **Open contract…** loads a contract file plus
+  its `registry.json` sibling; the buffers edit as monospace JSON;
+  **Check** recompiles on demand; **Save** writes both buffers back to
+  their files (enabled only when opened from disk and dirty); **Reset to
+  specimen** discards the draft. A status line reports COMPILED/REJECTED
+  with the blocking-finding count.
+- **Findings** gained apply buttons: a repair candidate whose exact edits
+  the compiler can state shows **Apply: <candidate>** and applies the RFC
+  6902 patch to the buffer, then the check re-runs. Candidates the
+  compiler can only name still render as labels. The case view's findings
+  stay read-only.
+- `apply_edits`/`apply_edit` — an RFC 6902 applier over
+  `serde_json::Value::pointer_mut` for `replace`, `add` (object key or
+  array index/`-`), and `remove`.
+- `--specimen WORKSPACE` opens the mode at a named workspace (a
+  screenshot dev aid).
+
+**Validation evidence:**
+
+- `cargo test --workspace` green; app suite 43 tests including draft
+  open/edit/check/save/reset, the RFC 6902 vocabulary, a one-click repair
+  that clears its own CORE-S1101 finding on the real specimen, and the
+  honest-draft fixture unchanged.
+- `cargo fmt --all -- --check` and
+  `cargo clippy --workspace --all-targets -- -D warnings` clean.
+- Real screenshots exercised the Sources workspace (toolbar, check status,
+  editable buffers) and Findings (repair candidates render; the
+  specimen's judgment-only findings honestly show no Apply button).
+
+**Limits:** this is JSON-level editing, not structured form authoring —
+the fields' meaning stays in the contract schema and its findings; a
+repair apply re-serializes the buffer (formatting is not preserved);
+`registry.json` must sit beside the opened contract; a malformed buffer
+shows the compiler's message instead of a report. Plan approval,
+structured question-first authoring, and pilot-participant testing
+remain.
+
+**Next product increment:** the capability threat-model and conformance
+design slice, then campaign-level views beyond one run.
 
 A public catalog, package installation, browser client, cloud/HPC scheduling,
 organization governance, autonomous search orchestration, and comprehensive

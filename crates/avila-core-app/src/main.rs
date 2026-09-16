@@ -16,7 +16,7 @@ mod tools_view;
 
 use avila_core_compiler::{
     CompilationStatus, CompileReport, ContractSource, CoreDiagnostic, FindingClass,
-    RepairApplicability, compile_documents, explain,
+    RepairApplicability, RepairEdit, compile_documents, explain,
 };
 use avila_core_kernel::VerdictStatus;
 use eframe::egui;
@@ -83,6 +83,7 @@ fn main() -> eframe::Result {
 enum Workspace {
     #[default]
     Overview,
+    Sources,
     Contract,
     Findings,
     Compiled,
@@ -91,8 +92,9 @@ enum Workspace {
 }
 
 impl Workspace {
-    const ALL: [Self; 6] = [
+    const ALL: [Self; 7] = [
         Self::Overview,
+        Self::Sources,
         Self::Contract,
         Self::Findings,
         Self::Compiled,
@@ -103,6 +105,7 @@ impl Workspace {
     const fn label(self) -> &'static str {
         match self {
             Self::Overview => "Overview",
+            Self::Sources => "Sources",
             Self::Contract => "Contract",
             Self::Findings => "Findings",
             Self::Compiled => "Compiled snapshot",
@@ -110,11 +113,226 @@ impl Workspace {
             Self::Evidence => "Evidence",
         }
     }
+
+    fn by_name(name: &str) -> Option<Self> {
+        let key: String = name.chars().filter(|c| c.is_alphanumeric()).collect();
+        Self::ALL.iter().copied().find(|workspace| {
+            workspace
+                .label()
+                .chars()
+                .filter(|c| c.is_alphanumeric())
+                .collect::<String>()
+                .eq_ignore_ascii_case(&key)
+        })
+    }
 }
 
+/// The authoring draft behind the specimen compiler: editable source
+/// buffers, the paths they were opened from or saved to, and the latest
+/// compiler check. Nothing writes a file until **Save** is clicked; the
+/// embedded specimen is always available as the starting template.
 struct Specimen {
-    contract: ContractSource,
-    report: CompileReport,
+    contract_text: String,
+    registry_text: String,
+    contract_path: Option<std::path::PathBuf>,
+    registry_path: Option<std::path::PathBuf>,
+    dirty: bool,
+    check: Result<(ContractSource, CompileReport), String>,
+    picker: case_browser::FilePicker,
+    notice: Option<String>,
+}
+
+impl Specimen {
+    fn embedded() -> Result<Self, String> {
+        let mut draft = Self {
+            contract_text: String::from_utf8_lossy(CONTRACT_JSON).into_owned(),
+            registry_text: String::from_utf8_lossy(REGISTRY_JSON).into_owned(),
+            contract_path: None,
+            registry_path: None,
+            dirty: false,
+            check: Err("not yet compiled".to_string()),
+            picker: case_browser::FilePicker::default(),
+            notice: None,
+        };
+        draft.recheck()?;
+        Ok(draft)
+    }
+
+    /// Compile the current buffers. The read workspaces render only what
+    /// the check produced; a parse failure keeps the last sources and shows
+    /// the compiler's message.
+    fn recheck(&mut self) -> Result<(), String> {
+        self.check =
+            compile_documents(self.contract_text.as_bytes(), self.registry_text.as_bytes())
+                .map_err(|error| error.to_string())
+                .and_then(|report| {
+                    serde_json::from_str::<ContractSource>(&self.contract_text)
+                        .map(|contract| (contract, report))
+                        .map_err(|error| error.to_string())
+                });
+        self.check.as_ref().map(|_| ()).map_err(Clone::clone)
+    }
+
+    /// Open a contract file; its registry is `registry.json` beside it.
+    fn open(&mut self, path: std::path::PathBuf) {
+        match std::fs::read(&path) {
+            Ok(bytes) => match String::from_utf8(bytes) {
+                Ok(text) => {
+                    self.contract_text = text;
+                    self.contract_path = Some(path.clone());
+                    let registry = path.with_file_name("registry.json");
+                    match std::fs::read(&registry)
+                        .ok()
+                        .and_then(|bytes| String::from_utf8(bytes).ok())
+                    {
+                        Some(text) => {
+                            self.registry_text = text;
+                            self.registry_path = Some(registry);
+                        }
+                        None => {
+                            self.registry_path = None;
+                            self.notice = Some(format!(
+                                "No readable `registry.json` beside {}; the registry buffer kept its current contents.",
+                                path.display()
+                            ));
+                        }
+                    }
+                    self.dirty = false;
+                    if let Err(error) = self.recheck() {
+                        self.notice = Some(format!("Opened but does not compile: {error}"));
+                    }
+                }
+                Err(_) => self.notice = Some(format!("{} is not UTF-8 JSON text", path.display())),
+            },
+            Err(error) => self.notice = Some(format!("Could not read {}: {error}", path.display())),
+        }
+    }
+
+    /// Write both buffers back to the paths they came from.
+    fn save(&mut self) {
+        let (Some(contract), Some(registry)) =
+            (self.contract_path.clone(), self.registry_path.clone())
+        else {
+            self.notice = Some(
+                "Nothing to save to: open a contract file first, or the draft stays in memory."
+                    .into(),
+            );
+            return;
+        };
+        let written = std::fs::write(&contract, &self.contract_text)
+            .and_then(|()| std::fs::write(&registry, &self.registry_text));
+        match written {
+            Ok(()) => {
+                self.dirty = false;
+                self.notice = Some(format!(
+                    "Saved {} and {}",
+                    contract.display(),
+                    registry.display()
+                ));
+            }
+            Err(error) => {
+                self.notice = Some(format!("Save failed: {error}"));
+            }
+        }
+    }
+
+    fn reset(&mut self) {
+        self.contract_text = String::from_utf8_lossy(CONTRACT_JSON).into_owned();
+        self.registry_text = String::from_utf8_lossy(REGISTRY_JSON).into_owned();
+        self.contract_path = None;
+        self.registry_path = None;
+        self.dirty = false;
+        self.notice = Some("Reset to the embedded specimen.".to_string());
+        let _ = self.recheck();
+    }
+
+    /// Apply one repair alternative — RFC 6902 edits over the buffer of the
+    /// document the finding names — then recheck.
+    fn apply_repairs(&mut self, document: &str, edits: &[RepairEdit]) {
+        let buffer = match document {
+            "contract" => &mut self.contract_text,
+            "registry" => &mut self.registry_text,
+            _ => {
+                self.notice = Some(format!("Unknown document `{document}`"));
+                return;
+            }
+        };
+        match apply_edits(buffer, edits) {
+            Ok(text) => {
+                *buffer = text;
+                self.dirty = true;
+                let _ = self.recheck();
+            }
+            Err(error) => {
+                self.notice = Some(format!("Repair did not apply: {error}"));
+            }
+        }
+    }
+}
+
+/// Apply RFC 6902 `replace`, `add`, and `remove` edits to a JSON document
+/// and return it pretty-printed.
+fn apply_edits(text: &str, edits: &[RepairEdit]) -> Result<String, String> {
+    let mut document: serde_json::Value =
+        serde_json::from_str(text).map_err(|error| format!("source is not valid JSON: {error}"))?;
+    for edit in edits {
+        apply_edit(&mut document, edit).map_err(|error| format!("{edit:?}: {error}"))?;
+    }
+    serde_json::to_string_pretty(&document).map_err(|error| error.to_string())
+}
+
+fn apply_edit(document: &mut serde_json::Value, edit: &RepairEdit) -> Result<(), String> {
+    match edit {
+        RepairEdit::Replace { path, value } => document
+            .pointer_mut(path)
+            .map(|slot| *slot = value.clone())
+            .ok_or_else(|| format!("nothing exists at {path}")),
+        RepairEdit::Add { path, value } => {
+            let Some(split) = path.rfind('/') else {
+                return Err(format!("{path} is not a JSON Pointer"));
+            };
+            let (parent, token) = (&path[..split], &path[split + 1..]);
+            match document.pointer_mut(parent) {
+                Some(serde_json::Value::Array(items)) => {
+                    if token == "-" {
+                        items.push(value.clone());
+                    } else if let Ok(index) = token.parse::<usize>()
+                        && index <= items.len()
+                    {
+                        items.insert(index, value.clone());
+                    } else {
+                        return Err(format!("{path} does not index the array"));
+                    }
+                    Ok(())
+                }
+                Some(serde_json::Value::Object(object)) => {
+                    object.insert(token.replace("~1", "/").replace("~0", "~"), value.clone());
+                    Ok(())
+                }
+                _ => Err(format!("nothing exists at {parent}")),
+            }
+        }
+        RepairEdit::Remove { path } => {
+            let Some(split) = path.rfind('/') else {
+                return Err(format!("{path} is not a JSON Pointer"));
+            };
+            let (parent, token) = (&path[..split], &path[split + 1..]);
+            match document.pointer_mut(parent) {
+                Some(serde_json::Value::Array(items)) => match token.parse::<usize>() {
+                    Ok(index) if index < items.len() => {
+                        items.remove(index);
+                        Ok(())
+                    }
+                    _ => Err(format!("{path} does not index the array")),
+                },
+                Some(serde_json::Value::Object(object)) => object
+                    .remove(&token.replace("~1", "/").replace("~0", "~"))
+                    .map(|_| ())
+                    .ok_or_else(|| format!("nothing exists at {path}")),
+                _ => Err(format!("nothing exists at {parent}")),
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -152,7 +370,13 @@ impl CoreApp {
             help.start_tour(guide);
         }
         let tools = tools_view::ToolsView::new(setup.tools_path.clone(), setup.tool.as_deref());
-        let mode = if setup.history_path.is_some() {
+        let specimen_workspace = setup
+            .specimen_workspace
+            .as_deref()
+            .and_then(Workspace::by_name);
+        let mode = if setup.specimen_workspace.is_some() {
+            Mode::Specimen
+        } else if setup.history_path.is_some() {
             Mode::History
         } else if setup.tools_path.is_some() || setup.tool.is_some() {
             Mode::Tools
@@ -163,9 +387,9 @@ impl CoreApp {
         };
         Self {
             mode,
-            workspace: Workspace::Overview,
+            workspace: specimen_workspace.unwrap_or_default(),
             logo: load_logo_texture(context).ok(),
-            specimen: load_specimen(),
+            specimen: Specimen::embedded(),
             history: history_view::HistoryView::new(
                 setup.history_path.clone(),
                 setup.history_select.clone(),
@@ -262,7 +486,7 @@ impl CoreApp {
         targets.set(TourTarget::SpecimenNavigation, navigation.response.rect);
         ui.separator();
 
-        let specimen = match &self.specimen {
+        let specimen = match &mut self.specimen {
             Ok(specimen) => specimen,
             Err(error) => {
                 ui.colored_label(
@@ -272,18 +496,58 @@ impl CoreApp {
                 return;
             }
         };
+        if let Some(path) = specimen.picker.poll() {
+            specimen.open(path);
+        }
 
+        let mut applies: Vec<(String, Vec<RepairEdit>)> = Vec::new();
         egui::ScrollArea::vertical()
             .auto_shrink([false, false])
             .show(ui, |ui| match self.workspace {
-                Workspace::Overview => show_overview(ui, specimen),
-                Workspace::Contract => show_contract(ui, &specimen.contract),
-                Workspace::Findings => show_findings(ui, &specimen.report),
-                Workspace::Compiled => show_compiled(ui, &specimen.report),
-                Workspace::Results => show_results(ui, &specimen.contract),
+                Workspace::Sources => show_sources(ui, specimen),
                 Workspace::Evidence => show_evidence(ui),
+                Workspace::Overview => match &specimen.check {
+                    Ok((contract, report)) => show_overview(ui, contract, report),
+                    Err(error) => show_check_error(ui, error),
+                },
+                Workspace::Contract => match &specimen.check {
+                    Ok((contract, _)) => show_contract(ui, contract),
+                    Err(error) => show_check_error(ui, error),
+                },
+                Workspace::Findings => match &specimen.check {
+                    Ok((_, report)) => show_findings(
+                        ui,
+                        report,
+                        specimen.contract_text.as_bytes(),
+                        specimen.registry_text.as_bytes(),
+                        &mut Some(&mut applies),
+                    ),
+                    Err(error) => show_check_error(ui, error),
+                },
+                Workspace::Compiled => match &specimen.check {
+                    Ok((_, report)) => show_compiled(ui, report),
+                    Err(error) => show_check_error(ui, error),
+                },
+                Workspace::Results => match &specimen.check {
+                    Ok((contract, _)) => show_results(ui, contract),
+                    Err(error) => show_check_error(ui, error),
+                },
             });
+        for (document, edits) in applies {
+            specimen.apply_repairs(&document, &edits);
+        }
     }
+}
+
+fn show_check_error(ui: &mut egui::Ui, error: &str) {
+    card(ui, |ui| {
+        ui.colored_label(
+            egui::Color32::LIGHT_RED,
+            "The sources do not compile — the last check reported:",
+        );
+        ui.label(egui::RichText::new(error).monospace().size(11.0));
+        ui.label("Edit the sources under Sources and press Check again.");
+    });
 }
 
 impl eframe::App for CoreApp {
@@ -437,14 +701,6 @@ impl eframe::App for CoreApp {
     }
 }
 
-fn load_specimen() -> Result<Specimen, String> {
-    let contract: ContractSource =
-        serde_json::from_slice(CONTRACT_JSON).map_err(|error| error.to_string())?;
-    let report =
-        compile_documents(CONTRACT_JSON, REGISTRY_JSON).map_err(|error| error.to_string())?;
-    Ok(Specimen { contract, report })
-}
-
 fn load_logo_texture(context: &egui::Context) -> Result<egui::TextureHandle, String> {
     let decoded = image::load_from_memory_with_format(LOGO_PNG, image::ImageFormat::Png)
         .map_err(|error| format!("embedded Core logo is not a valid PNG: {error}"))?
@@ -594,14 +850,12 @@ fn show_scaffold_notice(ui: &mut egui::Ui) {
     });
 }
 
-fn show_overview(ui: &mut egui::Ui, specimen: &Specimen) {
+fn show_overview(ui: &mut egui::Ui, contract: &ContractSource, report: &CompileReport) {
     section_heading(
         ui,
         "What do you need to establish?",
         "Begin with a bounded question and its acceptance requirements, not a solver or a blank workflow.",
     );
-    let contract = &specimen.contract;
-    let report = &specimen.report;
 
     card(ui, |ui| {
         ui.label(
@@ -785,11 +1039,138 @@ fn show_contract(ui: &mut egui::Ui, contract: &ContractSource) {
     });
 }
 
-fn show_findings(ui: &mut egui::Ui, report: &CompileReport) {
+fn show_sources(ui: &mut egui::Ui, specimen: &mut Specimen) {
+    section_heading(
+        ui,
+        "Sources",
+        "Edit the contract and registry as JSON. Check runs the same compiler the case runner uses and changes nothing on disk; Save writes both buffers back to the files they were opened from.",
+    );
+
+    ui.horizontal_wrapped(|ui| {
+        if ui
+            .button("Open contract…")
+            .on_hover_text("Open a contract JSON file; its registry.json sibling loads too.")
+            .clicked()
+        {
+            specimen
+                .picker
+                .start(ui.ctx(), false, "Open a contract JSON file");
+        }
+        if ui
+            .button("Check")
+            .on_hover_text("Compile the buffers as they stand.")
+            .clicked()
+        {
+            let _ = specimen.recheck();
+        }
+        if ui
+            .add_enabled(
+                specimen.dirty
+                    && specimen.contract_path.is_some()
+                    && specimen.registry_path.is_some(),
+                egui::Button::new("Save"),
+            )
+            .on_hover_text("Write both buffers back to the files they were opened from.")
+            .clicked()
+        {
+            specimen.save();
+        }
+        if ui
+            .button("Reset to specimen")
+            .on_hover_text("Discard the buffers and reload the embedded draft.")
+            .clicked()
+        {
+            specimen.reset();
+        }
+        if specimen.dirty {
+            ui.colored_label(CORE_ORANGE, "unsaved edits");
+        }
+    });
+    if let Some(notice) = &specimen.notice {
+        ui.colored_label(muted(ui), notice);
+    }
+    ui.add_space(4.0);
+    match &specimen.check {
+        Ok((_, report)) => {
+            let blocking = report
+                .findings
+                .iter()
+                .filter(|finding| finding.blocks_compilation())
+                .count();
+            ui.horizontal_wrapped(|ui| {
+                match report.status {
+                    CompilationStatus::Compiled => {
+                        badge(ui, "COMPILED", egui::Color32::from_rgb(76, 175, 80));
+                    }
+                    CompilationStatus::Rejected => {
+                        badge(ui, "REJECTED", egui::Color32::LIGHT_RED);
+                    }
+                }
+                ui.colored_label(
+                    muted(ui),
+                    format!(
+                        "{} finding(s), {} blocking — see Findings",
+                        report.findings.len(),
+                        blocking
+                    ),
+                );
+            });
+        }
+        Err(error) => {
+            ui.colored_label(
+                egui::Color32::LIGHT_RED,
+                format!("The sources do not compile: {error}"),
+            );
+        }
+    }
+    ui.separator();
+
+    let contract_label = specimen.contract_path.as_ref().map_or_else(
+        || "contract — embedded specimen".to_string(),
+        |path| format!("contract — {}", path.display()),
+    );
+    ui.label(egui::RichText::new(contract_label).strong());
+    if ui
+        .add(
+            egui::TextEdit::multiline(&mut specimen.contract_text)
+                .font(egui::TextStyle::Monospace)
+                .desired_width(f32::INFINITY)
+                .desired_rows(22),
+        )
+        .changed()
+    {
+        specimen.dirty = true;
+    }
+    ui.add_space(8.0);
+    let registry_label = specimen.registry_path.as_ref().map_or_else(
+        || "registry — embedded specimen".to_string(),
+        |path| format!("registry — {}", path.display()),
+    );
+    ui.label(egui::RichText::new(registry_label).strong());
+    if ui
+        .add(
+            egui::TextEdit::multiline(&mut specimen.registry_text)
+                .font(egui::TextStyle::Monospace)
+                .desired_width(f32::INFINITY)
+                .desired_rows(14),
+        )
+        .changed()
+    {
+        specimen.dirty = true;
+    }
+}
+
+fn show_findings(
+    ui: &mut egui::Ui,
+    report: &CompileReport,
+    contract_bytes: &[u8],
+    registry_bytes: &[u8],
+    applies: &mut Option<&mut Vec<(String, Vec<RepairEdit>)>>,
+) {
     section_heading(
         ui,
         "Findings",
-        "Every finding carries a stable code, a class, an accountable owner, a JSON Pointer, and typed repair candidates where a bounded repair exists.",
+        "Every finding carries a stable code, a class, an accountable owner, a JSON Pointer, and typed repair candidates where a bounded repair exists. A candidate the compiler can state exactly can be applied to the source buffer with one click — the check re-runs and nothing writes to disk until Save.",
     );
     if report.findings.is_empty() {
         card(ui, |ui| {
@@ -801,7 +1182,8 @@ fn show_findings(ui: &mut egui::Ui, report: &CompileReport) {
         show_finding(
             ui,
             finding,
-            &[("contract", CONTRACT_JSON), ("registry", REGISTRY_JSON)],
+            &[("contract", contract_bytes), ("registry", registry_bytes)],
+            applies.as_deref_mut(),
         );
         ui.add_space(7.0);
     }
@@ -835,7 +1217,12 @@ fn finding_location(finding: &CoreDiagnostic, sources: &[(&str, &[u8])]) -> Opti
     Some(rendered)
 }
 
-fn show_finding(ui: &mut egui::Ui, finding: &CoreDiagnostic, sources: &[(&str, &[u8])]) {
+fn show_finding(
+    ui: &mut egui::Ui,
+    finding: &CoreDiagnostic,
+    sources: &[(&str, &[u8])],
+    mut applies: Option<&mut Vec<(String, Vec<RepairEdit>)>>,
+) {
     card(ui, |ui| {
         ui.horizontal_wrapped(|ui| {
             class_badge(ui, finding.class);
@@ -872,7 +1259,24 @@ fn show_finding(ui: &mut egui::Ui, finding: &CoreDiagnostic, sources: &[(&str, &
             };
             ui.horizontal_wrapped(|ui| {
                 badge(ui, label, egui::Color32::from_rgb(120, 164, 210));
-                ui.monospace(repair.candidates.join("  |  "));
+                for (index, candidate) in repair.candidates.iter().enumerate() {
+                    let applicable = repair.edits.get(index).filter(|edits| !edits.is_empty());
+                    match (applicable, applies.as_deref_mut()) {
+                        (Some(edits), Some(collector))
+                            if ui
+                                .button(format!("Apply: {candidate}"))
+                                .on_hover_text(
+                                    "Apply the compiler's exact edit to the source buffer; the check re-runs and nothing writes to disk until Save.",
+                                )
+                                .clicked() =>
+                        {
+                            collector.push((finding.primary.document.clone(), edits.clone()));
+                        }
+                        _ => {
+                            ui.monospace(candidate);
+                        }
+                    }
+                }
             });
         }
         if let Some(entry) = explain(&finding.code) {
@@ -1114,10 +1518,14 @@ mod tests {
     }
     #[test]
     fn embedded_specimen_is_an_honest_draft() {
-        let specimen = load_specimen().expect("embedded specimen should load");
-        assert_eq!(specimen.report.status, CompilationStatus::Rejected);
-        assert!(!specimen.report.findings.is_empty());
-        for finding in &specimen.report.findings {
+        let specimen = Specimen::embedded().expect("embedded specimen should load");
+        let (_, report) = specimen
+            .check
+            .as_ref()
+            .expect("the embedded specimen compiles to a report");
+        assert_eq!(report.status, CompilationStatus::Rejected);
+        assert!(!report.findings.is_empty());
+        for finding in &report.findings {
             assert_eq!(finding.class, FindingClass::Missing, "{finding:?}");
             assert_eq!(finding.owner, "requester", "{finding:?}");
             assert!(
@@ -1125,6 +1533,145 @@ mod tests {
                 "only declared placeholders may block the specimen: {finding:?}"
             );
         }
+    }
+
+    fn draft_scratch(tag: &str) -> std::path::PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("avila-app-draft-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn the_draft_opens_edits_checks_and_saves() {
+        let dir = draft_scratch("open");
+        let contract_path = dir.join("contract.json");
+        let registry_path = dir.join("registry.json");
+        std::fs::write(&contract_path, CONTRACT_JSON).unwrap();
+        std::fs::write(&registry_path, REGISTRY_JSON).unwrap();
+
+        let mut specimen = Specimen::embedded().unwrap();
+        specimen.open(contract_path.clone());
+        assert_eq!(
+            specimen.contract_path.as_deref(),
+            Some(contract_path.as_path())
+        );
+        assert_eq!(
+            specimen.registry_path.as_deref(),
+            Some(registry_path.as_path())
+        );
+        assert!(!specimen.dirty);
+        assert!(specimen.check.is_ok());
+
+        specimen
+            .contract_text
+            .push_str("\n// an edit that breaks parsing\n");
+        specimen.dirty = true;
+        assert!(specimen.recheck().is_err());
+
+        // A good edit rechecks into a report; Save writes both files.
+        specimen.contract_text = String::from_utf8_lossy(CONTRACT_JSON).into_owned();
+        assert!(specimen.recheck().is_ok());
+        specimen.save();
+        assert!(!specimen.dirty);
+        assert_eq!(
+            std::fs::read(&contract_path).unwrap(),
+            specimen.contract_text.as_bytes()
+        );
+        assert_eq!(
+            std::fs::read(&registry_path).unwrap(),
+            specimen.registry_text.as_bytes()
+        );
+
+        specimen.reset();
+        assert!(specimen.contract_path.is_none());
+        assert!(specimen.check.is_ok());
+    }
+
+    #[test]
+    fn apply_edits_runs_the_rfc6902_vocabulary() {
+        let text = r#"{"a": {"b": 1}, "list": ["x", "y"], "gone": true}"#;
+        let out = apply_edits(
+            text,
+            &[
+                RepairEdit::Replace {
+                    path: "/a/b".into(),
+                    value: serde_json::json!(2),
+                },
+                RepairEdit::Add {
+                    path: "/list/-".into(),
+                    value: serde_json::json!("z"),
+                },
+                RepairEdit::Remove {
+                    path: "/gone".into(),
+                },
+            ],
+        )
+        .unwrap();
+        let document: serde_json::Value = serde_json::from_str(&out).unwrap();
+        assert_eq!(document["a"]["b"], 2);
+        assert_eq!(document["list"], serde_json::json!(["x", "y", "z"]));
+        assert!(document.get("gone").is_none());
+        assert!(
+            apply_edits(
+                text,
+                &[RepairEdit::Replace {
+                    path: "/missing".into(),
+                    value: serde_json::json!(0)
+                }]
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn a_repair_apply_patches_the_buffer_and_rechecks() {
+        let mut specimen = Specimen::embedded().unwrap();
+        specimen.apply_repairs(
+            "contract",
+            &[RepairEdit::Replace {
+                path: "/contract_id".into(),
+                value: serde_json::json!("edited.draft"),
+            }],
+        );
+        assert!(specimen.dirty);
+        assert!(specimen.contract_text.contains("edited.draft"));
+        // The check re-ran against the edited buffer.
+        assert!(specimen.check.is_ok());
+        assert!(apply_edits(&specimen.contract_text, &[]).is_ok());
+    }
+
+    #[test]
+    fn an_exact_repair_applies_and_clears_its_finding() {
+        let mut specimen = Specimen::embedded().unwrap();
+        // An undeclared material factor is a CORE-S1101 finding with an
+        // exact removal repair.
+        let mut document: serde_json::Value =
+            serde_json::from_str(&specimen.contract_text).unwrap();
+        document["workflow"][0]["reproducibility"]["material_factors"] =
+            serde_json::json!({ "bogus-factor": "1" });
+        specimen.contract_text = serde_json::to_string_pretty(&document).unwrap();
+        specimen.recheck().unwrap();
+        let edits = {
+            let (_, report) = specimen.check.as_ref().unwrap();
+            let finding = report
+                .findings
+                .iter()
+                .find(|finding| finding.code == "CORE-S1101")
+                .expect("an undeclared factor is a S1101 finding");
+            let edits = finding.repairs[0].edits[0].clone();
+            assert!(!edits.is_empty());
+            edits
+        };
+        specimen.apply_repairs("contract", &edits);
+        let (_, report) = specimen.check.as_ref().unwrap();
+        assert!(
+            !report.findings.iter().any(|f| f.code == "CORE-S1101"),
+            "the applied repair cleared its finding"
+        );
+        // The draft's own missing-parameter findings are untouched.
+        assert!(report.findings.iter().any(|f| f.code == "CORE-S1301"));
     }
 
     #[test]

@@ -328,6 +328,9 @@ pub struct CaseSetup {
     pub light: bool,
     /// Start a walkthrough immediately, by its first word or full title.
     pub tour: Option<String>,
+    /// Open the specimen compiler at a named workspace (a development aid
+    /// with `--screenshot`).
+    pub specimen_workspace: Option<String>,
     /// Open the query workspace with a saved report or campaign log.
     pub tools_path: Option<String>,
     /// Query name to select in the Tools workspace.
@@ -390,6 +393,7 @@ impl CaseSetup {
                 "--tab" => setup.tab = Some(value()?),
                 "--light" => setup.light = true,
                 "--tour" => setup.tour = Some(value()?),
+                "--specimen" => setup.specimen_workspace = Some(value()?),
                 "--tools" => setup.tools_path = Some(value()?),
                 "--history" => setup.history_path = Some(value()?),
                 "--history-select" => setup.history_select = Some(value()?),
@@ -1937,7 +1941,7 @@ fn show_compile(ui: &mut egui::Ui, compile: Option<&CompileReport>, sources: &[(
         }
     }
     for finding in &compile.findings {
-        show_finding(ui, finding, sources);
+        show_finding(ui, finding, sources, None);
     }
 }
 

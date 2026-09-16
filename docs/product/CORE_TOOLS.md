@@ -91,7 +91,9 @@ overwritten. Each program row also offers hash-only probing: check a typed
 path, **Search PATH**, or **Scan folder…** to compare local files against the
 bound executable digest. A probe never executes a candidate, and adopting a
 discovered match is an explicit **Use this program** action. **Check setup**
-invokes the shared runner’s plan operation without launching solver steps;
+invokes the shared runner’s plan operation without launching solver steps —
+its report includes the bound plan, so a step the plan would attempt shows
+as blocked when a capability or environment key is still unmet;
 **Run case** explicitly executes or reuses verified steps. Advanced run options
 include the workspace and campaign log. Recent cases and their data/program
 locations are remembered locally; **Forget** removes that entry without
@@ -104,6 +106,14 @@ case folder.
 Use **Open saved results…** on Cases to browse a saved run report in Tools
 without running the case. This expects a full runner report, not a package’s
 `campaign-report.json`.
+
+The **Specimen compiler** mode is also the preflight editor: the **Sources**
+workspace edits the contract and registry as JSON, **Open contract…** loads
+a contract file plus the `registry.json` beside it, **Check** recompiles
+through the same compiler the case runner uses, and a finding's repair
+candidate carries an **Apply** button when the compiler can state the exact
+edit. **Save** writes both buffers back to the files they came from;
+**Reset to specimen** reloads the embedded draft.
 
 Open **Tools** next to **Current case** and **Specimen compiler**. All fourteen
 queries have named entries with the relevant filter fields; no JSON arguments

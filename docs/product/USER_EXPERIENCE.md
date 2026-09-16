@@ -32,10 +32,16 @@ is built in: contextual explanations per view, bundled
 answers to the questions the interface itself raises, and spotlight
 walkthroughs for the use cases above that dim everything but the control
 being explained while leaving it live. Dark and light themes are provided.
-Contract authoring, preflight editing, plan approval, a dedicated
-design-history view over recorded lineage, and campaign
-supervision beyond one run are not implemented; nothing in the interface has
-semantics the runner and kernel do not.
+The specimen compiler doubles as a preflight editor: its Sources workspace
+edits the contract and registry as JSON (or opens a contract file and its
+`registry.json` sibling), Check recompiles through the same compiler the
+case runner uses, and each finding carries its class, owner, location, and
+repair candidates — a candidate the compiler can state exactly applies to
+the buffer with one click. Nothing writes to disk until Save. Structured
+question-first authoring (form fields over every contract element), plan
+approval, a dedicated design-history view over recorded lineage, and
+campaign supervision beyond one run are not implemented; nothing in the
+interface has semantics the runner and kernel do not.
 
 ## Design premise
 

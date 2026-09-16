@@ -225,6 +225,43 @@ A portable package should contain or securely reference:
 The human view is generated from these records, not maintained as an unrelated
 report.
 
+## Package-root semantics
+
+The package root is the directory containing `package.json`, canonicalized at
+verification time. The implemented rules:
+
+- **Package documents are confined.** Every `documents[]` path must be a
+  relative path inside the root; canonicalization is checked against the root
+  so `..` and symlink escapes fail before a byte is read, and only regular
+  files are accepted.
+- **Artifacts are digest-bound, not location-bound.** A `source_root` name is
+  declared in the manifest but resolves to an operator-supplied directory at
+  run time; the artifact's path is then confined to *that* root the same way.
+  An artifact may therefore live outside the package root — its identity is
+  the recorded digest, never the path.
+- **Identity is content, not location.** The manifest digest is the package
+  identity and transitively pins every document and artifact digest.
+  Relocating a package — copying the folder and its data elsewhere — verifies
+  at the same identity (`a_relocated_package_verifies_at_the_same_identity`
+  pins this). A recorded `case_path` in a log line is provenance text, not
+  identity.
+- **A redacted or absent byte stream is a check state, not an error.** Every
+  document and artifact resolves to verified / mismatch / missing /
+  not_checked; a package can verify *partially* with named omissions rather
+  than failing wholesale. The retention question — which of those states may
+  carry a publishable package — is policy, below.
+
+## Redaction and retention (owner-gated)
+
+ADR-0005 names redaction as first-class; the mechanism (a digest preserves
+identity without disclosing bytes) already exists — a redacted artifact reads
+as `not_checked` or `missing` with its identity intact. What does not exist is
+the *policy*: which artifacts may be redacted before a package may be called
+complete-enough-to-publish, what a verifier must still be able to check, and
+how retention obligations are stated. Those are owner decisions — they trade
+confidentiality against verifiability per deployment — so the gate records
+them as owner-gated rather than unimplemented.
+
 ## Independent verification
 
 An offline verifier should report, separately:

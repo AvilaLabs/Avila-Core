@@ -544,9 +544,37 @@ cross-case dashboard is not implemented; "waiting for input / running"
 are live states the log cannot record, so the strip is a recorded-state
 reading, not a progress monitor.
 
-**Next product increment:** the evidence-package remainder —
-package-root semantics, with redaction/retention named as owner-gated —
-then the verifier named-outs assessment.
+### Package-root semantics + redaction named owner-gated — implemented 2026-09-17
+
+EVIDENCE_MODEL.md gains two sections resolving the gate's remaining
+locally-doable half:
+
+- **Package-root semantics**, documented against the implemented rules:
+  documents confined to the canonicalized package root (`..`/symlink
+  escapes refuse before reads), artifacts digest-bound through
+  operator-resolved source roots (location is not identity), the manifest
+  digest as package identity, and check-states-not-errors for absent
+  bytes. A new test,
+  `a_relocated_package_verifies_at_the_same_identity`, pins the
+  content-not-location claim.
+- **Redaction and retention (owner-gated)**: the mechanism exists — a
+  redacted artifact keeps its digest identity and reads as
+  `not_checked`/`missing` — but which artifacts may be redacted before a
+  package may be called publishable, and what retention obligations
+  apply, are policy decisions trading confidentiality against
+  verifiability. Named owner-gated rather than unimplemented.
+
+The status row now reads Partial with the three pieces named honestly:
+package-root semantics documented and pinned, the independent verifier
+exercised (named-outs open), redaction/retention rules owner-gated.
+
+**Validation evidence:** `cargo test --workspace` green including the new
+relocation test; `cargo fmt --all -- --check` and
+`cargo clippy --workspace --all-targets -- -D warnings` clean.
+
+**Next product increment:** the verifier named-outs assessment —
+presentation-gate realisation and compiled-snapshot recomputation —
+implementing the ungated slice and naming what remains owner-gated.
 
 A public catalog, package installation, browser client, cloud/HPC scheduling,
 organization governance, autonomous search orchestration, and comprehensive

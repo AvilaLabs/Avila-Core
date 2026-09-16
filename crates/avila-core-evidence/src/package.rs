@@ -950,6 +950,33 @@ mod tests {
     }
 
     #[test]
+    fn a_relocated_package_verifies_at_the_same_identity() {
+        // Identity is content, not location: the same manifest and file
+        // bytes at a different package root and source root produce the
+        // same manifest digest and the same verified states.
+        let first = TestDir::new();
+        let manifest = fixture(&first.0);
+        let second = TestDir::new();
+        for name in ["contract.json", "registry.json", "claims.json"] {
+            fs::write(second.0.join(name), name.as_bytes()).unwrap();
+        }
+        fs::create_dir_all(second.0.join("source")).unwrap();
+        fs::write(second.0.join("source/artifact.bin"), b"artifact").unwrap();
+
+        let first_sources = BTreeMap::from([("source".into(), first.0.join("source"))]);
+        let second_sources = BTreeMap::from([("source".into(), second.0.join("source"))]);
+        let one = verify_case_package(&manifest, &first.0, &first_sources, None).unwrap();
+        let two = verify_case_package(&manifest, &second.0, &second_sources, None).unwrap();
+        assert_eq!(one.integrity.status, PackageIntegrityStatus::Complete);
+        assert_eq!(two.integrity.status, PackageIntegrityStatus::Complete);
+        assert_eq!(one.integrity.manifest_sha256, two.integrity.manifest_sha256);
+        assert_eq!(
+            one.integrity.artifacts[0].state,
+            two.integrity.artifacts[0].state
+        );
+    }
+
+    #[test]
     fn executions_must_name_declared_capabilities_and_bound_claims() {
         let root = TestDir::new();
         let mut manifest: CasePackageManifest = serde_json::from_slice(&fixture(&root.0)).unwrap();

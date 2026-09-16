@@ -43,6 +43,12 @@ avila-core amend AMENDMENT_ID --log campaign.jsonl --supersedes ROOT_REVISION_ID
 avila-core run CASE --plan --capability NAME=EXECUTABLE --input NAME=FILE
 avila-core run CASE --capability NAME=EXECUTABLE --input NAME=FILE --log campaign.jsonl
 # Add --no-reuse for an intentionally fresh execution.
+
+# Hash-only setup probing — reports which local files match each bound
+# capability digest without executing anything; a check or run verifies the
+# chosen bytes again:
+avila-core capabilities CASE --candidate NAME=EXECUTABLE
+avila-core capabilities CASE --scan DIR --on-path
 ```
 
 Add `--json` to any query for machine-readable output. `inspect` reads a saved
@@ -66,16 +72,27 @@ an example, or **Open case folder…** (Ctrl+O). A case folder contains
 `package.json`; dropping that file or its folder onto Cases also opens it.
 Opening only previews the authored question and package contents.
 
+Each example card states what the case still asks of this machine: which data
+folders the build ships, which it cannot, and how many programs remain to
+locate. The line is manifest metadata, not a verification.
+
 In **Current case**, **Machine setup** locates data folders and programs using
-native Browse dialogs. **Check setup** invokes the shared runner’s plan
-operation without launching solver steps; **Run case** explicitly executes or
-reuses verified steps. Advanced run options include the workspace and campaign
-log. Recent cases and their data/program locations are remembered locally;
-**Forget** removes that entry without deleting the case. Environment values,
-run workspaces, and execution authorization are not persisted. Remembered
-locations still undergo the runner’s normal identity checks. Examples are
-discovered from the source checkout when it is present; separately distributed
-builds can always open a case folder.
+native Browse dialogs. A bundled example’s requested folders open already
+filled from the shipped trees — `case` names the case’s own folder — while
+programs stay operator-supplied; typed or remembered locations are never
+overwritten. Each program row also offers hash-only probing: check a typed
+path, **Search PATH**, or **Scan folder…** to compare local files against the
+bound executable digest. A probe never executes a candidate, and adopting a
+discovered match is an explicit **Use this program** action. **Check setup**
+invokes the shared runner’s plan operation without launching solver steps;
+**Run case** explicitly executes or reuses verified steps. Advanced run options
+include the workspace and campaign log. Recent cases and their data/program
+locations are remembered locally; **Forget** removes that entry without
+deleting the case. Environment values, run workspaces, and execution
+authorization are not persisted. Remembered and probed locations still undergo
+the runner’s normal identity checks. Examples are discovered from the source
+checkout when it is present; separately distributed builds can always open a
+case folder.
 
 Use **Open saved results…** on Cases to browse a saved run report in Tools
 without running the case. This expects a full runner report, not a package’s

@@ -307,8 +307,77 @@ delta; the workbench displays record payloads verbatim and owns no
 domain logic. A revision's `intent`, reference `rationale`, and amendment
 `rationale` are inert attribution text.
 
-**Next product increment** (unchanged from before): local workflow
-starters and easier capability setup.
+### Local workflow starters and easier capability setup — implemented 2026-09-16
+
+The named next product increment landed in three commits: `dcfa513`
+(hash-only probing in the runner plus the `avila-core capabilities` verb),
+`e368b54` (workbench probing controls), and `abd7079` (bundled-root
+resolution, setup prefill, and per-example needs lines).
+
+**What landed:**
+
+- `crates/avila-core-runner/src/case_run/probe.rs` — shared hash-only
+  probing: `probe_capability` compares a candidate file's bytes to a bound
+  executable digest and reports `verified`, `mismatch`, or `missing`;
+  `scan_dir` offers the regular files directly inside one directory
+  (deterministic order, bounded at 256 entries, no recursion) to every
+  declared capability; `candidates_on_path` searches `PATH` for a capability
+  name and its shortened `-`-prefixed forms (e.g. `python3`, `python3.14`
+  for `python3-numpy`) while refusing an empty name. Probing never executes
+  a candidate; a check or run re-verifies the chosen bytes against the
+  package's pinned identities.
+- `avila-core capabilities CASE` — accepts a case directory or a
+  `package.json` path, refuses undeclared capability names and unreadable
+  scan paths, and emits a `capability-probe/v0.1-draft` JSON report naming
+  each capability's expected digest, candidate paths, per-candidate state,
+  and whether any candidate verified. Options: `--candidate NAME=PATH`,
+  `--scan DIR`, `--on-path`.
+- Workbench machine setup — each program row can check a typed path,
+  **Search PATH**, or **Scan folder…**; hashing runs on a background thread
+  and the panel states that probing does not execute candidates. A verified
+  discovered match is adopted only through the explicit **Use this program**
+  action; typed or remembered paths are never silently replaced, and a path
+  changed since the last probe is called out.
+- Workflow starters — a bundled example's declared source roots resolve
+  against the shipped trees (`capabilities/<name>`, `libraries/<name>`,
+  then `<name>`; `case` names the case's own folder) and empty setup rows
+  open prefilled, while programs stay operator-supplied and restored or
+  typed locations win. Each example card states what the case still asks of
+  the machine — bundled folders, folders the operator must supply (e.g.
+  `simsopt`), and the program count — as manifest metadata, not
+  verification.
+
+**Validation evidence:**
+
+- `cargo test --workspace` green — runner suite 146 tests including probe
+  coverage for digest verification, mismatch/missing states, path
+  deduplication, bounded deterministic scans, shortened-name `PATH`
+  matching, and empty-name refusal; CLI suite adds named candidates, scans,
+  missing state, undeclared-capability and unreadable-scan refusals, and
+  manifest-path input; app suite 39 tests including typed-probe, folder
+  scan, apply-verified, panel controls, bundled prefill, restored-path
+  preservation, no-capability-prefill, and needs-line coverage.
+- `cargo fmt --all -- --check` and
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  clean; `cargo build --workspace` clean.
+- CLI smoke-verified against the real case-003 package: `--on-path`
+  located `python3.14` for `python3-numpy` and reported the honest
+  digest mismatch.
+- Real workbench screenshots exercised the rendered result: prefilled
+  `case`/`thermal` rows with empty program rows, the per-row
+  **Search PATH** / **Scan folder…** controls, and the example cards'
+  needs lines.
+
+**Limits:** probing establishes byte identity only — it does not execute,
+sandbox, or qualify a program, and a verified probe is not a run
+authorization. Bundled-root offers resolve only for cases inside this
+build's shipped examples tree; separately distributed builds still open a
+case folder and supply every root. External roots such as `simsopt` remain
+explicitly the operator's. The needs line previews the manifest and
+verifies nothing.
+
+**Next product increment:** no named successor; the larger roadmap tracks
+below remain.
 
 A public catalog, package installation, browser client, cloud/HPC scheduling,
 organization governance, autonomous search orchestration, and comprehensive

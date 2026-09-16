@@ -80,7 +80,8 @@ avila-core-kernel            (first canonical-value semantic slice)
     └── avila-core-runner    (the case workflow: staging, execution, receipts,
         │                     reuse, claim generation, built-in and declared adapters)
         ├── avila-core-cli   (canonicalize, compile, evaluate, explain, run,
-        │                     the shared query tools, keys/sign, and local MCP)
+        │                     capabilities probing, the shared query tools,
+        │                     keys/sign, and local MCP)
         └── avila-core-app   (thin egui workbench over the runner and compiler:
                             case browser, case workbench, specimen compiler,
                             and the shared-query Tools workspace)
@@ -160,7 +161,11 @@ Provides authoritative JSON canonicalization, embedded semantic-profile and
 vector-set identities, `v0.2-draft` compilation with a nonzero exit status for
 a rejected contract, campaign evaluation over a claims document, the
 diagnostic catalog through `explain`, and the composed case workflow through
-`run`, printed as a concise staged view or as the complete JSON report. It
+`run`, printed as a concise staged view or as the complete JSON report. The
+`capabilities` verb probes local files against a case's bound executable
+digests — hashing candidates only, never executing them — so an operator can
+find which supplied path satisfies a pinned program before the run path
+verifies it again. It
 also exposes the fourteen shared read-only queries over saved reports and
 campaign logs (`inspect`, `history`, `attempt`, `constellation`,
 `revision`, `reference`, `assessment`, `amend`, `tools`, and
@@ -171,9 +176,15 @@ structural validity, and process provenance from scientific validity.
 ### `avila-core-app`
 
 An egui workbench with four modes. The Cases browser opens local and example
-case folders and remembers their data and program locations on this computer.
-The case workbench opens a composed case, lists the roots and executables its
-package requests, runs the workflow on a background thread through the runner
+case folders, remembers their data and program locations on this computer,
+and states each bundled example's unmet needs — shipped versus operator data
+folders and the number of programs to locate — as manifest metadata, not
+verification. The case workbench opens a composed case, lists the roots and
+executables its package requests — offering the shipped data folders for a
+bundled example while leaving programs operator-supplied and typed or
+remembered locations untouched — probes candidate executables hash-only
+against the bound digests through the runner crate, runs the workflow on a
+background thread through the runner
 crate, and renders the report stage by stage: integrity, compilation,
 execution with reuse and change classes, generated claims and binding,
 verdicts with their complete boundaries, optional presentation-gate readiness

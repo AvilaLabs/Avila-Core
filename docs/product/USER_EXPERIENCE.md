@@ -9,9 +9,17 @@ the implemented workbench described below remains distinct.
 
 The egui workbench today covers the run-and-understand half of the journey
 below for a composed case. A local case browser opens recent, example, or
-arbitrary case folders and remembers their data and program locations. The
+arbitrary case folders and remembers their data and program locations; each
+bundled example names up front which folders the build ships, which the
+operator must supply, and how many programs remain to locate. The
 case view lists the roots and executables the case
-package requests, plans or runs the workflow through the same runner the CLI
+package requests — a bundled example's data folders are offered already
+filled from the shipped trees without overwriting typed or remembered
+locations — and each program row can probe a typed path, `PATH`, or a folder
+of candidates against the bound digest without executing anything, so the
+machine setup answers "which of my files is the pinned program?" before a
+check or run re-verifies it. The view plans or runs the workflow through the
+same runner the CLI
 uses, and renders integrity, compilation, execution (reused, executed,
 planned, not run, refused, failed, with every change named by class),
 generated claims, requirement verdicts with their complete boundaries, and

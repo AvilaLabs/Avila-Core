@@ -464,6 +464,22 @@ impl CaseSetup {
         }
     }
 
+    /// Fill empty source-root rows from locations this build can offer —
+    /// `case` names the case's own folder, and a bundled example's other
+    /// roots resolve against the shipped sibling trees. Typed and restored
+    /// locations are never overwritten; a check or run still verifies every
+    /// supplied path against the package's pinned identities.
+    pub fn prefill_bundled(&mut self) {
+        let case_dir = PathBuf::from(self.case_dir.trim());
+        for row in &mut self.source_roots {
+            if row.path.trim().is_empty()
+                && let Some(path) = crate::case_browser::bundled_root(&case_dir, &row.name)
+            {
+                row.path = path.display().to_string();
+            }
+        }
+    }
+
     fn options(&self, plan_only: bool) -> CaseRunOptions {
         let paths = |rows: &[NamedPath]| -> BTreeMap<String, PathBuf> {
             rows.iter()
@@ -570,6 +586,7 @@ impl CaseView {
                 Ok(info) => {
                     setup.case_dir = info.path.display().to_string();
                     setup.absorb_manifest(&info.manifest);
+                    setup.prefill_bundled();
                     (Some(info), None)
                 }
                 Err(error) => (None, Some(error)),
@@ -2753,6 +2770,65 @@ mod tests {
         let unset = CaseSetup::default().options(false);
         assert_eq!(unset.trust_root, None);
         assert_eq!(unset.runner_key, None);
+    }
+
+    /// A bundled example's declared data folders are offered from the
+    /// shipped trees on open — `case` is the package's own folder — while
+    /// programs stay operator-supplied and a restored location still wins.
+    #[test]
+    fn a_bundled_example_prefills_its_shipped_data_folders() {
+        let root_path = |view: &CaseView, name: &str| {
+            view.setup
+                .source_roots
+                .iter()
+                .find(|row| row.name == name)
+                .map(|row| row.path.clone())
+        };
+        let mut view = CaseView::new(CaseSetup::default());
+        view.select_case(example("case-003-thermal-spreader"), None)
+            .unwrap();
+        assert_eq!(
+            root_path(&view, "case").as_deref(),
+            Some(view.setup.case_dir.as_str())
+        );
+        assert!(
+            root_path(&view, "thermal")
+                .unwrap()
+                .ends_with("examples/capabilities/thermal")
+        );
+        assert!(
+            view.setup
+                .capabilities
+                .iter()
+                .all(|row| row.path.is_empty()),
+            "programs are never prefilled"
+        );
+
+        // A restored location still wins over the bundled offer.
+        let saved = crate::case_browser::RecentCase {
+            path: example("case-003-thermal-spreader").path,
+            roots: vec![NamedPath {
+                name: "thermal".into(),
+                path: "/my/thermal".into(),
+            }],
+            ..Default::default()
+        };
+        view.select_case(example("case-003-thermal-spreader"), Some(&saved))
+            .unwrap();
+        assert_eq!(root_path(&view, "thermal").as_deref(), Some("/my/thermal"));
+        assert_eq!(
+            root_path(&view, "case").as_deref(),
+            Some(view.setup.case_dir.as_str())
+        );
+
+        // Outside the bundled tree only `case` resolves.
+        let outside = probe_scratch("outside-case");
+        assert_eq!(
+            crate::case_browser::bundled_root(&outside, "case").unwrap(),
+            outside
+        );
+        assert!(crate::case_browser::bundled_root(&outside, "thermal").is_none());
+        std::fs::remove_dir_all(&outside).unwrap();
     }
 
     // --- capability probing --------------------------------------------

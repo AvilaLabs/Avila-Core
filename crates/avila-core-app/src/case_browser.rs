@@ -8,6 +8,19 @@ use serde::{Deserialize, Serialize};
 
 use crate::case_view::NamedPath;
 
+/// What a case still asks of this machine, derived from its manifest and
+/// this build's bundled example locations. Display metadata only — it
+/// verifies nothing.
+#[derive(Clone, Debug, Default)]
+pub(crate) struct CaseNeeds {
+    /// Requested data folders a bundled location offers.
+    pub bundled: Vec<String>,
+    /// Requested data folders the operator must supply.
+    pub external: Vec<String>,
+    /// Programs the operator locates on their machine.
+    pub programs: usize,
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct CaseInfo {
     pub path: PathBuf,
@@ -16,6 +29,7 @@ pub(crate) struct CaseInfo {
     pub requirements: Vec<(String, String)>,
     pub assumptions: Vec<String>,
     pub metadata_error: Option<String>,
+    pub needs: CaseNeeds,
 }
 
 impl CaseInfo {
@@ -60,6 +74,24 @@ impl CaseInfo {
             }
             Err(error) => (String::new(), Vec::new(), Vec::new(), Some(error)),
         };
+        let needs = {
+            let mut roots: Vec<&str> = manifest
+                .artifacts
+                .iter()
+                .map(|artifact| artifact.source_root.as_str())
+                .collect();
+            roots.sort_unstable();
+            roots.dedup();
+            let (bundled, external): (Vec<String>, Vec<String>) = roots
+                .into_iter()
+                .map(str::to_owned)
+                .partition(|name| bundled_root(&path, name).is_some());
+            CaseNeeds {
+                bundled,
+                external,
+                programs: manifest.capabilities.len(),
+            }
+        };
         Ok(Self {
             path,
             manifest,
@@ -67,8 +99,44 @@ impl CaseInfo {
             requirements,
             assumptions,
             metadata_error,
+            needs,
         })
     }
+}
+
+/// The bundled example trees this build ships, when readable: the cases
+/// directory and its parent examples directory.
+fn bundled_examples() -> Option<(PathBuf, PathBuf)> {
+    let cases = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/cases")
+        .canonicalize()
+        .ok()?;
+    let examples = cases.parent()?.to_path_buf();
+    Some((cases, examples))
+}
+
+/// Resolve a declared source root to a location this build can offer, when
+/// one exists. `case` names the case's own folder for any package; other
+/// roots resolve only for cases inside this build's bundled examples tree,
+/// against the documented sibling layout (`capabilities/<name>`,
+/// `libraries/<name>`, then `<name>`). A resolved path is an offer only —
+/// check and run verify it against the package's pinned identities.
+pub(crate) fn bundled_root(case_dir: &Path, name: &str) -> Option<PathBuf> {
+    if name == "case" {
+        return Some(case_dir.to_path_buf());
+    }
+    let (cases, examples) = bundled_examples()?;
+    if !case_dir.starts_with(&cases) {
+        return None;
+    }
+    [
+        examples.join("capabilities").join(name),
+        examples.join("libraries").join(name),
+        examples.join(name),
+    ]
+    .into_iter()
+    .find(|candidate| candidate.is_dir())
+    .and_then(|candidate| candidate.canonicalize().ok())
 }
 
 fn read_document(root: &Path, relative: &str) -> Result<Vec<u8>, String> {
@@ -92,6 +160,22 @@ fn read_document(root: &Path, relative: &str) -> Result<Vec<u8>, String> {
         return Err("Document exceeds the 8 MiB preview limit.".into());
     }
     Ok(bytes)
+}
+
+/// One small line naming what an example still asks of this machine.
+fn needs_line(needs: &CaseNeeds) -> String {
+    let folders = if needs.bundled.is_empty() && needs.external.is_empty() {
+        "No data folders requested".to_string()
+    } else if needs.external.is_empty() {
+        "Data folders bundled with this build".to_string()
+    } else {
+        format!("Needs your folders: {}", needs.external.join(", "))
+    };
+    if needs.programs == 0 {
+        folders
+    } else {
+        format!("{folders} · {} program(s) to locate", needs.programs)
+    }
 }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -169,7 +253,9 @@ pub(crate) struct CaseBrowser {
 }
 impl CaseBrowser {
     pub fn new(local: LocalCases) -> Self {
-        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/cases");
+        let root = bundled_examples()
+            .map(|(cases, _)| cases)
+            .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/cases"));
         let mut examples: Vec<_> = std::fs::read_dir(root)
             .into_iter()
             .flatten()
@@ -249,6 +335,7 @@ impl CaseBrowser {
                             ui.small(&example.manifest.case_id);
                             if ui.add_enabled(!active, egui::Button::new(egui::RichText::new(example.manifest.title.replace('→', "->")).strong()).wrap()).clicked() { selected = Some(example.path.clone()); }
                             ui.label(&example.question);
+                            ui.small(needs_line(&example.needs));
                         });
                     });
                 }
@@ -383,6 +470,36 @@ mod tests {
                 .contains("outside")
         );
     }
+    #[test]
+    fn an_example_names_what_it_still_needs() {
+        let case = CaseInfo::read(
+            &Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../examples/cases/case-003-thermal-spreader"),
+        )
+        .unwrap();
+        assert_eq!(case.needs.bundled, ["case", "thermal"]);
+        assert!(case.needs.external.is_empty());
+        assert_eq!(case.needs.programs, 2);
+        assert_eq!(
+            needs_line(&case.needs),
+            "Data folders bundled with this build · 2 program(s) to locate"
+        );
+
+        let simsopt = CaseInfo::read(
+            &Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../examples/cases/case-005-passive-compliance-ceiling"),
+        )
+        .unwrap();
+        assert_eq!(simsopt.needs.external, ["simsopt"]);
+        assert!(
+            simsopt
+                .needs
+                .bundled
+                .contains(&"magnetic-compliance".to_string())
+        );
+        assert!(needs_line(&simsopt.needs).contains("Needs your folders: simsopt"));
+    }
+
     #[test]
     fn examples_have_authored_questions_and_manifest_paths_work() {
         let browser = CaseBrowser::new(LocalCases::default());

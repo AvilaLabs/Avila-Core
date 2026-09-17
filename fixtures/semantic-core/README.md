@@ -41,7 +41,7 @@ multiple historical profiles.
   cases and 3 rejected cases covering governed purpose resolution, exact nominal
   exclusions, unrelated and similarly named purposes, and major-version
   mismatch;
-- `defects/defects.v1.json`: 23 executable real-contract defect fixtures. The
+- `defects/defects.v1.json`: 33 executable real-contract defect fixtures. The
   base pair is CASE-001's committed contract+registry verbatim; each fixture
   seeds one realistic defect as JSON-pointer mutations (a typo'd field, an
   unresolvable metric step, a mismatched binding role or media type, an
@@ -65,7 +65,7 @@ The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
 `scope-predicates.v1.json`, plus the 48 requirement, 10 categorical, and 8
 aggregation vectors in `verdict-calculus.v1.json`. The compiler harness also executes all 70 cases in
-the five compiler manifests plus all 23 real-contract defect cases in
+the five compiler manifests plus all 33 real-contract defect cases in
 `defects/defects.v1.json`, and pins each registry digest plus all successful
 compiled-snapshot identities. The campaign harness executes all 15 cases in its
 manifest and pins every successful campaign identity. Passing the 98 pure
@@ -189,7 +189,7 @@ canonically.
 | `kinds.unit-not-in-class.fail` | a known unit belonging to another class → `CORE-T2301`-adjacent `CORE-T2103`; repair `constrained_choice` = unit class — exercised by `types.R6.limit-unit.fail` |
 | `kinds.unit-not-in-profile.fail` | `rem` under the current restricted profile → `CORE-T2001` |
 | `kinds.unit-symbol-unknown.fail` | `Mpa` → `CORE-T2001`; correction requires confirmation unless a governed typo alias makes identity and scale unique — exercised by `types.R6.unknown-unit.fail` |
-| `kinds.prefix-case.fail` | `MSv` (mega-sievert) is not `mSv` → `CORE-T2001` — same check as `types.R6.unknown-unit.fail` |
+| `kinds.prefix-case.fail` | `MSv` (mega-sievert) is not `mSv` → `CORE-T2001` — exercised by `defect.contract.prefix-case` |
 | `kinds.cross-kind-conversion.fail` | absorbed-dose producer bound to dose-equivalent slot → `CORE-T2101`; repair `method_owner_judgment` naming the conversion capability |
 | `kinds.exact-scaling.pass` | vectors `unit-scaling.v1` |
 | `kinds.registry-namespace-owner.fail` | kind in `nuclear.*` without owner → `CORE-R3501` |
@@ -200,7 +200,7 @@ canonically.
 | --- | --- |
 | `numerics.decimal-canonical.pass` | `"9.41"` accepted — exercised by `canon.v1.json` vector `decimal.canonical` |
 | `numerics.decimal-noncanonical.fail` | `"9.410"`, `"09.4"` → `CORE-S1102` — exercised by `decimal.trailing-zero-rejected` |
-| `numerics.json-float.fail` | `25.0` as JSON number in `limit` → `CORE-S1102` — exercised by `json.float-number-rejected` and fixture `types.source.json-float.fail` |
+| `numerics.json-float.fail` | `25.0` as JSON number in `limit` → `CORE-S1102` — exercised by `json.float-number-rejected`, `types.source.json-float.fail`, and `defect.contract.json-float-limit` |
 | `numerics.json-int.pass` | `3` as JSON number for `mesh_refinement_levels` — exercised by `json.integer-accepted` |
 | `numerics.nan-inf.fail` | `"NaN"`, `"Infinity"` → `CORE-S1102` — exercised by `json.nan-refused` and `json.infinity-refused` |
 | `numerics.display-rounding.pass` | presentation changes, canonical value and verdict do not |
@@ -208,7 +208,7 @@ canonically.
 | `numerics.rational-factor.pass` | `"1/3600000000"` parsed and reduced — exercised by `rational.canonical` |
 | `numerics.rational-noncanonical.fail` | reducible fraction, negative denominator, leading plus/zeros, zero denominator — exercised by `rational.reducible-rejected` and `rational.negative-denominator-rejected` |
 | `numerics.decimal-exponent-normalizes.pass` | authored exponent lowers to one canonical plain decimal — exercised by `decimal.exponent-authored-lowering` |
-| `numerics.negative-zero.fail` | `"-0"` is noncanonical; canonical value is `"0"` — exercised by `decimal.negative-zero-authored-lowering` |
+| `numerics.negative-zero.fail` | `"-0"` is noncanonical; canonical value is `"0"` — exercised by `decimal.negative-zero-authored-lowering` and `defect.contract.negative-zero-limit` |
 
 ### uncertainty/ (SC-3)
 
@@ -227,7 +227,7 @@ canonically.
 | `roles.nominal-identity.fail` | same kind, different role id → `CORE-T2101` — exercised by `types.R2.role-mismatch.fail` |
 | `roles.major-version.fail` | `role@2` offered to `role@1` slot → `CORE-T2101` |
 | `roles.minor-version.pass` | `role@1` with extra optional attribute accepted |
-| `roles.validator-required.fail` | role without validator → `CORE-R3501` |
+| `roles.validator-required.fail` | role without validator → `CORE-R3501` — exercised by `defect.registry.missing-validator` |
 | `roles.attribute-undeclared-in-predicate.fail` | predicate references undeclared attribute → structural finding before evaluation |
 | `roles.cardinality-slot-scoped.pass` | two aggregation instances may carry the same role without creating a global duplicate |
 

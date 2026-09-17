@@ -454,29 +454,9 @@ def _ref_key(ref: dict) -> tuple:
 
 def _build_index(registry: dict) -> RegistryIndex:
     index = RegistryIndex(doc=registry)
-    for record in registry.get("roles", []):
-        role = record["role"]
-        index.roles[_ref_key(role)] = RoleDef(
-            ref=role,
-            accepted_media_types=record.get("accepted_media_types", []),
-            permitted_claim_models=record.get("permitted_claim_models", []),
-            quantity_kind=record.get("quantity_kind"),
-            unit_class=record.get("unit_class"),
-            categorical_values=record.get("categorical_values", []),
-        )
-    for record in registry.get("capability_types", []):
-        cap = record["capability_type"]
-        index.capability_types[_ref_key(cap)] = CapabilityDef(
-            ref=cap,
-            inputs=record.get("inputs", []),
-            outputs=record.get("outputs", []),
-            parameters=record.get("parameters", []),
-            reproducibility=record.get("reproducibility", {}),
-            review=record.get("review"),
-        )
-    for record in registry.get("purposes", []):
-        index.purposes.add(_ref_key(record["purpose"]))
     index.kinds = kinds_from_registry_doc(registry)
+    kind_class_names: dict = {}
+    kind_ids: set = set()
     # Kernel invariants enforced at registry load (unit.rs): every factor
     # positive, no duplicate unit symbols, the canonical unit present with
     # factor exactly one.
@@ -486,6 +466,12 @@ def _build_index(registry: dict) -> RegistryIndex:
         units = kind_record.get("units", [])
         if not kind_id or not canonical_unit or not units:
             raise WouldReject(f"kind `{kind_id}` is missing its id, canonical unit, or units")
+        if kind_id in kind_ids:
+            raise WouldReject(f"duplicate kind `{kind_id}`")
+        kind_ids.add(kind_id)
+        kind_class_names[kind_id] = kind_record.get("unit_class", "")
+        if not kind_record.get("owner", "").strip():
+            raise WouldReject(f"kind `{kind_id}` owner must not be empty")
         symbols: set[str] = set()
         canonical_factor = None
         for unit in units:
@@ -501,6 +487,59 @@ def _build_index(registry: dict) -> RegistryIndex:
             raise WouldReject(f"kind `{kind_id}` does not include its canonical unit")
         if canonical_factor != 1:
             raise WouldReject(f"kind `{kind_id}` canonical-unit factor is not exactly one")
+    for record in registry.get("roles", []):
+        role = record["role"]
+        if _ref_key(role) in index.roles:
+            raise WouldReject(f"duplicate evidence role `{role['id']}@{role['major']}`")
+        if not record.get("owner", "").strip() or not record.get("validator", "").strip():
+            raise WouldReject(f"role `{role['id']}@{role['major']}` requires a nonempty owner and validator")
+        quantity_kind = record.get("quantity_kind")
+        unit_class = record.get("unit_class")
+        if (quantity_kind is None) != (unit_class is None):
+            raise WouldReject(
+                f"role `{role['id']}@{role['major']}` must declare both quantity_kind and unit_class")
+        if quantity_kind is not None:
+            expected_class = kind_class_names.get(quantity_kind)
+            if expected_class is None:
+                raise WouldReject(f"role `{role['id']}@{role['major']}` references unknown quantity kind `{quantity_kind}`")
+            if expected_class != unit_class:
+                raise WouldReject(
+                    f"role `{role['id']}@{role['major']}` unit class `{unit_class}` does not match kind class `{expected_class}`")
+        categorical = record.get("categorical_values", [])
+        if categorical and (quantity_kind is not None or unit_class is not None):
+            raise WouldReject("a closed categorical role must be non-quantitative")
+        if categorical and record.get("permitted_claim_models") != [{"model": "unquantified"}]:
+            raise WouldReject(
+                "a closed categorical role must permit only the unquantified claim model")
+        index.roles[_ref_key(role)] = RoleDef(
+            ref=role,
+            accepted_media_types=record.get("accepted_media_types", []),
+            permitted_claim_models=record.get("permitted_claim_models", []),
+            quantity_kind=quantity_kind,
+            unit_class=unit_class,
+            categorical_values=categorical,
+        )
+    for record in registry.get("capability_types", []):
+        cap = record["capability_type"]
+        if _ref_key(cap) in index.capability_types:
+            raise WouldReject(f"duplicate capability type `{cap['id']}@{cap['major']}`")
+        if not record.get("owner", "").strip():
+            raise WouldReject(f"capability type `{cap['id']}@{cap['major']}` owner must not be empty")
+        index.capability_types[_ref_key(cap)] = CapabilityDef(
+            ref=cap,
+            inputs=record.get("inputs", []),
+            outputs=record.get("outputs", []),
+            parameters=record.get("parameters", []),
+            reproducibility=record.get("reproducibility", {}),
+            review=record.get("review"),
+        )
+    for record in registry.get("purposes", []):
+        key = _ref_key(record["purpose"])
+        if key in index.purposes:
+            raise WouldReject(f"duplicate governed purpose `{key[0]}@{key[1]}`")
+        if not record.get("owner", "").strip():
+            raise WouldReject(f"purpose `{key[0]}@{key[1]}` owner must not be empty")
+        index.purposes.add(key)
     return index
 
 

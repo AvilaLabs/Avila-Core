@@ -845,3 +845,21 @@ current compiler can express. The remaining 128 absent names map to
 unimplemented semantics: lifecycle enforcement, the campaign-state machine,
 policy selection and organization rules, per-condition admission fixtures,
 scope/qualification evaluation, and the scenarios corpus.
+
+### Corpus expansion: gt family, JSON-number edges, registry defects — 2026-09-17
+
+fixtures-check made the remaining gaps enumerable; three families closed
+against already-implemented semantics. The verdict corpus gained the strict
+greater-than family (`gt.bounded.within/below/crossing/boundary`, including
+the plan's `lo = L` crossing case — 48 requirement vectors). The canon corpus
+gained `json.nan-refused`, `json.infinity-refused`, and
+`json.integer-accepted` (15 vectors). The defect corpus gained eleven entries —
+its `registry_mutations` path is now exercised (missing validator, duplicate
+role/purpose, unit-class mismatch, empty owner, duplicate unit symbol) plus
+contract-side JSON-float, duplicate input_id, prefix-case, and negative-zero
+defects (33 total). The Python lowerer grew the matching registry invariants —
+duplicate roles/purposes/capability types/kinds, nonempty owner/validator,
+quantity-kind↔unit-class pairing, categorical-role restrictions — so the
+second implementation rejects the same malformed registries. fixtures-check
+now reads 90 covered / 63 named / 18 unbounded / 120 absent; every absent
+name requires semantics the profile has not implemented.

@@ -1447,7 +1447,7 @@ class TestSnapshotLowering(unittest.TestCase):
                     with self.assertRaises(lower.WouldReject):
                         lower.lower_compiled_snapshot(contract_bytes, registry_bytes)
                     rejected += 1
-        self.assertEqual(rejected + compiled, 23)
+        self.assertEqual(rejected + compiled, 33)
 
 
 def _resolve_pointer(document, pointer: str):

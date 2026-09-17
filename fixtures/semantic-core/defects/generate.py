@@ -279,6 +279,88 @@ DEFECTS = [
         [{"op": "__unit_factor", "kind": "nuclear.ambient-dose-equivalent-rate",
           "symbol": "uSv/h", "value": "0.0000000005"}],
     ),
+    (
+        "defect.registry.missing-validator",
+        "a role loses its declared validator",
+        [],
+        [
+            {"op": "set", "pointer": "/roles/0/validator", "value": ""},
+        ],
+    ),
+    (
+        "defect.registry.duplicate-role",
+        "a second role reuses the first role's versioned identity",
+        [],
+        [
+            {"op": "set", "pointer": "/roles/1/role",
+             "value": {"id": "shielding.candidate", "major": 1}},
+        ],
+    ),
+    (
+        "defect.registry.role-unit-class-mismatch",
+        "a quantity role names a unit class that does not match its kind's class",
+        [],
+        [
+            {"op": "set", "pointer": "/roles/6/unit_class", "value": "core.length.units@1"},
+        ],
+    ),
+    (
+        "defect.registry.duplicate-purpose",
+        "a second purpose reuses the first purpose's id",
+        [],
+        [
+            {"op": "set", "pointer": "/purposes/1/purpose/id",
+             "value": "avila-labs.shielding.design-search"},
+        ],
+    ),
+    (
+        "defect.registry.empty-owner",
+        "a role loses its owner",
+        [],
+        [
+            {"op": "set", "pointer": "/roles/0/owner", "value": ""},
+        ],
+    ),
+    (
+        "defect.registry.duplicate-unit",
+        "a kind declares the same unit symbol twice",
+        [],
+        [
+            {"op": "set", "pointer": "/kinds/0/units/1/symbol", "value": "uSv/h"},
+        ],
+    ),
+    (
+        "defect.contract.json-float-limit",
+        "a limit is authored as a JSON float instead of an exact decimal string",
+        [
+            {"op": "set", "pointer": "/requirements/1/limit/value", "value": 25.0},
+        ],
+        [],
+    ),
+    (
+        "defect.contract.duplicate-input",
+        "two inputs reuse the same input_id",
+        [
+            {"op": "set", "pointer": "/inputs/1/input_id", "value": "candidate"},
+        ],
+        [],
+    ),
+    (
+        "defect.contract.prefix-case",
+        "a limit's unit has the wrong prefix case — MSv is not mSv",
+        [
+            {"op": "set", "pointer": "/requirements/1/limit/unit", "value": "MSv/h"},
+        ],
+        [],
+    ),
+    (
+        "defect.contract.negative-zero-limit",
+        "a limit is authored as -0, which has no canonical decimal",
+        [
+            {"op": "set", "pointer": "/requirements/1/limit/value", "value": "-0"},
+        ],
+        [],
+    ),
 ]
 
 

@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+mod fixtures_check;
 mod mcp;
 mod queries;
 
@@ -72,6 +73,18 @@ enum Command {
     },
     /// Report the draft semantic profile and exact embedded vector identities.
     SemanticProfile,
+    /// Report the semantic fixture corpus against the README's
+    /// ADR-0006 required-fixture plan — which names exist, which are
+    /// plan-referenced only, and which are absent.
+    FixturesCheck {
+        /// Exit nonzero when any required name is absent (unbounded names
+        /// still report but do not fail).
+        #[arg(long)]
+        strict: bool,
+        /// Emit the report as JSON instead of a table.
+        #[arg(long)]
+        json: bool,
+    },
     /// Read authoritative JSON and emit its deterministic canonical bytes.
     Canonicalize { document: PathBuf },
     /// Compile a v0.2-draft contract against one immutable registry snapshot.
@@ -521,6 +534,11 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 "{}",
                 serde_json::to_string_pretty(&semantic_profile_report()?)?
             );
+        }
+        Command::FixturesCheck { strict, json } => {
+            return Ok(ExitCode::from(
+                fixtures_check::fixtures_check(strict, json)? as u8,
+            ));
         }
         Command::Canonicalize { document } => {
             let source = fs::read(document)?;
@@ -1306,7 +1324,7 @@ mod tests {
         assert_eq!(report.status, "draft");
         assert_eq!(report.total_vectors, 103);
         assert_eq!(report.implemented_vector_sets.len(), 4);
-        assert_eq!(report.total_compiler_fixtures, 68);
+        assert_eq!(report.total_compiler_fixtures, 70);
         assert_eq!(report.implemented_compiler_fixture_sets.len(), 5);
         assert_eq!(report.total_campaign_fixtures, 16);
         assert_eq!(report.implemented_campaign_fixture_sets.len(), 1);

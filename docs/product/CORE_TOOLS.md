@@ -93,7 +93,11 @@ commands complement the query suite. `evaluate` accepts `--artifact FILE`
 (repeatable) to re-hash supplied bytes against each attested artifact
 identity — every admission then states `verified` or `not_checked`; without
 any, the report stays a digest-only evaluation and its identity is
-unchanged.
+unchanged. `fixtures-check` reports the committed fixture corpus against the
+ADR-0006 required-fixture plan in `fixtures/semantic-core/README.md` — every
+required name as `covered`, `named`, `unbounded`, or `absent`, and any
+fixture that references a code neither diagnostic catalog defines fails the
+check; `--strict` also fails on absent names.
 
 ## Native workbench
 

@@ -826,3 +826,22 @@ qualification bounds, package re-pinning, or evidence re-blessing.
 > infrastructure. Complete the required checks and visually exercise the app.
 > Continue through ready work without routine confirmation; stop at the stated
 > review point with a concise handoff.
+
+### Executable fixture-counting rule — implemented 2026-09-17
+
+The README's ADR-0006 counting rule is now `avila-core fixtures-check`: the
+committed corpus is embedded, the required-fixture tables are parsed (with
+`A1..A10` ranges, `a/b` alternatives, `pass/fail` suffixes, and
+prefix-inheriting shorthand), and every required name reports `covered`,
+`named`, `unbounded`, or `absent` per family. A fixture referencing a
+diagnostic code neither catalog defines fails outright; `--strict` fails on
+any absent name. Reconciling the plan surfaced real divergences: T2202 is a
+plan-anticipated code the profile does not define (the unquantified-governed
+case emits T2201), and several covered rules carried aspirational names that
+now cross-reference the committed vector or fixture identity. Two new
+executable fixtures — `types.R3.unquantified-governed.fail` and
+`types.R3.unquantified-nominal.pass` — closed the only absent names the
+current compiler can express. The remaining 128 absent names map to
+unimplemented semantics: lifecycle enforcement, the campaign-state machine,
+policy selection and organization rules, per-condition admission fixtures,
+scope/qualification evaluation, and the scenarios corpus.

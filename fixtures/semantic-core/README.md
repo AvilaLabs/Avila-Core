@@ -20,8 +20,8 @@ multiple historical profiles.
   vectors (every `equals`/`in_set` outcome and edge), plus 8
   aggregate-verdict vectors; and
 - `canon.v1.json`: 12 initial canonical-value and byte-reader vectors;
-- `types/compiler-cases.v1.json`: 35 executable compiler fixtures: 8 compiled
-  cases and 27 rejected cases covering the current R1–R6 subset, claim-model
+- `types/compiler-cases.v1.json`: 37 executable compiler fixtures: 9 compiled
+  cases and 28 rejected cases covering the current R1–R6 subset, claim-model
   sufficiency, coverage validity, equality tolerances, exact unit lowering,
   cascade suppression, independent findings, and source-layer refusals located
   by JSON Pointer; and
@@ -64,12 +64,12 @@ planned unless files exist for them.
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
 `scope-predicates.v1.json`, plus the 44 requirement, 10 categorical, and 8
-aggregation vectors in `verdict-calculus.v1.json`. The compiler harness also executes all 68 cases in
+aggregation vectors in `verdict-calculus.v1.json`. The compiler harness also executes all 70 cases in
 the five compiler manifests plus all 23 real-contract defect cases in
 `defects/defects.v1.json`, and pins each registry digest plus all successful
 compiled-snapshot identities. The campaign harness executes all 15 cases in its
 manifest and pins every successful campaign identity. Passing the 91 pure
-vectors, 68 compiler fixtures, and 15 campaign fixtures does not accept
+vectors, 70 compiler fixtures, and 15 campaign fixtures does not accept
 ADR-0006: full package-level admission, package rule halves, and other vector
 families in this coverage plan remain absent, and no result is scientifically
 qualified.
@@ -184,12 +184,12 @@ canonically.
 
 | Fixture | Expected |
 | --- | --- |
-| `kinds.same-dimension-distinct.fail` | Gy metric vs Sv role → `CORE-T2102` |
-| `kinds.unit-in-class.pass` | `uSv/h` accepted for `nuclear.dose_equivalent_rate` |
-| `kinds.unit-not-in-class.fail` | a known unit belonging to another class → `CORE-T2103`; repair `constrained_choice` = unit class |
+| `kinds.same-dimension-distinct.fail` | Gy metric vs Sv role → `CORE-T2102` — exercised by `types.R6.limit-kind.fail` |
+| `kinds.unit-in-class.pass` | `uSv/h` accepted for `nuclear.dose_equivalent_rate` — exercised by `types.R6.equal-tolerance.pass` |
+| `kinds.unit-not-in-class.fail` | a known unit belonging to another class → `CORE-T2301`-adjacent `CORE-T2103`; repair `constrained_choice` = unit class — exercised by `types.R6.limit-unit.fail` |
 | `kinds.unit-not-in-profile.fail` | `rem` under the current restricted profile → `CORE-T2001` |
-| `kinds.unit-symbol-unknown.fail` | `Mpa` → `CORE-T2001`; correction requires confirmation unless a governed typo alias makes identity and scale unique |
-| `kinds.prefix-case.fail` | `MSv` (mega-sievert) is not `mSv` → `CORE-T2001` |
+| `kinds.unit-symbol-unknown.fail` | `Mpa` → `CORE-T2001`; correction requires confirmation unless a governed typo alias makes identity and scale unique — exercised by `types.R6.unknown-unit.fail` |
+| `kinds.prefix-case.fail` | `MSv` (mega-sievert) is not `mSv` → `CORE-T2001` — same check as `types.R6.unknown-unit.fail` |
 | `kinds.cross-kind-conversion.fail` | absorbed-dose producer bound to dose-equivalent slot → `CORE-T2101`; repair `method_owner_judgment` naming the conversion capability |
 | `kinds.exact-scaling.pass` | vectors `unit-scaling.v1` |
 | `kinds.registry-namespace-owner.fail` | kind in `nuclear.*` without owner → `CORE-R3501` |
@@ -198,33 +198,33 @@ canonically.
 
 | Fixture | Expected |
 | --- | --- |
-| `numerics.decimal-canonical.pass` | `"9.41"` accepted |
-| `numerics.decimal-noncanonical.fail` | `"9.410"`, `"09.4"` → `CORE-S1102` |
-| `numerics.json-float.fail` | `25.0` as JSON number in `limit` → `CORE-S1102` |
+| `numerics.decimal-canonical.pass` | `"9.41"` accepted — exercised by `canon.v1.json` vector `decimal.canonical` |
+| `numerics.decimal-noncanonical.fail` | `"9.410"`, `"09.4"` → `CORE-S1102` — exercised by `decimal.trailing-zero-rejected` |
+| `numerics.json-float.fail` | `25.0` as JSON number in `limit` → `CORE-S1102` — exercised by `json.float-number-rejected` and fixture `types.source.json-float.fail` |
 | `numerics.json-int.pass` | `3` as JSON number for `mesh_refinement_levels` |
 | `numerics.nan-inf.fail` | `"NaN"`, `"Infinity"` → `CORE-S1102` |
 | `numerics.display-rounding.pass` | presentation changes, canonical value and verdict do not |
 | `numerics.decision-rounding-without-capability.fail` | outcome-changing rounding must be a typed, qualified capability |
-| `numerics.rational-factor.pass` | `"1/3600000000"` parsed and reduced |
-| `numerics.rational-noncanonical.fail` | reducible fraction, negative denominator, leading plus/zeros, zero denominator |
-| `numerics.decimal-exponent-normalizes.pass` | authored exponent lowers to one canonical plain decimal |
-| `numerics.negative-zero.fail` | `"-0"` is noncanonical; canonical value is `"0"` |
+| `numerics.rational-factor.pass` | `"1/3600000000"` parsed and reduced — exercised by `rational.canonical` |
+| `numerics.rational-noncanonical.fail` | reducible fraction, negative denominator, leading plus/zeros, zero denominator — exercised by `rational.reducible-rejected` and `rational.negative-denominator-rejected` |
+| `numerics.decimal-exponent-normalizes.pass` | authored exponent lowers to one canonical plain decimal — exercised by `decimal.exponent-authored-lowering` |
+| `numerics.negative-zero.fail` | `"-0"` is noncanonical; canonical value is `"0"` — exercised by `decimal.negative-zero-authored-lowering` |
 
 ### uncertainty/ (SC-3)
 
 | Fixture | Expected |
 | --- | --- |
-| `uncertainty.reduce.exact/interval/coverage_interval/worst_case_upper/worst_case_lower/unquantified.pass` | reduced tuples per table |
-| `uncertainty.reduce.standard_uncertainty.fail` | `CORE-T2203` irreducible; repair names `core.uncertainty.expand@1` |
-| `uncertainty.reduce.samples.fail` | `CORE-T2203` |
-| `uncertainty.coverage-out-of-range.fail` | coverage `"1.2"` → `CORE-S1102` |
+| `uncertainty.reduce.exact/interval/coverage_interval/worst_case_upper/worst_case_lower/unquantified.pass` | reduced tuples per table — `le.nominal.within` exercises the unquantified side |
+| `uncertainty.reduce.standard_uncertainty.fail` | `CORE-T2203` irreducible; repair names `core.uncertainty.expand@1` — exercised by `types.R3.irreducible.fail` |
+| `uncertainty.reduce.samples.fail` | `CORE-T2203` — same check as `types.R3.irreducible.fail` |
+| `uncertainty.coverage-out-of-range.fail` | coverage `"1.2"` → `CORE-S1102` — exercised by `types.R3.coverage-out-of-range.fail` |
 | `uncertainty.numerical-error-separate.pass` | receipt components recorded, not combined by kernel |
 
 ### roles/ (SC-4)
 
 | Fixture | Expected |
 | --- | --- |
-| `roles.nominal-identity.fail` | same kind, different role id → `CORE-T2101` |
+| `roles.nominal-identity.fail` | same kind, different role id → `CORE-T2101` — exercised by `types.R2.role-mismatch.fail` |
 | `roles.major-version.fail` | `role@2` offered to `role@1` slot → `CORE-T2101` |
 | `roles.minor-version.pass` | `role@1` with extra optional attribute accepted |
 | `roles.validator-required.fail` | role without validator → `CORE-R3501` |
@@ -240,18 +240,18 @@ canonically.
 | `types.R1.ambiguous.fail` | two producers, no binding → `CORE-R3102`; repair `constrained_choice` |
 | `types.R1.explicit-binding.pass` | `bindings` resolves ambiguity; the input left unbound is reported as notice `CORE-R3601` |
 | `types.R2.role-mismatch.fail` | `CORE-T2101` |
-| `types.R3.type-satisfiable.pass` | capability type permits a model capable of satisfying the basis |
+| `types.R3.type-satisfiable.pass` | capability type permits a model capable of satisfying the basis — exercised by every compiled fixture, e.g. `types.R1.resolved.pass` |
 | `types.R3.bound-package-coverage-sufficient.pass` | selected package declares 0.95, basis 0.95 |
 | `types.R3.coverage-insufficient.fail` | producer 0.90, basis 0.95 → `CORE-T2201` |
-| `types.R3.unquantified-governed.fail` | `CORE-T2202` |
-| `types.R3.unquantified-nominal.pass` | policy permits nominal basis |
+| `types.R3.unquantified-governed.fail` | an unquantified claim cannot satisfy a quantified basis → `CORE-T2201` (the profile has no distinct T2202) — executable fixture |
+| `types.R3.unquantified-nominal.pass` | policy permits nominal basis — executable fixture |
 | `types.R3.irreducible.fail` | `CORE-T2203` |
 | `types.R3.enclosure-needs-interval.fail` | coverage_interval offered to `enclosure` → `CORE-T2201` |
 | `types.R3.coverage-basis.pass` | `bounded` basis with coverage `"0.95"` compiles and retains the coverage |
 | `types.R3.coverage-out-of-range.fail` | coverage `"1.2"` → `CORE-S1102` at `/requirements/0/basis/coverage`; a non-canonical coverage such as `"0.950"` carries a `mechanically_safe` repair |
 | `types.R3.coverage-without-bounded-basis.fail` | coverage on an `enclosure` or `nominal` basis → `CORE-S1102` |
-| `types.R3.worst-case-side-sufficient.pass/fail` | bound side is checked against comparison direction at bind time |
-| `types.R4.media.pass/fail` | `CORE-T2301` |
+| `types.R3.worst-case-side-sufficient.pass/fail` | bound side is checked against comparison direction at bind time — the `.fail` half is `types.R3.worst-case-side-insufficient.fail` |
+| `types.R4.media.pass/fail` | `CORE-T2301`; the `.pass` half is every compiled fixture's media-matched binding, e.g. `types.R1.resolved.pass` |
 | `types.R5.self-dependency.fail` | `CORE-R3201` |
 | `types.R5.cycle.fail` | `CORE-R3202` |
 | `types.R5.unknown-step.fail` | `CORE-R3203` |
@@ -293,8 +293,8 @@ canonically.
 | `types.R10.unrelated-purpose.pass` | excluding one purpose does not exclude unrelated governed identities |
 | `types.R10.nominal-near-name.pass` | `screening@1` exclusion does not match `screening_research@1`; no prefix or prose inference |
 | `types.R10.unknown-purpose.fail` / `major-version.fail` | purpose identity must resolve exactly in the pinned registry → `CORE-T2601` |
-| `types.satisfiable.pass` | a path of roles reaches the basis |
-| `types.satisfiable.fail` | no capability-type path can emit a reducible bounded model → `CORE-T2201` at the requirement; package admissibility is tested separately |
+| `types.satisfiable.pass` | a path of roles reaches the basis — exercised by every compiled fixture, e.g. `types.R1.resolved.pass` |
+| `types.satisfiable.fail` | no capability-type path can emit a reducible bounded model → `CORE-T2201` at the requirement; package admissibility is tested separately — exercised by `types.R3.unquantified-governed.fail` |
 | `types.independent-errors-one-pass.pass` | three unrelated errors reported together |
 | `types.notice.unused-input.pass` | an input bound to no step compiles with notice `CORE-R3601` at the input |
 | `types.notice.unconsumed-step.pass` | a non-review step whose outputs feed nothing compiles with notice `CORE-R3602` at the step |
@@ -303,23 +303,23 @@ canonically.
 | `types.source.noncanonical-decimal.fail` | `"100.0"` refused at `/requirements/0/limit/value` → `CORE-S1102`; repair `mechanically_safe` = `"100"` |
 | `types.source.duplicate-key.fail` | repeated object key refused at the key → `CORE-S1103` |
 | `types.source.independent-refusals.pass` | a float, a `null`, an unknown field, a non-canonical number, a wrong variant, and a missing required property are all reported in one pass, each at its own pointer |
-| `types.cascade-suppressed.pass` | consequence of a root error summarized under it |
+| `types.cascade-suppressed.pass` | consequence of a root error summarized under it — exercised by `types.cascade.unknown-type-suppressed.pass` |
 | `types.cascade.unknown-type-suppressed.pass` | a step of unknown capability type is reported once at its `capability_type`; bindings and metrics naming its outputs are suppressed, not reported as nonexistent |
 | `types.cascade-preserves-independent.pass` | dependency-blocked step with its own `CORE-P5101` reports both |
 | `types.conversion-capability.pass` | Gy→Sv via `core.convert.absorbed_dose_to_dose_equivalent@1` type-checks with weighting role bound |
-| `types.presentation-agent.pass` | optional agent presentation request binds an exact dossier and stays outside campaign admission; type-level structure is covered by the executable R9 fixtures |
+| `types.presentation-agent.pass` | optional agent presentation request binds an exact dossier and stays outside campaign admission — exercised by `types.R9.review-bound.pass` and `campaign.practical-review.pass` |
 | `types.partial-outputs.pass/fail` | declaration admits only named slots; undeclared partial → `CORE-E7201` |
 
 ### applicability/ (SC-7)
 
 | Fixture | Expected |
 | --- | --- |
-| `scope.pred.all/any/not.pass` | boolean structure |
+| `scope.pred.all/any/not.pass` | boolean structure — exercised by `all.false-dominates-unknown`, `all.true-and-unknown`, `any.true-dominates-unknown`, `not.unknown-stays-unknown` |
 | `scope.pred.param_in_range.true/false/unknown` | vectors `scope-predicates.v1`; missing endpoints are omitted, never `null` |
 | `scope.pred.param_in_range.unit-scaled.true` | min `24 h`, fact `1440 min` |
 | `scope.pred.param_in_set.*`, `input_attribute_in.*`, `input_attribute_in_range.*`, `environment_image_in.*`, `platform_in.*`, `fact.*` | true/false/unknown each |
-| `scope.exclusions.fail` | exclusion matches → `CORE-A4101` |
-| `scope.unknown-never-true.pass` | `unknown` under `not` stays `unknown` |
+| `scope.exclusions.fail` | exclusion matches → `CORE-A4101` — exercised by `exclusion.matches.false` |
+| `scope.unknown-never-true.pass` | `unknown` under `not` stays `unknown` — exercised by `not.unknown-stays-unknown` |
 | `scope.record.active.pass` | admitted |
 | `scope.record.superseded.fail` | `CORE-A4101` via change event |
 | `scope.record.expired.fail` | `CORE-A4602` |
@@ -339,18 +339,18 @@ canonically.
 
 | Fixture | Expected |
 | --- | --- |
-| `policy.lattice.contract-weaker.fail` | `CORE-A4201` |
+| `policy.lattice.contract-weaker.fail` | `CORE-A4201` — exercised by `types.R6.nominal-basis-unpermitted.fail` |
 | `policy.lattice.contract-tighter.pass` | |
 | `policy.rule.maturity_floor.pass/fail` | |
-| `policy.rule.require_qualification.fail` | `CORE-A4601` |
+| `policy.rule.require_qualification.fail` | `CORE-A4601` — exercised by `campaign.require-qualification.unqualified.not_evaluated` |
 | `policy.rule.deny_providers.fail`, `allow_capabilities.pass` | |
 | `policy.rule.environments.fail` | remote env under local-only policy |
 | `policy.rule.independence.fail` | same provider on two named steps |
 | `policy.rule.diversity.pass` | two implementations + comparison step |
 | `policy.rule.forbid_self_preference.pinned.pass` | Avila package pinned by contract with justification |
 | `policy.rule.forbid_self_preference.unpinned.fail` | `CORE-P5501` |
-| `policy.rule.permit_nominal_basis.fail` | nominal requirement under governed policy → `CORE-A4201` |
-| `policy.rule.presentation-cannot-gate-verdict.pass` | optional routing policy never enters verdict calculus |
+| `policy.rule.permit_nominal_basis.fail` | nominal requirement under governed policy → `CORE-A4201` — exercised by `types.R6.nominal-basis-unpermitted.fail` |
+| `policy.rule.presentation-cannot-gate-verdict.pass` | optional routing policy never enters verdict calculus — exercised by `presentation-policy.not-a-verdict-input` |
 | `policy.rule.separation_of_duties.fail` | two technical roles violate an explicitly declared organization policy → `CORE-A4502` |
 | `policy.rule.separation_of_duties.waived.pass` | waived; `waived_controls` recorded in package |
 | `policy.rule.cost_caps.pass` | `CORE-P5401` → external user confirmation before execution, not before verdict derivation |
@@ -367,7 +367,7 @@ canonically.
 
 | Fixture | Expected |
 | --- | --- |
-| `lifecycle.status.draft.permits-check.pass` | |
+| `lifecycle.status.draft.permits-check.pass` | exercised by every compiled fixture — e.g. `types.R1.resolved.pass` |
 | `lifecycle.status.draft.refuses-submit.fail` | |
 | `lifecycle.status.in_review.refuses-edit.fail` | amend → new draft |
 | `lifecycle.status.approved.permits-bind.pass` | contract lifecycle is separate from campaign state |
@@ -391,24 +391,24 @@ canonically.
 | Fixture | Expected |
 | --- | --- |
 | `verdict.le.bounded.within/exceeds/crossing/one_sided` | vectors |
-| `verdict.ge.bounded.within/below/crossing/one_sided` | vectors |
+| `verdict.ge.bounded.within/below/crossing/one_sided` | vectors `ge.bounded.within`, `ge.bounded.below`, `ge.bounded.crossing`, `ge.bounded.upper_only.below`, `ge.bounded.upper_only.inconclusive` |
 | `verdict.lt.bounded.boundary` | hi = L → crossing, not PASS |
 | `verdict.gt.bounded.boundary` | lo = L → crossing |
 | `verdict.enclosure.*` | as bounded with coverage 1 required |
-| `verdict.nominal.within/exceeds` | vectors; `basis: nominal` visible |
+| `verdict.nominal.within/exceeds` | vectors `le.nominal.within`, `le.nominal.exceeds`, `equal.nominal.within` |
 | `verdict.equal.within/outside/partial` | vectors |
 | `verdict.equal.no-tolerance.fail` | `CORE-T2104`; the compile-time half is covered by `types.R6.equal-no-tolerance.fail` |
-| `verdict.display-rounding-does-not-change.pass` | exact canonical values determine the verdict |
+| `verdict.display-rounding-does-not-change.pass` | exact canonical values determine the verdict — exercised by `display_rounding.does-not-change-verdict` |
 | `verdict.decision-rounding-capability.pass` | admitted transformation output is compared exactly and raw input remains linked |
-| `verdict.unit-scaling-exact.pass` | 100 uSv/h limit vs Sv/s evidence |
+| `verdict.unit-scaling-exact.pass` | 100 uSv/h limit vs Sv/s evidence — exercised by `le.bounded.unit-mixed` and `campaign.unit-scaled.pass` |
 | `verdict.aggregation.all.*`, `any.*` | current precedence examples plus planned exhaustive and property-generated truth tables |
 | `verdict.aggregation.max/min.enclosure` | side-aware max/min reduction; a side that cannot be bounded remains absent |
-| `verdict.aggregation.coverage-needs-capability.fail` | marginal coverage intervals are not assigned joint coverage by the kernel |
+| `verdict.aggregation.coverage-needs-capability.fail` | marginal coverage intervals are not assigned joint coverage by the kernel — exercised by `aggregation.coverage.requires-capability` |
 | `verdict.one-sided.lower/upper.*` | both comparison directions and strict boundaries |
 | `verdict.equal.nominal/one-sided.*` | nominal tolerance and one-sided contradiction rules |
-| `verdict.not_evaluated.missing/quarantined/invalidated` | reasons and owners listed; no numbers |
-| `verdict.not_evaluated.duplicate-claim` | `CORE-E7301` |
-| `verdict.presentation-policy.not-an-input.pass` | the same admitted claims produce the same verdict with or without optional presentation routing |
+| `verdict.not_evaluated.missing/quarantined/invalidated` | reasons and owners listed; no numbers — exercised by `not_evaluated.missing`, `not_evaluated.quarantined`, `not_evaluated.invalidated`, `not_evaluated.mixed-admitted-quarantined`, `not_evaluated.mixed-admitted-invalidated` |
+| `verdict.not_evaluated.duplicate-claim` | `CORE-E7301` — exercised by `not_evaluated.duplicate-claim` and `campaign.duplicate-claim.quarantine` |
+| `verdict.presentation-policy.not-an-input.pass` | the same admitted claims produce the same verdict with or without optional presentation routing — exercised by `presentation-policy.not-a-verdict-input` and `presentation-policy.cannot-mask-fail` |
 | `verdict.record-fields.pass` | every field of `avila.core/verdict/v0.2` present |
 | `verdict.evaluator-identity.pass` | `kernel:verdict-calculus@1` |
 | `verdict.core-requirement-evaluation-step.pass` | specimen step type maps to kernel |
@@ -419,14 +419,14 @@ canonically.
 | Fixture | Expected |
 | --- | --- |
 | `admission.A1..A10.pass` | one fixture each |
-| `admission.A1.hash-mismatch.fail` | `CORE-E7101` → quarantined |
+| `admission.A1.hash-mismatch.fail` | `CORE-E7101` → quarantined — exercised by `campaign.snapshot-mismatch.rejected` |
 | `admission.A2.foreign-receipt.fail` | `CORE-E7102` |
 | `admission.A2.untrusted-runner-key.fail` | `CORE-E7102` |
-| `admission.A3.unadmitted-parent.fail` | `CORE-E7103`; cascade to root |
+| `admission.A3.unadmitted-parent.fail` | `CORE-E7103`; cascade to root — exercised by `campaign.parent-missing.not_evaluated` |
 | `admission.A4.package-mismatch.fail` | `CORE-E7104` |
 | `admission.A5.exit-zero-insufficient.fail` | exit 0 with missing declared output → `CORE-X6202`; nothing admitted |
 | `admission.A5.timeout/crash/sandbox.fail` | `CORE-X6101/6102/6103` |
-| `admission.A6.validator-rejected.fail` | `CORE-E7201` |
+| `admission.A6.validator-rejected.fail` | `CORE-E7201` — exercised by `campaign.model-not-permitted.quarantine` |
 | `admission.A6.model-mismatch.fail` | declared coverage_interval, emitted unquantified → `CORE-E7201` |
 | `admission.A7.actual-context.fail` | see `scope.a7-actual-context.fail` |
 | `admission.A7.vacuous-recorded.pass` | no qualification required → sub-record says so |
@@ -434,7 +434,7 @@ canonically.
 | `admission.A9.optional-routing-record.pass` | a valid attached routing record is checked separately and does not change artifact admission |
 | `admission.A10.ancestor-invalidated.fail` | |
 | `admission.state.quarantine-terminal.pass` | rerun yields new artifact id |
-| `admission.presentation.present/return/abstain.pass` | closed routing dispositions; technical verdict unchanged |
+| `admission.presentation.present/return/abstain.pass` | closed routing dispositions; technical verdict unchanged — exercised by `campaign.practical-review.pass` and `campaign.practical-review.fail` |
 | `admission.presentation.cannot-edit-artifact.fail` | routing record with mutated dossier bytes is quarantined; artifact and verdict remain unchanged |
 | `admission.non-artifact-records.pass` | snapshot, approvals, selection, preflight, change events are records |
 | `admission.sub-record-replayable.pass` | verifier replays A1–A4, A6(kernel), A7, A8, A10 from package alone |
@@ -494,7 +494,7 @@ canonically.
 
 | Fixture | Expected |
 | --- | --- |
-| `canon.key-order.pass`, `canon.nfc-rejected.fail`, `canon.no-null.fail`, `canon.float-refused.fail`, `canon.digest-algorithm-id.pass` | NFC is required on input; authoritative readers reject rather than silently normalize signed content |
+| `canon.key-order.pass`, `canon.nfc-rejected.fail`, `canon.no-null.fail`, `canon.float-refused.fail`, `canon.digest-algorithm-id.pass` | NFC is required on input; authoritative readers reject rather than silently normalize signed content — exercised by `json.key-order`, `json.non-nfc-string-rejected`, `json.null-as-absence-rejected`, `json.float-number-rejected` |
 
 ### scenarios/ (planned end-to-end corpus)
 
@@ -532,8 +532,13 @@ automatically.
 
 ## Counting rule
 
-The future `fixtures-check` command must fail if any clause, rule id, admission
-condition, change class, state transition, or diagnostic code referenced in
-ADR-0006 lacks a fixture, or if a fixture references an undefined code. Until
-that command and the required files exist, this README is a coverage manifest
-and ADR-0006 stays proposed.
+`avila-core fixtures-check` executes the counting rule over the committed
+corpus: it parses the required-fixture tables above, indexes every fixture and
+vector identity, and reports each required name as `covered` (its exact
+identity exists), `named` (the plan row references an existing vector set,
+vector, or fixture that exercises the rule under a different identity),
+`unbounded` (a pattern such as `*`, `<each>`, or a non-numeric `..` that needs
+an enumerated domain), or `absent`. A fixture that references a diagnostic
+code neither catalog defines fails the check outright; `--strict` also fails
+on any `absent` name, and `--json` emits the report. Until every required name
+is covered and none is absent, ADR-0006 stays proposed.

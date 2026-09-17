@@ -1,0 +1,65 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "fixture.types.R3.unquantified-governed.fail",
+  "revision": 1,
+  "status": "draft",
+  "question": "Specimen question for types.R3.unquantified-governed.fail; it has no physical meaning.",
+  "inputs": [
+    {
+      "input_id": "case",
+      "role": {
+        "id": "fixture.source_document",
+        "major": 1
+      },
+      "media_type": "application/vnd.fixture.source+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "metric",
+      "role": {
+        "id": "nuclear.shutdown_dose_rate",
+        "major": 1
+      },
+      "media_type": "application/vnd.fixture.quantity+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "step_id": "calculate",
+      "capability_type": {
+        "id": "fixture.calculate_dose",
+        "major": 1
+      },
+      "parameters": {}
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "R-001",
+      "statement": "A quantified basis can never be met by an unquantified claim.",
+      "metric": {
+        "source": "contract_input",
+        "input_id": "metric"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "nuclear.dose_equivalent_rate",
+        "value": "100",
+        "unit": "uSv/h"
+      },
+      "basis": {
+        "kind": "bounded"
+      },
+      "purpose": {
+        "id": "fixture.requirement_evaluation",
+        "major": 1
+      }
+    }
+  ]
+}

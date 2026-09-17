@@ -37,6 +37,18 @@
             "required": ["code", "detail"],
             "properties": { "code": { "type": "string", "pattern": "^CORE-[A-Z][0-9]{4}$" }, "detail": { "$ref": "#/$defs/nonemptyString" } }
           }
+        },
+        "artifact": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sha256", "check"],
+          "properties": {
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "check": {
+              "enum": ["verified", "not_checked"],
+              "description": "verified when the evaluator re-hashed supplied bytes to the attested identity; not_checked when no supplied file did. Present only when the evaluation was given artifact bytes."
+            }
+          }
         }
       }
     },

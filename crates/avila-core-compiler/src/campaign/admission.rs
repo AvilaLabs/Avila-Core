@@ -96,6 +96,7 @@ pub(super) fn admit(
                 evidence_id,
                 source,
                 state: AdmissionState::Missing,
+                artifact: None,
                 reasons: vec![reason(CORE_E7101, "no artifact attested for this input")],
             });
             continue;
@@ -140,6 +141,7 @@ pub(super) fn admit(
             source,
             state,
             reasons,
+            artifact: None,
         });
     }
 
@@ -292,6 +294,7 @@ pub(super) fn admit(
             source,
             state,
             reasons,
+            artifact: None,
         });
     }
 

@@ -19,7 +19,7 @@ pub use campaign::{
     AdmissionReason, AdmissionRecord, AdmissionState, ArtifactIdentity, CAMPAIGN_NOTICE,
     CAMPAIGN_REPORT_SCHEMA_VERSION, CLAIMS_SCHEMA_VERSION, CampaignReport, CampaignStatus,
     ClaimValue, ClaimsDocument, InputAttestation, OutputClaim, ProducerIdentity, VerdictBoundary,
-    VerdictRecord, evaluate_campaign,
+    VerdictRecord, evaluate_campaign, evaluate_campaign_with_artifacts,
 };
 pub use catalog::{DIAGNOSTIC_CATALOG, DiagnosticExplanation, explain};
 pub use compile::{

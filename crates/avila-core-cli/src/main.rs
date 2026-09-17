@@ -10,8 +10,8 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use avila_core_compiler::{
-    CampaignStatus, CompilationStatus, DIAGNOSTIC_CATALOG, compile_documents, evaluate_campaign,
-    explain, render_campaign_report, render_compile_report,
+    CampaignStatus, CompilationStatus, DIAGNOSTIC_CATALOG, compile_documents,
+    evaluate_campaign_with_artifacts, explain, render_campaign_report, render_compile_report,
 };
 use avila_core_evidence::sha256_hex;
 use avila_core_evidence::signature::{self, KeyRole};
@@ -102,6 +102,11 @@ enum Command {
         registry: PathBuf,
         #[arg(long)]
         claims: PathBuf,
+        /// Supply an artifact file to be re-hashed against the claims'
+        /// attested identities. Repeatable. When at least one is supplied,
+        /// every attested artifact is marked `verified` or `not_checked`.
+        #[arg(long)]
+        artifact: Vec<PathBuf>,
         /// Print findings and verdicts as readable text with source locations
         /// instead of the JSON report.
         #[arg(long)]
@@ -551,12 +556,21 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             contract,
             registry,
             claims,
+            artifact,
             text,
         } => {
             let contract = fs::read(contract)?;
             let registry = fs::read(registry)?;
             let claims = fs::read(claims)?;
-            let report = evaluate_campaign(&contract, &registry, &claims)?;
+            let mut artifact_digests = std::collections::BTreeSet::new();
+            for path in &artifact {
+                let bytes = fs::read(path).map_err(|error| {
+                    format!("cannot read artifact `{}`: {error}", path.display())
+                })?;
+                artifact_digests.insert(format!("sha256:{}", sha256_hex(&bytes)));
+            }
+            let report =
+                evaluate_campaign_with_artifacts(&contract, &registry, &claims, &artifact_digests)?;
             if text {
                 print!(
                     "{}",

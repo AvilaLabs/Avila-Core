@@ -89,7 +89,11 @@ fourteen queries. `avila-core tools call core_requirements --arguments
 as `inspect --view requirements`. `tools instructions` prints the concise
 integration guidance that the MCP server also supplies at initialization.
 Existing `compile`, `evaluate`, `explain`, `canonicalize`, and `run --plan`
-commands complement the query suite.
+commands complement the query suite. `evaluate` accepts `--artifact FILE`
+(repeatable) to re-hash supplied bytes against each attested artifact
+identity — every admission then states `verified` or `not_checked`; without
+any, the report stays a digest-only evaluation and its identity is
+unchanged.
 
 ## Native workbench
 

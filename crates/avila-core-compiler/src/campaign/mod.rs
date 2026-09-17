@@ -13,6 +13,8 @@ mod admission;
 mod document;
 mod verdicts;
 
+use std::collections::{BTreeMap, BTreeSet};
+
 use avila_core_kernel::{SEMANTIC_PROFILE, VerdictOutput, canonicalize_json};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -68,6 +70,31 @@ pub struct AdmissionRecord {
     pub state: AdmissionState,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub reasons: Vec<AdmissionReason>,
+    /// Present only when the evaluator was given artifact bytes: whether a
+    /// supplied file's bytes actually hashed to the attested identity.
+    /// Absent keeps the report — and its identity — unchanged for
+    /// digest-only evaluations.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artifact: Option<ArtifactCheck>,
+}
+
+/// Byte-level evidence behind an attested artifact identity.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ArtifactCheck {
+    /// The identity the attestation declared.
+    pub sha256: String,
+    /// `verified` when a supplied file's bytes hashed to the declared
+    /// identity; `not_checked` when no supplied file did — the attested
+    /// bytes were not produced for this evaluation.
+    pub check: ArtifactCheckState,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ArtifactCheckState {
+    Verified,
+    NotChecked,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -115,6 +142,25 @@ pub fn evaluate_campaign(
     contract_bytes: &[u8],
     registry_bytes: &[u8],
     claims_bytes: &[u8],
+) -> Result<CampaignReport, CompilerError> {
+    evaluate_campaign_with_artifacts(
+        contract_bytes,
+        registry_bytes,
+        claims_bytes,
+        &BTreeSet::new(),
+    )
+}
+
+/// `evaluate_campaign` plus byte-level evidence: `artifact_digests` is the
+/// set of digests the caller actually re-hashed from supplied files. Every
+/// attested artifact then carries an explicit check — `verified` when its
+/// declared identity was produced, `not_checked` when it was not. An empty
+/// set is a digest-only evaluation and the records are unchanged.
+pub fn evaluate_campaign_with_artifacts(
+    contract_bytes: &[u8],
+    registry_bytes: &[u8],
+    claims_bytes: &[u8],
+    artifact_digests: &BTreeSet<String>,
 ) -> Result<CampaignReport, CompilerError> {
     let compile = compile_documents(contract_bytes, registry_bytes)?;
     let Some(compiled) = compile.compiled else {
@@ -179,7 +225,37 @@ pub fn evaluate_campaign(
         ));
     }
 
-    let admissions = admission::admit(&compiled, &registry, &claims, &mut findings);
+    let mut admissions = admission::admit(&compiled, &registry, &claims, &mut findings);
+    if !artifact_digests.is_empty() {
+        let attested: BTreeMap<String, &str> = claims
+            .inputs
+            .iter()
+            .map(|attestation| {
+                (
+                    format!("input:{}", attestation.input_id),
+                    attestation.artifact.sha256.as_str(),
+                )
+            })
+            .chain(
+                claims
+                    .claims
+                    .iter()
+                    .map(|claim| (claim.claim_id.clone(), claim.artifact.sha256.as_str())),
+            )
+            .collect();
+        for record in &mut admissions {
+            if let Some(sha256) = attested.get(record.evidence_id.as_str()) {
+                record.artifact = Some(ArtifactCheck {
+                    sha256: (*sha256).to_string(),
+                    check: if artifact_digests.contains(*sha256) {
+                        ArtifactCheckState::Verified
+                    } else {
+                        ArtifactCheckState::NotChecked
+                    },
+                });
+            }
+        }
+    }
     let boundary = VerdictBoundary {
         semantic_profile: SEMANTIC_PROFILE.into(),
         compiler: compiled.compiler.clone(),

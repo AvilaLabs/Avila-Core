@@ -590,9 +590,11 @@ the run it names was never committed. The verifier reports that as
 `not_checked` (unresolvable reference), never `mismatch`, and a new test
 pins the distinction.
 
-The other named-out — compiled-snapshot recomputation — stays open by
-name: it requires reimplementing the compiler's lowering, which is the
-Stage-3 second-implementation track, not a verifier profile addition.
+The other named-out — compiled-snapshot recomputation — was closed in the
+next increment: `verifier/avila_core_lower.py` independently lowers the
+committed contract+registry into the compiled-body identity, proved
+against all 68 compiler fixtures' pinned snapshots and every committed
+case.
 
 **Validation evidence:** 56 verifier tests / 163 subtests pass, including
 five new `TestStagedReviewMutations` tests (edited presented-evidence
@@ -640,6 +642,39 @@ real CASE-004 bundle verified end-to-end by the Python verifier.
 **Limits:** the export report is an export record, not a manifest
 document — it carries no evidence weight. Package *installation* of
 foreign bundles (a catalog operation) remains a reserved track.
+
+### Compiled-snapshot recomputation — implemented 2026-09-17
+
+The independent verifier's last named-out is closed: a new
+`verifier/avila_core_lower.py` independently lowers the committed
+contract+registry into the compiled body's identity and `verify-case`
+reports `claims.compiled_snapshot_recomputation` as `verified` (digest
+equal), `mismatch` (digest differs or the pair would not compile), or
+`not_checked` (a construct outside the port's covered subset, named).
+
+The port reimplements the lowering that decides the compiled body's
+contents — canonical document identities, registry-reference validation
+(invalid sources, purpose checks), slot resolution (explicit and
+single-match auto-binding with role/media checks), the deterministic
+topological order, parameter and material-factor lowering (all five
+typed-value families with domain bounds), determinism/seed rules,
+presentation-gate resolution, requirement lowering into canonical units,
+claim-model sufficiency, basis coverage, and categorical requirements —
+plus the `deny_unknown_fields`/required-field/enum refusals, since a pair
+the compiler rejects has no legitimate snapshot. It deliberately does not
+reproduce the finding vocabulary (codes, pointers, repairs) a rejected
+compile reports; that text carries no weight in the snapshot.
+
+**Validation evidence:** every one of the 68 compiler fixtures' pinned
+`snapshot_sha256` values reproduces exactly (and every rejected fixture is
+detected as non-compiling), and every committed example case's recorded
+snapshot recomputes; three new mutation tests prove the check names an
+edited contract field, an edited recorded digest, and a non-compiling
+contract as `mismatch`. 62 verifier tests pass.
+
+This is the Stage-3 "second implementation" seeded early: the verifier now
+implements the semantic kernel *and* the compiler's lowering result in an
+independent codebase.
 
 A public catalog, package installation, browser client, cloud/HPC scheduling,
 organization governance, autonomous search orchestration, and comprehensive

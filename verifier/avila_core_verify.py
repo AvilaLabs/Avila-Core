@@ -47,10 +47,19 @@ reported as ``not_checked`` with a reason; it is never silently skipped.
   4. Claims binding — every claim's producer identity and evidence records
      bind to receipts and artifacts that verify; the claims document's and
      campaign report's compiled-snapshot digests are compared for equality
-     and reported as such. Recompiling either digest from the contract and
-     registry is explicitly NOT_CHECKED: this profile does not implement
-     the compiler (see CAMPAIGN_EVALUATION.md's own evaluator boundary,
-     which likewise does not read bytes or recompile the snapshot).
+     and reported as such. The snapshot itself is then *recomputed*:
+     ``avila_core_lower`` independently lowers the committed contract and
+     registry into the compiled body's identity (canonical-document
+     digests, slot resolution, topological order, parameter/material-factor
+     lowering, determinism/seed rules, presentation-gate resolution, unit
+     scaling, basis and claim-model sufficiency, categorical requirements)
+     and the result must equal the recorded ``compiled_snapshot_sha256``.
+     A pair the port shows the compiler would have rejected is a
+     ``mismatch``, never ``verified``; a construct outside the port's
+     covered subset is ``not_checked`` with the uncovered construct named.
+     Proved against every compiled fixture's pinned snapshot across the
+     five compiler suites in fixtures/semantic-core/types/ and every
+     committed example case (test_verifier.py).
 
   5. Verdict re-derivation — recomputes the four-state verdict for every
      numeric and categorical requirement in a case's authored contract
@@ -207,7 +216,9 @@ Explicitly refused (outside this profile, by name, never silently):
     reviewer's committed record is);
   - archive/package-root canonicalisation beyond the flat document+artifact
     list a case-package.v0.1-draft manifest already enumerates;
-  - recompiling a contract+registry into a compiled snapshot identity;
+  - the compiler's finding vocabulary itself — avila_core_lower reproduces
+    whether a pair compiles and what its compiled body is, not the codes,
+    pointers, and repair candidates a rejected compile would report;
   - anything named ``not_checked`` at the point this file produces it.
 
 Exit status: 0 only when zero checks report ``mismatch`` and this file
@@ -230,12 +241,10 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
+import avila_core_lower
+
 VERIFIER_PROFILE = "avila.core/independent-verifier-profile/v1"
 SEMANTIC_PROFILE = "avila.core/semantic/0.2-draft"
-
-UNSUPPORTED_NOTES = {
-    "compiled_snapshot": "the compiler is not implemented; compiled_snapshot_sha256 equality is checked, never recomputed",
-}
 
 
 # ---------------------------------------------------------------------------
@@ -1314,8 +1323,9 @@ def verify_receipt(
 # claims document binds exactly one compiled snapshot by identity");
 # ADR-0007 clause 6 ("The generated document is compared canonically with
 # the committed claims.json, is bound to the package identities"). Compiled
-# snapshot identity equality is checked; its recomputation from contract +
-# registry is explicitly out of this profile (see module docstring item 4).
+# snapshot identity equality is checked, then the snapshot is recomputed
+# from the committed contract+registry by avila_core_lower (module
+# docstring item 4).
 # ---------------------------------------------------------------------------
 
 
@@ -1369,10 +1379,30 @@ def verify_claims_binding(
                 report.mismatch(check, f"claims.json binds {claims_snapshot}, campaign-report.json binds {report_snapshot}")
         else:
             report.not_checked(check, "compiled_snapshot_sha256 missing from claims.json or campaign-report.json")
-        report.not_checked(
-            "claims.compiled_snapshot_recomputation",
-            UNSUPPORTED_NOTES["compiled_snapshot"],
-        )
+
+        check = "claims.compiled_snapshot_recomputation"
+        doc_paths = {d["role"]: d["path"] for d in package.get("documents", [])}
+        contract_path = case_dir / doc_paths["contract"] if "contract" in doc_paths else None
+        registry_path = case_dir / doc_paths["registry"] if "registry" in doc_paths else None
+        recorded = claims.get("compiled_snapshot_sha256")
+        if recorded is None:
+            report.not_checked(check, "claims.json does not bind a compiled snapshot identity")
+        elif contract_path is None or registry_path is None or not (contract_path.is_file() and registry_path.is_file()):
+            report.not_checked(check, "contract/registry documents are not present to recompute the snapshot")
+        else:
+            try:
+                recomputed = avila_core_lower.lower_compiled_snapshot(
+                    contract_path.read_bytes(), registry_path.read_bytes()
+                )
+            except avila_core_lower.CannotLower as error:
+                report.not_checked(check, f"lowering subset does not cover this pair: {error}")
+            except avila_core_lower.WouldReject as error:
+                report.mismatch(check, f"the committed contract+registry would not compile: {error}")
+            else:
+                if recomputed == recorded:
+                    report.verified(check, recomputed)
+                else:
+                    report.mismatch(check, f"recomputed {recomputed}, claims.json binds {recorded}")
         check = "claims.claims_sha256_matches_campaign_report"
         report_claims_sha = campaign_report.get("claims_sha256")
         if report_claims_sha:

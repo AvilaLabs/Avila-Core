@@ -304,9 +304,17 @@ optional presentation gate's committed half — are verified: both digest
 rules recompute, presented-evidence entries re-derive against claims.json,
 and the campaign/snapshot bindings are checked against every committed
 carrier (an unresolvable binding reads `not_checked`, never forged).
-Compiled-snapshot recomputation remains a named-out: it requires the
-compiler itself and is part of the second-implementation track; reviewer
-attestation is reported, never authenticated.
+Compiled-snapshot recomputation is verified by the verifier's independent
+lowering port (`verifier/avila_core_lower.py`): it re-derives the compiled
+body's identity from the committed contract+registry — slot resolution,
+topological order, parameter/material-factor lowering, determinism and
+seed rules, presentation-gate resolution, unit scaling, basis and
+claim-model sufficiency, categorical requirements — and the recomputed
+`snapshot_sha256` must equal the recorded one (proved against all 68
+compiler fixtures' pinned snapshots and every committed case). The port
+reproduces *whether* a pair compiles and *what* it compiles to, not the
+finding vocabulary a rejected compile would report; reviewer attestation
+is still reported, never authenticated.
 
 ## Confidentiality and portable evidence
 

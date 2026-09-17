@@ -22,6 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import avila_core_lower as lower
 import avila_core_verify as v
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -1366,6 +1367,133 @@ class TestStagedReviewMutations(unittest.TestCase):
         self.assertGreater(len(staged), 5)
         for check in staged:
             self.assertNotEqual(check.status, "mismatch", check.to_dict())
+
+
+# ---------------------------------------------------------------------------
+# Compiled-snapshot lowering (avila_core_lower): the second-implementation
+# seed. The oracle is the compiler's own fixture corpus — every fixture pins
+# its expected snapshot digest — plus every committed example case, and then
+# the mutation tests prove the verifier actually runs the check rather than
+# trusting a recorded digest.
+# ---------------------------------------------------------------------------
+
+
+class TestSnapshotLowering(unittest.TestCase):
+    TYPES = REPO_ROOT / "fixtures" / "semantic-core" / "types"
+    SUITES = [
+        "compiler-cases.v1.json",
+        "compiler-parameter-cases.v1.json",
+        "compiler-reproducibility-cases.v1.json",
+        "compiler-review-cases.v1.json",
+        "compiler-purpose-cases.v1.json",
+    ]
+
+    def test_every_fixture_status_and_snapshot(self):
+        compiled = rejected = 0
+        for suite_name in self.SUITES:
+            suite = json.loads((self.TYPES / suite_name).read_text())
+            registry = (self.TYPES / suite["registry"]["path"]).read_bytes()
+            for fixture in suite["fixtures"]:
+                contract = (self.TYPES / fixture["contract"]).read_bytes()
+                expected = fixture["expected"]
+                with self.subTest(fixture=fixture["fixture_id"]):
+                    if expected["status"] == "compiled":
+                        self.assertEqual(
+                            lower.lower_compiled_snapshot(contract, registry),
+                            expected["compiled"]["snapshot_sha256"],
+                        )
+                        compiled += 1
+                    else:
+                        with self.assertRaises(lower.WouldReject):
+                            lower.lower_compiled_snapshot(contract, registry)
+                        rejected += 1
+        # Pin the corpus breadth so a quietly dropped suite cannot hollow
+        # the proof out.
+        self.assertEqual(compiled + rejected, 68)
+
+    def test_every_committed_case_snapshot_recomputes(self):
+        case_dirs = sorted(p for p in EXAMPLES.iterdir() if (p / "claims.json").is_file())
+        self.assertGreaterEqual(len(case_dirs), 10)
+        for case_dir in case_dirs:
+            with self.subTest(case=case_dir.name):
+                claims = json.loads((case_dir / "claims.json").read_text())
+                self.assertEqual(
+                    lower.lower_compiled_snapshot(
+                        (case_dir / "contract.json").read_bytes(),
+                        (case_dir / "registry.json").read_bytes(),
+                    ),
+                    claims["compiled_snapshot_sha256"],
+                )
+
+
+class TestSnapshotLoweringMutations(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="avila-core-lower-mutation-")
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def _copy_case(self, name: str) -> Path:
+        dst = Path(self.tmp) / name
+        shutil.copytree(EXAMPLES / name, dst)
+        return dst
+
+    def test_mutated_contract_field_changes_the_recomputed_snapshot(self):
+        case_dir = self._copy_case("case-003-thermal-spreader")
+        contract_path = case_dir / "contract.json"
+        contract = json.loads(contract_path.read_text())
+        contract["question"] = "A different question, answered by no committed run."
+        _write_json(contract_path, contract)
+        package_path = case_dir / "package.json"
+        package = json.loads(package_path.read_text())
+        _rehash_document(package, "case-003-contract", v.sha256_file(contract_path))
+        _write_json(package_path, package)
+
+        report = v.verify_case(case_dir, {"case": case_dir})
+        by_check = {c.check: c for c in report.checks}
+        self.assertEqual(
+            by_check["package.document.case-003-contract"].status, "verified"
+        )
+        self.assertEqual(
+            by_check["claims.compiled_snapshot_recomputation"].status, "mismatch"
+        )
+
+    def test_mutated_recorded_snapshot_is_named(self):
+        case_dir = self._copy_case("case-003-thermal-spreader")
+        claims_path = case_dir / "claims.json"
+        claims = json.loads(claims_path.read_text())
+        real = claims["compiled_snapshot_sha256"]
+        claims["compiled_snapshot_sha256"] = "sha256:" + (
+            "0" * 63 + "1" if real[-1] != "1" else "0" * 64
+        )
+        _write_json(claims_path, claims)
+        package_path = case_dir / "package.json"
+        package = json.loads(package_path.read_text())
+        _rehash_document(package, "case-003-claims", v.sha256_file(claims_path))
+        _write_json(package_path, package)
+
+        report = v.verify_case(case_dir, {"case": case_dir})
+        by_check = {c.check: c for c in report.checks}
+        self.assertEqual(
+            by_check["claims.compiled_snapshot_recomputation"].status, "mismatch"
+        )
+
+    def test_noncompiling_contract_is_mismatch_not_verified(self):
+        case_dir = self._copy_case("case-003-thermal-spreader")
+        contract_path = case_dir / "contract.json"
+        contract = json.loads(contract_path.read_text())
+        # An undeclared contract field makes the contract uncompilable; a
+        # recorded snapshot for these bytes cannot be legitimate.
+        contract["an_undeclared_field"] = "forged"
+        _write_json(contract_path, contract)
+        package_path = case_dir / "package.json"
+        package = json.loads(package_path.read_text())
+        _rehash_document(package, "case-003-contract", v.sha256_file(contract_path))
+        _write_json(package_path, package)
+
+        report = v.verify_case(case_dir, {"case": case_dir})
+        by_check = {c.check: c for c in report.checks}
+        self.assertEqual(
+            by_check["claims.compiled_snapshot_recomputation"].status, "mismatch"
+        )
 
 
 if __name__ == "__main__":

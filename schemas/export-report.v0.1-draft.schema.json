@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/export-report/v0.1-draft.schema.json",
+  "title": "Avila Core Export Report v0.1 draft",
+  "description": "The record of a byte-verified package export: a verified case package gathered into one relocatable directory, with every copied byte's digest re-measured on the exported file and the bundle-relative source-root layout recorded. The report is evidence of what was copied, not an approval, certification, or run authorization.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "case_id",
+    "manifest_sha256",
+    "documents",
+    "artifacts",
+    "source_roots",
+    "export_sha256",
+    "notice"
+  ],
+  "properties": {
+    "schema_version": { "const": "avila.core/export-report/v0.1-draft" },
+    "status": { "const": "exported" },
+    "case_id": { "$ref": "#/$defs/nonemptyString" },
+    "manifest_sha256": { "$ref": "#/$defs/sha256" },
+    "documents": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/exportedDocument" }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/exportedArtifact" }
+    },
+    "source_roots": {
+      "type": "object",
+      "description": "Each named source root's bundle-relative directory, so a receiver can pass `--source-root <name>=<bundle>/roots/<name>`.",
+      "additionalProperties": { "$ref": "#/$defs/nonemptyString" }
+    },
+    "export_sha256": {
+      "$ref": "#/$defs/sha256",
+      "description": "SHA-256 of the canonical report body with this field removed — the export record's content identity."
+    },
+    "notice": { "type": "string" }
+  },
+  "$defs": {
+    "nonemptyString": { "type": "string", "minLength": 1 },
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "exportedDocument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document_id", "role", "path", "sha256"],
+      "properties": {
+        "document_id": { "$ref": "#/$defs/nonemptyString" },
+        "role": { "$ref": "#/$defs/nonemptyString" },
+        "path": { "$ref": "#/$defs/nonemptyString" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "exportedArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_id", "evidence_ids", "source_root", "path", "bundle_path", "sha256", "bytes"],
+      "properties": {
+        "artifact_id": { "$ref": "#/$defs/nonemptyString" },
+        "evidence_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nonemptyString" }
+        },
+        "source_root": { "$ref": "#/$defs/nonemptyString" },
+        "path": { "$ref": "#/$defs/nonemptyString" },
+        "bundle_path": {
+          "$ref": "#/$defs/nonemptyString",
+          "description": "Where the artifact landed inside the bundle: roots/<source_root>/<path>."
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256",
+          "description": "Re-hashed from the exported bytes — the copy is checked, not trusted."
+        },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

@@ -448,7 +448,7 @@ pub fn verify_case_package(
     })
 }
 
-fn validate_manifest(manifest: &CasePackageManifest) -> Result<(), PackageError> {
+pub(crate) fn validate_manifest(manifest: &CasePackageManifest) -> Result<(), PackageError> {
     if manifest.schema_version != CASE_PACKAGE_SCHEMA_VERSION {
         return Err(PackageError::InvalidManifest(format!(
             "unsupported schema version `{}`; expected `{CASE_PACKAGE_SCHEMA_VERSION}`",
@@ -690,7 +690,7 @@ fn validate_root_name(value: &str) -> Result<(), PackageError> {
     Ok(())
 }
 
-fn validate_relative_path(value: &str) -> Result<PathBuf, PackageError> {
+pub(crate) fn validate_relative_path(value: &str) -> Result<PathBuf, PackageError> {
     require_nonempty("path", value)?;
     let path = Path::new(value);
     if !path
@@ -752,7 +752,10 @@ fn read_confined(root: &Path, relative: &str) -> Result<Option<Vec<u8>>, Package
         })
 }
 
-fn resolve_confined(root: &Path, relative: &str) -> Result<Option<PathBuf>, PackageError> {
+pub(crate) fn resolve_confined(
+    root: &Path,
+    relative: &str,
+) -> Result<Option<PathBuf>, PackageError> {
     let relative = validate_relative_path(relative)?;
     let candidate = root.join(relative);
     match fs::symlink_metadata(&candidate) {

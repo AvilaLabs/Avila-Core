@@ -251,6 +251,23 @@ verification time. The implemented rules:
   than failing wholesale. The retention question — which of those states may
   carry a publishable package — is policy, below.
 
+## Export
+
+`avila-core export` gathers a *completely verified* package into one
+relocatable directory: the manifest and documents verbatim at their declared
+paths, every declared artifact under `roots/<source_root>/<path>`, and a
+content-identified `export-report.json` (`export-report/v0.1-draft`) whose
+per-artifact digests are re-hashed from the copied bytes — the copy is
+checked, not trusted. Export refuses a package whose integrity is partial or
+failed: a bundle that shipped unmet or mismatched bytes would misrepresent
+what it claims to carry.
+
+The bundle is self-describing — `source_roots` records where each root
+landed, so a receiver passes `--source-root <name>=<bundle>/roots/<name>` and
+the normal check/run path and the independent verifier both verify it at the
+same package identity. The report is an export record, not a manifest
+document; it carries no evidence weight and cannot alter a verdict.
+
 ## Redaction and retention (owner-gated)
 
 ADR-0005 names redaction as first-class; the mechanism (a digest preserves

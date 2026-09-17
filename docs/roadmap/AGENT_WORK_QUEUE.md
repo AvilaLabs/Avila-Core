@@ -605,6 +605,42 @@ a new CI step exercises it there.
 **Next product increment:** Stage-0 status row updates for the verifier
 gate, then the final report of what remains owner- or outside-gated.
 
+### Categorical verdict vectors + relocatable export — implemented 2026-09-17
+
+Two increments that grew out of the ledger pass.
+
+**Categorical vectors.** `verdict-calculus.v1.json` gains two mixed-state
+numeric vectors (`not_evaluated.mixed-admitted-quarantined`,
+`not_evaluated.mixed-admitted-invalidated`) and a ten-vector
+`categorical_vectors` section covering every `equals`/`in_set` outcome and
+edge — missing, quarantined, mixed, duplicate, category-missing, invalidated.
+The corpus is now 103 vectors (was 91). The vectors surfaced a real
+divergence: the independent verifier evaluated the *admitted half* of a
+mixed evidence set where the kernel reports `not_evaluated` — a
+non-admitted claim settles nothing. Both verifier evaluators now follow
+the kernel's ordering; an admitted claim missing its category reports
+`not_evaluated.category_missing` instead of a false `fail`; and `in_set`
+is vector-proven on both implementations rather than an inferred rule.
+
+**Relocatable export.** `avila-core export CASE --source-root name=DIR --out
+DIR` verifies a package completely, then gathers it into one directory —
+manifest and documents verbatim, artifacts under `roots/<source_root>/`,
+plus a content-identified `export-report.json`
+(`export-report/v0.1-draft`) whose digests are re-measured on the copied
+bytes. Export refuses a partially verified package and writes nothing.
+The bundle verifies anywhere: `run --plan` on it reproduces the bound
+plan, and the independent verifier re-derives package identity, artifact
+digests, and verdicts against `roots/<name>`.
+
+**Validation evidence:** kernel harness executes all 12 new vectors;
+`semantic-profile` reports 103; 57 verifier tests / 175 subtests; three
+export tests pin gather/relocate-verify/refuse-empty; smoke run on the
+real CASE-004 bundle verified end-to-end by the Python verifier.
+
+**Limits:** the export report is an export record, not a manifest
+document — it carries no evidence weight. Package *installation* of
+foreign bundles (a catalog operation) remains a reserved track.
+
 A public catalog, package installation, browser client, cloud/HPC scheduling,
 organization governance, autonomous search orchestration, and comprehensive
 semantic invalidation remain larger roadmap tracks. They are not implicit tasks

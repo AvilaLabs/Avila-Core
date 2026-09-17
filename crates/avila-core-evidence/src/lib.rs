@@ -7,6 +7,7 @@
 
 #![forbid(unsafe_code)]
 
+mod export;
 mod hash_cache;
 mod package;
 mod receipt;
@@ -15,6 +16,10 @@ pub mod signature;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+pub use export::{
+    EXPORT_REPORT_SCHEMA_VERSION, ExportError, ExportReport, ExportStatus, ExportedArtifact,
+    ExportedDocument, export_package,
+};
 pub use hash_cache::{
     FileStamp, HASH_CACHE_SCHEMA_VERSION, HashCache, HashCacheEntry, HashCacheError,
     load_hash_cache, save_hash_cache,

@@ -119,6 +119,22 @@ enum Command {
     /// without executing anything; a check or run verifies the chosen
     /// bytes again.
     Capabilities(CapabilitiesArgs),
+    /// Export a verified case package into one relocatable directory: the
+    /// manifest and documents verbatim, every declared artifact under
+    /// `roots/<source_root>/`, plus a content-identified export report whose
+    /// digests are measured on the copied bytes. Requires every declared
+    /// source root to be supplied and verified; a package with unmet roots
+    /// is refused rather than shipped incomplete.
+    Export {
+        /// The case directory containing `package.json`.
+        case: PathBuf,
+        /// Bind a named source root to a directory: `--source-root name=DIR`.
+        #[arg(long = "source-root", value_name = "NAME=DIR")]
+        source_roots: Vec<String>,
+        /// The output directory. Must be absent or empty.
+        #[arg(long, value_name = "DIR")]
+        out: PathBuf,
+    },
     /// Explain a stable finding code from the diagnostic catalog.
     Explain {
         /// A code such as `CORE-R3102`. Omit it and pass `--all` for the whole catalog.
@@ -613,6 +629,18 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 "{}",
                 serde_json::to_string_pretty(&run_capabilities(args)?)?
             );
+        }
+        Command::Export {
+            case,
+            source_roots,
+            out,
+        } => {
+            let report = avila_core_evidence::export_package(
+                &case,
+                &avila_core_runner::parse_source_roots(&source_roots)?,
+                &out,
+            )?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
         }
         Command::Explain { code, all } => match (code, all) {
             (None, true) => {

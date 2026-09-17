@@ -56,6 +56,17 @@ avila-core run CASE --capability NAME=EXECUTABLE --input NAME=FILE --log campaig
 # chosen bytes again:
 avila-core capabilities CASE --candidate NAME=EXECUTABLE
 avila-core capabilities CASE --scan DIR --on-path
+
+# Relocatable export — verifies the package completely, then gathers the
+# manifest, documents, and every declared artifact into one directory
+# (artifacts under roots/<name>/). Every digest in the content-identified
+# export-report.json is re-measured on the copied bytes; a package with
+# unmet or mismatched roots is refused and writes nothing:
+avila-core export CASE --source-root name=DIR --out BUNDLE_DIR
+# The bundle verifies anywhere — point each root at roots/<name>:
+avila-core run BUNDLE_DIR --plan --source-root name=BUNDLE_DIR/roots/name
+python3 verifier/avila_core_verify.py verify-case BUNDLE_DIR \
+    --source-root name=BUNDLE_DIR/roots/name
 ```
 
 Add `--json` to any query for machine-readable output. `inspect` reads a saved

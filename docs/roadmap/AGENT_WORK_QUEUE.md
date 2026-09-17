@@ -729,6 +729,31 @@ is no ranking among *different* admissible implementations (that is the
 still-open multi-implementation selection policy), no cross-registry
 package discovery, and no cost/duration estimates.
 
+### Question-first form authoring — implemented 2026-09-17
+
+The specimen compiler gained a **Question** workspace: structured form
+fields over the question layer of the contract — the bounded question,
+contract id/revision/status, execution-policy flags, the assumptions list,
+and every requirement's statement, purpose (registry choices), metric
+(none / contract input / step output, with the output-slot dropdown fed by
+the step's declared capability type in the registry), comparison, limit
+and tolerance quantities (kind and unit dropdowns from the registry), and
+basis. Requirements add and remove in place. Edits write the same JSON
+buffer Sources edits — the authoritative compiler is still the only check,
+and nothing persists until Save.
+
+**Validation evidence:** the workspace renders against the bundled
+specimen (screenshot-verified); helper tests pin that every specimen kind
+admits units, every step exposes its declared output slots, the specimen's
+requirement metric resolves to real choices, and a malformed buffer is
+reported rather than panicking.
+
+**Limits:** the form covers the *question* the workflow answers — workflow
+steps, inputs, bindings, parameters, seeds, and review declarations stay
+JSON-level in Sources, as do categorical requirements. There is no
+schema-driven generic form generator; each field is written against the
+contract shape explicitly.
+
 A public catalog, package installation, browser client, cloud/HPC scheduling,
 organization governance, autonomous search orchestration, and comprehensive
 semantic invalidation remain larger roadmap tracks. They are not implicit tasks

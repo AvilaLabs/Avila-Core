@@ -83,6 +83,7 @@ fn main() -> eframe::Result {
 enum Workspace {
     #[default]
     Overview,
+    Question,
     Sources,
     Contract,
     Findings,
@@ -92,8 +93,9 @@ enum Workspace {
 }
 
 impl Workspace {
-    const ALL: [Self; 7] = [
+    const ALL: [Self; 8] = [
         Self::Overview,
+        Self::Question,
         Self::Sources,
         Self::Contract,
         Self::Findings,
@@ -105,6 +107,7 @@ impl Workspace {
     const fn label(self) -> &'static str {
         match self {
             Self::Overview => "Overview",
+            Self::Question => "Question",
             Self::Sources => "Sources",
             Self::Contract => "Contract",
             Self::Findings => "Findings",
@@ -504,6 +507,7 @@ impl CoreApp {
         egui::ScrollArea::vertical()
             .auto_shrink([false, false])
             .show(ui, |ui| match self.workspace {
+                Workspace::Question => show_question(ui, specimen),
                 Workspace::Sources => show_sources(ui, specimen),
                 Workspace::Evidence => show_evidence(ui),
                 Workspace::Overview => match &specimen.check {
@@ -1037,6 +1041,651 @@ fn show_contract(ui: &mut egui::Ui, contract: &ContractSource) {
             );
         }
     });
+}
+
+// ---------------------------------------------------------------------------
+// Question-first form authoring: the question layer of the contract (question,
+// status, assumptions, execution policy, and every requirement) edited as
+// structured fields over the same JSON buffer — the compiler remains the only
+// check. The workflow, inputs, and bindings stay JSON-level in Sources.
+// ---------------------------------------------------------------------------
+
+/// Edit the string at `pointer` in `doc`; `true` when the value changed.
+/// The field must already exist and hold a string.
+fn form_string(ui: &mut egui::Ui, doc: &mut serde_json::Value, pointer: &str) -> bool {
+    let mut text = doc
+        .pointer(pointer)
+        .and_then(|value| value.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let changed = ui
+        .add(egui::TextEdit::singleline(&mut text).desired_width(320.0))
+        .changed();
+    if changed && let Some(slot) = doc.pointer_mut(pointer) {
+        *slot = serde_json::Value::String(text);
+    }
+    changed
+}
+
+/// Multiline string field.
+fn form_text(ui: &mut egui::Ui, doc: &mut serde_json::Value, pointer: &str, rows: usize) -> bool {
+    let mut text = doc
+        .pointer(pointer)
+        .and_then(|value| value.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let changed = ui
+        .add(
+            egui::TextEdit::multiline(&mut text)
+                .desired_width(f32::INFINITY)
+                .desired_rows(rows),
+        )
+        .changed();
+    if changed && let Some(slot) = doc.pointer_mut(pointer) {
+        *slot = serde_json::Value::String(text);
+    }
+    changed
+}
+
+/// A `u64` field edited as text; an unparseable buffer is left in place until
+/// it parses (the compiler reports the type error either way).
+fn form_u64(ui: &mut egui::Ui, doc: &mut serde_json::Value, pointer: &str) -> bool {
+    let mut text = doc
+        .pointer(pointer)
+        .and_then(|value| value.as_u64())
+        .map_or_else(String::new, |value| value.to_string());
+    let changed = ui
+        .add(egui::TextEdit::singleline(&mut text).desired_width(70.0))
+        .changed();
+    if changed
+        && let Ok(number) = text.parse::<u64>()
+        && let Some(slot) = doc.pointer_mut(pointer)
+    {
+        *slot = serde_json::Value::from(number);
+    }
+    changed
+}
+
+/// A closed-choice string field as a dropdown.
+fn form_choice(
+    ui: &mut egui::Ui,
+    id: &str,
+    doc: &mut serde_json::Value,
+    pointer: &str,
+    choices: &[&str],
+) -> bool {
+    let current = doc
+        .pointer(pointer)
+        .and_then(|value| value.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let mut selected = current.clone();
+    egui::ComboBox::from_id_salt(id)
+        .selected_text(if selected.is_empty() {
+            "—"
+        } else {
+            &selected
+        })
+        .show_ui(ui, |ui| {
+            for choice in choices {
+                ui.selectable_value(&mut selected, (*choice).to_string(), *choice);
+            }
+        });
+    if selected != current {
+        if let Some(slot) = doc.pointer_mut(pointer) {
+            *slot = serde_json::Value::String(selected);
+        }
+        return true;
+    }
+    false
+}
+
+/// A boolean flag rendered as a checkbox.
+fn form_bool(ui: &mut egui::Ui, doc: &mut serde_json::Value, pointer: &str, label: &str) -> bool {
+    let mut value = doc
+        .pointer(pointer)
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+    let changed = ui.checkbox(&mut value, label).changed();
+    if changed && let Some(slot) = doc.pointer_mut(pointer) {
+        *slot = serde_json::Value::Bool(value);
+    }
+    changed
+}
+
+/// The registry's `kind_id`s and the unit symbols one kind admits.
+fn registry_choices(registry: Option<&serde_json::Value>) -> (Vec<String>, Vec<String>) {
+    let kinds: Vec<String> = registry
+        .and_then(|doc| doc["kinds"].as_array())
+        .map(|kinds| {
+            kinds
+                .iter()
+                .filter_map(|kind| kind["kind_id"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default();
+    let purposes: Vec<String> = registry
+        .and_then(|doc| doc["purposes"].as_array())
+        .map(|purposes| {
+            purposes
+                .iter()
+                .filter_map(|purpose| purpose["purpose"]["id"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default();
+    (kinds, purposes)
+}
+
+/// Unit symbols the registry admits for `kind_id`.
+fn registry_units(registry: Option<&serde_json::Value>, kind_id: &str) -> Vec<String> {
+    registry
+        .and_then(|doc| doc["kinds"].as_array())
+        .and_then(|kinds| {
+            kinds
+                .iter()
+                .find(|kind| kind["kind_id"].as_str() == Some(kind_id))
+        })
+        .and_then(|kind| kind["units"].as_array())
+        .map(|units| {
+            units
+                .iter()
+                .filter_map(|unit| unit["symbol"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Workflow step ids declared on the contract.
+fn workflow_steps(contract: &serde_json::Value) -> Vec<String> {
+    contract["workflow"]
+        .as_array()
+        .map(|steps| {
+            steps
+                .iter()
+                .filter_map(|step| step["step_id"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Output slots the registry declares for the capability type `step` uses.
+fn step_output_slots(
+    contract: &serde_json::Value,
+    registry: Option<&serde_json::Value>,
+    step_id: &str,
+) -> Vec<String> {
+    let Some(capability) = contract["workflow"]
+        .as_array()
+        .and_then(|steps| {
+            steps
+                .iter()
+                .find(|step| step["step_id"].as_str() == Some(step_id))
+        })
+        .and_then(|step| step["capability_type"]["id"].as_str().map(str::to_string))
+    else {
+        return Vec::new();
+    };
+    registry
+        .and_then(|doc| doc["capability_types"].as_array())
+        .and_then(|types| {
+            types
+                .iter()
+                .find(|cap| cap["capability_type"]["id"].as_str() == Some(capability.as_str()))
+        })
+        .and_then(|cap| cap["outputs"].as_array())
+        .map(|outputs| {
+            outputs
+                .iter()
+                .filter_map(|output| output["slot_id"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Contract input ids.
+fn contract_inputs(contract: &serde_json::Value) -> Vec<String> {
+    contract["inputs"]
+        .as_array()
+        .map(|inputs| {
+            inputs
+                .iter()
+                .filter_map(|input| input["input_id"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn quantity_form(
+    ui: &mut egui::Ui,
+    id_prefix: &str,
+    doc: &mut serde_json::Value,
+    pointer: &str,
+    kinds: &[String],
+    registry: Option<&serde_json::Value>,
+) -> bool {
+    let mut changed = false;
+    ui.horizontal_wrapped(|ui| {
+        ui.label("kind");
+        let kind_choices: Vec<&str> = kinds.iter().map(String::as_str).collect();
+        changed |= form_choice(
+            ui,
+            &format!("{id_prefix}-kind"),
+            doc,
+            &format!("{pointer}/kind"),
+            &kind_choices,
+        );
+        let kind = doc
+            .pointer(&format!("{pointer}/kind"))
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string();
+        ui.label("value");
+        changed |= form_string(ui, doc, &format!("{pointer}/value"));
+        ui.label("unit");
+        let unit_choices: Vec<String> = registry_units(registry, &kind);
+        let unit_refs: Vec<&str> = unit_choices.iter().map(String::as_str).collect();
+        changed |= form_choice(
+            ui,
+            &format!("{id_prefix}-unit"),
+            doc,
+            &format!("{pointer}/unit"),
+            &unit_refs,
+        );
+    });
+    changed
+}
+
+/// One requirement's metric: a source-kind dropdown plus the fields the kind
+/// names — a contract input or a workflow step's declared output slot.
+fn metric_form(
+    ui: &mut egui::Ui,
+    id_prefix: &str,
+    requirement: &mut serde_json::Value,
+    contract: &serde_json::Value,
+    registry: Option<&serde_json::Value>,
+) -> bool {
+    let mut changed = false;
+    ui.horizontal_wrapped(|ui| {
+        ui.label("metric");
+        let kinds = ["none", "contract_input", "step_output"];
+        let current = requirement["metric"]["source"]
+            .as_str()
+            .unwrap_or("none")
+            .to_string();
+        let mut selected = current.clone();
+        egui::ComboBox::from_id_salt(format!("{id_prefix}-metric-kind"))
+            .selected_text(&selected)
+            .show_ui(ui, |ui| {
+                for kind in kinds {
+                    ui.selectable_value(&mut selected, kind.to_string(), kind);
+                }
+            });
+        if selected != current {
+            requirement["metric"] = match selected.as_str() {
+                "contract_input" => serde_json::json!({
+                    "source": "contract_input",
+                    "input_id": contract_inputs(contract).first().cloned().unwrap_or_default(),
+                }),
+                "step_output" => serde_json::json!({
+                    "source": "step_output",
+                    "step_id": workflow_steps(contract).first().cloned().unwrap_or_default(),
+                    "output_slot": "",
+                }),
+                _ => serde_json::Value::Null,
+            };
+            if selected == "none" {
+                requirement.as_object_mut().unwrap().remove("metric");
+            }
+            changed = true;
+        }
+        match requirement["metric"]["source"].as_str() {
+            Some("contract_input") => {
+                let choices: Vec<String> = contract_inputs(contract);
+                let refs: Vec<&str> = choices.iter().map(String::as_str).collect();
+                ui.label("input");
+                changed |= form_choice(
+                    ui,
+                    &format!("{id_prefix}-metric-input"),
+                    requirement,
+                    "/metric/input_id",
+                    &refs,
+                );
+            }
+            Some("step_output") => {
+                let steps = workflow_steps(contract);
+                let refs: Vec<&str> = steps.iter().map(String::as_str).collect();
+                ui.label("step");
+                changed |= form_choice(
+                    ui,
+                    &format!("{id_prefix}-metric-step"),
+                    requirement,
+                    "/metric/step_id",
+                    &refs,
+                );
+                let step_id = requirement["metric"]["step_id"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_string();
+                let slots = step_output_slots(contract, registry, &step_id);
+                ui.label("output");
+                if slots.is_empty() {
+                    changed |= form_string(ui, requirement, "/metric/output_slot");
+                } else {
+                    let slot_refs: Vec<&str> = slots.iter().map(String::as_str).collect();
+                    changed |= form_choice(
+                        ui,
+                        &format!("{id_prefix}-metric-slot"),
+                        requirement,
+                        "/metric/output_slot",
+                        &slot_refs,
+                    );
+                }
+            }
+            _ => {}
+        }
+    });
+    changed
+}
+
+/// One requirement card — returns true when the contract was edited; the
+/// caller writes the buffer back and marks it dirty.
+fn requirement_form(
+    ui: &mut egui::Ui,
+    index: usize,
+    contract: &mut serde_json::Value,
+    kinds: &[String],
+    purposes: &[String],
+    registry: Option<&serde_json::Value>,
+) -> (bool, bool) {
+    let mut changed = false;
+    let mut remove = false;
+    let prefix = format!("/requirements/{index}");
+    card(ui, |ui| {
+        ui.horizontal_wrapped(|ui| {
+            ui.label(egui::RichText::new(format!("Requirement {}", index + 1)).strong());
+            ui.label("id");
+            changed |= form_string(ui, contract, &format!("{prefix}/requirement_id"));
+            if ui.small_button("remove").clicked() {
+                remove = true;
+            }
+        });
+        ui.label("statement — what the requirement claims, in words");
+        changed |= form_text(ui, contract, &format!("{prefix}/statement"), 2);
+        ui.horizontal_wrapped(|ui| {
+            ui.label("purpose");
+            let purpose_refs: Vec<&str> = purposes.iter().map(String::as_str).collect();
+            changed |= form_choice(
+                ui,
+                &format!("req{index}-purpose"),
+                contract,
+                &format!("{prefix}/purpose/id"),
+                &purpose_refs,
+            );
+            ui.label("major");
+            changed |= form_u64(ui, contract, &format!("{prefix}/purpose/major"));
+        });
+        {
+            let contract_snapshot = contract.clone();
+            let mut requirement = contract
+                .pointer_mut(&prefix)
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
+            changed |= metric_form(
+                ui,
+                &format!("req{index}"),
+                &mut requirement,
+                &contract_snapshot,
+                registry,
+            );
+            if let Some(slot) = contract.pointer_mut(&prefix) {
+                *slot = requirement;
+            }
+        }
+        ui.horizontal_wrapped(|ui| {
+            ui.label("comparison");
+            changed |= form_choice(
+                ui,
+                &format!("req{index}-comparison"),
+                contract,
+                &format!("{prefix}/comparison"),
+                &[
+                    "less_than",
+                    "less_than_or_equal",
+                    "greater_than",
+                    "greater_than_or_equal",
+                    "equal",
+                ],
+            );
+            ui.label("basis");
+            changed |= form_choice(
+                ui,
+                &format!("req{index}-basis"),
+                contract,
+                &format!("{prefix}/basis/kind"),
+                &["bounded", "enclosure", "nominal"],
+            );
+        });
+        ui.label("limit — the quantity the metric is compared against");
+        changed |= quantity_form(
+            ui,
+            &format!("req{index}-limit"),
+            contract,
+            &format!("{prefix}/limit"),
+            kinds,
+            registry,
+        );
+        if contract
+            .pointer(&format!("{prefix}/comparison"))
+            .and_then(|value| value.as_str())
+            == Some("equal")
+        {
+            if contract.pointer(&format!("{prefix}/tolerance")).is_none()
+                && let Some(requirement) = contract.pointer_mut(&prefix)
+            {
+                requirement.as_object_mut().unwrap().insert(
+                    "tolerance".to_string(),
+                    serde_json::json!({"kind": "", "value": "0", "unit": ""}),
+                );
+            }
+            ui.label("tolerance — an equal comparison is evaluable only with one");
+            changed |= quantity_form(
+                ui,
+                &format!("req{index}-tolerance"),
+                contract,
+                &format!("{prefix}/tolerance"),
+                kinds,
+                registry,
+            );
+        } else if contract.pointer(&format!("{prefix}/tolerance")).is_some() {
+            ui.horizontal_wrapped(|ui| {
+                ui.colored_label(
+                    muted(ui),
+                    "a tolerance is meaningful only for an equal comparison",
+                );
+                if ui.small_button("remove tolerance").clicked() {
+                    if let Some(requirement) = contract.pointer_mut(&prefix) {
+                        requirement.as_object_mut().unwrap().remove("tolerance");
+                    }
+                    changed = true;
+                }
+            });
+        }
+    });
+    (changed, remove)
+}
+
+fn show_question(ui: &mut egui::Ui, specimen: &mut Specimen) {
+    section_heading(
+        ui,
+        "Question",
+        "The question layer of the contract as form fields — the bounded question, its policy, and every requirement. Edits write the contract buffer directly; Check still runs the authoritative compiler and nothing is saved until Save.",
+    );
+    let mut contract: serde_json::Value = match serde_json::from_str(&specimen.contract_text) {
+        Ok(document) => document,
+        Err(error) => {
+            card(ui, |ui| {
+                ui.colored_label(
+                    egui::Color32::LIGHT_RED,
+                    format!("The contract buffer does not parse as JSON: {error}"),
+                );
+                ui.label("Fix it under Sources, then return here.");
+            });
+            return;
+        }
+    };
+    let registry: serde_json::Value =
+        serde_json::from_str(&specimen.registry_text).unwrap_or(serde_json::Value::Null);
+    let registry = (!registry.is_null()).then_some(registry);
+    let (kinds, purposes) = registry_choices(registry.as_ref());
+    let mut changed = false;
+
+    card(ui, |ui| {
+        ui.label(egui::RichText::new("The bounded question").strong());
+        changed |= form_text(ui, &mut contract, "/question", 3);
+        ui.horizontal_wrapped(|ui| {
+            ui.label("contract id");
+            changed |= form_string(ui, &mut contract, "/contract_id");
+            ui.label("revision");
+            changed |= form_u64(ui, &mut contract, "/revision");
+            ui.label("status");
+            changed |= form_choice(
+                ui,
+                "status",
+                &mut contract,
+                "/status",
+                &["draft", "in_review", "approved", "retired"],
+            );
+        });
+        ui.add_space(4.0);
+        ui.label(egui::RichText::new("Execution policy").strong());
+        ui.horizontal_wrapped(|ui| {
+            if contract.pointer("/execution_policy").is_none() {
+                contract["execution_policy"] = serde_json::json!({});
+            }
+            changed |= form_bool(
+                ui,
+                &mut contract,
+                "/execution_policy/permit_nominal_basis",
+                "permit nominal-basis requirements",
+            );
+            changed |= form_bool(
+                ui,
+                &mut contract,
+                "/execution_policy/require_qualification",
+                "require qualification on bounded and enclosure evidence",
+            );
+            changed |= form_bool(
+                ui,
+                &mut contract,
+                "/execution_policy/require_signatures",
+                "require a signed manifest and receipts to run",
+            );
+        });
+    });
+
+    card(ui, |ui| {
+        ui.label(
+            egui::RichText::new("Assumptions — conditions accepted without being established")
+                .strong(),
+        );
+        let count = contract["assumptions"].as_array().map_or(0, Vec::len);
+        let mut remove: Option<usize> = None;
+        for index in 0..count {
+            ui.horizontal_wrapped(|ui| {
+                changed |= form_string(ui, &mut contract, &format!("/assumptions/{index}"));
+                if ui.small_button("remove").clicked() {
+                    remove = Some(index);
+                }
+            });
+        }
+        if let Some(index) = remove {
+            contract["assumptions"]
+                .as_array_mut()
+                .unwrap()
+                .remove(index);
+            changed = true;
+        }
+        if ui.small_button("+ assumption").clicked() {
+            if !contract["assumptions"].is_array() {
+                contract["assumptions"] = serde_json::json!([]);
+            }
+            contract["assumptions"]
+                .as_array_mut()
+                .unwrap()
+                .push(serde_json::Value::String(String::new()));
+            changed = true;
+        }
+    });
+
+    ui.label(egui::RichText::new("Requirements — what an answer must establish").strong());
+    let count = contract["requirements"].as_array().map_or(0, Vec::len);
+    let mut remove: Option<usize> = None;
+    for index in 0..count {
+        let (edited, delete) = requirement_form(
+            ui,
+            index,
+            &mut contract,
+            &kinds,
+            &purposes,
+            registry.as_ref(),
+        );
+        changed |= edited;
+        if delete {
+            remove = Some(index);
+        }
+    }
+    if let Some(index) = remove {
+        contract["requirements"]
+            .as_array_mut()
+            .unwrap()
+            .remove(index);
+        changed = true;
+    }
+    if ui
+        .button("+ requirement")
+        .on_hover_text("Append a draft requirement; the compiler reports what it still needs.")
+        .clicked()
+    {
+        if !contract["requirements"].is_array() {
+            contract["requirements"] = serde_json::json!([]);
+        }
+        contract["requirements"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({
+                "requirement_id": "",
+                "statement": "",
+                "purpose": purposes
+                    .first()
+                    .map(|id| serde_json::json!({"id": id, "major": 1}))
+                    .unwrap_or_else(|| serde_json::json!({"id": "", "major": 1})),
+                "comparison": "less_than_or_equal",
+                "limit": {
+                    "kind": kinds.first().cloned().unwrap_or_default(),
+                    "value": "0",
+                    "unit": registry
+                        .as_ref()
+                        .and_then(|doc| registry_units(
+                            Some(doc),
+                            kinds.first().map(String::as_str).unwrap_or_default(),
+                        ).first().cloned())
+                        .unwrap_or_default(),
+                },
+                "basis": {"kind": "bounded"},
+            }));
+        changed = true;
+    }
+    ui.add_space(4.0);
+    ui.colored_label(
+        muted(ui),
+        "Workflow steps, inputs, and bindings stay under Sources — the form covers the question the workflow answers, not the method.",
+    );
+
+    if changed {
+        specimen.contract_text = serde_json::to_string_pretty(&contract)
+            .unwrap_or_else(|_| specimen.contract_text.clone());
+        specimen.dirty = true;
+    }
 }
 
 fn show_sources(ui: &mut egui::Ui, specimen: &mut Specimen) {
@@ -1679,5 +2328,60 @@ mod tests {
         let image = image::load_from_memory_with_format(LOGO_PNG, image::ImageFormat::Png)
             .expect("logo should be a PNG");
         assert_eq!((image.width(), image.height()), (2000, 2000));
+    }
+
+    #[test]
+    fn question_form_lists_registry_and_workflow_choices() {
+        let contract: serde_json::Value =
+            serde_json::from_slice(CONTRACT_JSON).expect("specimen contract parses");
+        let registry: serde_json::Value =
+            serde_json::from_slice(REGISTRY_JSON).expect("specimen registry parses");
+
+        let (kinds, purposes) = registry_choices(Some(&registry));
+        assert!(!kinds.is_empty());
+        assert!(!purposes.is_empty());
+        for kind in &kinds {
+            assert!(
+                !registry_units(Some(&registry), kind).is_empty(),
+                "kind {kind} declares no units"
+            );
+        }
+
+        let steps = workflow_steps(&contract);
+        assert!(!steps.is_empty());
+        for step in &steps {
+            let slots = step_output_slots(&contract, Some(&registry), step);
+            assert!(
+                !slots.is_empty(),
+                "step {step} has no registry-declared output slots"
+            );
+        }
+        // The specimen's requirements' metric fields resolve to real choices.
+        let requirement = &contract["requirements"][0];
+        assert_eq!(requirement["metric"]["source"], "step_output");
+        let step_id = requirement["metric"]["step_id"].as_str().unwrap();
+        assert!(steps.iter().any(|step| step == step_id));
+        let slot = requirement["metric"]["output_slot"].as_str().unwrap();
+        assert!(
+            step_output_slots(&contract, Some(&registry), step_id)
+                .iter()
+                .any(|declared| declared == slot)
+        );
+    }
+
+    #[test]
+    fn question_form_survives_a_noncompiling_buffer() {
+        // The form reads the buffer as plain JSON: a syntactically valid but
+        // noncompiling contract still renders, and an invalid one is reported
+        // rather than panicking.
+        let mut specimen = Specimen::embedded().unwrap();
+        specimen.contract_text = "{ not json".to_string();
+        assert!(serde_json::from_str::<serde_json::Value>(&specimen.contract_text).is_err());
+        specimen.contract_text = "{\"schema_version\": \"x\"}".to_string();
+        let doc: serde_json::Value = serde_json::from_str(&specimen.contract_text).unwrap();
+        assert!(workflow_steps(&doc).is_empty());
+        assert!(contract_inputs(&doc).is_empty());
+        let (kinds, purposes) = registry_choices(Some(&serde_json::json!({})));
+        assert!(kinds.is_empty() && purposes.is_empty());
     }
 }

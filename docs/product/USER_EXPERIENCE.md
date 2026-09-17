@@ -41,11 +41,16 @@ the buffer with one click. Nothing writes to disk until Save. A campaign
 log's History view also carries a supervision roll-up: run-state counts
 (evaluated / planned / rejected), step-state tallies, the latest recorded
 verdict per requirement, and the records needing attention — all derived
-from the log, never inferred. Structured question-first authoring (form
-fields over every contract element), plan approval, a dedicated
-design-history view over recorded lineage, live in-progress supervision,
-and cross-campaign dashboards are not implemented; nothing in the
-interface has semantics the runner and kernel do not.
+from the log, never inferred. The Question workspace is form-based
+authoring over the question layer — the bounded question, status,
+assumptions, execution policy, and every requirement's statement, purpose,
+metric (with registry-driven choices for kinds, units, purposes, and
+declared output slots), comparison, limit, tolerance, and basis — writing
+the same contract buffer the compiler checks. Form fields over the
+workflow, inputs, and bindings (the method layer), plan approval, a
+dedicated design-history view over recorded lineage, live in-progress
+supervision, and cross-campaign dashboards are not implemented; nothing
+in the interface has semantics the runner and kernel do not.
 
 ## Design premise
 

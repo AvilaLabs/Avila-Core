@@ -210,18 +210,18 @@ class TestVerdictCalculusVectors(unittest.TestCase):
 # ---------------------------------------------------------------------------
 # Section 5 (campaign fixtures): fixtures/semantic-core/campaigns/campaign-cases.v1.json
 #
-# Three fixtures need admission facts this profile does not build without a
-# compiler (a compiled dataflow graph for A3's parent cascade, a registry
-# role's permitted-claim-model list for A6, and the compiler's own
-# recomputed compiled-snapshot identity) and are explicitly excluded from
-# the pass/fail assertion below, each named and reasoned — never silently
-# skipped. Every other fixture's `expected.verdicts` must match exactly.
+# Two fixtures need facts this profile does not build at verdict level: A3's
+# parent cascade (needs the compiled dataflow graph, which the lowerer does
+# not construct) and a status-level rejection the verdict comparison never
+# sees. Both are explicitly excluded from the pass/fail assertion below,
+# each named and reasoned — never silently skipped. Every other fixture's
+# `expected.verdicts` must match exactly — A6's permitted-model check and
+# E7002's undeclared-slot drop run through the lowerer's registry index.
 # ---------------------------------------------------------------------------
 
 NOT_RE_DERIVABLE_CAMPAIGN_FIXTURES = {
-    "campaign.parent-missing.not_evaluated": "needs the compiled dataflow graph to cascade a missing input attestation to a downstream step's admission (A3); this profile has no compiler",
-    "campaign.model-not-permitted.quarantine": "needs a registry role's declared permitted-claim-model list (A6 type check); this profile does not bind capability-type output slots to registry roles",
-    "campaign.snapshot-mismatch.rejected": "needs the compiler's own recomputed compiled_snapshot_sha256 to detect a mismatch; this profile checks compiled-snapshot equality but never recomputes it",
+    "campaign.parent-missing.not_evaluated": "needs the compiled dataflow graph to cascade a missing input attestation to a downstream step's admission (A3); the lowerer indexes the registry but does not build the compiled graph",
+    "campaign.snapshot-mismatch.rejected": "the fixture's expected outcome is a status-level rejection, not per-requirement verdicts — the verdict-level harness has nothing to compare; the Rust campaign harness pins it",
 }
 
 

@@ -874,3 +874,15 @@ wrong-role-refused. `avila-core-evidence` runs the suite in
 through `signature_status`, so both independent implementations execute the
 identical bytes. fixtures-check now reports 94 covered / 66 named /
 18 unbounded / 116 absent.
+
+### Campaign A6 + E7002 fixtures; verifier A6 check — 2026-09-17
+
+Two campaign fixtures close real admission gaps: `campaign.undeclared-slot.rejected`
+pins CORE-E7002 when a claim names an output slot the step's capability type
+does not declare (the claim drops out; the requirement is `missing`), and
+`campaign.model-mismatch.quarantine` pins A6's E7201 for an unquantified
+claim on an interval-only slot. The Python verifier grew the matching
+checks — `admit_claims_for_metric` now resolves each claim's slot against
+the lowerer's registry index, so `campaign.model-not-permitted.quarantine`
+leaves the not-re-derivable exclusion list and runs asserted like every
+other fixture. 18 campaign fixtures; fixtures-check reads 94/78/18/103.

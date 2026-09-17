@@ -58,7 +58,7 @@ multiple historical profiles.
   entry is refused, and a requester key listed only under the runner role is
   refused (the key travels with its declared role). Both implementations —
   `avila-core-evidence` and the Python verifier — execute the suite; and
-- `campaigns/campaign-cases.v1.json`: 15 executable campaign fixtures covering
+- `campaigns/campaign-cases.v1.json`: 18 executable campaign fixtures covering
   the first SC-10/SC-11 claim-admission and verdict slice, including bounded
   outcomes, exact unit scaling, quarantine paths, snapshot mismatch,
   qualification, `require_qualification` enforcement, and proof that
@@ -73,7 +73,7 @@ The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 aggregation vectors in `verdict-calculus.v1.json`. The compiler harness also executes all 70 cases in
 the five compiler manifests plus all 33 real-contract defect cases in
 `defects/defects.v1.json`, and pins each registry digest plus all successful
-compiled-snapshot identities. The evidence harness executes the four authority cases in `authority/authority-cases.v1.json`. The campaign harness executes all 15 cases in its
+compiled-snapshot identities. The evidence harness executes the four authority cases in `authority/authority-cases.v1.json`. The campaign harness executes all 18 cases in its
 manifest and pins every successful campaign identity. Passing the 98 pure
 vectors, 70 compiler fixtures, and 15 campaign fixtures does not accept
 ADR-0006: full package-level admission, package rule halves, and other vector
@@ -424,7 +424,7 @@ canonically.
 
 | Fixture | Expected |
 | --- | --- |
-| `admission.A1..A10.pass` | one fixture each |
+| `admission.A1..A8.pass` / `admission.A10.pass` | each pass condition runs inside the admitted-claims fixtures — `campaign.le.within.pass` exercises A1–A6, A7-vacuous, A8, and A10; `campaign.require-qualification.qualified-inside.pass` exercises A7-as-required — dedicated per-condition pinpoint fixtures remain |
 | `admission.A1.hash-mismatch.fail` | `CORE-E7101` → quarantined — exercised by `campaign.snapshot-mismatch.rejected` |
 | `admission.A2.foreign-receipt.fail` | `CORE-E7102` |
 | `admission.A2.untrusted-runner-key.fail` | `CORE-E7102` |
@@ -433,18 +433,18 @@ canonically.
 | `admission.A5.exit-zero-insufficient.fail` | exit 0 with missing declared output → `CORE-X6202`; nothing admitted |
 | `admission.A5.timeout/crash/sandbox.fail` | `CORE-X6101/6102/6103` |
 | `admission.A6.validator-rejected.fail` | `CORE-E7201` — exercised by `campaign.model-not-permitted.quarantine` |
-| `admission.A6.model-mismatch.fail` | declared coverage_interval, emitted unquantified → `CORE-E7201` |
+| `admission.A6.model-mismatch.fail` | declared interval-only slot, emitted unquantified → `CORE-E7201` — exercised by `campaign.model-mismatch.quarantine` |
 | `admission.A7.actual-context.fail` | see `scope.a7-actual-context.fail` |
-| `admission.A7.vacuous-recorded.pass` | no qualification required → sub-record says so |
+| `admission.A7.vacuous-recorded.pass` | no qualification required → sub-record says so — every admitted-claims fixture without `require_qualification`, e.g. `campaign.le.within.pass` |
 | `admission.A8.policy-changed.fail` | → invalidated |
-| `admission.A9.optional-routing-record.pass` | a valid attached routing record is checked separately and does not change artifact admission |
+| `admission.A9.pass` | one fixture |
 | `admission.A10.ancestor-invalidated.fail` | |
 | `admission.state.quarantine-terminal.pass` | rerun yields new artifact id |
 | `admission.presentation.present/return/abstain.pass` | closed routing dispositions; technical verdict unchanged — exercised by `campaign.practical-review.pass` and `campaign.practical-review.fail` |
 | `admission.presentation.cannot-edit-artifact.fail` | routing record with mutated dossier bytes is quarantined; artifact and verdict remain unchanged |
 | `admission.non-artifact-records.pass` | snapshot, approvals, selection, preflight, change events are records |
 | `admission.sub-record-replayable.pass` | verifier replays A1–A4, A6(kernel), A7, A8, A10 from package alone |
-| `admission.undeclared-output-discarded.pass` | `CORE-X6301` note; not evidence |
+| `admission.undeclared-output-discarded.pass` | `CORE-X6301` note; not evidence — the claims-level half is `campaign.undeclared-slot.rejected` (`CORE-E7002` when a claim names a slot the step does not declare); the artifact-file discard half remains runner-level |
 | `admission.validator-does-not-establish-truth.pass` | obligations report describes the validator's narrow responsibility |
 | `admission.as-of-historical/current.pass` | package snapshot and supplied current revocation material produce distinct labeled results |
 

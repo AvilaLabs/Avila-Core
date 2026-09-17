@@ -1461,25 +1461,45 @@ def apply_qualification_gate(claim: dict, basis_kind: str, require_qualification
     return None, []
 
 
-def admit_claims_for_metric(matches: list[dict]) -> list[ReducedEvidence]:
-    """Applies the two claim-shape admission checks this profile can decide
-    without a compiled snapshot or registry role bindings (the type-level
-    SC-11 subset CAMPAIGN_EVALUATION.md's own admission table names): a
-    duplicate claim for one output slot quarantines every claim for that
-    slot ("cardinality", CORE-E7301 — proved against
-    ``campaign.duplicate-claim.quarantine``), and a numeric claim whose
-    lower bound exceeds its upper is refused for shape ("bounds are
-    ordered", CORE-E7201 — proved against
-    ``campaign.inverted-bounds.quarantine``). A3 (parent-admission cascade)
-    and the A6 role-permitted-claim-model check are NOT implemented — they
-    need the compiled dataflow graph and registry role declarations this
-    profile does not build — and are reported ``not_checked`` by the caller
-    where a fixture specifically needs them
-    (``campaign.parent-missing.not_evaluated``,
-    ``campaign.model-not-permitted.quarantine``).
+def admit_claims_for_metric(
+    matches: list[dict],
+    permitted_models_for=None,
+) -> list[ReducedEvidence]:
+    """Applies the claim-shape admission checks this profile can decide
+    without a compiled snapshot (the type-level SC-11 subset
+    CAMPAIGN_EVALUATION.md's own admission table names): a claim naming an
+    output slot the step's capability type does not declare is dropped
+    before admission (CORE-E7002 — proved against
+    ``campaign.undeclared-slot.rejected``), a claim whose model the slot's
+    ``permitted_claim_models`` does not list is quarantined (A6,
+    CORE-E7201 — proved against ``campaign.model-not-permitted.quarantine``
+    and ``campaign.model-mismatch.quarantine``), a duplicate claim for one
+    output slot quarantines every claim for that slot ("cardinality",
+    CORE-E7301 — proved against ``campaign.duplicate-claim.quarantine``),
+    and a numeric claim whose lower bound exceeds its upper is refused for
+    shape ("bounds are ordered", CORE-E7201 — proved against
+    ``campaign.inverted-bounds.quarantine``). ``permitted_models_for``
+    resolves the slot's declared models: a set of admitted model names, an
+    empty set when the slot is undeclared (the claim drops out as the
+    compiler's `continue` does), or None when the registry could not be
+    indexed. A3 (parent-admission cascade) is NOT implemented — it needs
+    the compiled dataflow graph — and is reported ``not_checked`` by the
+    caller where a fixture specifically needs it
+    (``campaign.parent-missing.not_evaluated``).
     """
     reduced: list[ReducedEvidence] = []
     for m in matches:
+        if permitted_models_for is not None:
+            permitted = permitted_models_for(m)
+            if permitted is not None and m["claim"].get("model") not in permitted:
+                # An undeclared slot drops the claim entirely; a declared
+                # slot with an unpermitted model quarantines it.
+                if permitted:
+                    reduced.append(
+                        ReducedEvidence(
+                            evidence_id=m["claim_id"], state="quarantined",
+                            model=m["claim"].get("model", "?")))
+                continue
         try:
             r = reduce_claim_value(m["claim_id"], "admitted", m["claim"])
         except CanonError:
@@ -1544,6 +1564,35 @@ def verify_case_verdicts(
     require_qualification = bool(contract.get("execution_policy", {}).get("require_qualification", False))
     verdicts_by_req = {v["requirement_id"]: v for v in (campaign_report or {}).get("verdicts", [])}
 
+    # A6's slot-declaredness and permitted-claim-model checks ride the
+    # lowerer's registry index — the same structures the compiler builds.
+    # Imported lazily: avila_core_lower reuses this file's canonical JSON.
+    import avila_core_lower
+
+    steps = {s.get("step_id"): s for s in contract.get("workflow", [])}
+    try:
+        registry_index = avila_core_lower._build_index(registry)
+    except Exception:
+        registry_index = None
+
+    def permitted_models_for(claim):
+        if registry_index is None:
+            return None
+        step = steps.get(claim.get("step_id"))
+        if step is None:
+            return None
+        capability = registry_index.capability_types.get(
+            avila_core_lower._ref_key(step.get("capability_type", {})))
+        if capability is None:
+            return None
+        output = next(
+            (o for o in capability.outputs if o.get("slot_id") == claim.get("output_slot")),
+            None,
+        )
+        if output is None:
+            return set()
+        return {m["model"] for m in output.get("permitted_claim_models", [])}
+
     for req in contract.get("requirements", []):
         check = f"verdict.{req['requirement_id']}"
         metric = req.get("metric")
@@ -1564,7 +1613,7 @@ def verify_case_verdicts(
         coverage_required = read_authoritative_exact(req["basis"]["coverage"]) if "coverage" in req["basis"] else None
         aggregation = req.get("aggregation")
 
-        reduced_evidence = admit_claims_for_metric(matches)
+        reduced_evidence = admit_claims_for_metric(matches, permitted_models_for)
         gated_result: Optional[VerdictResult] = None
         extra_reasons: list[dict] = []
         if len(reduced_evidence) == 1 and reduced_evidence[0].state == "admitted":
@@ -1586,7 +1635,7 @@ def verify_case_verdicts(
             report.not_checked(check, "requirement's metric is not a step_output reference")
             continue
         matches = find_claims_for_metric(claims, metric)
-        reduced_evidence = admit_claims_for_metric(matches)
+        reduced_evidence = admit_claims_for_metric(matches, permitted_models_for)
         gated_result, extra_reasons = (None, [])
         if len(reduced_evidence) == 1 and reduced_evidence[0].state == "admitted":
             gated_result, extra_reasons = apply_qualification_gate(matches[0], "categorical", require_qualification)

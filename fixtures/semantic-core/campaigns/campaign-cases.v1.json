@@ -654,6 +654,95 @@
     ],
     "campaign_sha256": "sha256:56bf91a174b8a66ea20c98c4bc4d802abfad72449fcf500c4733fab96b4e541e"
    }
+  },
+  {
+   "fixture_id": "campaign.undeclared-slot.rejected",
+   "clause": "SC-11",
+   "contract": "../types/types.R1.resolved.pass.contract.json",
+   "registry": "../types/compiler.registry.v1.json",
+   "claims": "campaign.undeclared-slot.claims.json",
+   "expected": {
+    "status": "evaluated",
+    "findings": [
+     {
+      "code": "CORE-E7002",
+      "class": "invalid",
+      "owner": "executor",
+      "primary": {
+       "document": "claims",
+       "pointer": "/claims/1/output_slot"
+      }
+     }
+    ],
+    "admissions": [
+     {
+      "evidence_id": "input:case",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "calculated",
+      "state": "admitted",
+      "reasons": []
+     }
+    ],
+    "verdicts": [
+     {
+      "requirement_id": "R-001",
+      "status": "not_evaluated",
+      "rule": "not_evaluated.missing"
+     }
+    ],
+    "campaign_sha256": "sha256:788b56d9c3691ccb2c1f158ca08db916b6f21fa102be5cebb58970feb088a7fa"
+   }
+  },
+  {
+   "fixture_id": "campaign.model-mismatch.quarantine",
+   "clause": "SC-11",
+   "contract": "../types/types.R1.resolved.pass.contract.json",
+   "registry": "../types/compiler.registry.v1.json",
+   "claims": "campaign.model-mismatch.claims.json",
+   "expected": {
+    "status": "evaluated",
+    "findings": [
+     {
+      "code": "CORE-E7201",
+      "class": "inadmissible",
+      "owner": "executor",
+      "primary": {
+       "document": "claims",
+       "pointer": "/claims/1/claim"
+      }
+     }
+    ],
+    "admissions": [
+     {
+      "evidence_id": "input:case",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "calculated",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "bounded",
+      "state": "quarantined",
+      "reasons": [
+       "CORE-E7201"
+      ]
+     }
+    ],
+    "verdicts": [
+     {
+      "requirement_id": "R-001",
+      "status": "not_evaluated",
+      "rule": "not_evaluated.quarantined"
+     }
+    ],
+    "campaign_sha256": "sha256:9fe392e46d1abaf65f63a34d2dda8be8c63e012834e066bf8677d33350c25507"
+   }
   }
  ]
 }

@@ -676,6 +676,59 @@ This is the Stage-3 "second implementation" seeded early: the verifier now
 implements the semantic kernel *and* the compiler's lowering result in an
 independent codebase.
 
+### Real-contract diagnostic defect corpus — implemented 2026-09-17
+
+`fixtures/semantic-core/defects/` pins 23 realistic defects seeded one at a
+time into verbatim copies of the committed CASE-001 contract+registry —
+typo'd and missing fields, unresolvable metrics and bindings, role/media
+mismatches, unadmitted units and limit-kind mismatches, parameter and seed
+violations, incomplete review declarations, basis and coverage violations,
+unknown purposes and capability types, a self-dependency, and two
+registry-side invariant breaks (a dropped role, a rewritten canonical-unit
+factor). Each fixture records the mutation as JSON pointers plus the
+compiler's exact status, findings (code, class, owner, primary pointer,
+repair applicability), and — where compilation still succeeds — the
+snapshot identity.
+
+One fixture intentionally compiles: dropping a redundant explicit binding
+lets single-candidate auto-binding resolve the slot, and the snapshot
+differs from the base pair's only through the source-document digest —
+pinning that defect location does change identity even when structure does
+not.
+
+**Validation evidence:** `generate.py` produced the corpus by invoking the
+real compiler; the Rust fixture harness replays all 23 against
+`compile_documents`; the independent lowering port reproduces every
+rejection (and the compiled snapshot), which required porting the kernel's
+canonical-unit factor invariant it previously skipped. 63 verifier tests
+pass.
+
+### Deterministic capability discovery — implemented 2026-09-17
+
+The "package discovery" half of planning-and-selection's open row:
+`CaseRunOptions.capability_dirs` / `--capability-dir DIR` scans a directory
+once and binds the file whose digest equals the manifest's pinned
+`executable_sha256`. Selection is deterministic *because the pin is the
+selector* — any match is byte-identical to the declared capability, so no
+name matching or ordering policy is needed. Directories scan in declared
+order, entries in file-name order, first digest match wins; an explicit
+`--capability` supply always wins and is authoritative (a supplied wrong
+file refuses even when the catalog holds the right bytes); every resolved
+path is hash-verified again at use. The bound plan records
+`capability_source` (`supplied`/`catalog`) — a kind, not a path, so plan
+identity stays portable.
+
+**Validation evidence:** four new adversarial fixtures cover catalog
+selection with a decoy present, explicit-supply precedence, no-match
+blocking, and source recording on the bound plan; the schema lists
+`capability_source`; smoke-tested end-to-end on a re-pinned CASE-004 copy
+(`decision: execute`, `capability_source: catalog`).
+
+**Limits:** discovery is one directory level deep and digest-only — there
+is no ranking among *different* admissible implementations (that is the
+still-open multi-implementation selection policy), no cross-registry
+package discovery, and no cost/duration estimates.
+
 A public catalog, package installation, browser client, cloud/HPC scheduling,
 organization governance, autonomous search orchestration, and comprehensive
 semantic invalidation remain larger roadmap tracks. They are not implicit tasks

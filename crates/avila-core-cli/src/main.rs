@@ -372,6 +372,12 @@ struct RunArgs {
     /// bytes must hash to the identity the package binds. Repeat as needed.
     #[arg(long = "capability", value_name = "NAME=PATH")]
     capabilities: Vec<String>,
+    /// Scan DIR for a file whose digest equals a declared capability's
+    /// pinned executable_sha256 — deterministic discovery for capabilities
+    /// not named by --capability. Repeat as needed; directories are scanned
+    /// in the order given, first digest match wins.
+    #[arg(long = "capability-dir", value_name = "DIR")]
+    capability_dirs: Vec<PathBuf>,
     /// Fresh directory for staged inputs, outputs, logs, receipts, and the
     /// generated documents. Defaults to workspaces/<case>/<run> under the
     /// current directory when something is executed.
@@ -575,6 +581,7 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 case,
                 source_roots,
                 capabilities,
+                capability_dirs,
                 workspace,
                 no_reuse,
                 expect_manifest,
@@ -613,6 +620,7 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 hash_cache,
                 trust_root,
                 runner_key,
+                capability_dirs,
             };
             let report = avila_core_runner::execute_case(&case, &options)?;
             if json {

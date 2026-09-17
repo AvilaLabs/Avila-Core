@@ -67,6 +67,10 @@ pub(super) struct Runner<'a> {
     /// `runner_key`'s key id, derived once, so reporting never re-derives it
     /// (and never needs to touch the seed again after this).
     runner_key_id: Option<String>,
+    /// Capability catalog: executable digest → candidate path, scanned once
+    /// from `options.capability_dirs` in declared order. The manifest's
+    /// `executable_sha256` selects; explicit `--capability` supplies win.
+    catalog: BTreeMap<String, PathBuf>,
 }
 
 impl<'a> Runner<'a> {
@@ -106,6 +110,27 @@ impl<'a> Runner<'a> {
             signature::key_id_from_public_hex(&signature::public_key_hex_from_seed(&seed))
                 .expect("a derived public key hex is always well-formed")
         });
+        // Scan the capability catalog once: each directory's regular files
+        // are hashed in file-name order, and the first candidate carrying a
+        // digest wins. Selection itself happens per capability below, keyed
+        // by the manifest's pinned digest.
+        let mut catalog = BTreeMap::new();
+        for dir in &options.capability_dirs {
+            let mut entries: Vec<_> = match fs::read_dir(dir) {
+                Ok(entries) => entries.filter_map(Result::ok).collect(),
+                Err(_) => continue,
+            };
+            entries.sort_by_key(|entry| entry.file_name());
+            for entry in entries {
+                let path = entry.path();
+                if !path.is_file() {
+                    continue;
+                }
+                if let Ok((digest, _)) = sha256_file(&path) {
+                    catalog.entry(digest).or_insert(path);
+                }
+            }
+        }
         Self {
             package,
             compiled,
@@ -127,6 +152,7 @@ impl<'a> Runner<'a> {
             trust_root,
             runner_key,
             runner_key_id,
+            catalog,
         }
     }
 
@@ -307,6 +333,7 @@ impl<'a> Runner<'a> {
                     blockers: Vec::new(),
                     missing_environment: Vec::new(),
                     capability_state: None,
+                    capability_source: None,
                     note: Some(skip.reason.clone()),
                 });
             }
@@ -368,6 +395,7 @@ impl<'a> Runner<'a> {
             blockers: Vec::new(),
             missing_environment: Vec::new(),
             capability_state: step.capability.as_ref().map(|check| check.state),
+            capability_source: None,
             note: None,
         };
         match step.state {
@@ -417,13 +445,23 @@ impl<'a> Runner<'a> {
         }) {
             bound.blockers.push("inputs_unverified".to_string());
         }
-        let capability_state = step
+        let capability_check = step
             .capability
             .as_ref()
-            .map(|check| check.state)
+            .map(|check| {
+                (
+                    check.state,
+                    if self.options.capabilities.contains_key(&step.capability_id) {
+                        "supplied"
+                    } else {
+                        "catalog"
+                    },
+                )
+            })
             .or_else(|| self.probe_supplied_capability(&step.capability_id));
-        bound.capability_state = capability_state;
-        match capability_state {
+        bound.capability_state = capability_check.map(|check| check.0);
+        bound.capability_source = capability_check.map(|check| check.1.to_string());
+        match bound.capability_state {
             Some(CapabilityCheckState::Verified) => {}
             Some(CapabilityCheckState::Mismatch) => {
                 bound.blockers.push("capability_mismatch".to_string())
@@ -456,24 +494,47 @@ impl<'a> Runner<'a> {
         }
     }
 
-    /// Hash the path supplied for `capability_id` against the declared
-    /// executable digest. `None` when nothing was supplied; `Missing` when
-    /// the supplied path cannot be read as a regular file.
-    fn probe_supplied_capability(&self, capability_id: &str) -> Option<CapabilityCheckState> {
-        let path = self.options.capabilities.get(capability_id)?;
+    /// Resolve the executable for `capability_id`: an explicit
+    /// `--capability` supply first, then the catalog — the file whose digest
+    /// equals the manifest's pinned `executable_sha256`. Returns the path
+    /// and where the bytes came from (`"supplied"` or `"catalog"`).
+    fn resolve_capability_path(&self, capability_id: &str) -> Option<(PathBuf, &'static str)> {
+        if let Some(path) = self.options.capabilities.get(capability_id) {
+            return Some((path.clone(), "supplied"));
+        }
         let declared = self
             .package
             .manifest
             .capabilities
             .iter()
             .find(|capability| capability.capability_id == capability_id)?;
-        Some(match sha256_file(path) {
+        self.catalog
+            .get(&declared.executable_sha256)
+            .map(|path| (path.clone(), "catalog"))
+    }
+
+    /// Hash the resolved executable for `capability_id` against the declared
+    /// digest. `None` when nothing supplied or catalog-matched; `Missing`
+    /// when the resolved path cannot be read as a regular file.
+    fn probe_supplied_capability(
+        &self,
+        capability_id: &str,
+    ) -> Option<(CapabilityCheckState, &'static str)> {
+        let (path, source) = self.resolve_capability_path(capability_id)?;
+        let declared = self
+            .package
+            .manifest
+            .capabilities
+            .iter()
+            .find(|capability| capability.capability_id == capability_id)?;
+        let state = match sha256_file(&path) {
             Ok((digest, _)) if digest == declared.executable_sha256 => {
                 CapabilityCheckState::Verified
             }
             Ok(_) => CapabilityCheckState::Mismatch,
             Err(_) => CapabilityCheckState::Missing,
-        })
+        };
+        Some((state, source))
     }
 
     /// The roots and capabilities the plan still needs: roots whose
@@ -788,12 +849,12 @@ impl<'a> Runner<'a> {
 
         // Unchecked bytes: without an executable the step is simply not run;
         // with one, the runner refuses, because it executes only over bytes
-        // it verified and reuses only against them.
+        // it verified and reuses only against them. Resolution is an explicit
+        // --capability supply first, then a --capability-dir catalog match on
+        // the pinned digest.
         let executable = self
-            .options
-            .capabilities
-            .get(&execution.capability_id)
-            .cloned();
+            .resolve_capability_path(&execution.capability_id)
+            .map(|(path, _)| path);
         if !unverified.is_empty() {
             match executable {
                 None => {

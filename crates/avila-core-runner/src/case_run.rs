@@ -141,6 +141,14 @@ pub struct CaseRunOptions {
     /// the workspace; campaign log lines this run appends are signed the
     /// same way.
     pub runner_key: Option<PathBuf>,
+    /// Directories scanned for executables whose digest matches a declared
+    /// capability's `executable_sha256` — deterministic capability
+    /// discovery: the manifest's pinned digest is the selector, so any file
+    /// the scan binds is byte-identical to the declared executable.
+    /// Scanned in declared order, entries in file-name order, first digest
+    /// match wins. An explicit `--capability` supply always wins over the
+    /// catalog, and bytes are still hash-verified after selection.
+    pub capability_dirs: Vec<PathBuf>,
 }
 
 impl Default for CaseRunOptions {
@@ -159,6 +167,7 @@ impl Default for CaseRunOptions {
             hash_cache: None,
             trust_root: None,
             runner_key: None,
+            capability_dirs: Vec::new(),
         }
     }
 }

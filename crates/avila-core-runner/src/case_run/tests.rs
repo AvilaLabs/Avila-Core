@@ -489,6 +489,7 @@ fn case_000_executes_both_tools_when_available() {
         hash_cache: None,
         trust_root: None,
         runner_key: None,
+        capability_dirs: Vec::new(),
     };
     let report = execute_case(&case_000(), &options).unwrap();
     let summary = human_summary(&report);

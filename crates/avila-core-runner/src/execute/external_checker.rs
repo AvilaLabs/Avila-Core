@@ -1052,6 +1052,7 @@ mod tests {
             hash_cache: None,
             trust_root: None,
             runner_key: None,
+            capability_dirs: Vec::new(),
         }
     }
 

@@ -106,10 +106,15 @@ pub struct BoundStep {
     /// Environment keys the step's execution requires that were not valued.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub missing_environment: Vec<String>,
-    /// The bound check on the supplied capability path: `verified` only when
+    /// The bound check on the resolved capability path: `verified` only when
     /// the file's bytes hash to the pinned executable digest.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub capability_state: Option<super::CapabilityCheckState>,
+    /// Where the resolved executable came from: `supplied` (an explicit
+    /// `--capability`) or `catalog` (a `--capability-dir` scan matched the
+    /// pinned digest). Not a path — the plan's identity stays portable.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub capability_source: Option<String>,
     /// For `not_executed` steps: why no execution is declared.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,

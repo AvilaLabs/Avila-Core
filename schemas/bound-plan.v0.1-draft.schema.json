@@ -64,6 +64,10 @@
           "items": { "$ref": "#/$defs/nonemptyString" }
         },
         "capability_state": { "enum": ["verified", "mismatch", "missing", "not_supplied"] },
+        "capability_source": {
+          "enum": ["supplied", "catalog"],
+          "description": "Where the resolved executable came from: an explicit --capability supply, or a --capability-dir scan matched on the pinned executable_sha256. A kind, not a path, so the plan's identity stays portable."
+        },
         "note": { "type": "string" }
       }
     },

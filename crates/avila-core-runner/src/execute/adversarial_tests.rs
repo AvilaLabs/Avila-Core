@@ -371,6 +371,7 @@ fn run_options(synthetic: &Synthetic, workspace: PathBuf) -> CaseRunOptions {
         hash_cache: None,
         trust_root: None,
         runner_key: None,
+        capability_dirs: Vec::new(),
     }
 }
 
@@ -3751,4 +3752,114 @@ fn a_bound_plan_is_unavailable_when_the_run_is_rejected_before_planning() {
     assert_eq!(plan.status, BoundPlanStatus::Unavailable);
     assert!(plan.steps.is_empty());
     assert!(plan.note.is_some());
+}
+
+// Capability catalogs: deterministic discovery. The manifest's pinned
+// executable_sha256 selects the file, so a catalog match is byte-identical
+// to the declared capability; explicit --capability supplies always win.
+
+#[test]
+fn a_capability_catalog_selects_the_pinned_executable() {
+    let dir = TestDir::new();
+    let catalog_dir = dir.0.join("catalog");
+    fs::create_dir(&catalog_dir).unwrap();
+    let stub = catalog_dir.join("zzz-named-anything.sh");
+    let canned = dir.0.join("canned-route-result.json");
+    fs::write(&canned, canned_route_result("0.5")).unwrap();
+    write_copy_stub(&stub, &canned);
+    // A non-matching decoy alongside the pinned executable is ignored.
+    fs::write(catalog_dir.join("aaa-decoy.sh"), b"#!/bin/sh\nexit 1\n").unwrap();
+    let synthetic = build_package(&dir.0, &stub);
+
+    let mut options = run_options(&synthetic, dir.workspace());
+    options.capabilities.clear();
+    options.capability_dirs.push(catalog_dir);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let summary = human_summary(&report);
+    // The run is unblessed — fresh claims differ from the committed ones —
+    // but the step executed on the catalog-resolved bytes.
+    assert_eq!(report.status, CaseRunStatus::Rejected, "{summary}");
+    let step = &report.execution.as_ref().unwrap().steps[0];
+    assert_eq!(step.state, StepExecutionState::Executed, "{summary}");
+    assert_eq!(
+        step.capability.as_ref().unwrap().state,
+        CapabilityCheckState::Verified
+    );
+}
+
+#[test]
+fn an_explicit_supply_wins_over_the_catalog() {
+    let dir = TestDir::new();
+    let catalog_dir = dir.0.join("catalog");
+    fs::create_dir(&catalog_dir).unwrap();
+    let stub = catalog_dir.join("stub.sh");
+    let canned = dir.0.join("canned-route-result.json");
+    fs::write(&canned, canned_route_result("0.5")).unwrap();
+    write_copy_stub(&stub, &canned);
+    let synthetic = build_package(&dir.0, &stub);
+
+    // The catalog holds the right bytes, but the explicitly supplied file is
+    // wrong: explicit supply is authoritative and the mismatch is refused.
+    let wrong = dir.0.join("wrong.sh");
+    fs::write(&wrong, b"#!/bin/sh\nexit 1\n").unwrap();
+    let mut options = run_options(&synthetic, dir.workspace());
+    options.capabilities.insert("stub".into(), wrong);
+    options.capability_dirs.push(catalog_dir);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let step = &report.execution.as_ref().unwrap().steps[0];
+    assert_eq!(step.state, StepExecutionState::Refused);
+    assert_eq!(
+        step.capability.as_ref().unwrap().state,
+        CapabilityCheckState::Mismatch
+    );
+}
+
+#[test]
+fn a_catalog_without_a_match_still_blocks_the_plan() {
+    let dir = TestDir::new();
+    let catalog_dir = dir.0.join("catalog");
+    fs::create_dir(&catalog_dir).unwrap();
+    fs::write(catalog_dir.join("decoy.sh"), b"#!/bin/sh\nexit 1\n").unwrap();
+    let stub = dir.0.join("stub.sh");
+    let canned = dir.0.join("canned-route-result.json");
+    fs::write(&canned, canned_route_result("0.5")).unwrap();
+    write_copy_stub(&stub, &canned);
+    let synthetic = build_package(&dir.0, &stub);
+
+    let mut options = plan_options(&synthetic, dir.workspace());
+    options.capabilities.clear();
+    options.capability_dirs.push(catalog_dir);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let plan = report.bound_plan.as_ref().unwrap();
+    let step = bound_step(plan, "classification");
+    assert_eq!(step.decision, BoundDecision::Blocked);
+    assert_eq!(step.blockers, ["capability_not_supplied"]);
+}
+
+#[test]
+fn a_bound_plan_records_where_the_executable_came_from() {
+    let dir = TestDir::new();
+    let catalog_dir = dir.0.join("catalog");
+    fs::create_dir(&catalog_dir).unwrap();
+    let stub = catalog_dir.join("stub.sh");
+    let canned = dir.0.join("canned-route-result.json");
+    fs::write(&canned, canned_route_result("0.5")).unwrap();
+    write_copy_stub(&stub, &canned);
+    let synthetic = build_package(&dir.0, &stub);
+
+    let mut options = plan_options(&synthetic, dir.workspace());
+    options.capabilities.clear();
+    options.capability_dirs.push(catalog_dir);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let plan = report.bound_plan.as_ref().unwrap();
+    let step = bound_step(plan, "classification");
+    assert_eq!(step.decision, BoundDecision::Execute);
+    assert_eq!(step.capability_state, Some(CapabilityCheckState::Verified));
+    assert_eq!(step.capability_source.as_deref(), Some("catalog"));
+
+    // The same plan against an explicit supply names the other source.
+    let options = plan_options(&synthetic, dir.workspace());
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let step = bound_step(report.bound_plan.as_ref().unwrap(), "classification");
+    assert_eq!(step.capability_source.as_deref(), Some("supplied"));
 }

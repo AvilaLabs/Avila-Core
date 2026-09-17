@@ -2167,7 +2167,7 @@
     "upper_canonical": "1/36000000",
     "nominal_canonical": "97/3600000000"
    },
-   "note": "strict: hi == L means no admitted value exceeds L — contradiction"
+   "note": "strict: hi == L means no admitted value exceeds L \u2014 contradiction"
   },
   {
    "id": "gt.bounded.crossing",
@@ -2262,6 +2262,475 @@
     "nominal_canonical": "7/240000000"
    },
    "note": "strict: lo == L is not > L; hi > L leaves the verdict unestablished"
+  },
+  {
+   "id": "lt.enclosure.within",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "less_than",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "enclosure"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.enc.lt.1",
+      "state": "admitted",
+      "model": "interval",
+      "lower": {
+       "value": "20",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "24",
+       "unit": "MPa"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "enclosure.lt.within",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "lower_canonical": "20000000",
+    "upper_canonical": "24000000"
+   },
+   "note": "enclosure basis is bounded with coverage one required"
+  },
+  {
+   "id": "gt.enclosure.below",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "greater_than",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "enclosure"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.enc.gt.1",
+      "state": "admitted",
+      "model": "interval",
+      "lower": {
+       "value": "10",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "20",
+       "unit": "MPa"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "status": "fail",
+    "rule": "enclosure.gt.below",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "lower_canonical": "10000000",
+    "upper_canonical": "20000000"
+   }
+  },
+  {
+   "id": "ge.enclosure.crossing",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "greater_than_or_equal",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "enclosure"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.enc.ge.1",
+      "state": "admitted",
+      "model": "interval",
+      "lower": {
+       "value": "20",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "30",
+       "unit": "MPa"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "enclosure.ge.crossing",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "lower_canonical": "20000000",
+    "upper_canonical": "30000000"
+   }
+  },
+  {
+   "id": "equal.enclosure.outside",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "equal",
+     "limit": {
+      "value": "50",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "enclosure"
+     },
+     "tolerance": {
+      "value": "2",
+      "unit": "MPa"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.enc.eq.1",
+      "state": "admitted",
+      "model": "interval",
+      "lower": {
+       "value": "60",
+       "unit": "MPa"
+      },
+      "upper": {
+       "value": "65",
+       "unit": "MPa"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "status": "fail",
+    "rule": "equal.outside",
+    "canonical_unit": "Pa",
+    "limit_canonical": "50000000",
+    "lower_canonical": "60000000",
+    "upper_canonical": "65000000",
+    "tolerance_canonical": "2000000"
+   },
+   "note": "equality ignores the basis prefix \u2014 the rule stays equal.*"
+  },
+  {
+   "id": "lt.bounded.lower_only.exceeds",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "less_than",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.lt.lower.1",
+      "state": "admitted",
+      "model": "worst_case",
+      "lower": {
+       "value": "30",
+       "unit": "MPa"
+      },
+      "basis": "one-sided lower bound"
+     }
+    ]
+   },
+   "expected": {
+    "status": "fail",
+    "rule": "bounded.lt.exceeds",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "lower_canonical": "30000000"
+   },
+   "note": "a one-sided lower bound CAN fail an upper-side comparison \u2014 lower >= limit settles it"
+  },
+  {
+   "id": "lt.bounded.lower_only.inconclusive",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "less_than",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.lt.lower.2",
+      "state": "admitted",
+      "model": "worst_case",
+      "lower": {
+       "value": "24",
+       "unit": "MPa"
+      },
+      "basis": "one-sided lower bound"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "bounded.lt.lower_only",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "lower_canonical": "24000000"
+   }
+  },
+  {
+   "id": "lt.bounded.upper_only.within",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "less_than",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.lt.upper.1",
+      "state": "admitted",
+      "model": "worst_case",
+      "upper": {
+       "value": "20",
+       "unit": "MPa"
+      },
+      "basis": "one-sided upper bound"
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "bounded.lt.within",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "upper_canonical": "20000000"
+   },
+   "note": "the upper side is decisive for lt \u2014 it alone can pass"
+  },
+  {
+   "id": "gt.bounded.lower_only.within",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "greater_than",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.gt.lower.1",
+      "state": "admitted",
+      "model": "worst_case",
+      "lower": {
+       "value": "30",
+       "unit": "MPa"
+      },
+      "basis": "one-sided lower bound"
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "bounded.gt.within",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "lower_canonical": "30000000"
+   },
+   "note": "the lower side is decisive for gt \u2014 it alone can pass"
+  },
+  {
+   "id": "gt.bounded.upper_only.below",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "greater_than",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.gt.upper.1",
+      "state": "admitted",
+      "model": "worst_case",
+      "upper": {
+       "value": "20",
+       "unit": "MPa"
+      },
+      "basis": "one-sided upper bound"
+     }
+    ]
+   },
+   "expected": {
+    "status": "fail",
+    "rule": "bounded.gt.below",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "upper_canonical": "20000000"
+   }
+  },
+  {
+   "id": "gt.bounded.upper_only.inconclusive",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "greater_than",
+     "limit": {
+      "value": "25",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.gt.upper.2",
+      "state": "admitted",
+      "model": "worst_case",
+      "upper": {
+       "value": "30",
+       "unit": "MPa"
+      },
+      "basis": "one-sided upper bound"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "bounded.gt.upper_only",
+    "canonical_unit": "Pa",
+    "limit_canonical": "25000000",
+    "upper_canonical": "30000000"
+   }
+  },
+  {
+   "id": "equal.nominal.outside",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "equal",
+     "limit": {
+      "value": "50",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "nominal"
+     },
+     "tolerance": {
+      "value": "2",
+      "unit": "MPa"
+     },
+     "policy": {
+      "permit_nominal_basis": true
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.eq.nom.out",
+      "state": "admitted",
+      "model": "unquantified",
+      "nominal": {
+       "value": "55",
+       "unit": "MPa"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "status": "fail",
+    "rule": "nominal.equal.outside",
+    "canonical_unit": "Pa",
+    "limit_canonical": "50000000",
+    "nominal_canonical": "55000000",
+    "tolerance_canonical": "2000000",
+    "basis_visible": "nominal"
+   }
+  },
+  {
+   "id": "equal.nominal.boundary",
+   "input": {
+    "kind": "mech.stress@1",
+    "requirement": {
+     "comparison": "equal",
+     "limit": {
+      "value": "50",
+      "unit": "MPa"
+     },
+     "basis": {
+      "kind": "nominal"
+     },
+     "tolerance": {
+      "value": "2",
+      "unit": "MPa"
+     },
+     "policy": {
+      "permit_nominal_basis": true
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.eq.nom.bnd",
+      "state": "admitted",
+      "model": "unquantified",
+      "nominal": {
+       "value": "52",
+       "unit": "MPa"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "status": "pass",
+    "rule": "nominal.equal.within",
+    "canonical_unit": "Pa",
+    "limit_canonical": "50000000",
+    "nominal_canonical": "52000000",
+    "tolerance_canonical": "2000000",
+    "basis_visible": "nominal"
+   },
+   "note": "the tolerance band is inclusive \u2014 nominal exactly at the edge is within"
   }
  ],
  "categorical_vectors": [

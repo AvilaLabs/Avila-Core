@@ -354,6 +354,14 @@ DEFECTS = [
         [],
     ),
     (
+        "defect.contract.role-major-version",
+        "an input references the right role at the wrong major version",
+        [
+            {"op": "set", "pointer": "/inputs/0/role/major", "value": 2},
+        ],
+        [],
+    ),
+    (
         "defect.contract.negative-zero-limit",
         "a limit is authored as -0, which has no canonical decimal",
         [

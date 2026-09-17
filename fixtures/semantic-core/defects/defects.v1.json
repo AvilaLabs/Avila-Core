@@ -1461,6 +1461,43 @@
    }
   },
   {
+   "fixture_id": "defect.contract.role-major-version",
+   "defect": "an input references the right role at the wrong major version",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/inputs/0/role/major",
+     "value": 2
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-R3101",
+      "class": "unsatisfied",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/inputs/0/role"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
    "fixture_id": "defect.contract.negative-zero-limit",
    "defect": "a limit is authored as -0, which has no canonical decimal",
    "contract_mutations": [

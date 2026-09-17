@@ -41,7 +41,7 @@ multiple historical profiles.
   cases and 3 rejected cases covering governed purpose resolution, exact nominal
   exclusions, unrelated and similarly named purposes, and major-version
   mismatch;
-- `defects/defects.v1.json`: 33 executable real-contract defect fixtures. The
+- `defects/defects.v1.json`: 34 executable real-contract defect fixtures. The
   base pair is CASE-001's committed contract+registry verbatim; each fixture
   seeds one realistic defect as JSON-pointer mutations (a typo'd field, an
   unresolvable metric step, a mismatched binding role or media type, an
@@ -69,9 +69,9 @@ planned unless files exist for them.
 
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
-`scope-predicates.v1.json`, plus the 48 requirement, 10 categorical, and 8
+`scope-predicates.v1.json`, plus the 60 requirement, 10 categorical, and 8
 aggregation vectors in `verdict-calculus.v1.json`. The compiler harness also executes all 70 cases in
-the five compiler manifests plus all 33 real-contract defect cases in
+the five compiler manifests plus all 34 real-contract defect cases in
 `defects/defects.v1.json`, and pins each registry digest plus all successful
 compiled-snapshot identities. The evidence harness executes the four authority cases in `authority/authority-cases.v1.json`. The campaign harness executes all 18 cases in its
 manifest and pins every successful campaign identity. Passing the 98 pure
@@ -209,7 +209,7 @@ canonically.
 | `numerics.json-float.fail` | `25.0` as JSON number in `limit` → `CORE-S1102` — exercised by `json.float-number-rejected`, `types.source.json-float.fail`, and `defect.contract.json-float-limit` |
 | `numerics.json-int.pass` | `3` as JSON number for `mesh_refinement_levels` — exercised by `json.integer-accepted` |
 | `numerics.nan-inf.fail` | `"NaN"`, `"Infinity"` → `CORE-S1102` — exercised by `json.nan-refused` and `json.infinity-refused` |
-| `numerics.display-rounding.pass` | presentation changes, canonical value and verdict do not |
+| `numerics.display-rounding.pass` | presentation changes, canonical value and verdict do not — exercised by `display_rounding.does-not-change-verdict` |
 | `numerics.decision-rounding-without-capability.fail` | outcome-changing rounding must be a typed, qualified capability |
 | `numerics.rational-factor.pass` | `"1/3600000000"` parsed and reduced — exercised by `rational.canonical` |
 | `numerics.rational-noncanonical.fail` | reducible fraction, negative denominator, leading plus/zeros, zero denominator — exercised by `rational.reducible-rejected` and `rational.negative-denominator-rejected` |
@@ -231,7 +231,7 @@ canonically.
 | Fixture | Expected |
 | --- | --- |
 | `roles.nominal-identity.fail` | same kind, different role id → `CORE-T2101` — exercised by `types.R2.role-mismatch.fail` |
-| `roles.major-version.fail` | `role@2` offered to `role@1` slot → `CORE-T2101` |
+| `roles.major-version.fail` | `role@2` offered to `role@1` slot → `CORE-T2101` — the resolution half is exercised by `defect.contract.role-major-version` (input references `role@2` absent from the registry → `CORE-R3101`); the binding-level T2101 variant needs a registry carrying both majors |
 | `roles.minor-version.pass` | `role@1` with extra optional attribute accepted |
 | `roles.validator-required.fail` | role without validator → `CORE-R3501` — exercised by `defect.registry.missing-validator` |
 | `roles.attribute-undeclared-in-predicate.fail` | predicate references undeclared attribute → structural finding before evaluation |
@@ -400,7 +400,7 @@ canonically.
 | `verdict.ge.bounded.within/below/crossing/one_sided` | vectors `ge.bounded.within`, `ge.bounded.below`, `ge.bounded.crossing`, `ge.bounded.upper_only.below`, `ge.bounded.upper_only.inconclusive` |
 | `verdict.lt.bounded.boundary` | hi = L → crossing, not PASS |
 | `verdict.gt.bounded.boundary` | lo = L → crossing — exercised by `gt.bounded.boundary`; the `gt` family is `gt.bounded.within/below/crossing/boundary` |
-| `verdict.enclosure.*` | as bounded with coverage 1 required |
+| `verdict.enclosure.*` | as bounded with coverage 1 required — exercised by `le.enclosure.within`, `le.enclosure.crossing`, `lt.enclosure.within`, `gt.enclosure.below`, `ge.enclosure.crossing`, `equal.enclosure.outside`, `aggregation.max.enclosure`, `aggregation.min.enclosure` |
 | `verdict.nominal.within/exceeds` | vectors `le.nominal.within`, `le.nominal.exceeds`, `equal.nominal.within` |
 | `verdict.equal.within/outside/partial` | vectors |
 | `verdict.equal.no-tolerance.fail` | `CORE-T2104`; the compile-time half is covered by `types.R6.equal-no-tolerance.fail` |
@@ -410,8 +410,8 @@ canonically.
 | `verdict.aggregation.all.*`, `any.*` | current precedence examples plus planned exhaustive and property-generated truth tables |
 | `verdict.aggregation.max/min.enclosure` | side-aware max/min reduction; a side that cannot be bounded remains absent |
 | `verdict.aggregation.coverage-needs-capability.fail` | marginal coverage intervals are not assigned joint coverage by the kernel — exercised by `aggregation.coverage.requires-capability` |
-| `verdict.one-sided.lower/upper.*` | both comparison directions and strict boundaries |
-| `verdict.equal.nominal/one-sided.*` | nominal tolerance and one-sided contradiction rules |
+| `verdict.one-sided.lower/upper.*` | both comparison directions and strict boundaries — exercised by `le.bounded.one_sided`, `le.bounded.lower_only.*`, `ge.bounded.upper_only.*`, `lt.bounded.lower_only.*`, `lt.bounded.upper_only.within`, `gt.bounded.lower_only.within`, `gt.bounded.upper_only.*` |
+| `verdict.equal.nominal/one-sided.*` | nominal tolerance and one-sided contradiction rules — exercised by `equal.within`, `equal.outside`, `equal.partial`, `equal.nominal.within`, `equal.nominal.outside`, `equal.nominal.boundary`, `equal.one_sided.outside`, `equal.one_sided.partial` |
 | `verdict.not_evaluated.missing/quarantined/invalidated` | reasons and owners listed; no numbers — exercised by `not_evaluated.missing`, `not_evaluated.quarantined`, `not_evaluated.invalidated`, `not_evaluated.mixed-admitted-quarantined`, `not_evaluated.mixed-admitted-invalidated` |
 | `verdict.not_evaluated.duplicate-claim` | `CORE-E7301` — exercised by `not_evaluated.duplicate-claim` and `campaign.duplicate-claim.quarantine` |
 | `verdict.presentation-policy.not-an-input.pass` | the same admitted claims produce the same verdict with or without optional presentation routing — exercised by `presentation-policy.not-a-verdict-input` and `presentation-policy.cannot-mask-fail` |

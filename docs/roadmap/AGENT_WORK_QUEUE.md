@@ -886,3 +886,13 @@ checks — `admit_claims_for_metric` now resolves each claim's slot against
 the lowerer's registry index, so `campaign.model-not-permitted.quarantine`
 leaves the not-re-derivable exclusion list and runs asserted like every
 other fixture. 18 campaign fixtures; fixtures-check reads 94/78/18/103.
+
+### Enclosure and one-sided verdict vectors — 2026-09-17
+
+Twelve vectors deepen the verdict corpus where the plan's `*` rows had
+thin coverage: enclosure basis across lt/gt/ge/equal (equality ignores
+the basis prefix), and the one-sided corners that pin which side is
+decisive — lt passes on upper alone and fails on a lower bound above the
+limit; gt passes on lower alone and fails on an upper bound below it —
+plus equal-nominal outside/boundary. 60 requirement vectors; kernel and
+Python verifier agree on every one.

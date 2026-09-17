@@ -1447,7 +1447,7 @@ class TestSnapshotLowering(unittest.TestCase):
                     with self.assertRaises(lower.WouldReject):
                         lower.lower_compiled_snapshot(contract_bytes, registry_bytes)
                     rejected += 1
-        self.assertEqual(rejected + compiled, 33)
+        self.assertEqual(rejected + compiled, 34)
 
     def test_authority_fixtures_are_executable(self):
         suite_dir = REPO_ROOT / "fixtures" / "semantic-core" / "authority"

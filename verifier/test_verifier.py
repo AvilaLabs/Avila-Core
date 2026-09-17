@@ -210,17 +210,16 @@ class TestVerdictCalculusVectors(unittest.TestCase):
 # ---------------------------------------------------------------------------
 # Section 5 (campaign fixtures): fixtures/semantic-core/campaigns/campaign-cases.v1.json
 #
-# Two fixtures need facts this profile does not build at verdict level: A3's
-# parent cascade (needs the compiled dataflow graph, which the lowerer does
-# not construct) and a status-level rejection the verdict comparison never
-# sees. Both are explicitly excluded from the pass/fail assertion below,
-# each named and reasoned — never silently skipped. Every other fixture's
-# `expected.verdicts` must match exactly — A6's permitted-model check and
-# E7002's undeclared-slot drop run through the lowerer's registry index.
+# One fixture needs a fact this profile does not build at verdict level: a
+# status-level rejection the verdict comparison never sees. It is
+# explicitly excluded from the pass/fail assertion below — named and
+# reasoned, never silently skipped. Every other fixture's
+# `expected.verdicts` must match exactly — A6's permitted-model check,
+# E7002's undeclared-slot drop, and A3's parent cascade all run through
+# the lowerer's registry index and resolved workflow graph.
 # ---------------------------------------------------------------------------
 
 NOT_RE_DERIVABLE_CAMPAIGN_FIXTURES = {
-    "campaign.parent-missing.not_evaluated": "needs the compiled dataflow graph to cascade a missing input attestation to a downstream step's admission (A3); the lowerer indexes the registry but does not build the compiled graph",
     "campaign.snapshot-mismatch.rejected": "the fixture's expected outcome is a status-level rejection, not per-requirement verdicts — the verdict-level harness has nothing to compare; the Rust campaign harness pins it",
 }
 

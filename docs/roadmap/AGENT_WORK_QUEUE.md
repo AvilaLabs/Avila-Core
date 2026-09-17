@@ -901,3 +901,16 @@ decisive — lt passes on upper alone and fails on a lower bound above the
 limit; gt passes on lower alone and fails on an upper bound below it —
 plus equal-nominal outside/boundary. 60 requirement vectors; kernel and
 Python verifier agree on every one.
+
+### Verifier A3 parent-admission cascade — 2026-09-17
+
+The Python verifier now replays A3's cascade from the package alone: the
+lowerer gained `resolved_workflow` (the bindings the compiler would
+auto-bind plus their topological order, built on the same internals as
+`lower_compiled_snapshot`), and verdict re-derivation walks it — a
+contract input admitted only by its attestation, a step output only when
+its sole claim passes the slot/model/shape checks AND every bound source
+is admitted. `campaign.parent-missing.not_evaluated` moved from the
+exclusion list to the asserted set; `snapshot-mismatch.rejected` is now
+the only non-derivable campaign fixture (a status-level rejection the
+verdict comparison cannot see).

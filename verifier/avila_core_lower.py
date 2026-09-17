@@ -1138,6 +1138,29 @@ def _validate_contract_registry_refs(contract: dict, index: RegistryIndex) -> li
 # ---- top-level lowering -----------------------------------------------------
 
 
+def resolved_workflow(contract: dict, registry: dict) -> tuple[dict, list]:
+    """The resolved per-step bindings and topological step order the
+    compiled snapshot would carry — the dataflow graph A3's
+    parent-admission cascade walks. ``bindings[step_id]`` is a list of
+    ``{"input_slot", "source"}`` entries after explicit-and-auto-binding
+    resolution, exactly as the compiler resolves them. Raises the same
+    ``WouldReject``/``CannotLower`` failures as ``lower_compiled_snapshot``;
+    callers that only need a best-effort graph should catch them."""
+    _validate_shape(contract, registry)
+    index = _build_index(registry)
+    invalid_sources = _validate_contract_registry_refs(contract, index)
+    unknown_type_steps = {
+        s["step_id"]
+        for s in contract["workflow"]
+        if _ref_key(s["capability_type"]) not in index.capability_types
+    }
+    candidates = _collect_sources(contract, index)
+    bindings, dependencies = _resolve_workflow(
+        contract, index, candidates, invalid_sources, unknown_type_steps
+    )
+    return bindings, _topological_order(contract, dependencies)
+
+
 def lower_compiled_snapshot(contract_bytes: bytes, registry_bytes: bytes) -> str:
     """Re-derives the compiled-contract ``snapshot_sha256`` for a
     contract+registry byte pair. Raises ``WouldReject`` when a ported check

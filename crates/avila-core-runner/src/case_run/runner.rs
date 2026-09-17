@@ -12,6 +12,7 @@
 
 use super::plan::BOUND_PLAN_SCHEMA_VERSION;
 use super::replay::changes_since;
+use super::plan::{ImpactReport, InvalidatedNode, ReusedNode};
 use super::stderr::{DiagnosticStderrFeedback, read_diagnostic_stderr};
 use super::*;
 
@@ -48,6 +49,9 @@ pub(super) struct Runner<'a> {
     pub(super) claims: Vec<GeneratedClaim>,
     /// Supplied free inputs by evidence id, resolved to their files.
     supplied: BTreeMap<String, PathBuf>,
+    /// The contract input ids those supplies name — the change origins the
+    /// impact report propagates through the compiled bindings.
+    supplied_input_ids: BTreeSet<String>,
     /// Whether committed receipts describe this run's candidate.
     replay_applicable: bool,
     /// The package's qualification records and the kinds their facts scale by.
@@ -144,6 +148,10 @@ impl<'a> Runner<'a> {
             supplied: supplied_inputs
                 .iter()
                 .map(|input| (input.evidence_id.clone(), PathBuf::from(&input.path)))
+                .collect(),
+            supplied_input_ids: supplied_inputs
+                .iter()
+                .map(|input| input.input_id.clone())
                 .collect(),
             replay_applicable,
             envelopes,
@@ -365,6 +373,7 @@ impl<'a> Runner<'a> {
         } else {
             BoundPlanStatus::Ready
         };
+        let impact = self.impact_report(&steps);
         BoundPlan {
             schema_version: BOUND_PLAN_SCHEMA_VERSION.to_string(),
             case_id: self.package.manifest.case_id.clone(),
@@ -373,7 +382,93 @@ impl<'a> Runner<'a> {
             status,
             steps,
             unresolved,
+            impact: Some(impact),
             note: None,
+        }
+    }
+
+    /// The SC-12.6 change analysis over the bound decisions: supplied
+    /// inputs are the named change origins, and invalidation propagates
+    /// through the compiled bindings from each origin — a step is
+    /// invalidated when any bound source is a supplied input or an
+    /// already-invalidated step's output. Dependency follows content, so a
+    /// step whose recorded inputs stay byte-identical keeps its
+    /// `reuse_committed` decision even when a parent re-executes for its
+    /// own change records; the report names both halves.
+    fn impact_report(&self, steps: &[BoundStep]) -> ImpactReport {
+        let mut reached: BTreeSet<&str> = BTreeSet::new();
+        let mut condemned: BTreeMap<&str, Vec<String>> = BTreeMap::new();
+        for step in &self.compiled.workflow {
+            let mut edges = Vec::new();
+            for binding in &step.bindings {
+                let carries = match &binding.source {
+                    avila_core_compiler::SourceRef::ContractInput { input_id } => {
+                        self.supplied_input_ids.contains(input_id)
+                    }
+                    avila_core_compiler::SourceRef::StepOutput { step_id, .. } => {
+                        reached.contains(step_id.as_str())
+                    }
+                };
+                if carries {
+                    edges.push(format!(
+                        "{} -> {}.{}",
+                        binding.source.label(),
+                        step.step_id,
+                        binding.input_slot
+                    ));
+                }
+            }
+            if !edges.is_empty() {
+                reached.insert(step.step_id.as_str());
+                condemned.insert(step.step_id.as_str(), edges);
+            }
+        }
+        let invalidated: Vec<InvalidatedNode> = self
+            .compiled
+            .workflow
+            .iter()
+            .filter(|step| reached.contains(step.step_id.as_str()))
+            .map(|step| InvalidatedNode {
+                step_id: step.step_id.clone(),
+                condemned_by: condemned
+                    .get(step.step_id.as_str())
+                    .cloned()
+                    .unwrap_or_default(),
+            })
+            .collect();
+        let reused: Vec<ReusedNode> = steps
+            .iter()
+            .filter(|step| step.decision == BoundDecision::ReuseCommitted)
+            .map(|step| ReusedNode {
+                step_id: step.step_id.clone(),
+                reused_under: "deterministic_memo".to_string(),
+            })
+            .collect();
+        let rerun_subgraph: Vec<String> = steps
+            .iter()
+            .filter(|step| {
+                !matches!(
+                    step.decision,
+                    BoundDecision::ReuseCommitted | BoundDecision::NotExecuted
+                )
+            })
+            .map(|step| step.step_id.clone())
+            .collect();
+        let mut unestimated = 0usize;
+        let mut total = 0u64;
+        for step_id in &rerun_subgraph {
+            match self.recorded_duration(step_id) {
+                Some(duration) => total = total.saturating_add(duration),
+                None => unestimated += 1,
+            }
+        }
+        ImpactReport {
+            invalidated,
+            reused,
+            rerun_subgraph,
+            estimated_duration_ms: (unestimated == 0 && !steps.is_empty())
+                .then_some(total),
+            unestimated_steps: unestimated,
         }
     }
 
@@ -1047,6 +1142,19 @@ impl<'a> Runner<'a> {
                 }
             }
             report.receipt_signature = Some(status);
+        }
+
+        // SC-12.5: execution memoization requires a reproducible
+        // invocation. A nondeterministic capability's committed receipt
+        // is never reused, however identical it looks — the run carries
+        // no seed or environment that would make "identical" meaningful.
+        if step.reproducibility.determinism
+            == avila_core_compiler::DeterminismClass::Nondeterministic
+        {
+            report.changes.push(ChangeRecord {
+                class: ChangeClass::Nondeterministic,
+                detail: "the step's capability type is nondeterministic; committed receipts are never reused for it".into(),
+            });
         }
 
         // Reuse: same invocation identity, a completed receipt, and every

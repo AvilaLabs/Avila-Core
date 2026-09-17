@@ -953,6 +953,27 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                 );
             }
         }
+        if let Some(impact) = &plan.impact
+            && !impact.invalidated.is_empty()
+        {
+            let _ = writeln!(
+                out,
+                "Impact: {} invalidated ({}), {} reuse under deterministic memo; rerun subgraph: {}.",
+                impact.invalidated.len(),
+                impact
+                    .invalidated
+                    .iter()
+                    .map(|node| node.step_id.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                impact.reused.len(),
+                if impact.rerun_subgraph.is_empty() {
+                    "none".to_string()
+                } else {
+                    impact.rerun_subgraph.join(", ")
+                }
+            );
+        }
     }
     out
 }

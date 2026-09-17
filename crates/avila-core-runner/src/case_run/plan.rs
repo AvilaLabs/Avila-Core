@@ -125,6 +125,70 @@ pub struct BoundStep {
     pub note: Option<String>,
 }
 
+/// One invalidated workflow node and the condemning edges that carried
+/// the change to it (SC-12.6).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct InvalidatedNode {
+    pub step_id: String,
+    /// The binding edges that propagate invalidation into this step:
+    /// `input:<id> -> <step>.<slot>` for a supplied contract input, or
+    /// `<src_step>.<src_slot> -> <step>.<slot>` for an invalidated
+    /// parent's output. Empty when the step's own change records are the
+    /// origin — the change is named on the step's `changes` field.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub condemned_by: Vec<String>,
+}
+
+/// One node permitted to reuse its committed evidence and the authority
+/// it reuses under.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReusedNode {
+    pub step_id: String,
+    /// The reuse authority: `deterministic_memo` — the committed receipt's
+    /// invocation identity equals the planned one and every bound input is
+    /// byte-identical. Signed non-dependence reuse rules (SC-12.3) are a
+    /// later record type; when one applies it names the rule's digest here.
+    pub reused_under: String,
+}
+
+/// The SC-12.6 impact report a bound plan derives: every invalidated node
+/// with the condemning edge path, the permitted reuse and its authority,
+/// the minimal rerun subgraph, and a labeled cost estimate.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ImpactReport {
+    /// Steps whose committed evidence this run's changes invalidate:
+    /// every step a supplied input reaches through the compiled bindings
+    /// (dependency follows content — a step whose recorded inputs are
+    /// byte-identical reuses even when a parent re-executes).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub invalidated: Vec<InvalidatedNode>,
+    /// Steps permitted to reuse committed evidence, each under the named
+    /// authority.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reused: Vec<ReusedNode>,
+    /// The minimal set of steps that must execute — every invalidated
+    /// node plus every step whose own change records defeat reuse, in
+    /// compiled workflow order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rerun_subgraph: Vec<String>,
+    /// Labeled estimate: the sum of the rerun subgraph's recorded
+    /// `estimated_duration_ms`, reported only when every rerun step
+    /// carries one. From committed receipts, not a prediction model.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub estimated_duration_ms: Option<u64>,
+    /// Rerun steps with no committed receipt duration — the estimate
+    /// above is absent or partial while this is nonzero.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub unestimated_steps: usize,
+}
+
+fn is_zero(value: &usize) -> bool {
+    *value == 0
+}
+
 /// A `--plan` run's bound plan: per-step decisions plus the named supplies
 /// still missing, derived deterministically from the same report.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -147,6 +211,11 @@ pub struct BoundPlan {
     /// verify.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub unresolved: Vec<UnresolvedRequirement>,
+    /// The SC-12.6 change analysis over this plan: which nodes are
+    /// invalidated and by which edges, which reuse and under what
+    /// authority, the minimal rerun subgraph, and its cost estimate.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub impact: Option<ImpactReport>,
     /// For `unavailable`: why no plan exists.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
@@ -169,6 +238,7 @@ impl BoundPlan {
             status: BoundPlanStatus::Unavailable,
             steps: Vec::new(),
             unresolved: Vec::new(),
+            impact: None,
             note: Some(
                 if matches!(report.status, CaseRunStatus::Rejected) {
                     "the workflow was rejected before execution planning; the report's findings name the gate"

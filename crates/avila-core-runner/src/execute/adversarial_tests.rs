@@ -1752,6 +1752,145 @@ fn a_two_step_chain_reruns_only_what_a_change_reaches() {
     );
 }
 
+#[test]
+fn a_plan_reports_the_impact_of_every_change_origin() {
+    let dir = TestDir::new();
+    let synthetic = blessed_chain(&dir);
+
+    // Unchanged: nothing is invalidated, both steps reuse under the
+    // deterministic memo rule, and the rerun subgraph is empty.
+    let report = execute_case(
+        &synthetic.case_dir,
+        &chain_options(&dir, &synthetic, true, true),
+    )
+    .unwrap();
+    let plan = report.bound_plan.as_ref().unwrap();
+    let impact = plan.impact.as_ref().expect("a bound plan reports impact");
+    assert!(impact.invalidated.is_empty());
+    assert!(impact.rerun_subgraph.is_empty());
+    assert_eq!(
+        impact
+            .reused
+            .iter()
+            .map(|node| node.step_id.as_str())
+            .collect::<Vec<_>>(),
+        ["activation", "classification"]
+    );
+    assert!(
+        impact
+            .reused
+            .iter()
+            .all(|node| node.reused_under == "deterministic_memo")
+    );
+
+    // Supplying a free input condemns the chain: activation at the input
+    // edge, classification at the two activation-output edges that reach
+    // it. The rerun subgraph is the whole invalidated chain.
+    declare_free_input(&synthetic, "fns-spectrum");
+    let supplied = dir.0.join("other-spectrum.json");
+    fs::write(&supplied, b"another spectrum\n").unwrap();
+    let mut options = chain_options(&dir, &synthetic, true, true);
+    options
+        .inputs
+        .insert("fns-spectrum".into(), supplied);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let plan = report.bound_plan.as_ref().unwrap();
+    let impact = plan.impact.as_ref().expect("a bound plan reports impact");
+    assert_eq!(
+        impact
+            .invalidated
+            .iter()
+            .map(|node| node.step_id.as_str())
+            .collect::<Vec<_>>(),
+        ["activation", "classification"]
+    );
+    assert_eq!(
+        impact.invalidated[0].condemned_by,
+        ["input:fns-spectrum -> activation.spectrum"]
+    );
+    assert_eq!(
+        impact.invalidated[1].condemned_by,
+        [
+            "step:activation/decay-metadata -> classification.decay-metadata",
+            "step:activation/inventory -> classification.inventory",
+        ]
+    );
+    // Dependency follows content: classification's recorded inputs are
+    // byte-identical, so the deterministic memo rule still permits reuse
+    // even though the supplied input's reach condemns it — only
+    // activation is in the minimal rerun subgraph.
+    assert_eq!(impact.rerun_subgraph, ["activation"], "{plan:?}");
+    assert_eq!(
+        impact
+            .reused
+            .iter()
+            .map(|node| node.step_id.as_str())
+            .collect::<Vec<_>>(),
+        ["classification"]
+    );
+    // The cost estimate is the rerun subgraph's recorded durations —
+    // activation's committed receipt — not a prediction.
+    let activation = plan
+        .steps
+        .iter()
+        .find(|step| step.step_id == "activation")
+        .unwrap();
+    assert_eq!(
+        impact.estimated_duration_ms,
+        activation.estimated_duration_ms
+    );
+    assert_eq!(impact.unestimated_steps, 0);
+}
+
+#[test]
+fn a_nondeterministic_step_never_reuses_its_committed_receipt() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+
+    // Declare the classification capability type nondeterministic and
+    // permit its produced roles — the contract compiles, but SC-12.5
+    // memoization requires a reproducible invocation.
+    let registry_path = synthetic.case_dir.join("registry.json");
+    let mut registry: Value =
+        serde_json::from_slice(&fs::read(&registry_path).unwrap()).unwrap();
+    for capability_type in registry["capability_types"].as_array_mut().unwrap() {
+        if capability_type["capability_type"]["id"]
+            == json!("aftermatter.activated-metal-disposition")
+        {
+            capability_type["reproducibility"]["determinism"] = json!("nondeterministic");
+        }
+    }
+    fs::write(&registry_path, serde_json::to_vec_pretty(&registry).unwrap()).unwrap();
+    rehash_document(&synthetic.case_dir, "registry", "registry.json");
+
+    let contract_path = synthetic.case_dir.join("contract.json");
+    let mut contract: Value =
+        serde_json::from_slice(&fs::read(&contract_path).unwrap()).unwrap();
+    contract["execution_policy"]["permitted_nondeterministic_roles"] = json!([
+        { "id": "aftermatter.classification-fraction", "major": 1 },
+        { "id": "aftermatter.route-state", "major": 1 }
+    ]);
+    fs::write(&contract_path, serde_json::to_vec_pretty(&contract).unwrap()).unwrap();
+    rehash_document(&synthetic.case_dir, "contract", "contract.json");
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let executed = step(&report);
+    assert_eq!(executed.state, StepExecutionState::Executed, "{summary}");
+    assert!(
+        executed
+            .changes
+            .iter()
+            .any(|change| change.class == ChangeClass::Nondeterministic),
+        "{summary}"
+    );
+    assert_eq!(report.claims.as_ref().unwrap().reused_claims, 0);
+}
+
 /// Declare one package input free, as CASE-001 does for its candidate.
 fn declare_free_input(synthetic: &Synthetic, input_id: &str) {
     let mut package: Value =

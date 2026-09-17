@@ -285,17 +285,24 @@ fn corpus() -> Result<Corpus, Box<dyn Error>> {
     // `named` (not `covered` — coverage still means a corpus identity).
     let tests_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../crates");
     for crate_dir in fs::read_dir(&tests_dir)? {
-        let tests = crate_dir?.path().join("tests");
-        if !tests.is_dir() {
-            continue;
-        }
-        for file in fs::read_dir(&tests)? {
-            let file = file?.path();
-            if file.extension().and_then(|e| e.to_str()) == Some("rs")
-                && let Some(stem) = file.file_stem().and_then(|s| s.to_str())
-            {
-                index.test_ids.insert(stem.to_string());
+        let crate_dir = crate_dir?.path();
+        let tests = crate_dir.join("tests");
+        if tests.is_dir() {
+            for file in fs::read_dir(&tests)? {
+                let file = file?.path();
+                if file.extension().and_then(|e| e.to_str()) == Some("rs")
+                    && let Some(stem) = file.file_stem().and_then(|s| s.to_str())
+                {
+                    index.test_ids.insert(stem.to_string());
+                }
             }
+        }
+        // Unit tests inside `src/` pin rows too — behavior-level checks
+        // that need the crate's internals. Index each `#[test]` fn by name
+        // so a plan row can credit it the same way it credits a file stem.
+        let src = crate_dir.join("src");
+        if src.is_dir() {
+            index_test_fns(&src, &mut index.test_ids)?;
         }
     }
     for bytes in VECTOR_SETS {
@@ -332,6 +339,45 @@ fn corpus() -> Result<Corpus, Box<dyn Error>> {
         }
     }
     Ok(index)
+}
+
+/// Index `#[test]` fn names under a crate's `src/` recursively, so a plan
+/// row can credit a behavior-level unit test by name.
+fn index_test_fns(dir: &Path, test_ids: &mut BTreeSet<String>) -> Result<(), Box<dyn Error>> {
+    for entry in fs::read_dir(dir)? {
+        let path = entry?.path();
+        if path.is_dir() {
+            index_test_fns(&path, test_ids)?;
+            continue;
+        }
+        if path.extension().and_then(|e| e.to_str()) != Some("rs") {
+            continue;
+        }
+        let text = fs::read_to_string(&path)?;
+        let mut is_test = false;
+        for line in text.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("#[test]") {
+                is_test = true;
+                continue;
+            }
+            if is_test && trimmed.starts_with("fn ") {
+                let name = trimmed[3..]
+                    .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+                    .next()
+                    .unwrap_or_default();
+                if !name.is_empty() {
+                    test_ids.insert(name.to_string());
+                }
+                is_test = false;
+            } else if trimmed.starts_with("#[") || trimmed.is_empty() {
+                continue;
+            } else {
+                is_test = false;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Every `CORE-Xnnnn` string in a fixture's expected body — finding codes,

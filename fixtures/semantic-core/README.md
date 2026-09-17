@@ -452,22 +452,22 @@ canonically.
 
 | Fixture | Expected |
 | --- | --- |
-| `change.class.<each>.pass` | default invalidation set for every change class defined by SC-12 |
+| `change.class.<each>.pass` | default invalidation set for every change class defined by SC-12 — classes emitted by `changes_since`; several pinned across the adversarial suite |
 | `change.input_metadata.non-dependence.pass` | attribute not consulted → no invalidation |
-| `change.propagation.stops-at-unrelated.pass` | upstream and sibling nodes untouched |
+| `change.propagation.stops-at-unrelated.pass` | upstream and sibling nodes untouched — `a_two_step_chain_reruns_only_what_a_change_reaches` and `a_plan_reports_the_impact_of_every_change_origin` |
 | `change.propagation.selected_over-never.pass` | |
-| `change.requirement.verdict-only.pass` | evidence untouched |
+| `change.requirement.verdict-only.pass` | evidence untouched — `a_requirement_change_reuses_evidence_and_recomputes_verdicts` |
 | `change.reuse-rule.applies.pass` | `reused_under` edge with rule id |
 | `change.reuse-rule.condition-unknown.rerun.pass` | |
 | `change.reuse-rule.authority-mismatch.fail` | `CORE-E7502` |
 | `change.reuse-rule.expired.fail` | |
 | `change.reuse-rule.only-narrows.fail` | rule attempting to widen → refused |
-| `change.memo.deterministic-hit.pass` | identical invocation digest → `reused` |
-| `change.memo.seeded-same-seed.pass` / `different-seed.fail` | |
-| `change.memo.nondeterministic-never.fail` | |
-| `change.memo.admission-under-new-policy.fail` | old evidence, new policy forbids → rerun |
+| `change.memo.deterministic-hit.pass` | identical invocation digest → `reused` — `a_plan_reports_the_impact_of_every_change_origin` names the `deterministic_memo` reuse authority |
+| `change.memo.seeded-same-seed.pass` / `different-seed.fail` | seed enters argv → invocation identity — `transport_arguments_carry_seed_and_parameters` |
+| `change.memo.nondeterministic-never.fail` | `a_nondeterministic_step_never_reuses_its_committed_receipt` — `ChangeClass::Nondeterministic` defeats reuse |
+| `change.memo.admission-under-new-policy.fail` | old evidence, new policy forbids → rerun; the re-evaluation half is `a_requirement_change_reuses_evidence_and_recomputes_verdicts` |
 | `change.memo.validator-version.fail` | validator version changed → rerun |
-| `change.impact-report.edge-paths.pass` | each invalidated node names its condemning path |
+| `change.impact-report.edge-paths.pass` | each invalidated node names its condemning path — `impact.invalidated[].condemned_by` on the bound plan, pinned by `a_plan_reports_the_impact_of_every_change_origin` |
 | `change.engine-vs-language.pass` | cold vs incremental equality is tested elsewhere; this fixture only asserts the module boundary |
 
 ### campaign/ (SC-13)

@@ -23,6 +23,7 @@
       "type": "array",
       "items": { "$ref": "#/$defs/unresolved" }
     },
+    "impact": { "$ref": "#/$defs/impactReport" },
     "note": { "type": "string" }
   },
   "$defs": {
@@ -84,6 +85,59 @@
         "kind": { "enum": ["source_root", "capability"] },
         "name": { "$ref": "#/$defs/nonemptyString" },
         "state": { "enum": ["not_checked", "not_supplied", "missing", "mismatch"] }
+      }
+    },
+    "impactReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The SC-12.6 change analysis over the plan's decisions: every invalidated node with the condemning edge path that carried the change to it, the permitted reuse and its authority, the minimal rerun subgraph, and a labeled cost estimate.",
+      "required": ["invalidated", "reused", "rerun_subgraph"],
+      "properties": {
+        "invalidated": {
+          "type": "array",
+          "description": "Steps whose committed evidence this run's changes invalidate — every step a supplied input reaches through the compiled bindings.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["step_id"],
+            "properties": {
+              "step_id": { "$ref": "#/$defs/nonemptyString" },
+              "condemned_by": {
+                "type": "array",
+                "description": "The binding edges carrying invalidation into this step — `input:<id> -> <step>.<slot>` or `step:<src>/<src_slot> -> <step>.<slot>`. Empty when the step's own change records are the origin.",
+                "items": { "$ref": "#/$defs/nonemptyString" }
+              }
+            }
+          }
+        },
+        "reused": {
+          "type": "array",
+          "description": "Steps permitted to reuse committed evidence and the authority they reuse under — `deterministic_memo` for an identical invocation digest over byte-identical bound inputs.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["step_id", "reused_under"],
+            "properties": {
+              "step_id": { "$ref": "#/$defs/nonemptyString" },
+              "reused_under": { "$ref": "#/$defs/nonemptyString" }
+            }
+          }
+        },
+        "rerun_subgraph": {
+          "type": "array",
+          "description": "The minimal set of steps that must execute — every invalidated node plus every step whose own change records defeat reuse, in compiled workflow order.",
+          "items": { "$ref": "#/$defs/nonemptyString" }
+        },
+        "estimated_duration_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The sum of the rerun subgraph's recorded estimated_duration_ms, reported only when every rerun step carries one."
+        },
+        "unestimated_steps": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Rerun steps with no committed receipt duration; while nonzero the estimate is absent or partial."
+        }
       }
     }
   }

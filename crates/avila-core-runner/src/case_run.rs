@@ -289,6 +289,11 @@ pub enum ChangeClass {
     /// invocation changed: it was produced for a different case (a "donor"
     /// receipt copied from elsewhere) and does not describe this one.
     DifferentCase,
+    /// The step's capability type declares `nondeterministic`: SC-12.5
+    /// execution memoization requires a reproducible invocation, so a
+    /// committed receipt for a nondeterministic step is never reused,
+    /// however identical it looks.
+    Nondeterministic,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

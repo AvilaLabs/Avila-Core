@@ -51,7 +51,13 @@ multiple historical profiles.
   absorbs (a dropped redundant explicit binding, resolved by single-candidate
   auto-binding) — the compiled snapshot identity, which differs from the base
   pair's only through the source-document digest. `generate.py` is the
-  regeneration aid; the corpus is pinned, not generated at test time; and
+  regeneration aid; the corpus is pinned, not generated at test time;
+- `authority/authority-cases.v1.json`: 4 executable authority fixtures over the
+  committed CASE-001 manifest signature and examples trust root — a valid
+  signature verifies, a tampered signature is refused, a missing trust-root
+  entry is refused, and a requester key listed only under the runner role is
+  refused (the key travels with its declared role). Both implementations —
+  `avila-core-evidence` and the Python verifier — execute the suite; and
 - `campaigns/campaign-cases.v1.json`: 15 executable campaign fixtures covering
   the first SC-10/SC-11 claim-admission and verdict slice, including bounded
   outcomes, exact unit scaling, quarantine paths, snapshot mismatch,
@@ -67,7 +73,7 @@ The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 aggregation vectors in `verdict-calculus.v1.json`. The compiler harness also executes all 70 cases in
 the five compiler manifests plus all 33 real-contract defect cases in
 `defects/defects.v1.json`, and pins each registry digest plus all successful
-compiled-snapshot identities. The campaign harness executes all 15 cases in its
+compiled-snapshot identities. The evidence harness executes the four authority cases in `authority/authority-cases.v1.json`. The campaign harness executes all 15 cases in its
 manifest and pins every successful campaign identity. Passing the 98 pure
 vectors, 70 compiler fixtures, and 15 campaign fixtures does not accept
 ADR-0006: full package-level admission, package rule halves, and other vector

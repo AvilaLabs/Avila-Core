@@ -863,3 +863,14 @@ quantity-kind↔unit-class pairing, categorical-role restrictions — so the
 second implementation rejects the same malformed registries. fixtures-check
 now reads 90 covered / 63 named / 18 unbounded / 120 absent; every absent
 name requires semantics the profile has not implemented.
+
+### Authority fixture suite — 2026-09-17
+
+`authority/authority-cases.v1.json` executes the signature boundary over
+real committed material: the CASE-001 manifest signature and the examples
+trust root. Four cases pin verified / tampered-refused / key-not-listed /
+wrong-role-refused. `avila-core-evidence` runs the suite in
+`tests/authority_fixtures.rs`; the Python verifier runs the same file
+through `signature_status`, so both independent implementations execute the
+identical bytes. fixtures-check now reports 94 covered / 66 named /
+18 unbounded / 116 absent.

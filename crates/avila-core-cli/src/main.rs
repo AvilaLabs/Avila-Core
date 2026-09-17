@@ -1030,6 +1030,8 @@ struct SemanticProfileReport {
     total_compiler_fixtures: usize,
     implemented_campaign_fixture_sets: Vec<CompilerFixtureSetReport>,
     total_campaign_fixtures: usize,
+    implemented_supplemental_fixture_sets: Vec<CompilerFixtureSetReport>,
+    total_supplemental_fixtures: usize,
     notice: &'static str,
 }
 
@@ -1067,6 +1069,11 @@ const EMBEDDED_COMPILER_FIXTURE_SETS: [&[u8]; 5] = [
 const EMBEDDED_CAMPAIGN_FIXTURE_SETS: [&[u8]; 1] = [include_bytes!(
     "../../../fixtures/semantic-core/campaigns/campaign-cases.v1.json"
 )];
+
+const EMBEDDED_SUPPLEMENTAL_FIXTURE_SETS: [&[u8]; 2] = [
+    include_bytes!("../../../fixtures/semantic-core/defects/defects.v1.json"),
+    include_bytes!("../../../fixtures/semantic-core/authority/authority-cases.v1.json"),
+];
 
 fn semantic_profile_report() -> Result<SemanticProfileReport, Box<dyn Error>> {
     let mut implemented_vector_sets = Vec::with_capacity(EMBEDDED_VECTOR_SETS.len());
@@ -1145,6 +1152,29 @@ fn semantic_profile_report() -> Result<SemanticProfileReport, Box<dyn Error>> {
         });
     }
 
+    let mut implemented_supplemental_fixture_sets = Vec::new();
+    let mut total_supplemental_fixtures = 0;
+    for bytes in EMBEDDED_SUPPLEMENTAL_FIXTURE_SETS {
+        let document: serde_json::Value = serde_json::from_slice(bytes)?;
+        let fixture_set = required_string(&document, "fixture_set")?;
+        let version = document
+            .get("version")
+            .and_then(serde_json::Value::as_u64)
+            .ok_or("embedded supplemental fixture set is missing an integer version")?;
+        let fixtures = document
+            .get("fixtures")
+            .and_then(serde_json::Value::as_array)
+            .ok_or("embedded supplemental fixture set is missing fixtures")?
+            .len();
+        total_supplemental_fixtures += fixtures;
+        implemented_supplemental_fixture_sets.push(CompilerFixtureSetReport {
+            fixture_set: fixture_set.into(),
+            version,
+            fixtures,
+            sha256: format!("sha256:{}", sha256_hex(bytes)),
+        });
+    }
+
     Ok(SemanticProfileReport {
         semantic_profile: SEMANTIC_PROFILE,
         kernel_version: env!("CARGO_PKG_VERSION"),
@@ -1155,6 +1185,8 @@ fn semantic_profile_report() -> Result<SemanticProfileReport, Box<dyn Error>> {
         total_compiler_fixtures,
         implemented_campaign_fixture_sets,
         total_campaign_fixtures,
+        implemented_supplemental_fixture_sets,
+        total_supplemental_fixtures,
         notice: "Conformance to these software fixtures is not scientific qualification, full package-level evidence admission, or certification.",
     })
 }
@@ -1327,6 +1359,8 @@ mod tests {
         assert_eq!(report.total_compiler_fixtures, 70);
         assert_eq!(report.implemented_compiler_fixture_sets.len(), 5);
         assert_eq!(report.total_campaign_fixtures, 16);
+        assert_eq!(report.total_supplemental_fixtures, 37);
+        assert_eq!(report.implemented_supplemental_fixture_sets.len(), 2);
         assert_eq!(report.implemented_campaign_fixture_sets.len(), 1);
         assert!(
             report

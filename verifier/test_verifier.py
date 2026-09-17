@@ -1449,6 +1449,36 @@ class TestSnapshotLowering(unittest.TestCase):
                     rejected += 1
         self.assertEqual(rejected + compiled, 33)
 
+    def test_authority_fixtures_are_executable(self):
+        suite_dir = REPO_ROOT / "fixtures" / "semantic-core" / "authority"
+        suite = json.loads((suite_dir / "authority-cases.v1.json").read_text())
+        self.assertEqual(suite["fixture_set"], "authority-cases")
+        for fixture in suite["fixtures"]:
+            with self.subTest(fixture=fixture["fixture_id"]):
+                document = fixture["signature_document"]
+                root_doc = fixture["trust_root"]
+                keys = {
+                    (entry["key_id"], entry["role"]): entry["public_key_hex"]
+                    for entry in root_doc.get("keys", [])
+                }
+                trust_root = v.TrustRoot(keys=keys)
+                digest = v.digest_from_prefixed(document["signed_document"]["sha256"])
+                status = v.signature_status(
+                    document, digest, trust_root, fixture["expected_role"])
+                expected = fixture["expected"]
+                if expected["status"] == "verified":
+                    self.assertEqual(status["state"], "verified")
+                    self.assertEqual(status["signed_by"], expected["key_id"])
+                else:
+                    self.assertEqual(status["state"], "invalid")
+                    reason = status["reason"]
+                    if expected["error"] == "does_not_verify":
+                        self.assertIn("does not verify", reason)
+                    elif expected["error"] == "key_not_listed":
+                        self.assertIn("not listed", reason)
+                    else:
+                        self.fail(f"unmapped rejection kind {expected['error']}")
+
 
 def _resolve_pointer(document, pointer: str):
     tokens = [t.replace("~1", "/").replace("~0", "~") for t in pointer.split("/")[1:]]

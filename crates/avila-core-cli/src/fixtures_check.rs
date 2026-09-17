@@ -27,7 +27,7 @@ const VECTOR_SETS: [&[u8]; 4] = [
     include_bytes!("../../../fixtures/semantic-core/vectors/verdict-calculus.v1.json"),
 ];
 
-const FIXTURE_SETS: [&[u8]; 7] = [
+const FIXTURE_SETS: [&[u8]; 8] = [
     include_bytes!("../../../fixtures/semantic-core/types/compiler-cases.v1.json"),
     include_bytes!("../../../fixtures/semantic-core/types/compiler-parameter-cases.v1.json"),
     include_bytes!("../../../fixtures/semantic-core/types/compiler-reproducibility-cases.v1.json"),
@@ -35,6 +35,7 @@ const FIXTURE_SETS: [&[u8]; 7] = [
     include_bytes!("../../../fixtures/semantic-core/types/compiler-purpose-cases.v1.json"),
     include_bytes!("../../../fixtures/semantic-core/campaigns/campaign-cases.v1.json"),
     include_bytes!("../../../fixtures/semantic-core/defects/defects.v1.json"),
+    include_bytes!("../../../fixtures/semantic-core/authority/authority-cases.v1.json"),
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]

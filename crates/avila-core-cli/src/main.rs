@@ -1015,10 +1015,11 @@ fn semantic_profile_report() -> Result<SemanticProfileReport, Box<dyn Error>> {
             .and_then(serde_json::Value::as_array)
             .ok_or("embedded vector set is missing vectors")?
             .len();
-        let secondary = document
-            .get("aggregation_vectors")
-            .and_then(serde_json::Value::as_array)
-            .map_or(0, Vec::len);
+        let secondary: usize = ["aggregation_vectors", "categorical_vectors"]
+            .iter()
+            .filter_map(|key| document.get(*key).and_then(serde_json::Value::as_array))
+            .map(Vec::len)
+            .sum();
         let vectors = primary + secondary;
         total_vectors += vectors;
         implemented_vector_sets.push(VectorSetReport {
@@ -1253,7 +1254,7 @@ mod tests {
         let report = semantic_profile_report().unwrap();
         assert_eq!(report.semantic_profile, SEMANTIC_PROFILE);
         assert_eq!(report.status, "draft");
-        assert_eq!(report.total_vectors, 91);
+        assert_eq!(report.total_vectors, 103);
         assert_eq!(report.implemented_vector_sets.len(), 4);
         assert_eq!(report.total_compiler_fixtures, 68);
         assert_eq!(report.implemented_compiler_fixture_sets.len(), 5);

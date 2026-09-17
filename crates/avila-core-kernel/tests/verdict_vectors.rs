@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
 
 use avila_core_kernel::{
-    Aggregation, ExactNumber, KindDefinition, KindRegistry, SEMANTIC_PROFILE, UnitDefinition,
-    VerdictCase, VerdictEvaluator, VerdictStatus, aggregate_verdicts,
+    Aggregation, CategoricalVerdictCase, CategoricalVerdictEvaluator, ExactNumber, KindDefinition,
+    KindRegistry, SEMANTIC_PROFILE, UnitDefinition, VerdictCase, VerdictEvaluator, VerdictStatus,
+    aggregate_verdicts,
 };
 use serde::Deserialize;
 use serde::de::{Deserializer, MapAccess, Visitor};
@@ -16,6 +17,8 @@ struct VectorSet {
     semantic_profile: String,
     kinds: BTreeMap<String, FixtureKind>,
     vectors: Vec<Vector>,
+    #[serde(default)]
+    categorical_vectors: Vec<CategoricalVector>,
     aggregation_vectors: Vec<AggregationVector>,
 }
 
@@ -30,6 +33,13 @@ struct FixtureKind {
 struct Vector {
     id: String,
     input: VerdictCase,
+    expected: Value,
+}
+
+#[derive(Debug, Deserialize)]
+struct CategoricalVector {
+    id: String,
+    input: CategoricalVerdictCase,
     expected: Value,
 }
 
@@ -52,7 +62,12 @@ fn verdict_vectors_are_executable() {
     assert_eq!(set.semantic_profile, SEMANTIC_PROFILE);
     assert_eq!(
         set.vectors.len(),
-        42,
+        44,
+        "update the corpus count intentionally"
+    );
+    assert_eq!(
+        set.categorical_vectors.len(),
+        10,
         "update the corpus count intentionally"
     );
     assert_eq!(
@@ -71,6 +86,17 @@ fn verdict_vectors_are_executable() {
             serde_json::to_value(actual).unwrap(),
             vector.expected,
             "vector {}",
+            vector.id
+        );
+    }
+
+    for vector in set.categorical_vectors {
+        let actual = CategoricalVerdictEvaluator::evaluate(&vector.input)
+            .unwrap_or_else(|error| panic!("categorical vector {} failed: {error}", vector.id));
+        assert_eq!(
+            serde_json::to_value(actual).unwrap(),
+            vector.expected,
+            "categorical vector {}",
             vector.id
         );
     }

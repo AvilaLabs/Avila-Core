@@ -187,6 +187,24 @@ class TestVerdictCalculusVectors(unittest.TestCase):
                 got = v.aggregate_statuses(vec["input"]["aggregation"], vec["input"]["verdicts"])
                 self.assertEqual(got, vec["expected"]["status"])
 
+    def test_every_categorical_vector(self):
+        for vec in self.doc["categorical_vectors"]:
+            with self.subTest(id=vec["id"]):
+                inp = vec["input"]
+                requirement = inp["requirement"]
+                evidence = [
+                    v.reduce_claim_value(
+                        ev["evidence_id"], ev["state"], {"model": "unquantified", "value": ev.get("value")}
+                    )
+                    for ev in inp["evidence"]
+                ]
+                result = v.evaluate_categorical_requirement(
+                    requirement["comparison"], requirement["accepted_values"], evidence
+                )
+                expected = vec["expected"]
+                self.assertEqual(result.status, expected["status"], vec["id"])
+                self.assertEqual(result.rule, expected["rule"], vec["id"])
+
 
 # ---------------------------------------------------------------------------
 # Section 5 (campaign fixtures): fixtures/semantic-core/campaigns/campaign-cases.v1.json

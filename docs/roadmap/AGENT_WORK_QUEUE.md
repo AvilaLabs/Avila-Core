@@ -52,7 +52,7 @@ this handoff is a starting point, not permission to ignore subsequent changes.
 **Status:** done 2026-09-15.
 
 Reconciled against HEAD `3e6dd8f`; executable evidence:
-`avila-core semantic-profile` reports 91 vectors, 68 compiler fixtures, 15
+`avila-core semantic-profile` reports 103 vectors, 68 compiler fixtures, 15
 campaign fixtures; `avila-core tools list --json` reports eleven tools.
 
 - `README.md`: "ten shared read-only queries" → eleven.

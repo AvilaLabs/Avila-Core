@@ -1958,6 +1958,389 @@
         "nominal_canonical": "1/40000000"
       },
       "note": "an exact value is the degenerate interval lo = hi = nominal and satisfies a bounded basis"
+    },
+    {
+      "id": "not_evaluated.mixed-admitted-quarantined",
+      "input": {
+        "kind": "nuclear.dose_equivalent_rate@1",
+        "requirement": {
+          "comparison": "less_than_or_equal",
+          "limit": {
+            "value": "100",
+            "unit": "uSv/h"
+          },
+          "basis": {
+            "kind": "bounded",
+            "coverage": "0.95"
+          }
+        },
+        "evidence": [
+          {
+            "evidence_id": "ev.mixed.0001",
+            "state": "admitted",
+            "model": "coverage_interval",
+            "lower": {
+              "value": "94",
+              "unit": "uSv/h"
+            },
+            "upper": {
+              "value": "96",
+              "unit": "uSv/h"
+            },
+            "nominal": {
+              "value": "95",
+              "unit": "uSv/h"
+            },
+            "coverage": "0.95"
+          },
+          {
+            "evidence_id": "ev.mixed.0002",
+            "state": "quarantined",
+            "model": "coverage_interval",
+            "lower": {
+              "value": "200",
+              "unit": "uSv/h"
+            },
+            "upper": {
+              "value": "220",
+              "unit": "uSv/h"
+            },
+            "nominal": {
+              "value": "210",
+              "unit": "uSv/h"
+            },
+            "coverage": "0.95"
+          }
+        ]
+      },
+      "expected": {
+        "status": "not_evaluated",
+        "rule": "not_evaluated.quarantined",
+        "reasons": [
+          {
+            "evidence_id": "ev.mixed.0002",
+            "state": "quarantined"
+          }
+        ],
+        "numbers_present": false
+      },
+      "note": "a quarantined claim alongside an admitted one means the metric is not settled; the verdict does not silently evaluate the admitted half"
+    },
+    {
+      "id": "not_evaluated.mixed-admitted-invalidated",
+      "input": {
+        "kind": "nuclear.dose_equivalent_rate@1",
+        "requirement": {
+          "comparison": "less_than_or_equal",
+          "limit": {
+            "value": "100",
+            "unit": "uSv/h"
+          },
+          "basis": {
+            "kind": "bounded",
+            "coverage": "0.95"
+          }
+        },
+        "evidence": [
+          {
+            "evidence_id": "ev.mixed.0003",
+            "state": "invalidated",
+            "model": "exact",
+            "nominal": {
+              "value": "500",
+              "unit": "uSv/h"
+            }
+          },
+          {
+            "evidence_id": "ev.mixed.0004",
+            "state": "admitted",
+            "model": "exact",
+            "nominal": {
+              "value": "90",
+              "unit": "uSv/h"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "status": "not_evaluated",
+        "rule": "not_evaluated.invalidated",
+        "reasons": [
+          {
+            "evidence_id": "ev.mixed.0003",
+            "state": "invalidated"
+          }
+        ],
+        "numbers_present": false
+      },
+      "note": "the first non-admitted claim decides the reason regardless of evidence order"
+    }
+  ],
+  "categorical_vectors": [
+    {
+      "id": "categorical.equals.match",
+      "input": {
+        "requirement": {
+          "comparison": "equals",
+          "accepted_values": ["candidate_unreviewed"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "ev.cat.0001",
+            "state": "admitted",
+            "value": "candidate_unreviewed"
+          }
+        ]
+      },
+      "expected": {
+        "status": "pass",
+        "rule": "categorical.equals.match",
+        "numbers_present": false,
+        "observed_category": "candidate_unreviewed",
+        "accepted_categories": ["candidate_unreviewed"]
+      }
+    },
+    {
+      "id": "categorical.equals.mismatch",
+      "input": {
+        "requirement": {
+          "comparison": "equals",
+          "accepted_values": ["candidate_unreviewed"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "ev.cat.0002",
+            "state": "admitted",
+            "value": "rejected"
+          }
+        ]
+      },
+      "expected": {
+        "status": "fail",
+        "rule": "categorical.equals.mismatch",
+        "numbers_present": false,
+        "observed_category": "rejected",
+        "accepted_categories": ["candidate_unreviewed"]
+      }
+    },
+    {
+      "id": "categorical.in_set.match",
+      "input": {
+        "requirement": {
+          "comparison": "in_set",
+          "accepted_values": ["clear", "candidate_unreviewed"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "ev.cat.0003",
+            "state": "admitted",
+            "value": "candidate_unreviewed"
+          }
+        ]
+      },
+      "expected": {
+        "status": "pass",
+        "rule": "categorical.in_set.match",
+        "numbers_present": false,
+        "observed_category": "candidate_unreviewed",
+        "accepted_categories": ["clear", "candidate_unreviewed"]
+      }
+    },
+    {
+      "id": "categorical.in_set.mismatch",
+      "input": {
+        "requirement": {
+          "comparison": "in_set",
+          "accepted_values": ["clear", "candidate_unreviewed"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "ev.cat.0004",
+            "state": "admitted",
+            "value": "rejected"
+          }
+        ]
+      },
+      "expected": {
+        "status": "fail",
+        "rule": "categorical.in_set.mismatch",
+        "numbers_present": false,
+        "observed_category": "rejected",
+        "accepted_categories": ["clear", "candidate_unreviewed"]
+      }
+    },
+    {
+      "id": "categorical.in_set.missing",
+      "input": {
+        "requirement": {
+          "comparison": "in_set",
+          "accepted_values": ["clear", "candidate_unreviewed"]
+        },
+        "evidence": []
+      },
+      "expected": {
+        "status": "not_evaluated",
+        "rule": "not_evaluated.missing",
+        "reasons": [
+          {
+            "code": "CORE-R3301",
+            "owner": "requester"
+          }
+        ],
+        "numbers_present": false,
+        "accepted_categories": ["clear", "candidate_unreviewed"]
+      }
+    },
+    {
+      "id": "categorical.in_set.quarantined",
+      "input": {
+        "requirement": {
+          "comparison": "in_set",
+          "accepted_values": ["clear", "candidate_unreviewed"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "ev.cat.0005",
+            "state": "quarantined",
+            "value": "clear"
+          }
+        ]
+      },
+      "expected": {
+        "status": "not_evaluated",
+        "rule": "not_evaluated.quarantined",
+        "reasons": [
+          {
+            "evidence_id": "ev.cat.0005",
+            "state": "quarantined"
+          }
+        ],
+        "numbers_present": false,
+        "accepted_categories": ["clear", "candidate_unreviewed"]
+      }
+    },
+    {
+      "id": "categorical.in_set.mixed-admitted-quarantined",
+      "input": {
+        "requirement": {
+          "comparison": "in_set",
+          "accepted_values": ["clear", "candidate_unreviewed"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "ev.cat.0006",
+            "state": "admitted",
+            "value": "clear"
+          },
+          {
+            "evidence_id": "ev.cat.0007",
+            "state": "quarantined",
+            "value": "rejected"
+          }
+        ]
+      },
+      "expected": {
+        "status": "not_evaluated",
+        "rule": "not_evaluated.quarantined",
+        "reasons": [
+          {
+            "evidence_id": "ev.cat.0007",
+            "state": "quarantined"
+          }
+        ],
+        "numbers_present": false,
+        "accepted_categories": ["clear", "candidate_unreviewed"]
+      },
+      "note": "same rule as the numeric vectors: a non-admitted claim settles nothing, so the verdict does not evaluate the admitted half"
+    },
+    {
+      "id": "categorical.in_set.duplicate",
+      "input": {
+        "requirement": {
+          "comparison": "in_set",
+          "accepted_values": ["clear", "candidate_unreviewed"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "ev.cat.0008",
+            "state": "admitted",
+            "value": "clear"
+          },
+          {
+            "evidence_id": "ev.cat.0009",
+            "state": "admitted",
+            "value": "candidate_unreviewed"
+          }
+        ]
+      },
+      "expected": {
+        "status": "not_evaluated",
+        "rule": "not_evaluated.duplicate_claim",
+        "reasons": [
+          {
+            "code": "CORE-E7301",
+            "evidence_ids": ["ev.cat.0008", "ev.cat.0009"]
+          }
+        ],
+        "numbers_present": false,
+        "accepted_categories": ["clear", "candidate_unreviewed"]
+      }
+    },
+    {
+      "id": "categorical.equals.category-missing",
+      "input": {
+        "requirement": {
+          "comparison": "equals",
+          "accepted_values": ["candidate_unreviewed"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "ev.cat.0010",
+            "state": "admitted"
+          }
+        ]
+      },
+      "expected": {
+        "status": "not_evaluated",
+        "rule": "not_evaluated.category_missing",
+        "reasons": [
+          {
+            "code": "CORE-R3301",
+            "owner": "executor"
+          }
+        ],
+        "numbers_present": false,
+        "accepted_categories": ["candidate_unreviewed"]
+      },
+      "note": "an admitted unquantified claim with no category value is the executor's gap, not a mismatch"
+    },
+    {
+      "id": "categorical.equals.invalidated",
+      "input": {
+        "requirement": {
+          "comparison": "equals",
+          "accepted_values": ["candidate_unreviewed"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "ev.cat.0011",
+            "state": "invalidated",
+            "value": "candidate_unreviewed"
+          }
+        ]
+      },
+      "expected": {
+        "status": "not_evaluated",
+        "rule": "not_evaluated.invalidated",
+        "reasons": [
+          {
+            "evidence_id": "ev.cat.0011",
+            "state": "invalidated"
+          }
+        ],
+        "numbers_present": false,
+        "accepted_categories": ["candidate_unreviewed"]
+      }
     }
   ],
   "aggregation_vectors": [

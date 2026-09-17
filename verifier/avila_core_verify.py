@@ -995,8 +995,11 @@ def evaluate_numeric_requirement(
     if not evidence:
         result.reasons = [{"code": "CORE-R3301", "owner": "requester"}]
         return result
-    if non_admitted and not admitted:
-        # A single non-admitted state decides the reason; if mixed, report the first.
+    if non_admitted:
+        # Any non-admitted claim settles nothing: the verdict does not
+        # evaluate the admitted half (verdict-calculus vectors
+        # not_evaluated.mixed-*). The first non-admitted claim decides the
+        # rule; every non-admitted claim is named in the reasons.
         state = non_admitted[0].state
         result.rule = f"not_evaluated.{state}"
         result.reasons = [{"evidence_id": e.evidence_id, "state": e.state} for e in non_admitted]
@@ -1107,9 +1110,10 @@ def evaluate_categorical_requirement(operator: str, accepted: list[str], evidenc
     missing, quarantined, duplicate, or out-of-qualification evidence is
     NOT_EVALUATED." Rule id ``categorical.equals.match``/``.mismatch`` is
     proved against examples/cases/case-000's committed campaign-report.json
-    (CASE-000-R3). ``categorical.in_set.*`` is inferred by analogy — no
-    committed fixture exercises ``in_set`` — and is reported with
-    ``inferred_rule: true`` so a caller can weight it accordingly.
+    (CASE-000-R3). ``categorical.in_set.*`` and every edge ordering —
+    any non-admitted claim settles the verdict before the admitted half
+    is read, duplicates, and a missing category — are proved against the
+    ``categorical_vectors`` section of verdict-calculus.v1.json.
     """
     result = VerdictResult(status="not_evaluated", rule="not_evaluated.missing")
     if not evidence:
@@ -1117,7 +1121,9 @@ def evaluate_categorical_requirement(operator: str, accepted: list[str], evidenc
         return result
     admitted = [e for e in evidence if e.state == "admitted"]
     non_admitted = [e for e in evidence if e.state != "admitted"]
-    if non_admitted and not admitted:
+    if non_admitted:
+        # Same ordering the kernel and numeric evaluator apply: any
+        # non-admitted claim means the metric is not settled.
         result.rule = f"not_evaluated.{non_admitted[0].state}"
         result.reasons = [{"evidence_id": e.evidence_id, "state": e.state} for e in non_admitted]
         return result
@@ -1126,11 +1132,14 @@ def evaluate_categorical_requirement(operator: str, accepted: list[str], evidenc
         result.reasons = [{"code": "CORE-E7301", "evidence_ids": [e.evidence_id for e in admitted]}]
         return result
     category = admitted[0].category
+    if category is None:
+        result.rule = "not_evaluated.category_missing"
+        result.reasons = [{"code": "CORE-R3301", "owner": "executor"}]
+        return result
     prefix = "categorical.equals" if operator == "equals" else "categorical.in_set"
     matched = (category == accepted[0]) if operator == "equals" else (category in accepted)
     result.status = "pass" if matched else "fail"
     result.rule = f"{prefix}.{'match' if matched else 'mismatch'}"
-    result.reasons = [] if operator == "equals" else [{"note": "inferred_rule"}]
     return result
 
 

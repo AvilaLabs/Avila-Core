@@ -53,7 +53,7 @@ fn campaign_fixtures_are_executable() {
     assert_eq!(suite.fixture_set, "campaign-evaluation");
     assert_eq!(suite.version, 1);
     assert_eq!(suite.semantic_profile, SEMANTIC_PROFILE);
-    assert_eq!(suite.fixtures.len(), 15);
+    assert_eq!(suite.fixtures.len(), 16);
 
     for case in suite.fixtures {
         assert!(!case.clause.is_empty(), "{} has no clause", case.fixture_id);
@@ -117,16 +117,37 @@ fn campaign_fixtures_are_executable() {
             case.fixture_id
         );
 
+        assert_eq!(
+            report["verdicts"].as_array().map_or(0, Vec::len),
+            case.expected.verdicts.len(),
+            "{} verdict count",
+            case.fixture_id
+        );
         let verdicts: Vec<Value> = report["verdicts"]
             .as_array()
             .into_iter()
             .flatten()
-            .map(|record| {
-                json!({
+            .zip(&case.expected.verdicts)
+            .map(|(record, expected)| {
+                let mut projected = json!({
                     "requirement_id": record["requirement_id"],
                     "status": record["verdict"]["status"],
                     "rule": record["verdict"]["rule"],
-                })
+                });
+                // A fixture that names `reasons` pins the verdict's reason
+                // codes; fixtures that omit it stay pinned on status and rule.
+                if expected.get("reasons").is_some() {
+                    projected["reasons"] = json!(
+                        record["verdict"]["reasons"]
+                            .as_array()
+                            .into_iter()
+                            .flatten()
+                            .filter(|reason| reason["code"].is_string())
+                            .map(|reason| reason["code"].clone())
+                            .collect::<Vec<_>>()
+                    );
+                }
+                projected
             })
             .collect();
         assert_eq!(

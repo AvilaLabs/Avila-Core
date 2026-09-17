@@ -167,16 +167,16 @@ pub fn export_package(
             evidence_ids: artifact.evidence_ids.clone(),
             source_root: artifact.source_root.clone(),
             path: artifact.path.clone(),
-            bundle_path: bundle_path.display().to_string(),
+            // Report paths are always forward-slash separated so the export
+            // report's content identity does not depend on the host's
+            // separator convention.
+            bundle_path: format!("roots/{}/{}", artifact.source_root, artifact.path),
             sha256: artifact.sha256.clone(),
             bytes,
         });
         exported_roots.insert(
             artifact.source_root.clone(),
-            Path::new("roots")
-                .join(&artifact.source_root)
-                .display()
-                .to_string(),
+            format!("roots/{}", artifact.source_root),
         );
     }
 

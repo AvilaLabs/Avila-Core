@@ -748,20 +748,25 @@ admits units, every step exposes its declared output slots, the specimen's
 requirement metric resolves to real choices, and a malformed buffer is
 reported rather than panicking.
 
-**Limits:** the form covers the *question* the workflow answers — workflow
-steps, bindings, parameters, seeds, and review declarations stay
-JSON-level in Sources. There is no schema-driven generic form generator;
-each field is written against the contract shape explicitly.
+**Limits:** the form covers the *question* the workflow answers — all
+contract sections, including workflow steps, bindings, parameters, seeds,
+review bindings, and material factors, are now form fields; nothing is
+JSON-only. There is no schema-driven generic form generator; each field is
+written against the contract shape explicitly.
 
 Follow-up 2026-09-17: the form now also covers contract inputs (registry
 role, with media-type and claim-model dropdowns constrained to that role's
 admitted values, and a `worst_case` side when the model needs it),
 categorical requirements (`equals`/`in_set` predicates over the same
-metric surface), and workflow steps — capability type, each declared
+metric surface), workflow steps — capability type, each declared
 input slot bound to a contract input or another step's output slot, each
 declared parameter as a typed field with a `not_defined` toggle, and the
-reproducibility seed. Review declarations (they need a policy digest the
-form cannot invent) and material factors remain JSON-level.
+reproducibility seed. Review bindings and material factors are now form
+fields too: a step's optional review edits the eligibility policy,
+independence mode with separated-from/minimum-separation dropdowns, and
+instruction lines, and each registry-declared material factor binds a
+typed value under `reproducibility/material_factors`. Nothing in the
+contract is JSON-only.
 
 ### Byte-reading evaluator and diagnostic coverage — implemented 2026-09-17
 

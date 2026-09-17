@@ -2016,6 +2016,256 @@ fn parameter_form(
     changed
 }
 
+/// One declared material factor bound on the step — same typed-value
+/// machinery as parameters, keyed under `reproducibility/material_factors`.
+/// An unset factor is left absent, never nulled.
+fn factor_form(
+    ui: &mut egui::Ui,
+    id_prefix: &str,
+    step: &mut serde_json::Value,
+    factor: &serde_json::Value,
+    registry: Option<&serde_json::Value>,
+) -> bool {
+    let mut changed = false;
+    let factor_id = factor["factor_id"].as_str().unwrap_or_default();
+    let pointer = format!("/reproducibility/material_factors/{factor_id}");
+    ui.horizontal_wrapped(|ui| {
+        ui.label(factor_id);
+        let set = !step.pointer(&pointer).is_none_or(serde_json::Value::is_null);
+        let mut on = set;
+        if ui
+            .checkbox(&mut on, "set")
+            .on_hover_text("Material factors are recorded execution context; an unset factor is simply absent.")
+            .changed()
+        {
+            if step["reproducibility"]["material_factors"].is_null() {
+                step["reproducibility"]["material_factors"] = serde_json::json!({});
+            }
+            if on {
+                step["reproducibility"]["material_factors"][factor_id] =
+                    match factor["value_type"]["type"].as_str() {
+                        Some("boolean") => serde_json::json!(false),
+                        Some("integer") | Some("exact_number") => {
+                            serde_json::Value::String("0".to_string())
+                        }
+                        Some("quantity") => {
+                            serde_json::json!({"kind": "", "value": "0", "unit": ""})
+                        }
+                        _ => serde_json::Value::String(String::new()),
+                    };
+            } else if let Some(map) =
+                step["reproducibility"]["material_factors"].as_object_mut()
+            {
+                map.remove(factor_id);
+            }
+            changed = true;
+        }
+        if set {
+            match factor["value_type"]["type"].as_str() {
+                Some("boolean") => {
+                    let mut value = step
+                        .pointer(&pointer)
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    if ui.checkbox(&mut value, "").changed() {
+                        step["reproducibility"]["material_factors"][factor_id] =
+                            serde_json::json!(value);
+                        changed = true;
+                    }
+                }
+                Some("text") => {
+                    let allowed = factor["value_type"]["allowed_values"]
+                        .as_array()
+                        .map(|values| {
+                            values
+                                .iter()
+                                .filter_map(|v| v.as_str().map(str::to_string))
+                                .collect::<Vec<_>>()
+                        })
+                        .unwrap_or_default();
+                    if allowed.is_empty() {
+                        changed |= form_string(ui, step, &pointer);
+                    } else {
+                        let refs: Vec<&str> = allowed.iter().map(String::as_str).collect();
+                        changed |= form_choice(
+                            ui,
+                            &format!("{id_prefix}-{factor_id}"),
+                            step,
+                            &pointer,
+                            &refs,
+                        );
+                    }
+                }
+                Some("quantity") => {
+                    let kind = factor["value_type"]["kind"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_string();
+                    changed |= quantity_form(
+                        ui,
+                        &format!("{id_prefix}-{factor_id}"),
+                        step,
+                        &pointer,
+                        &[kind],
+                        registry,
+                    );
+                }
+                _ => {
+                    changed |= form_string(ui, step, &pointer);
+                }
+            }
+        }
+    });
+    changed
+}
+
+/// The step's optional review binding — eligibility policy, independence
+/// mode, and the instructions the reviewer is shown. A review never gates
+/// a technical verdict; it gates presentation.
+fn review_form(ui: &mut egui::Ui, id_prefix: &str, step: &mut serde_json::Value) -> bool {
+    let mut changed = false;
+    let bound = step["review"].is_object();
+    let mut on = bound;
+    if ui
+        .checkbox(&mut on, "requires review")
+        .on_hover_text("An optional presentation gate: a reviewer records a disposition over the realised dossier. Review can never change a technical verdict.")
+        .changed()
+    {
+        step["review"] = if on {
+            serde_json::json!({
+                "reviewer_eligibility_policy": {
+                    "policy_id": "",
+                    "revision": 1,
+                    "sha256": "sha256:",
+                },
+                "independence": {"mode": "none"},
+                "instructions": [],
+            })
+        } else {
+            serde_json::Value::Null
+        };
+        changed = true;
+    }
+    if !bound {
+        return changed;
+    }
+    ui.horizontal_wrapped(|ui| {
+        ui.label("policy id");
+        changed |= form_string(ui, step, "/review/reviewer_eligibility_policy/policy_id");
+        ui.label("revision");
+        changed |= form_string(ui, step, "/review/reviewer_eligibility_policy/revision");
+    });
+    changed |= form_string(ui, step, "/review/reviewer_eligibility_policy/sha256");
+    ui.horizontal_wrapped(|ui| {
+        ui.label("independence");
+        let mode = step["review"]["independence"]["mode"]
+            .as_str()
+            .unwrap_or("none")
+            .to_string();
+        let mut selected = mode.clone();
+        egui::ComboBox::from_id_salt(format!("{id_prefix}-independence"))
+            .selected_text(&selected)
+            .show_ui(ui, |ui| {
+                for option in ["none", "constraints"] {
+                    ui.selectable_value(&mut selected, option.to_string(), option);
+                }
+            });
+        if selected != mode {
+            step["review"]["independence"] = if selected == "constraints" {
+                serde_json::json!({"mode": "constraints", "requirements": []})
+            } else {
+                serde_json::json!({"mode": "none"})
+            };
+            changed = true;
+        }
+        if selected == "constraints" {
+            ui.label("each constraint separates the reviewer from a party at a level");
+            let mut requirements = step["review"]["independence"]["requirements"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default();
+            let mut index = 0;
+            while index < requirements.len() {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(format!("constraint {}", index + 1));
+                    for (key, options) in [
+                        (
+                            "separated_from",
+                            [
+                                "requester",
+                                "method_owner",
+                                "capability_provider",
+                                "executor",
+                            ]
+                            .as_slice(),
+                        ),
+                        (
+                            "minimum_separation",
+                            ["different_person", "different_organization"].as_slice(),
+                        ),
+                    ] {
+                        let current = requirements[index][key]
+                            .as_str()
+                            .unwrap_or_default()
+                            .to_string();
+                        let mut picked = current.clone();
+                        egui::ComboBox::from_id_salt(format!("{id_prefix}-req{index}-{key}"))
+                            .selected_text(&picked)
+                            .show_ui(ui, |ui| {
+                                for option in options {
+                                    ui.selectable_value(&mut picked, option.to_string(), *option);
+                                }
+                            });
+                        if picked != current {
+                            requirements[index][key] = serde_json::json!(picked);
+                            changed = true;
+                        }
+                    }
+                    if ui.small_button("remove").clicked() {
+                        requirements.remove(index);
+                        changed = true;
+                    }
+                });
+                index += 1;
+            }
+            if ui.small_button("add constraint").clicked() {
+                requirements.push(serde_json::json!({
+                    "separated_from": "requester",
+                    "minimum_separation": "different_person",
+                }));
+                changed = true;
+            }
+            if step["review"]["independence"]["requirements"] != serde_json::json!(requirements) {
+                step["review"]["independence"]["requirements"] = serde_json::json!(requirements);
+            }
+        }
+    });
+    ui.label("instructions — one line each; the compiler binds the text but does not judge whether the reviewer followed it");
+    let mut instructions = step["review"]["instructions"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let mut index = 0;
+    while index < instructions.len() {
+        ui.horizontal_wrapped(|ui| {
+            changed |= form_string(ui, &mut instructions[index], "");
+            if ui.small_button("remove").clicked() {
+                instructions.remove(index);
+                changed = true;
+            }
+        });
+        index += 1;
+    }
+    if ui.small_button("add instruction").clicked() {
+        instructions.push(serde_json::Value::String(String::new()));
+        changed = true;
+    }
+    if step["review"]["instructions"] != serde_json::json!(instructions) {
+        step["review"]["instructions"] = serde_json::json!(instructions);
+    }
+    changed
+}
+
 /// One workflow-step card — capability type, its declared input slots bound
 /// to sources, its declared parameters, and the reproducibility seed.
 fn step_form(
@@ -2154,6 +2404,34 @@ fn step_form(
                 if let Some(slot_target) = contract.pointer_mut(&prefix) {
                     *slot_target = step;
                 }
+            }
+            let factors: Vec<serde_json::Value> =
+                declaration["reproducibility"]["material_factors"]
+                    .as_array()
+                    .cloned()
+                    .unwrap_or_default();
+            if !factors.is_empty() {
+                ui.label("material factors — execution context the run records alongside the seed");
+            }
+            for factor in factors {
+                let mut step = contract
+                    .pointer_mut(&prefix)
+                    .cloned()
+                    .unwrap_or(serde_json::Value::Null);
+                changed |= factor_form(ui, &format!("step{index}"), &mut step, &factor, registry);
+                if let Some(slot_target) = contract.pointer_mut(&prefix) {
+                    *slot_target = step;
+                }
+            }
+        }
+        {
+            let mut step = contract
+                .pointer_mut(&prefix)
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
+            changed |= review_form(ui, &format!("step{index}"), &mut step);
+            if let Some(slot_target) = contract.pointer_mut(&prefix) {
+                *slot_target = step;
             }
         }
         ui.horizontal_wrapped(|ui| {
@@ -3208,5 +3486,56 @@ mod tests {
         // An unknown role offers no constrained choices.
         assert!(role_media_types(Some(&registry), "unknown.role").is_empty());
         assert!(role_claim_models(Some(&registry), "unknown.role").is_empty());
+    }
+
+    #[test]
+    fn step_form_reads_factor_and_review_declarations() {
+        // The step card's material-factor fields come from the capability
+        // type's reproducibility declaration — the same document the
+        // compiler validates the bound values against.
+        let registry: serde_json::Value = serde_json::from_slice(include_bytes!(
+            "../../../fixtures/semantic-core/types/compiler.reproducibility.registry.v1.json"
+        ))
+        .unwrap();
+        let ty = registry_capability_type(Some(&registry), "fixture.deterministic_metric")
+            .expect("fixture registry declares the metric type");
+        let factors = ty["reproducibility"]["material_factors"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(factors.len(), 2);
+        let thread_count = factors
+            .iter()
+            .find(|f| f["factor_id"] == "thread_count")
+            .expect("thread_count factor declared");
+        assert_eq!(thread_count["value_type"]["type"], "integer");
+        let rng = factors
+            .iter()
+            .find(|f| f["factor_id"] == "environment_image");
+        assert!(rng.is_some());
+
+        // The review registry's agent-review capability exists, and the
+        // contract that binds it carries the review fields the form edits.
+        let review_registry: serde_json::Value = serde_json::from_slice(include_bytes!(
+            "../../../fixtures/semantic-core/types/compiler.review.registry.v1.json"
+        ))
+        .unwrap();
+        let review_type =
+            registry_capability_type(Some(&review_registry), "fixture.practical_agent_review")
+                .expect("review registry declares the review type");
+        assert!(review_type["review"].is_object());
+        let contract: serde_json::Value = serde_json::from_slice(include_bytes!(
+            "../../../fixtures/semantic-core/types/types.R9.review-bound.pass.contract.json"
+        ))
+        .unwrap();
+        let review = &contract["workflow"][1]["review"];
+        assert!(review.is_object());
+        assert_eq!(review["independence"]["mode"], "constraints");
+        assert_eq!(
+            review["independence"]["requirements"]
+                .as_array()
+                .map_or(0, Vec::len),
+            2
+        );
     }
 }

@@ -506,11 +506,11 @@ canonically.
 
 | Fixture | Expected |
 | --- | --- |
-| `scenarios.coverage-crosses-limit` | INCONCLUSIVE `bounded.le.crossing`; next actions with owners |
+| `scenarios.coverage-crosses-limit` | INCONCLUSIVE `bounded.le.crossing`; next actions with owners — the verdict half is exercised by `le.bounded.crossing` (and `campaign.le.crossing.inconclusive` end-to-end); the owner-named next-actions half remains |
 | `scenarios.qualification-narrowed` | exact invalidated set; transport reused; activation has no admissible candidate |
 | `scenarios.pinned-implementation` | Campaign IR has constraint only; Bound Plan records the excluded candidate as `excluded_by_contract_constraint` |
 | `scenarios.review-rejects-upstream` | descendants invalidated; nothing reused; owners named |
-| `scenarios.verify-without-evaluator` | obligations report uses the four verifier categories in SC-17 |
+| `scenarios.verify-without-evaluator` | obligations report uses the four verifier categories in SC-17 — the Python verifier produces verified/mismatch/not_checked/refused per check and runs on every committed case (CI step); the report's four-category rendering remains |
 | `scenarios.bike-hook` | three findings → plan with rejected Elmer → INCONCLUSIVE → geometry change → memo reuse of `fdm_properties` → PASS → obligations report — the verdict half is exercised by `le.bounded.bike-hook.first-run` and `le.bounded.bike-hook.second-run`; the memo and obligations halves remain |
 
 ## Campaign corpus

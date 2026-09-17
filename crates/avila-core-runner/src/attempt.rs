@@ -273,16 +273,7 @@ pub(crate) fn prepare_attempt(
     let (candidate_artifact_sha256, candidate_state_sha256, candidate_state) =
         load_candidate(candidate_path, Some(supplied_candidate_sha256))?;
 
-    let content = match fs::read_to_string(log_path) {
-        Ok(content) => content,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
-        Err(error) => {
-            return Err(format!(
-                "cannot read lineage log `{}`: {error}",
-                log_path.display()
-            ));
-        }
-    };
+    let content = read_log_tolerating_lock(log_path)?;
     let view = crate::history::parse_log(&content, log_path)?;
     crate::history::validate_log(&view, trust_root)?;
     let attempts = &view.attempts;
@@ -369,6 +360,33 @@ pub(crate) fn prepare_attempt(
     })
 }
 
+/// Read the lineage log tolerating an in-flight append's lock. On Windows a
+/// concurrent append's mandatory byte-range lock fails a read with
+/// ERROR_LOCK_VIOLATION (33) rather than waiting, so a racing caller would
+/// lose on contention before ever reaching the under-lock re-check that
+/// decides lineage. Retry briefly; a persistent failure is still reported.
+fn read_log_tolerating_lock(log_path: &Path) -> Result<String, String> {
+    let mut attempt = 0u32;
+    loop {
+        match fs::read_to_string(log_path) {
+            Ok(content) => return Ok(content),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(String::new());
+            }
+            Err(error) if error.raw_os_error() == Some(33) && attempt < 50 => {
+                attempt += 1;
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            Err(error) => {
+                return Err(format!(
+                    "cannot read lineage log `{}`: {error}",
+                    log_path.display()
+                ));
+            }
+        }
+    }
+}
+
 /// Re-check lineage immediately before append so a search cannot quietly
 /// attach a completed run to a parent that changed while the capability ran.
 /// `content` is the log text read through the handle that already holds the
@@ -442,16 +460,7 @@ pub(crate) fn parent_verdict_values(
         .parent_record_sha256
         .as_deref()
         .ok_or("a child attempt is missing its parent record identity")?;
-    let content = match fs::read_to_string(log_path) {
-        Ok(content) => content,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
-        Err(error) => {
-            return Err(format!(
-                "cannot read lineage log `{}`: {error}",
-                log_path.display()
-            ));
-        }
-    };
+    let content = read_log_tolerating_lock(log_path)?;
     let view = crate::history::parse_log(&content, log_path)?;
     let attempts = &view.attempts;
     // Read-only comparison rendering, not an admission gate: signatures are

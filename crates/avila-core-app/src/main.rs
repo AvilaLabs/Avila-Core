@@ -1229,6 +1229,33 @@ fn role_claim_models(registry: Option<&serde_json::Value>, role_id: &str) -> Vec
         .unwrap_or_default()
 }
 
+/// Capability-type ids the registry declares, for workflow-step dropdowns.
+fn registry_capability_types(registry: Option<&serde_json::Value>) -> Vec<String> {
+    registry
+        .and_then(|doc| doc["capability_types"].as_array())
+        .map(|types| {
+            types
+                .iter()
+                .filter_map(|ty| ty["capability_type"]["id"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// A registry capability-type entry for `type_id`, when declared.
+fn registry_capability_type<'a>(
+    registry: Option<&'a serde_json::Value>,
+    type_id: &str,
+) -> Option<&'a serde_json::Value> {
+    registry
+        .and_then(|doc| doc["capability_types"].as_array())
+        .and_then(|types| {
+            types
+                .iter()
+                .find(|ty| ty["capability_type"]["id"].as_str() == Some(type_id))
+        })
+}
+
 /// Unit symbols the registry admits for `kind_id`.
 fn registry_units(registry: Option<&serde_json::Value>, kind_id: &str) -> Vec<String> {
     registry
@@ -1793,11 +1820,361 @@ fn categorical_form(
     (changed, remove)
 }
 
+/// A `source` reference editor — contract input or another step's output
+/// slot — writing the SourceRef shape at `pointer`.
+fn source_ref_form(
+    ui: &mut egui::Ui,
+    id_prefix: &str,
+    step: &mut serde_json::Value,
+    pointer: &str,
+    contract: &serde_json::Value,
+    registry: Option<&serde_json::Value>,
+) -> bool {
+    let mut changed = false;
+    ui.horizontal_wrapped(|ui| {
+        let kinds = ["contract_input", "step_output"];
+        let current = step
+            .pointer(&format!("{pointer}/source"))
+            .and_then(|value| value.as_str())
+            .unwrap_or("contract_input")
+            .to_string();
+        let mut selected = current.clone();
+        egui::ComboBox::from_id_salt(format!("{id_prefix}-src-kind"))
+            .selected_text(&selected)
+            .show_ui(ui, |ui| {
+                for kind in kinds {
+                    ui.selectable_value(&mut selected, kind.to_string(), kind);
+                }
+            });
+        if selected != current
+            && let Some(source) = step.pointer_mut(pointer)
+        {
+            *source = if selected == "step_output" {
+                serde_json::json!({
+                    "source": "step_output",
+                    "step_id": workflow_steps(contract).first().cloned().unwrap_or_default(),
+                    "output_slot": "",
+                })
+            } else {
+                serde_json::json!({
+                    "source": "contract_input",
+                    "input_id": contract_inputs(contract).first().cloned().unwrap_or_default(),
+                })
+            };
+            changed = true;
+        }
+        match step
+            .pointer(&format!("{pointer}/source"))
+            .and_then(|value| value.as_str())
+        {
+            Some("step_output") => {
+                let steps: Vec<String> = workflow_steps(contract)
+                    .into_iter()
+                    .filter(|id| {
+                        step.pointer("/step_id").and_then(|v| v.as_str()) != Some(id.as_str())
+                    })
+                    .collect();
+                let refs: Vec<&str> = steps.iter().map(String::as_str).collect();
+                changed |= form_choice(
+                    ui,
+                    &format!("{id_prefix}-src-step"),
+                    step,
+                    &format!("{pointer}/step_id"),
+                    &refs,
+                );
+                let from_step = step
+                    .pointer(&format!("{pointer}/step_id"))
+                    .and_then(|value| value.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                let slots = step_output_slots(contract, registry, &from_step);
+                if slots.is_empty() {
+                    changed |= form_string(ui, step, &format!("{pointer}/output_slot"));
+                } else {
+                    let refs: Vec<&str> = slots.iter().map(String::as_str).collect();
+                    changed |= form_choice(
+                        ui,
+                        &format!("{id_prefix}-src-slot"),
+                        step,
+                        &format!("{pointer}/output_slot"),
+                        &refs,
+                    );
+                }
+            }
+            _ => {
+                let inputs = contract_inputs(contract);
+                let refs: Vec<&str> = inputs.iter().map(String::as_str).collect();
+                changed |= form_choice(
+                    ui,
+                    &format!("{id_prefix}-src-input"),
+                    step,
+                    &format!("{pointer}/input_id"),
+                    &refs,
+                );
+            }
+        }
+    });
+    changed
+}
+
+/// One parameter editor — a `not_defined` toggle plus the typed field the
+/// registry's `value_type` declares.
+fn parameter_form(
+    ui: &mut egui::Ui,
+    id_prefix: &str,
+    step: &mut serde_json::Value,
+    parameter: &serde_json::Value,
+    registry: Option<&serde_json::Value>,
+) -> bool {
+    let mut changed = false;
+    let param_id = parameter["parameter_id"].as_str().unwrap_or_default();
+    let required = parameter["required"].as_bool().unwrap_or(false);
+    let pointer = format!("/parameters/{param_id}");
+    ui.horizontal_wrapped(|ui| {
+        ui.label(format!(
+            "{param_id}{}",
+            if required { " *" } else { "" }
+        ));
+        let undefined = step.pointer(&pointer).is_none_or(|value| {
+            value.as_str() == Some("not_defined") || value.is_null()
+        });
+        let mut undef = undefined;
+        if ui
+            .checkbox(&mut undef, "not defined")
+            .on_hover_text("A draft placeholder; only `draft` contracts may leave a required parameter not defined.")
+            .changed()
+        {
+            step["parameters"][param_id] = if undef {
+                serde_json::Value::String("not_defined".to_string())
+            } else {
+                match parameter["value_type"]["type"].as_str() {
+                    Some("boolean") => serde_json::json!(false),
+                    Some("integer") | Some("exact_number") => {
+                        serde_json::Value::String("0".to_string())
+                    }
+                    Some("quantity") => serde_json::json!({"kind": "", "value": "0", "unit": ""}),
+                    _ => serde_json::Value::String(String::new()),
+                }
+            };
+            changed = true;
+        }
+        if !undefined {
+            match parameter["value_type"]["type"].as_str() {
+                Some("boolean") => {
+                    let mut value = step
+                        .pointer(&pointer)
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    if ui.checkbox(&mut value, "").changed() {
+                        step["parameters"][param_id] = serde_json::json!(value);
+                        changed = true;
+                    }
+                }
+                Some("text") => {
+                    let allowed = parameter["value_type"]["allowed_values"]
+                        .as_array()
+                        .map(|values| {
+                            values
+                                .iter()
+                                .filter_map(|v| v.as_str().map(str::to_string))
+                                .collect::<Vec<_>>()
+                        })
+                        .unwrap_or_default();
+                    if allowed.is_empty() {
+                        changed |= form_string(ui, step, &pointer);
+                    } else {
+                        let refs: Vec<&str> = allowed.iter().map(String::as_str).collect();
+                        changed |= form_choice(
+                            ui,
+                            &format!("{id_prefix}-{param_id}"),
+                            step,
+                            &pointer,
+                            &refs,
+                        );
+                    }
+                }
+                Some("quantity") => {
+                    let kind = parameter["value_type"]["kind"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_string();
+                    changed |= quantity_form(
+                        ui,
+                        &format!("{id_prefix}-{param_id}"),
+                        step,
+                        &pointer,
+                        &[kind],
+                        registry,
+                    );
+                }
+                _ => {
+                    changed |= form_string(ui, step, &pointer);
+                }
+            }
+        }
+    });
+    changed
+}
+
+/// One workflow-step card — capability type, its declared input slots bound
+/// to sources, its declared parameters, and the reproducibility seed.
+fn step_form(
+    ui: &mut egui::Ui,
+    index: usize,
+    contract: &mut serde_json::Value,
+    registry: Option<&serde_json::Value>,
+) -> (bool, bool) {
+    let mut changed = false;
+    let mut remove = false;
+    let prefix = format!("/workflow/{index}");
+    card(ui, |ui| {
+        ui.horizontal_wrapped(|ui| {
+            ui.label(egui::RichText::new(format!("Step {}", index + 1)).strong());
+            ui.label("id");
+            changed |= form_string(ui, contract, &format!("{prefix}/step_id"));
+            if ui.small_button("remove").clicked() {
+                remove = true;
+            }
+        });
+        ui.horizontal_wrapped(|ui| {
+            ui.label("capability type");
+            let type_id = contract
+                .pointer(&format!("{prefix}/capability_type/id"))
+                .and_then(|value| value.as_str())
+                .unwrap_or_default()
+                .to_string();
+            let types = registry_capability_types(registry);
+            let mut selected = type_id.clone();
+            egui::ComboBox::from_id_salt(format!("step{index}-type"))
+                .selected_text(&selected)
+                .show_ui(ui, |ui| {
+                    for ty in &types {
+                        ui.selectable_value(&mut selected, ty.clone(), ty);
+                    }
+                });
+            if selected != type_id
+                && let Some(step) = contract.pointer_mut(&prefix)
+            {
+                let major = registry_capability_type(registry, &selected)
+                    .and_then(|ty| ty["capability_type"]["major"].as_u64())
+                    .unwrap_or(1);
+                step["capability_type"] = serde_json::json!({"id": selected, "major": major});
+                changed = true;
+            }
+        });
+        let type_id = contract
+            .pointer(&format!("{prefix}/capability_type/id"))
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string();
+        let declared = registry_capability_type(registry, &type_id).cloned();
+        if let Some(declaration) = declared {
+            let slots: Vec<String> = declaration["inputs"]
+                .as_array()
+                .map(|inputs| {
+                    inputs
+                        .iter()
+                        .filter_map(|input| input["slot_id"].as_str().map(str::to_string))
+                        .collect()
+                })
+                .unwrap_or_default();
+            if !slots.is_empty() {
+                ui.label("inputs — each declared slot bound to a source");
+            }
+            for slot in slots {
+                let contract_snapshot = contract.clone();
+                let mut step = contract
+                    .pointer_mut(&prefix)
+                    .cloned()
+                    .unwrap_or(serde_json::Value::Null);
+                let binding_index = step["bindings"].as_array().and_then(|bindings| {
+                    bindings
+                        .iter()
+                        .position(|binding| binding["input_slot"].as_str() == Some(slot.as_str()))
+                });
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(slot.clone());
+                    match binding_index {
+                        Some(binding) => {
+                            changed |= source_ref_form(
+                                ui,
+                                &format!("step{index}-{slot}"),
+                                &mut step,
+                                &format!("/bindings/{binding}/source"),
+                                &contract_snapshot,
+                                registry,
+                            );
+                            if ui.small_button("unbind").clicked() {
+                                step["bindings"].as_array_mut().unwrap().remove(binding);
+                                changed = true;
+                            }
+                        }
+                        None => {
+                            ui.colored_label(muted(ui), "unbound");
+                            if ui.small_button("bind").clicked() {
+                                if !step["bindings"].is_array() {
+                                    step["bindings"] = serde_json::json!([]);
+                                }
+                                step["bindings"]
+                                    .as_array_mut()
+                                    .unwrap()
+                                    .push(serde_json::json!({
+                                        "input_slot": slot,
+                                        "source": {
+                                            "source": "contract_input",
+                                            "input_id": contract_inputs(&contract_snapshot)
+                                                .first()
+                                                .cloned()
+                                                .unwrap_or_default(),
+                                        },
+                                    }));
+                                changed = true;
+                            }
+                        }
+                    }
+                });
+                if let Some(slot_target) = contract.pointer_mut(&prefix) {
+                    *slot_target = step;
+                }
+            }
+            let parameters: Vec<serde_json::Value> = declaration["parameters"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default();
+            if !parameters.is_empty() {
+                ui.label("parameters");
+            }
+            for parameter in parameters {
+                let mut step = contract
+                    .pointer_mut(&prefix)
+                    .cloned()
+                    .unwrap_or(serde_json::Value::Null);
+                changed |=
+                    parameter_form(ui, &format!("step{index}"), &mut step, &parameter, registry);
+                if let Some(slot_target) = contract.pointer_mut(&prefix) {
+                    *slot_target = step;
+                }
+            }
+        }
+        ui.horizontal_wrapped(|ui| {
+            ui.label("seed");
+            let pointer = format!("{prefix}/reproducibility/seed");
+            if contract.pointer(&pointer).is_none()
+                && let Some(step) = contract.pointer_mut(&prefix)
+            {
+                step["reproducibility"] = serde_json::json!({});
+            }
+            changed |= form_string(ui, contract, &pointer);
+        });
+    });
+    (changed, remove)
+}
+
 fn show_question(ui: &mut egui::Ui, specimen: &mut Specimen) {
     section_heading(
         ui,
         "Question",
-        "The question layer of the contract as form fields — the bounded question, its policy, and every requirement. Edits write the contract buffer directly; Check still runs the authoritative compiler and nothing is saved until Save.",
+        "The contract as form fields — the bounded question, its policy, inputs, workflow steps, and every requirement. Edits write the contract buffer directly; Check still runs the authoritative compiler and nothing is saved until Save.",
     );
     let mut contract: serde_json::Value = match serde_json::from_str(&specimen.contract_text) {
         Ok(document) => document,
@@ -1938,6 +2315,44 @@ fn show_question(ui: &mut egui::Ui, specimen: &mut Specimen) {
         changed = true;
     }
 
+    ui.label(egui::RichText::new("Workflow — the method that answers the question").strong());
+    let count = contract["workflow"].as_array().map_or(0, Vec::len);
+    let mut remove: Option<usize> = None;
+    for index in 0..count {
+        let (edited, delete) = step_form(ui, index, &mut contract, registry.as_ref());
+        changed |= edited;
+        if delete {
+            remove = Some(index);
+        }
+    }
+    if let Some(index) = remove {
+        contract["workflow"].as_array_mut().unwrap().remove(index);
+        changed = true;
+    }
+    if ui
+        .button("+ step")
+        .on_hover_text("Append a workflow step; the compiler reports what it still needs.")
+        .clicked()
+    {
+        if !contract["workflow"].is_array() {
+            contract["workflow"] = serde_json::json!([]);
+        }
+        contract["workflow"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({
+                "step_id": "",
+                "capability_type": {
+                    "id": registry_capability_types(registry.as_ref())
+                        .first()
+                        .cloned()
+                        .unwrap_or_default(),
+                    "major": 1,
+                },
+            }));
+        changed = true;
+    }
+
     ui.label(egui::RichText::new("Requirements — what an answer must establish").strong());
     let count = contract["requirements"].as_array().map_or(0, Vec::len);
     let mut remove: Option<usize> = None;
@@ -2046,7 +2461,7 @@ fn show_question(ui: &mut egui::Ui, specimen: &mut Specimen) {
     ui.add_space(4.0);
     ui.colored_label(
         muted(ui),
-        "Workflow steps, bindings, parameters, and review declarations stay under Sources — the form covers the question and its declared inputs, not the method's wiring.",
+        "Review declarations and material factors stay under Sources — a review needs a policy digest no form can invent.",
     );
 
     if changed {

@@ -48,12 +48,14 @@ role, media-type, and claim-model choices), and every requirement's
 statement, purpose, metric (with registry-driven choices for kinds,
 units, purposes, and declared output slots), comparison, limit,
 tolerance, and basis — plus categorical requirements' closed-set
-predicates — writing the same contract buffer the compiler checks. Form
-fields over the workflow's wiring (steps, bindings, parameters, review
-declarations), plan approval, a dedicated design-history view over
-recorded lineage, live in-progress supervision, and cross-campaign
-dashboards are not implemented; nothing in the interface has semantics
-the runner and kernel do not.
+predicates and workflow steps (capability type, input-slot bindings to
+contract inputs or step outputs, typed parameters with a `not_defined`
+toggle, reproducibility seed) — writing the same contract buffer the
+compiler checks. Review declarations and material factors stay
+JSON-level; plan approval, a dedicated design-history view over recorded
+lineage, live in-progress supervision, and cross-campaign dashboards are
+not implemented; nothing in the interface has semantics the runner and
+kernel do not.
 
 ## Design premise
 

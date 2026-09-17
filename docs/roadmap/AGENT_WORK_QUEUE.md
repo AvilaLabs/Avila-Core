@@ -755,10 +755,13 @@ each field is written against the contract shape explicitly.
 
 Follow-up 2026-09-17: the form now also covers contract inputs (registry
 role, with media-type and claim-model dropdowns constrained to that role's
-admitted values, and a `worst_case` side when the model needs it) and
+admitted values, and a `worst_case` side when the model needs it),
 categorical requirements (`equals`/`in_set` predicates over the same
-metric surface). Method wiring — steps, bindings, parameters, review —
-remains JSON-level.
+metric surface), and workflow steps — capability type, each declared
+input slot bound to a contract input or another step's output slot, each
+declared parameter as a typed field with a `not_defined` toggle, and the
+reproducibility seed. Review declarations (they need a policy digest the
+form cannot invent) and material factors remain JSON-level.
 
 ### Byte-reading evaluator and diagnostic coverage — implemented 2026-09-17
 

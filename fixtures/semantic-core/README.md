@@ -411,7 +411,7 @@ canonically.
 | `verdict.presentation-policy.not-an-input.pass` | the same admitted claims produce the same verdict with or without optional presentation routing — exercised by `presentation-policy.not-a-verdict-input` and `presentation-policy.cannot-mask-fail` |
 | `verdict.record-fields.pass` | every field of `avila.core/verdict/v0.2` present — the vector harness compares each `verdict-calculus` vector's full serialized record |
 | `verdict.evaluator-identity.pass` | `kernel:verdict-calculus@1` — every `verdict-calculus` vector's record is produced by that evaluator |
-| `verdict.core-requirement-evaluation-step.pass` | specimen step type maps to kernel |
+| `verdict.core-requirement-evaluation-step.pass` | specimen step type maps to kernel — exercised by every compiled fixture carrying a `fixture.requirement_evaluation` requirement, e.g. `types.R1.resolved.pass` |
 | `verdict.kernel-bug-guard.fail` | undefined `hi` reaching the table → `CORE-V8102` |
 
 ### admission/ (SC-11)
@@ -505,7 +505,7 @@ canonically.
 | `scenarios.pinned-implementation` | Campaign IR has constraint only; Bound Plan records the excluded candidate as `excluded_by_contract_constraint` |
 | `scenarios.review-rejects-upstream` | descendants invalidated; nothing reused; owners named |
 | `scenarios.verify-without-evaluator` | obligations report uses the four verifier categories in SC-17 |
-| `scenarios.bike-hook` | three findings → plan with rejected Elmer → INCONCLUSIVE → geometry change → memo reuse of `fdm_properties` → PASS → obligations report |
+| `scenarios.bike-hook` | three findings → plan with rejected Elmer → INCONCLUSIVE → geometry change → memo reuse of `fdm_properties` → PASS → obligations report — the verdict half is exercised by `le.bounded.bike-hook.first-run` and `le.bounded.bike-hook.second-run`; the memo and obligations halves remain |
 
 ## Campaign corpus
 

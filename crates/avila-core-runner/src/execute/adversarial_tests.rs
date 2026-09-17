@@ -1497,15 +1497,9 @@ fn chain_options(
     options
 }
 
-
 /// Bind a `reuse_rule` document (SC-12.3) into the manifest and sign it
 /// with `seed`, exactly as `avila-core sign` would for any other role.
-fn bind_reuse_rule(
-    case_dir: &Path,
-    rule: &Value,
-    document_id: &str,
-    seed: &[u8; 32],
-) {
+fn bind_reuse_rule(case_dir: &Path, rule: &Value, document_id: &str, seed: &[u8; 32]) {
     let relative_path = format!("reuse-rules/{document_id}.json");
     let full_path = case_dir.join(&relative_path);
     fs::create_dir_all(full_path.parent().unwrap()).unwrap();
@@ -1569,10 +1563,7 @@ fn a_signed_reuse_rule_permits_reuse_across_its_scoped_edge() {
     let root_path = dir.0.join("trust-root.json");
     write_trust_root(
         &root_path,
-        &trust_root(&[
-            (&requester, KeyRole::Requester),
-            (&runner, KeyRole::Runner),
-        ]),
+        &trust_root(&[(&requester, KeyRole::Requester), (&runner, KeyRole::Runner)]),
     );
     change_wcs_rulepack(&synthetic);
     bind_reuse_rule(
@@ -1669,7 +1660,12 @@ fn a_reuse_rule_signed_by_a_runner_key_is_refused() {
     // A non-requester signature is not reuse authority: the rule is
     // refused and default invalidation reruns the step.
     assert_eq!(classification.decision, BoundDecision::Execute);
-    assert!(classification.changes.iter().all(|c| c.exempted_by.is_none()));
+    assert!(
+        classification
+            .changes
+            .iter()
+            .all(|c| c.exempted_by.is_none())
+    );
     assert!(
         report
             .findings
@@ -1710,8 +1706,7 @@ fn an_expired_reuse_rule_is_refused_and_reruns() {
         report
             .findings
             .iter()
-            .any(|finding| finding.code == "CORE-X3401"
-                && finding.message.contains("expired")),
+            .any(|finding| finding.code == "CORE-X3401" && finding.message.contains("expired")),
         "{}",
         human_summary(&report)
     );
@@ -1750,8 +1745,7 @@ fn a_reuse_rule_scoped_beyond_the_binding_edges_is_refused() {
         report
             .findings
             .iter()
-            .any(|finding| finding.code == "CORE-X3401"
-                && finding.message.contains("narrow")),
+            .any(|finding| finding.code == "CORE-X3401" && finding.message.contains("narrow")),
         "{}",
         human_summary(&report)
     );
@@ -2078,9 +2072,7 @@ fn a_plan_reports_the_impact_of_every_change_origin() {
     let supplied = dir.0.join("other-spectrum.json");
     fs::write(&supplied, b"another spectrum\n").unwrap();
     let mut options = chain_options(&dir, &synthetic, true, true);
-    options
-        .inputs
-        .insert("fns-spectrum".into(), supplied);
+    options.inputs.insert("fns-spectrum".into(), supplied);
     let report = execute_case(&synthetic.case_dir, &options).unwrap();
     let plan = report.bound_plan.as_ref().unwrap();
     let impact = plan.impact.as_ref().expect("a bound plan reports impact");
@@ -2139,8 +2131,7 @@ fn a_nondeterministic_step_never_reuses_its_committed_receipt() {
     // permit its produced roles — the contract compiles, but SC-12.5
     // memoization requires a reproducible invocation.
     let registry_path = synthetic.case_dir.join("registry.json");
-    let mut registry: Value =
-        serde_json::from_slice(&fs::read(&registry_path).unwrap()).unwrap();
+    let mut registry: Value = serde_json::from_slice(&fs::read(&registry_path).unwrap()).unwrap();
     for capability_type in registry["capability_types"].as_array_mut().unwrap() {
         if capability_type["capability_type"]["id"]
             == json!("aftermatter.activated-metal-disposition")
@@ -2148,17 +2139,24 @@ fn a_nondeterministic_step_never_reuses_its_committed_receipt() {
             capability_type["reproducibility"]["determinism"] = json!("nondeterministic");
         }
     }
-    fs::write(&registry_path, serde_json::to_vec_pretty(&registry).unwrap()).unwrap();
+    fs::write(
+        &registry_path,
+        serde_json::to_vec_pretty(&registry).unwrap(),
+    )
+    .unwrap();
     rehash_document(&synthetic.case_dir, "registry", "registry.json");
 
     let contract_path = synthetic.case_dir.join("contract.json");
-    let mut contract: Value =
-        serde_json::from_slice(&fs::read(&contract_path).unwrap()).unwrap();
+    let mut contract: Value = serde_json::from_slice(&fs::read(&contract_path).unwrap()).unwrap();
     contract["execution_policy"]["permitted_nondeterministic_roles"] = json!([
         { "id": "aftermatter.classification-fraction", "major": 1 },
         { "id": "aftermatter.route-state", "major": 1 }
     ]);
-    fs::write(&contract_path, serde_json::to_vec_pretty(&contract).unwrap()).unwrap();
+    fs::write(
+        &contract_path,
+        serde_json::to_vec_pretty(&contract).unwrap(),
+    )
+    .unwrap();
     rehash_document(&synthetic.case_dir, "contract", "contract.json");
 
     let report = execute_case(

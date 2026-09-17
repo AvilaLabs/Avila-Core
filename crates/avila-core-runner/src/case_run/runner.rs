@@ -11,8 +11,8 @@
 //! failed or invalidated earlier one.
 
 use super::plan::BOUND_PLAN_SCHEMA_VERSION;
-use super::replay::changes_since;
 use super::plan::{ImpactReport, InvalidatedNode, ReusedNode};
+use super::replay::changes_since;
 use super::stderr::{DiagnosticStderrFeedback, read_diagnostic_stderr};
 use super::*;
 
@@ -457,9 +457,10 @@ impl<'a> Runner<'a> {
                     .changes
                     .iter()
                     .find_map(|change| change.exempted_by.as_ref())
-                    .map_or_else(|| "deterministic_memo".to_string(), |rule| {
-                        format!("reuse_rule:{rule}")
-                    }),
+                    .map_or_else(
+                        || "deterministic_memo".to_string(),
+                        |rule| format!("reuse_rule:{rule}"),
+                    ),
             })
             .collect();
         let rerun_subgraph: Vec<String> = steps
@@ -484,8 +485,7 @@ impl<'a> Runner<'a> {
             invalidated,
             reused,
             rerun_subgraph,
-            estimated_duration_ms: (unestimated == 0 && !steps.is_empty())
-                .then_some(total),
+            estimated_duration_ms: (unestimated == 0 && !steps.is_empty()).then_some(total),
             unestimated_steps: unestimated,
         }
     }
@@ -1294,9 +1294,9 @@ impl<'a> Runner<'a> {
                 Err(detail) => report.changes.push(ChangeRecord {
                     class: ChangeClass::OutputsUnavailable,
                     detail,
-                 input_slot: None,
-                exempted_by: None,
-            }),
+                    input_slot: None,
+                    exempted_by: None,
+                }),
             }
         }
 

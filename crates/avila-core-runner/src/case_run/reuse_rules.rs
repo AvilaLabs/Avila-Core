@@ -14,12 +14,12 @@
 use std::collections::BTreeSet;
 
 use avila_core_compiler::{CompiledContract, SourceLocation};
-use avila_core_evidence::{VerifiedCasePackage, signature};
 use avila_core_evidence::signature::TrustRoot;
+use avila_core_evidence::{VerifiedCasePackage, signature};
 use serde::Deserialize;
 
-use crate::diagnostic::{CORE_X3401, RunStage};
 use crate::case_run::FindingClass;
+use crate::diagnostic::{CORE_X3401, RunStage};
 
 use super::RunFinding;
 
@@ -141,10 +141,7 @@ pub(super) fn evaluate(
         // sides are normalized `YYYY-MM-DDTHH:MM:SSZ`, so lexical order is
         // chronological.
         if now >= rule.not_after.as_str() {
-            findings.push(refused(
-                &label,
-                &format!("expired at {}", rule.not_after),
-            ));
+            findings.push(refused(&label, &format!("expired at {}", rule.not_after)));
             continue;
         }
         // Authority: a requester key in the supplied trust root must have
@@ -154,11 +151,9 @@ pub(super) fn evaluate(
         let Some(trust_root) = trust_root else {
             continue;
         };
-        let Some((_, signature_document)) = super::signing::find_signature_for(
-            package,
-            "reuse_rule",
-            &document.document_id,
-        ) else {
+        let Some((_, signature_document)) =
+            super::signing::find_signature_for(package, "reuse_rule", &document.document_id)
+        else {
             findings.push(refused(
                 &label,
                 "carries no signature document over its bound bytes — unsigned",
@@ -182,10 +177,7 @@ pub(super) fn evaluate(
                 step_id: rule.scope.step_id,
                 input_slot: rule.scope.input_slot,
             }),
-            Err(error) => findings.push(refused(
-                &label,
-                &format!("authority mismatch — {error}"),
-            )),
+            Err(error) => findings.push(refused(&label, &format!("authority mismatch — {error}"))),
         }
     }
     (rules, findings)

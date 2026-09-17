@@ -63,8 +63,8 @@ mod signing;
 pub use signing::SignatureStatus;
 mod inputs;
 use inputs::{steps_reached_by_inputs, supply_free_inputs, validate_free_inputs};
-mod reuse_rules;
 mod compare;
+mod reuse_rules;
 pub use compare::VerdictMargin;
 #[cfg(test)]
 use compare::write_attempt_comparison;
@@ -913,8 +913,7 @@ fn execute_case_inner(
     );
     report.findings.extend(rule_findings);
     let exempted_edges = reuse_rules::exempted_edges(&resolved_rules);
-    let invalidated_steps =
-        steps_reached_by_inputs(compiled, &supplied_inputs, &exempted_edges);
+    let invalidated_steps = steps_reached_by_inputs(compiled, &supplied_inputs, &exempted_edges);
     report.invalidated_steps = invalidated_steps.iter().cloned().collect();
 
     // A contract that requires signed execution cannot be run at all without

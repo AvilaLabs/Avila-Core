@@ -334,6 +334,7 @@ impl<'a> Runner<'a> {
                     missing_environment: Vec::new(),
                     capability_state: None,
                     capability_source: None,
+                    estimated_duration_ms: self.recorded_duration(&skip.step_id),
                     note: Some(skip.reason.clone()),
                 });
             }
@@ -396,6 +397,7 @@ impl<'a> Runner<'a> {
             missing_environment: Vec::new(),
             capability_state: step.capability.as_ref().map(|check| check.state),
             capability_source: None,
+            estimated_duration_ms: self.recorded_duration(&step.step_id),
             note: None,
         };
         match step.state {
@@ -492,6 +494,16 @@ impl<'a> Runner<'a> {
                 bound.blockers.push("environment_not_supplied".to_string());
             }
         }
+    }
+
+    /// The duration this step's committed receipt last recorded — the
+    /// estimate a bound plan can state from recorded evidence alone.
+    /// Absent when the package commits no readable receipt for the step.
+    fn recorded_duration(&self, step_id: &str) -> Option<u64> {
+        self.committed_receipt(step_id)
+            .ok()
+            .flatten()
+            .map(|(_, receipt)| receipt.process.duration_ms)
     }
 
     /// Resolve the executable for `capability_id`: an explicit

@@ -3788,6 +3788,31 @@ fn a_capability_catalog_selects_the_pinned_executable() {
 }
 
 #[test]
+fn a_bound_plan_states_the_recorded_duration_as_its_estimate() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    // The committed receipt's recorded process duration is what the plan can
+    // honestly estimate — read it from the receipt document itself.
+    let receipt: Value = serde_json::from_slice(
+        &fs::read(synthetic.case_dir.join("receipts/classification.json")).unwrap(),
+    )
+    .unwrap();
+    let recorded = receipt["process"]["duration_ms"].as_u64().unwrap();
+
+    let mut options = plan_options(&synthetic, dir.workspace());
+    options.reuse = true;
+    options.capabilities.clear();
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let plan = report.bound_plan.as_ref().unwrap();
+    let step = bound_step(plan, "classification");
+    assert_eq!(step.estimated_duration_ms, Some(recorded));
+
+    // A step with no committed receipt states no estimate.
+    let activation = bound_step(plan, "activation");
+    assert_eq!(activation.estimated_duration_ms, None);
+}
+
+#[test]
 fn an_explicit_supply_wins_over_the_catalog() {
     let dir = TestDir::new();
     let catalog_dir = dir.0.join("catalog");

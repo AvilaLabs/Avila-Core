@@ -115,6 +115,11 @@ pub struct BoundStep {
     /// pinned digest). Not a path — the plan's identity stays portable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub capability_source: Option<String>,
+    /// The duration the step's committed receipt last recorded — an
+    /// estimate from recorded evidence inside the package, deterministic
+    /// for a given package identity, not a prediction model.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub estimated_duration_ms: Option<u64>,
     /// For `not_executed` steps: why no execution is declared.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,

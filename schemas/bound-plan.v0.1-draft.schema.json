@@ -68,6 +68,11 @@
           "enum": ["supplied", "catalog"],
           "description": "Where the resolved executable came from: an explicit --capability supply, or a --capability-dir scan matched on the pinned executable_sha256. A kind, not a path, so the plan's identity stays portable."
         },
+        "estimated_duration_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The duration the step's committed receipt last recorded — an estimate from recorded evidence inside the package, deterministic for a given package identity, not a prediction model."
+        },
         "note": { "type": "string" }
       }
     },

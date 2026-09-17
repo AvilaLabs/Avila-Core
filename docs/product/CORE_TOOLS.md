@@ -55,7 +55,9 @@ avila-core run CASE --plan --capability-dir /opt/toolchain/bin
 # decided `execute` has verified capability bytes and every required
 # environment key; the report's `planned` only means the step would
 # attempt execution. `capability_source` names where a verified executable
-# came from — supplied or catalog.
+# came from — supplied or catalog. `estimated_duration_ms` states the
+# step's committed receipt's last recorded duration — recorded evidence,
+# not a prediction model.
 
 # Hash-only setup probing — reports which local files match each bound
 # capability digest without executing anything; a check or run verifies the

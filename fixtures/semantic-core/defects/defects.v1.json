@@ -1,0 +1,966 @@
+{
+ "fixture_set": "compiler-defects",
+ "version": 1,
+ "semantic_profile": "avila.core/semantic/0.2-draft",
+ "contract": {
+  "path": "base.contract.json",
+  "sha256": "sha256:ee883ba1a65ad3f690db05428cf6b807a14c34af46e4dbde7902e35024a16bcf"
+ },
+ "registry": {
+  "path": "base.registry.json",
+  "sha256": "sha256:0ef64caf83a633048b23dd5fb7f088501bb3bb00291eea2ae585c641cd341966"
+ },
+ "fixtures": [
+  {
+   "fixture_id": "defect.contract.typo-field",
+   "defect": "requester misspells `comparison` on a requirement",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/requirements/1/comparision",
+     "value": "less_than_or_equal"
+    },
+    {
+     "op": "remove",
+     "pointer": "/requirements/1/comparison"
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-S1101",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/requirements/1/comparision"
+      },
+      "repairs": [
+       "constrained_choice"
+      ]
+     },
+     {
+      "code": "CORE-S1102",
+      "class": "missing",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/requirements/1/comparison"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.unresolvable-metric",
+   "defect": "a requirement's metric names a step that does not exist",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/requirements/1/metric/step_id",
+     "value": "trasnport"
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-R3301",
+      "class": "missing",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/requirements/1/metric"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.unresolvable-binding",
+   "defect": "a binding names a contract input that does not exist",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/workflow/0/bindings/0/source",
+     "value": {
+      "source": "contract_input",
+      "input_id": "scree-script"
+     }
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-R3101",
+      "class": "missing",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/workflow/0/bindings/0/source"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.dropped-binding",
+   "defect": "a binding is deleted; the single matching candidate auto-binds and the contract still compiles",
+   "contract_mutations": [
+    {
+     "op": "remove",
+     "pointer": "/workflow/0/bindings/0"
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "compiled",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     }
+    ],
+    "snapshot_sha256": "sha256:e844521c75da491a2b896520fb452c36efda51073682b93a02e6934f500596da"
+   }
+  },
+  {
+   "fixture_id": "defect.contract.role-mismatched-binding",
+   "defect": "a step's script slot is bound to the candidate input (wrong role)",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/workflow/0/bindings/0/source",
+     "value": {
+      "source": "contract_input",
+      "input_id": "candidate"
+     }
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-T2101",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/workflow/0/bindings/0/source"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-T2301",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/workflow/0/bindings/0/source"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.media-mismatched-binding",
+   "defect": "a step's candidate slot is bound to the screen script (wrong media type)",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/workflow/0/bindings/1/source",
+     "value": {
+      "source": "contract_input",
+      "input_id": "screen-script"
+     }
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-T2101",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/workflow/0/bindings/1/source"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-T2301",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/workflow/0/bindings/1/source"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.unknown-unit",
+   "defect": "a limit is authored in a unit the kind does not admit",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/requirements/1/limit/unit",
+     "value": "uSv/hr"
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-T2001",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/requirements/1/limit/unit"
+      },
+      "repairs": [
+       "constrained_choice"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.limit-kind-mismatch",
+   "defect": "a limit's quantity kind does not match the metric's role kind",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/requirements/2/limit/kind",
+     "value": "core.length"
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-T2102",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/requirements/2/limit/kind"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.undeclared-parameter",
+   "defect": "a step binds a parameter its capability type does not declare",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/workflow/1/parameters/batch_size",
+     "value": 10
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-S1101",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/workflow/1/parameters/batch_size"
+      },
+      "repairs": [
+       "constrained_choice"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.missing-required-parameter",
+   "defect": "a required parameter binding is deleted",
+   "contract_mutations": [
+    {
+     "op": "remove",
+     "pointer": "/workflow/1/parameters/particles"
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-S1301",
+      "class": "missing",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/workflow/1/parameters/particles"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.parameter-type",
+   "defect": "an integer parameter is bound to text",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/workflow/1/parameters/particles",
+     "value": "many"
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-T2401",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/workflow/1/parameters/particles"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.missing-seed",
+   "defect": "a seeded-stochastic step's seed is deleted",
+   "contract_mutations": [
+    {
+     "op": "remove",
+     "pointer": "/workflow/1/reproducibility/seed"
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-T2501",
+      "class": "missing",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/workflow/1/reproducibility/seed"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.seed-on-deterministic",
+   "defect": "a deterministic step is given a seed",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/workflow/0/reproducibility",
+     "value": {
+      "seed": "7"
+     }
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-T2501",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/workflow/0/reproducibility/seed"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.review-policy-identity",
+   "defect": "the reviewer eligibility policy's sha256 is malformed",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/workflow/2/review/reviewer_eligibility_policy/sha256",
+     "value": "sha256:not-hex"
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-R3401",
+      "class": "invalid",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/workflow/2/review/reviewer_eligibility_policy/sha256"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.empty-instructions",
+   "defect": "the optional review's practical instructions are empty",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/workflow/2/review/instructions",
+     "value": []
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-R3401",
+      "class": "invalid",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/workflow/2/review/instructions"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.nominal-without-permit",
+   "defect": "a requirement switches to nominal basis while the policy's nominal permit is dropped",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/requirements/1/basis/kind",
+     "value": "nominal"
+    },
+    {
+     "op": "remove",
+     "pointer": "/execution_policy/permit_nominal_basis"
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-A4201",
+      "class": "inadmissible",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/requirements/0/basis"
+      },
+      "repairs": [
+       "constrained_choice"
+      ]
+     },
+     {
+      "code": "CORE-A4201",
+      "class": "inadmissible",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/requirements/1/basis"
+      },
+      "repairs": [
+       "constrained_choice"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.equal-without-tolerance",
+   "defect": "an equal comparison omits its tolerance",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/requirements/0/comparison",
+     "value": "equal"
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-T2104",
+      "class": "missing",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/requirements/0/tolerance"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.coverage-out-of-range",
+   "defect": "a bounded basis carries a coverage outside (0, 1]",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/requirements/1/basis/coverage",
+     "value": "1.5"
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-S1102",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/requirements/1/basis/coverage"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.unknown-purpose",
+   "defect": "a requirement names a purpose absent from the registry",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/requirements/0/purpose/id",
+     "value": "shielding.bogus"
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-T2601",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/requirements/0/purpose"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.unknown-capability",
+   "defect": "a step names a capability type absent from the registry",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/workflow/1/capability_type/id",
+     "value": "shielding.slab-trasport"
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-R3101",
+      "class": "unsatisfied",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/workflow/1/capability_type"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.contract.self-dependency",
+   "defect": "a step binds one of its own outputs as an input",
+   "contract_mutations": [
+    {
+     "op": "set",
+     "pointer": "/workflow/2/bindings/0/source",
+     "value": {
+      "source": "step_output",
+      "step_id": "practical-review",
+      "output_slot": "decision"
+     }
+    }
+   ],
+   "registry_mutations": [],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-R3201",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/workflow/2/bindings/0/source"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.registry.role-dropped",
+   "defect": "the registry drops a role an input still references",
+   "contract_mutations": [],
+   "registry_mutations": [
+    {
+     "op": "remove",
+     "pointer": "/roles/0"
+    }
+   ],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-R3101",
+      "class": "unsatisfied",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/inputs/0/role"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-R3501",
+      "class": "invalid",
+      "owner": "registry_owner",
+      "primary": {
+       "document": "registry",
+       "pointer": "/capability_types/0/inputs/1/role"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-R3501",
+      "class": "invalid",
+      "owner": "registry_owner",
+      "primary": {
+       "document": "registry",
+       "pointer": "/capability_types/1/inputs/1/role"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-R3501",
+      "class": "invalid",
+      "owner": "registry_owner",
+      "primary": {
+       "document": "registry",
+       "pointer": "/capability_types/2/inputs/1/role"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
+   "fixture_id": "defect.registry.unit-factor-rewritten",
+   "defect": "a registry unit's conversion factor is silently changed",
+   "contract_mutations": [],
+   "registry_mutations": [
+    {
+     "op": "set",
+     "pointer": "/kinds/0/units/0/factor",
+     "value": "0.0000000005"
+    }
+   ],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-S1102",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/requirements/0/limit/unit"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-S1102",
+      "class": "invalid",
+      "owner": "requester",
+      "primary": {
+       "document": "contract",
+       "pointer": "/requirements/1/limit/unit"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-S1102",
+      "class": "invalid",
+      "owner": "registry_owner",
+      "primary": {
+       "document": "registry",
+       "pointer": "/kinds/0"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  }
+ ]
+}

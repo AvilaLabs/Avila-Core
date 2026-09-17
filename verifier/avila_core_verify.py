@@ -241,8 +241,6 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
-import avila_core_lower
-
 VERIFIER_PROFILE = "avila.core/independent-verifier-profile/v1"
 SEMANTIC_PROFILE = "avila.core/semantic/0.2-draft"
 
@@ -1390,6 +1388,11 @@ def verify_claims_binding(
         elif contract_path is None or registry_path is None or not (contract_path.is_file() and registry_path.is_file()):
             report.not_checked(check, "contract/registry documents are not present to recompute the snapshot")
         else:
+            # Imported lazily: avila_core_lower reuses this file's canonical
+            # profile and exact-number machinery, so a top-level import here
+            # would be circular for whoever is imported second.
+            import avila_core_lower
+
             try:
                 recomputed = avila_core_lower.lower_compiled_snapshot(
                     contract_path.read_bytes(), registry_path.read_bytes()

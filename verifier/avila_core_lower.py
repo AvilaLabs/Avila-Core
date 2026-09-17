@@ -477,6 +477,30 @@ def _build_index(registry: dict) -> RegistryIndex:
     for record in registry.get("purposes", []):
         index.purposes.add(_ref_key(record["purpose"]))
     index.kinds = kinds_from_registry_doc(registry)
+    # Kernel invariants enforced at registry load (unit.rs): every factor
+    # positive, no duplicate unit symbols, the canonical unit present with
+    # factor exactly one.
+    for kind_record in registry.get("kinds", []):
+        kind_id = kind_record.get("kind_id", "")
+        canonical_unit = kind_record.get("canonical_unit", "")
+        units = kind_record.get("units", [])
+        if not kind_id or not canonical_unit or not units:
+            raise WouldReject(f"kind `{kind_id}` is missing its id, canonical unit, or units")
+        symbols: set[str] = set()
+        canonical_factor = None
+        for unit in units:
+            symbol = unit.get("symbol", "")
+            if not symbol or symbol in symbols:
+                raise WouldReject(f"kind `{kind_id}` declares a duplicate or empty unit")
+            symbols.add(symbol)
+            if read_authoritative_exact(unit.get("factor", "")) <= 0:
+                raise WouldReject(f"kind `{kind_id}` declares a nonpositive unit factor")
+            if symbol == canonical_unit:
+                canonical_factor = read_authoritative_exact(unit["factor"])
+        if canonical_factor is None:
+            raise WouldReject(f"kind `{kind_id}` does not include its canonical unit")
+        if canonical_factor != 1:
+            raise WouldReject(f"kind `{kind_id}` canonical-unit factor is not exactly one")
     return index
 
 

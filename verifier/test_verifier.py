@@ -1425,6 +1425,54 @@ class TestSnapshotLowering(unittest.TestCase):
                     claims["compiled_snapshot_sha256"],
                 )
 
+    def test_defect_corpus_status_and_snapshot(self):
+        defects_dir = REPO_ROOT / "fixtures" / "semantic-core" / "defects"
+        suite = json.loads((defects_dir / "defects.v1.json").read_text())
+        base_contract = json.loads((defects_dir / suite["contract"]["path"]).read_text())
+        base_registry = json.loads((defects_dir / suite["registry"]["path"]).read_text())
+        rejected = compiled = 0
+        for fixture in suite["fixtures"]:
+            contract = _apply_mutations(base_contract, fixture["contract_mutations"])
+            registry = _apply_mutations(base_registry, fixture["registry_mutations"])
+            contract_bytes = json.dumps(contract).encode()
+            registry_bytes = json.dumps(registry).encode()
+            with self.subTest(fixture=fixture["fixture_id"]):
+                if fixture["expected"]["status"] == "compiled":
+                    self.assertEqual(
+                        lower.lower_compiled_snapshot(contract_bytes, registry_bytes),
+                        fixture["expected"]["snapshot_sha256"],
+                    )
+                    compiled += 1
+                else:
+                    with self.assertRaises(lower.WouldReject):
+                        lower.lower_compiled_snapshot(contract_bytes, registry_bytes)
+                    rejected += 1
+        self.assertEqual(rejected + compiled, 23)
+
+
+def _resolve_pointer(document, pointer: str):
+    tokens = [t.replace("~1", "/").replace("~0", "~") for t in pointer.split("/")[1:]]
+    for token in tokens[:-1]:
+        document = document[int(token)] if isinstance(document, list) else document[token]
+    return document, tokens[-1]
+
+
+def _apply_mutations(document, mutations):
+    document = json.loads(json.dumps(document))
+    for mutation in mutations:
+        parent, leaf = _resolve_pointer(document, mutation["pointer"])
+        if mutation["op"] == "set":
+            if isinstance(parent, list):
+                parent[int(leaf)] = mutation["value"]
+            else:
+                parent[leaf] = mutation["value"]
+        else:
+            if isinstance(parent, list):
+                del parent[int(leaf)]
+            else:
+                del parent[leaf]
+    return document
+
 
 class TestSnapshotLoweringMutations(unittest.TestCase):
     def setUp(self):

@@ -40,7 +40,18 @@ multiple historical profiles.
 - `types/compiler-purpose-cases.v1.json`: 6 executable R10 fixtures: 3 compiled
   cases and 3 rejected cases covering governed purpose resolution, exact nominal
   exclusions, unrelated and similarly named purposes, and major-version
-  mismatch; and
+  mismatch;
+- `defects/defects.v1.json`: 23 executable real-contract defect fixtures. The
+  base pair is CASE-001's committed contract+registry verbatim; each fixture
+  seeds one realistic defect as JSON-pointer mutations (a typo'd field, an
+  unresolvable metric step, a mismatched binding role or media type, an
+  unadmitted unit, a dropped seed, a rewritten registry unit factor, …) and
+  pins the compiler's exact status, findings (code, class, owner, pointer,
+  repair applicability), and — for the one defect the compiler legitimately
+  absorbs (a dropped redundant explicit binding, resolved by single-candidate
+  auto-binding) — the compiled snapshot identity, which differs from the base
+  pair's only through the source-document digest. `generate.py` is the
+  regeneration aid; the corpus is pinned, not generated at test time; and
 - `campaigns/campaign-cases.v1.json`: 15 executable campaign fixtures covering
   the first SC-10/SC-11 claim-admission and verdict slice, including bounded
   outcomes, exact unit scaling, quarantine paths, snapshot mismatch,
@@ -54,7 +65,8 @@ The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
 `scope-predicates.v1.json`, plus the 44 requirement, 10 categorical, and 8
 aggregation vectors in `verdict-calculus.v1.json`. The compiler harness also executes all 68 cases in
-the five compiler manifests and pins each registry digest plus all successful
+the five compiler manifests plus all 23 real-contract defect cases in
+`defects/defects.v1.json`, and pins each registry digest plus all successful
 compiled-snapshot identities. The campaign harness executes all 15 cases in its
 manifest and pins every successful campaign identity. Passing the 91 pure
 vectors, 68 compiler fixtures, and 15 campaign fixtures does not accept

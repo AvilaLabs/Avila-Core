@@ -914,3 +914,12 @@ is admitted. `campaign.parent-missing.not_evaluated` moved from the
 exclusion list to the asserted set; `snapshot-mismatch.rejected` is now
 the only non-derivable campaign fixture (a status-level rejection the
 verdict comparison cannot see).
+
+### Construction-boundary check + verdict-vector tail — 2026-09-17
+
+`authority.frontend-cannot-construct-verdict.build` is now a real test
+(`authority_boundaries.rs`): no `VerdictOutput {`/`AdmissionRecord {`
+construction exists outside `avila-core-kernel`/`avila-core-compiler` —
+verified by planting a violation and watching it fail. `fixtures-check`
+credits a plan row's reference to a test file stem as `named`, so the
+counting rule sees boundary checks it cannot express as data.

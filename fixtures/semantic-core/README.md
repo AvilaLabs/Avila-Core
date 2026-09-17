@@ -493,7 +493,7 @@ canonically.
 | `authority.uncredentialed-client-cannot-apply-judgment.fail` | judgment requires an authority record regardless of client type |
 | `authority.agent-cannot-submit.fail` | `runner/submit` without authorization record |
 | `authority.key-role-not-cognition.pass` | Core enforces key/role authority and does not claim to detect whether a human used assistance |
-| `authority.frontend-cannot-construct-verdict.build` | CI grep: no `Verdict {` / `Admission {` outside kernel |
+| `authority.frontend-cannot-construct-verdict.build` | no `VerdictOutput {` / `AdmissionRecord {` construction outside the kernel/compiler boundary — pinned by `authority_boundaries.rs` |
 | `ownership.OM-1..OM-7.pass/fail` | one pair per invariant (in-place edit; use after invalidation; unsigned reuse; duplicate claim; hidden nominal basis; snapshot drift) |
 
 ### canon/ (SC-2, ADR-0005)
@@ -542,7 +542,9 @@ automatically.
 corpus: it parses the required-fixture tables above, indexes every fixture and
 vector identity, and reports each required name as `covered` (its exact
 identity exists), `named` (the plan row references an existing vector set,
-vector, or fixture that exercises the rule under a different identity),
+vector, fixture, or test file that exercises the rule under a different
+identity — e.g. `authority_boundaries.rs` for the construction-boundary
+row),
 `unbounded` (a pattern such as `*`, `<each>`, or a non-numeric `..` that needs
 an enumerated domain), or `absent`. A fixture that references a diagnostic
 code neither catalog defines fails the check outright; `--strict` also fails

@@ -13,6 +13,8 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::error::Error;
+use std::fs;
+use std::path::Path;
 
 use avila_core_compiler::DIAGNOSTIC_CATALOG;
 use avila_core_runner::RUNTIME_DIAGNOSTIC_CATALOG;
@@ -259,11 +261,13 @@ fn parse_plan() -> Vec<(String, String, String)> {
 }
 
 /// The committed corpus: every fixture identity, vector identity and set
-/// name, and every diagnostic code a fixture references.
+/// name, every test file a row may credit instead of a corpus fixture,
+/// and every diagnostic code a fixture references.
 struct Corpus {
     fixture_ids: BTreeSet<String>,
     vector_ids: BTreeSet<String>,
     vector_sets: BTreeSet<String>,
+    test_ids: BTreeSet<String>,
     referenced_codes: BTreeSet<String>,
 }
 
@@ -272,8 +276,28 @@ fn corpus() -> Result<Corpus, Box<dyn Error>> {
         fixture_ids: BTreeSet::new(),
         vector_ids: BTreeSet::new(),
         vector_sets: BTreeSet::new(),
+        test_ids: BTreeSet::new(),
         referenced_codes: BTreeSet::new(),
     };
+    // Test files can pin a row the corpus cannot express as data — a
+    // workspace-level check like the verdict-construction boundary is a
+    // test, not a fixture. Referencing one by file stem credits the row
+    // `named` (not `covered` — coverage still means a corpus identity).
+    let tests_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../crates");
+    for crate_dir in fs::read_dir(&tests_dir)? {
+        let tests = crate_dir?.path().join("tests");
+        if !tests.is_dir() {
+            continue;
+        }
+        for file in fs::read_dir(&tests)? {
+            let file = file?.path();
+            if file.extension().and_then(|e| e.to_str()) == Some("rs")
+                && let Some(stem) = file.file_stem().and_then(|s| s.to_str())
+            {
+                index.test_ids.insert(stem.to_string());
+            }
+        }
+    }
     for bytes in VECTOR_SETS {
         let document: serde_json::Value = serde_json::from_slice(bytes)?;
         index.vector_sets.insert(
@@ -398,10 +422,12 @@ pub fn fixtures_check(strict: bool, json_output: bool) -> Result<i32, Box<dyn Er
                     let set = set.strip_suffix(".json").unwrap_or(set);
                     set.strip_suffix(".v1").unwrap_or(set)
                 })
+                .map(|reference| reference.strip_suffix(".rs").unwrap_or(reference))
                 .any(|reference| {
                     index.vector_sets.contains(reference)
                         || index.vector_ids.contains(reference)
                         || index.fixture_ids.contains(reference)
+                        || index.test_ids.contains(reference)
                 });
             let coverage = if covered_by.is_some() {
                 Coverage::Covered

@@ -282,9 +282,14 @@ unqualified promise.
 The case runner itself now performs the signature-and-trust-root half of
 this list inline, as part of `run --trust-root FILE` (ADR-0015), and
 `verifier/avila_core_verify.py` checks committed packages without importing
-or trusting the runner's own code (S-041). Its named-outs — presentation-gate
-realisation and compiled-snapshot recomputation — remain open; see the
-status ledger.
+or trusting the runner's own code (S-041). Staged-review records — the
+optional presentation gate's committed half — are verified: both digest
+rules recompute, presented-evidence entries re-derive against claims.json,
+and the campaign/snapshot bindings are checked against every committed
+carrier (an unresolvable binding reads `not_checked`, never forged).
+Compiled-snapshot recomputation remains a named-out: it requires the
+compiler itself and is part of the second-implementation track; reviewer
+attestation is reported, never authenticated.
 
 ## Confidentiality and portable evidence
 

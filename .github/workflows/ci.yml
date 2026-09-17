@@ -82,3 +82,11 @@ jobs:
           python3 avila_core_verify.py verify-case ../examples/cases/case-008-mode-selective-quench \
             --source-root case=../examples/cases/case-008-mode-selective-quench \
             --source-root magnetic-compliance=../examples/capabilities/magnetic-compliance
+
+      - name: Verify CASE-001 (shield search, exercises the staged-review section)
+        working-directory: verifier
+        run: |
+          python3 avila_core_verify.py verify-case ../examples/cases/case-001-shield-search \
+            --source-root case=../examples/cases/case-001-shield-search \
+            --source-root shielding=../examples/capabilities/shielding \
+            --trust-root ../examples/keys/trust-root.json

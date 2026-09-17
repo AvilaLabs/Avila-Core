@@ -81,8 +81,8 @@ reported as ``not_checked`` with a reason; it is never silently skipped.
      does evaluate qualification positions already carried by claims" —
      rather than re-deriving `inside` / `outside` / `unknown` from real
      facts here; see item 9 for how much of that this profile independently
-     re-derives instead, and why not all of it); presentation-gate
-     realisation; categorical ``in_set`` predicates (declared but not
+     re-derives instead, and why not all of it); categorical ``in_set``
+     predicates (declared but not
      exercised by any committed fixture or case — the rule name is inferred
      by analogy to the vector-proven ``equals`` rule and is reported as
      ``inferred_rule``, never silently trusted).
@@ -183,8 +183,28 @@ reported as ``not_checked`` with a reason; it is never silently skipped.
      committed observable this check can compare; it does not fabricate a
      per-entry diff.
 
+ 11. Staged-review records — the optional presentation-gate's committed
+     half. For every manifest document of role ``staged_review_record``:
+     recomputes the request's ``request_sha256`` and the record's own
+     ``record_sha256`` (canonical body minus the digest field, the same
+     rule ``campaign_sha256`` uses); binds the request's compiled-snapshot
+     and campaign identities against every committed carrier (claims,
+     campaign report, recorded log lines — a binding no committed record
+     carries is reported ``not_checked`` as an unresolvable reference, not
+     ``mismatch``, since it names a run this package does not commit);
+     re-derives each ``presented_evidence`` entry from claims.json exactly
+     as the run realises it (contract inputs to ``input:{id}`` attestations,
+     step outputs to their claim ids, digest and media type compared);
+     checks readiness against the recorded missing list, reviewer role, the
+     disposition against the request's allowed dispositions, and the
+     eligibility-policy digest against a bound ``review_policy`` document.
+     Still named out: the agent's prose ``rationale``/``actions``, and
+     ``attestation`` — reported, never authenticated.
+
 Explicitly refused (outside this profile, by name, never silently):
-  - presentation-gate / staged-review realisation or content;
+  - run-time presentation-gate realisation itself (the transient
+    ``presentation_gates`` report a run emits is never committed; only the
+    reviewer's committed record is);
   - archive/package-root canonicalisation beyond the flat document+artifact
     list a case-package.v0.1-draft manifest already enumerates;
   - recompiling a contract+registry into a compiled snapshot identity;
@@ -214,7 +234,6 @@ VERIFIER_PROFILE = "avila.core/independent-verifier-profile/v1"
 SEMANTIC_PROFILE = "avila.core/semantic/0.2-draft"
 
 UNSUPPORTED_NOTES = {
-    "presentation_gate": "presentation-gate / staged-review realisation and content are not implemented",
     "compiled_snapshot": "the compiler is not implemented; compiled_snapshot_sha256 equality is checked, never recomputed",
 }
 
@@ -1565,7 +1584,10 @@ def verify_case_verdicts(
                 "verdict.campaign_sha256",
                 f"recomputed {recomputed}, committed {campaign_report['campaign_sha256']}",
             )
-    report.not_checked("verdict.presentation_gate", UNSUPPORTED_NOTES["presentation_gate"])
+    report.not_checked(
+        "verdict.presentation_gate",
+        "a run-time gate realisation is not committed to the package; the committed staged-review records are checked in section 11",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -2837,6 +2859,217 @@ def verify_case_coverage(case_dir: Path, package: dict, contract: Optional[dict]
 
 
 # ---------------------------------------------------------------------------
+# Section 11: staged-review records (optional presentation gates)
+#
+# Rule source: CAMPAIGN_EVALUATION.md "Optional presentation gates" and the
+# committed avila.core/staged-review-record/v0.1-draft schema, cross-checked
+# against examples/cases/case-001-shield-search/reviews/reference.json — the
+# one committed record of this shape. A run realizes each compiled
+# presentation_gate into a request: presented_evidence is resolved against
+# the generated claims document (a `contract_input` source binds the input
+# attestation `input:{input_id}`; a `step_output` source binds the claim
+# for that step+slot, and the evidence id is the claim id), readiness is
+# `ready_for_agent` only when every source resolved, and `request_sha256`
+# is sha256 of the canonical request body with the field removed — the
+# same digest rule `campaign_sha256` uses, cross-checked against the
+# committed record. The reviewer's record then adds its own
+# `record_sha256` over the record minus that field.
+#
+# What this section re-derives: both digests, the request's binding to the
+# committed campaign report (compiled snapshot and campaign identities),
+# every presented-evidence entry's evidence id, digest, and media type
+# against claims.json, readiness against the recorded missing list, the
+# reviewer role and disposition vocabulary, and the eligibility-policy
+# digest against the bound `review_policy` document.
+#
+# Named-outs, still: whether the agent's `rationale`/`actions` faithfully
+# describe the candidate is prose, not provable identity; and `attestation`
+# is the reviewer's self-report — this profile names it, never authenticates
+# a reviewer identity. The record is routing history; nothing here makes it
+# evidence or a verdict.
+# ---------------------------------------------------------------------------
+
+STAGED_REVIEW_SCHEMA_VERSION = "avila.core/staged-review-record/v0.1-draft"
+STAGED_REVIEW_DISPOSITIONS = {"present_to_user", "request_changes", "abstain"}
+
+
+def _canonical_identity(document: dict, field: str) -> Optional[str]:
+    """sha256 of the canonical body with `field` removed — the digest rule
+    request_sha256, record_sha256, and campaign_sha256 all share."""
+    if field not in document:
+        return None
+    body = {key: value for key, value in document.items() if key != field}
+    return sha256_bytes(canonicalize_json(json.dumps(body, separators=(",", ":")).encode()))
+
+
+def verify_staged_reviews(
+    case_dir: Path,
+    package: dict,
+    docs_by_role: dict[str, list[dict]],
+    claims: Optional[dict],
+    campaign_report: Optional[dict],
+    report: Report,
+) -> None:
+    records = docs_by_role.get("staged_review_record", [])
+    if not records:
+        return
+    claims_inputs = {i["input_id"]: i for i in (claims or {}).get("inputs", [])}
+    claims_outputs = {
+        (c["step_id"], c["output_slot"]): c for c in (claims or {}).get("claims", [])
+    }
+    for document in records:
+        document_id = document["document_id"]
+        prefix = f"staged_review.{document_id}"
+        path = case_dir / document["path"]
+        if not path.is_file():
+            report.mismatch(prefix, f"staged-review record missing: {document['path']}")
+            continue
+        try:
+            record = load_json(path)
+        except (OSError, json.JSONDecodeError) as error:
+            report.mismatch(prefix, f"staged-review record does not parse: {error}")
+            continue
+
+        if record.get("schema_version") == STAGED_REVIEW_SCHEMA_VERSION:
+            report.verified(f"{prefix}.schema_version", STAGED_REVIEW_SCHEMA_VERSION)
+        else:
+            report.mismatch(
+                f"{prefix}.schema_version",
+                f"expected {STAGED_REVIEW_SCHEMA_VERSION}, found {record.get('schema_version')!r}",
+            )
+            continue
+
+        request = record.get("review_request", {})
+        # The request binds the run that produced it. A committed carrier is
+        # the claims document's and campaign report's snapshot identity, or a
+        # campaign_sha256 any recorded log line carries; a binding no
+        # committed record carries is unresolvable, not automatically forged —
+        # the run it names may simply never have been committed.
+        snapshot_carriers = {
+            doc.get("compiled_snapshot_sha256")
+            for doc in (claims, campaign_report)
+            if doc is not None
+        } - {None}
+        campaign_carriers = {
+            (campaign_report or {}).get("campaign_sha256")
+        } - {None}
+        for log_path in case_dir.glob("**/*.jsonl"):
+            for line in log_path.read_bytes().splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(row, dict) and isinstance(row.get("campaign_sha256"), str):
+                    campaign_carriers.add(row["campaign_sha256"])
+        for field, carriers in (
+            ("compiled_snapshot_sha256", snapshot_carriers),
+            ("campaign_sha256", campaign_carriers),
+        ):
+            bound = request.get(field)
+            check = f"{prefix}.request.{field}"
+            if bound is None:
+                report.mismatch(check, f"request carries no {field}")
+            elif not carriers:
+                report.not_checked(check, "no committed record carries an identity to bind against")
+            elif bound in carriers:
+                report.verified(check, bound)
+            else:
+                report.not_checked(
+                    check,
+                    f"request binds {bound}, which no committed claims/report/log record carries — it names a run this package does not commit",
+                )
+
+        if claims is not None:
+            for entry in request.get("presented_evidence", []):
+                check = f"{prefix}.presented.{entry.get('input_slot', '?')}"
+                source = entry.get("source", {})
+                bound = None
+                if source.get("source") == "contract_input":
+                    input_id = source.get("input_id")
+                    bound = claims_inputs.get(input_id)
+                    want_evidence = f"input:{input_id}"
+                elif source.get("source") == "step_output":
+                    bound = claims_outputs.get((source.get("step_id"), source.get("output_slot")))
+                    want_evidence = bound["claim_id"] if bound is not None else None
+                else:
+                    report.mismatch(check, f"unknown presented-evidence source kind {source.get('source')!r}")
+                    continue
+                if bound is None:
+                    report.mismatch(check, f"presented evidence resolves to no claims record ({source})")
+                    continue
+                problems = []
+                if entry.get("evidence_id") != want_evidence:
+                    problems.append(f"evidence_id {entry.get('evidence_id')!r} != {want_evidence!r}")
+                for field in ("sha256", "media_type"):
+                    if entry.get(field) != bound["artifact"].get(field):
+                        problems.append(f"{field} {entry.get(field)!r} != claims' {bound['artifact'].get(field)!r}")
+                if problems:
+                    report.mismatch(check, "; ".join(problems))
+                else:
+                    report.verified(check, entry.get("evidence_id"))
+            readiness = request.get("readiness")
+            check = f"{prefix}.readiness"
+            if readiness == "ready_for_agent" and not request.get("missing_evidence"):
+                report.verified(check, "ready_for_agent with no missing evidence")
+            elif readiness == "awaiting_evidence" and request.get("missing_evidence"):
+                report.verified(
+                    check,
+                    f"awaiting_evidence names {len(request['missing_evidence'])} unresolved source(s)",
+                )
+            else:
+                report.mismatch(
+                    check,
+                    f"readiness {readiness!r} contradicts missing_evidence {request.get('missing_evidence')}",
+                )
+        else:
+            report.not_checked(f"{prefix}.presented_evidence", "no claims document committed to rebind against")
+
+        reviewer = record.get("reviewer", {})
+        check = f"{prefix}.reviewer_role"
+        if reviewer.get("role") == request.get("reviewer_role"):
+            report.verified(check, reviewer["role"])
+        else:
+            report.mismatch(check, f"reviewer role {reviewer.get('role')!r} != request's {request.get('reviewer_role')!r}")
+
+        check = f"{prefix}.disposition"
+        disposition = record.get("disposition")
+        if disposition in request.get("allowed_dispositions", []):
+            report.verified(check, disposition)
+        else:
+            report.mismatch(check, f"disposition {disposition!r} is not in the request's allowed dispositions")
+
+        policy = request.get("reviewer_eligibility_policy", {})
+        policy_doc = next(
+            (d for d in docs_by_role.get("review_policy", []) if policy.get("sha256") == d.get("sha256")),
+            None,
+        )
+        check = f"{prefix}.eligibility_policy"
+        if not policy:
+            report.not_checked(check, "request names no reviewer eligibility policy")
+        elif policy_doc is not None:
+            report.verified(check, f"policy digest binds manifest document {policy_doc['document_id']}")
+        else:
+            report.mismatch(check, f"policy digest {policy.get('sha256')!r} binds no manifest review_policy document")
+
+        for field, subject in (("request_sha256", request), ("record_sha256", record)):
+            check = f"{prefix}.{field}"
+            computed = _canonical_identity(subject, field)
+            if computed is None:
+                report.mismatch(check, f"record carries no {field}")
+            elif computed == subject[field]:
+                report.verified(check, computed)
+            else:
+                report.mismatch(check, f"recomputed {computed}, record binds {subject[field]!r}")
+
+        report.not_checked(
+            f"{prefix}.attestation",
+            f"attestation {record.get('attestation')!r} is the reviewer's self-report; this profile does not authenticate reviewer identity, and the record is routing history, not evidence or a verdict",
+        )
+
+
+# ---------------------------------------------------------------------------
 # Case-level orchestration and CLI
 # ---------------------------------------------------------------------------
 
@@ -2904,6 +3137,8 @@ def verify_case(
         case_dir, package, docs_by_role, claims, kinds_from_registry_doc(registry) if registry is not None else {},
         receipts_by_step, report
     )
+
+    verify_staged_reviews(case_dir, package, docs_by_role, claims, campaign_report, report)
 
     log_path = case_dir / "search" / "attempts.jsonl"
     if log_path.is_file():

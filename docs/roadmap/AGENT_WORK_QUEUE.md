@@ -572,9 +572,38 @@ exercised (named-outs open), redaction/retention rules owner-gated.
 relocation test; `cargo fmt --all -- --check` and
 `cargo clippy --workspace --all-targets -- -D warnings` clean.
 
-**Next product increment:** the verifier named-outs assessment —
-presentation-gate realisation and compiled-snapshot recomputation —
-implementing the ungated slice and naming what remains owner-gated.
+### Verifier named-outs: staged-review verification — implemented 2026-09-17
+
+The independent verifier's "presentation-gate realisation" named-out is
+resolved for its committed half: a new section 11 in
+`avila_core_verify.py` verifies every `staged_review_record` document —
+recomputing `request_sha256`/`record_sha256` (canonical body minus the
+digest field, the rule `campaign_sha256` shares), re-deriving each
+presented-evidence entry from claims.json exactly as the run realises it,
+checking readiness against the recorded missing list, reviewer role,
+disposition vocabulary, and the eligibility-policy digest against the
+bound `review_policy` document.
+
+One honest subtlety the section surfaced: CASE-001's committed record
+binds a campaign/snapshot identity that *no committed record carries* —
+the run it names was never committed. The verifier reports that as
+`not_checked` (unresolvable reference), never `mismatch`, and a new test
+pins the distinction.
+
+The other named-out — compiled-snapshot recomputation — stays open by
+name: it requires reimplementing the compiler's lowering, which is the
+Stage-3 second-implementation track, not a verifier profile addition.
+
+**Validation evidence:** 56 verifier tests / 163 subtests pass, including
+five new `TestStagedReviewMutations` tests (edited presented-evidence
+digest re-stamped consistently is still named; out-of-vocabulary
+disposition named; stale record digest named; unresolvable campaign
+binding named `not_checked`; positive path clean). `verify-case
+case-001` runs the section under the example trust root with exit 0, and
+a new CI step exercises it there.
+
+**Next product increment:** Stage-0 status row updates for the verifier
+gate, then the final report of what remains owner- or outside-gated.
 
 A public catalog, package installation, browser client, cloud/HPC scheduling,
 organization governance, autonomous search orchestration, and comprehensive

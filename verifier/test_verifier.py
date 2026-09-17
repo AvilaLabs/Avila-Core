@@ -1268,5 +1268,87 @@ class TestMutations(unittest.TestCase):
             self.assertNotEqual(check.status, "mismatch", check.to_dict())
 
 
+class TestStagedReviewMutations(unittest.TestCase):
+    """The committed staged-review record in CASE-001 gets the same
+    mutation treatment: a tamper kept internally consistent (digests
+    re-stamped) must still be named by the claims re-binding, and a
+    tamper left inconsistent is named by the digest checks themselves."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="avila-core-verifier-review-")
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.case_dir = Path(self.tmp) / "case-001-shield-search"
+        shutil.copytree(EXAMPLES / "case-001-shield-search", self.case_dir)
+        self.record_path = self.case_dir / "reviews" / "reference.json"
+        self.prefix = "staged_review.case-001-reference-staged-review"
+
+    def _load_record(self) -> dict:
+        return json.loads(self.record_path.read_text())
+
+    def _commit_record(self, record: dict) -> None:
+        _write_json(self.record_path, record)
+        package_path = self.case_dir / "package.json"
+        package = json.loads(package_path.read_text())
+        _rehash_document(package, "case-001-reference-staged-review", v.sha256_file(self.record_path))
+        _write_json(package_path, package)
+
+    def _verify(self) -> dict[str, object]:
+        report = v.verify_case(self.case_dir, {"case": self.case_dir})
+        return {c.check: c for c in report.checks}
+
+    def test_presented_evidence_digest_edited_is_named_by_claims_rebinding(self):
+        record = self._load_record()
+        entry = record["review_request"]["presented_evidence"][0]
+        entry["sha256"] = "sha256:" + "0" * 64
+        # Re-stamp both digests so the tamper is internally consistent —
+        # only the claims re-binding can name it.
+        record["review_request"]["request_sha256"] = v._canonical_identity(
+            record["review_request"], "request_sha256"
+        )
+        record["record_sha256"] = v._canonical_identity(record, "record_sha256")
+        self._commit_record(record)
+
+        by_check = self._verify()
+        self.assertEqual(by_check[f"{self.prefix}.request_sha256"].status, "verified")
+        self.assertEqual(by_check[f"{self.prefix}.record_sha256"].status, "verified")
+        self.assertEqual(by_check[f"{self.prefix}.presented.reviewer"].status, "mismatch")
+
+    def test_disposition_outside_the_allowed_set_is_named(self):
+        record = self._load_record()
+        record["disposition"] = "certify_as_correct"
+        record["record_sha256"] = v._canonical_identity(record, "record_sha256")
+        self._commit_record(record)
+
+        by_check = self._verify()
+        self.assertEqual(by_check[f"{self.prefix}.disposition"].status, "mismatch")
+        self.assertEqual(by_check[f"{self.prefix}.record_sha256"].status, "verified")
+
+    def test_record_digest_left_stale_is_named(self):
+        record = self._load_record()
+        record["candidate_id"] = "a-different-candidate"
+        # record_sha256 deliberately not re-stamped.
+        self._commit_record(record)
+
+        by_check = self._verify()
+        self.assertEqual(by_check[f"{self.prefix}.record_sha256"].status, "mismatch")
+
+    def test_uncommitted_campaign_identity_is_named_not_passed(self):
+        # The committed record already binds a campaign identity no
+        # committed claims/report/log carries: it must be not_checked as
+        # unresolvable, never silently verified or claimed forged.
+        by_check = self._verify()
+        self.assertEqual(
+            by_check[f"{self.prefix}.request.campaign_sha256"].status, "not_checked"
+        )
+        self.assertIn("no committed", by_check[f"{self.prefix}.request.campaign_sha256"].reason)
+
+    def test_positive_path_is_clean(self):
+        by_check = self._verify()
+        staged = [c for c in by_check.values() if c.check.startswith(self.prefix)]
+        self.assertGreater(len(staged), 5)
+        for check in staged:
+            self.assertNotEqual(check.status, "mismatch", check.to_dict())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1497,6 +1497,294 @@ fn chain_options(
     options
 }
 
+
+/// Bind a `reuse_rule` document (SC-12.3) into the manifest and sign it
+/// with `seed`, exactly as `avila-core sign` would for any other role.
+fn bind_reuse_rule(
+    case_dir: &Path,
+    rule: &Value,
+    document_id: &str,
+    seed: &[u8; 32],
+) {
+    let relative_path = format!("reuse-rules/{document_id}.json");
+    let full_path = case_dir.join(&relative_path);
+    fs::create_dir_all(full_path.parent().unwrap()).unwrap();
+    let mut bytes = serde_json::to_vec_pretty(rule).unwrap();
+    bytes.push(b'\n');
+    fs::write(&full_path, &bytes).unwrap();
+    let sha256 = format!("sha256:{}", sha256_hex(&bytes));
+    let mut manifest = read_manifest(case_dir);
+    manifest.documents.push(PackageDocument {
+        document_id: document_id.into(),
+        role: "reuse_rule".into(),
+        path: relative_path.clone(),
+        sha256: sha256.clone(),
+        step_id: None,
+    });
+    write_manifest(case_dir, &manifest);
+    let digest = signature::digest_from_prefixed(&sha256).unwrap();
+    let document = signature::build_signature_document(
+        seed,
+        "reuse_rule",
+        document_id.to_string(),
+        sha256,
+        &digest,
+    );
+    bind_signature_document(
+        case_dir,
+        &format!("signature-rule-{document_id}"),
+        &format!("reuse-rules/{document_id}.sig.json"),
+        &document,
+    );
+}
+
+/// A well-formed reuse rule scoped to `classification`'s `wcs-rulepack`
+/// binding edge.
+fn wcs_reuse_rule(not_after: &str) -> Value {
+    json!({
+        "schema_version": "avila.core/reuse-rule/v0.1-draft",
+        "rule_id": "avila-labs/wcs-rulepack-independent",
+        "scope": { "step_id": "classification", "input_slot": "wcs-rulepack" },
+        "justification": "The wcs rulepack binds reference routing constants the classifier reads but never feeds into the measured fraction outputs.",
+        "validation_evidence": [{ "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "note": "sensitivity sweep over rulepack constants" }],
+        "not_after": not_after
+    })
+}
+
+fn change_wcs_rulepack(synthetic: &Synthetic) {
+    change_input(
+        synthetic,
+        "aftermatter-wcs-rulepack",
+        "inputs/aftermatter-wcs-rulepack",
+        b"revised rulepack\n",
+    );
+}
+
+#[test]
+fn a_signed_reuse_rule_permits_reuse_across_its_scoped_edge() {
+    let dir = TestDir::new();
+    let synthetic = blessed_chain(&dir);
+    let requester = signature::generate_keypair(KeyRole::Requester).unwrap();
+    let runner = signature::generate_keypair(KeyRole::Runner).unwrap();
+    let root_path = dir.0.join("trust-root.json");
+    write_trust_root(
+        &root_path,
+        &trust_root(&[
+            (&requester, KeyRole::Requester),
+            (&runner, KeyRole::Runner),
+        ]),
+    );
+    change_wcs_rulepack(&synthetic);
+    bind_reuse_rule(
+        &synthetic.case_dir,
+        &wcs_reuse_rule("2999-01-01T00:00:00Z"),
+        "rule-wcs-independent",
+        &requester.seed,
+    );
+    // Supplying a trust root makes receipt signatures binding too: both
+    // receipts are signed with a listed runner key before the manifest is
+    // signed last.
+    sign_receipt(&synthetic.case_dir, "activation", &runner.seed);
+    sign_receipt(&synthetic.case_dir, "classification", &runner.seed);
+    sign_manifest(&synthetic.case_dir, &requester.seed);
+
+    let mut options = chain_options(&dir, &synthetic, true, true);
+    options.trust_root = Some(root_path);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let steps = &report.bound_plan.as_ref().unwrap().steps;
+    let classification = steps
+        .iter()
+        .find(|step| step.step_id == "classification")
+        .unwrap();
+    // The InputBytes change is recorded and exempted by the rule; the
+    // committed receipt still reuses under the rule's authority.
+    eprintln!("DBG classification changes={:?}", classification.changes);
+    assert_eq!(classification.decision, BoundDecision::ReuseCommitted);
+    let change = classification
+        .changes
+        .iter()
+        .find(|change| change.class == ChangeClass::InputBytes)
+        .unwrap();
+    assert_eq!(
+        change.exempted_by.as_deref(),
+        Some("avila-labs/wcs-rulepack-independent")
+    );
+    let impact = report.bound_plan.as_ref().unwrap().impact.as_ref().unwrap();
+    let reused = impact
+        .reused
+        .iter()
+        .find(|node| node.step_id == "classification")
+        .unwrap();
+    assert_eq!(
+        reused.reused_under,
+        "reuse_rule:avila-labs/wcs-rulepack-independent"
+    );
+    assert!(
+        impact
+            .invalidated
+            .iter()
+            .all(|node| node.step_id != "classification")
+    );
+    assert!(
+        report
+            .findings
+            .iter()
+            .all(|finding| finding.code != "CORE-X3401"),
+        "{}",
+        human_summary(&report)
+    );
+}
+
+#[test]
+fn a_reuse_rule_signed_by_a_runner_key_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed_chain(&dir);
+    let requester = signature::generate_keypair(KeyRole::Requester).unwrap();
+    let runner_key = signature::generate_keypair(KeyRole::Runner).unwrap();
+    let root_path = dir.0.join("trust-root.json");
+    write_trust_root(
+        &root_path,
+        &trust_root(&[
+            (&requester, KeyRole::Requester),
+            (&runner_key, KeyRole::Runner),
+        ]),
+    );
+    change_wcs_rulepack(&synthetic);
+    bind_reuse_rule(
+        &synthetic.case_dir,
+        &wcs_reuse_rule("2999-01-01T00:00:00Z"),
+        "rule-wcs-independent",
+        &runner_key.seed,
+    );
+    sign_manifest(&synthetic.case_dir, &requester.seed);
+
+    let mut options = chain_options(&dir, &synthetic, true, true);
+    options.trust_root = Some(root_path);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let steps = &report.bound_plan.as_ref().unwrap().steps;
+    let classification = steps
+        .iter()
+        .find(|step| step.step_id == "classification")
+        .unwrap();
+    // A non-requester signature is not reuse authority: the rule is
+    // refused and default invalidation reruns the step.
+    assert_eq!(classification.decision, BoundDecision::Execute);
+    assert!(classification.changes.iter().all(|c| c.exempted_by.is_none()));
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == "CORE-X3401"
+                && finding.message.contains("authority mismatch")),
+        "{}",
+        human_summary(&report)
+    );
+}
+
+#[test]
+fn an_expired_reuse_rule_is_refused_and_reruns() {
+    let dir = TestDir::new();
+    let synthetic = blessed_chain(&dir);
+    let requester = signature::generate_keypair(KeyRole::Requester).unwrap();
+    let root_path = dir.0.join("trust-root.json");
+    write_trust_root(&root_path, &trust_root(&[(&requester, KeyRole::Requester)]));
+    change_wcs_rulepack(&synthetic);
+    bind_reuse_rule(
+        &synthetic.case_dir,
+        &wcs_reuse_rule("2000-01-01T00:00:00Z"),
+        "rule-wcs-independent",
+        &requester.seed,
+    );
+    sign_manifest(&synthetic.case_dir, &requester.seed);
+
+    let mut options = chain_options(&dir, &synthetic, true, true);
+    options.trust_root = Some(root_path);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let steps = &report.bound_plan.as_ref().unwrap().steps;
+    let classification = steps
+        .iter()
+        .find(|step| step.step_id == "classification")
+        .unwrap();
+    assert_eq!(classification.decision, BoundDecision::Execute);
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == "CORE-X3401"
+                && finding.message.contains("expired")),
+        "{}",
+        human_summary(&report)
+    );
+}
+
+#[test]
+fn a_reuse_rule_scoped_beyond_the_binding_edges_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed_chain(&dir);
+    let requester = signature::generate_keypair(KeyRole::Requester).unwrap();
+    let root_path = dir.0.join("trust-root.json");
+    write_trust_root(&root_path, &trust_root(&[(&requester, KeyRole::Requester)]));
+    // `activation` binds no `wcs-rulepack` slot — a rule scoping there
+    // claims authority over an edge that does not exist.
+    let mut rule = wcs_reuse_rule("2999-01-01T00:00:00Z");
+    rule["scope"]["step_id"] = json!("activation");
+    change_wcs_rulepack(&synthetic);
+    bind_reuse_rule(
+        &synthetic.case_dir,
+        &rule,
+        "rule-wcs-widening",
+        &requester.seed,
+    );
+    sign_manifest(&synthetic.case_dir, &requester.seed);
+
+    let mut options = chain_options(&dir, &synthetic, true, true);
+    options.trust_root = Some(root_path);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let steps = &report.bound_plan.as_ref().unwrap().steps;
+    let classification = steps
+        .iter()
+        .find(|step| step.step_id == "classification")
+        .unwrap();
+    assert_eq!(classification.decision, BoundDecision::Execute);
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == "CORE-X3401"
+                && finding.message.contains("narrow")),
+        "{}",
+        human_summary(&report)
+    );
+}
+
+#[test]
+fn a_reuse_rule_without_a_trust_root_fails_closed() {
+    let dir = TestDir::new();
+    let synthetic = blessed_chain(&dir);
+    let requester = signature::generate_keypair(KeyRole::Requester).unwrap();
+    change_wcs_rulepack(&synthetic);
+    bind_reuse_rule(
+        &synthetic.case_dir,
+        &wcs_reuse_rule("2999-01-01T00:00:00Z"),
+        "rule-wcs-independent",
+        &requester.seed,
+    );
+
+    // No trust root: the rule's authority cannot be established, so it is
+    // inapplicable — the changed step reruns.
+    let report = execute_case(
+        &synthetic.case_dir,
+        &chain_options(&dir, &synthetic, true, true),
+    )
+    .unwrap();
+    let steps = &report.bound_plan.as_ref().unwrap().steps;
+    let classification = steps
+        .iter()
+        .find(|step| step.step_id == "classification")
+        .unwrap();
+    assert_eq!(classification.decision, BoundDecision::Execute);
+}
+
 #[test]
 fn an_unchanged_case_is_reused_without_running_anything() {
     let dir = TestDir::new();

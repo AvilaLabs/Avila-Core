@@ -189,6 +189,7 @@ fn locate_message(source: &[u8], pointer: &str, message: &str) -> String {
 pub(crate) fn steps_reached_by_inputs(
     compiled: &CompiledContract,
     supplied: &[SuppliedInput],
+    exempted: &BTreeSet<(String, String)>,
 ) -> BTreeSet<String> {
     let inputs: BTreeSet<&str> = supplied
         .iter()
@@ -196,10 +197,16 @@ pub(crate) fn steps_reached_by_inputs(
         .collect();
     let mut reached = BTreeSet::new();
     for step in &compiled.workflow {
-        let hit = step.bindings.iter().any(|binding| match &binding.source {
-            SourceRef::ContractInput { input_id } => inputs.contains(input_id.as_str()),
-            SourceRef::StepOutput { step_id, .. } => reached.contains(step_id),
-        });
+        let hit = step
+            .bindings
+            .iter()
+            .filter(|binding| {
+                !exempted.contains(&(step.step_id.clone(), binding.input_slot.clone()))
+            })
+            .any(|binding| match &binding.source {
+                SourceRef::ContractInput { input_id } => inputs.contains(input_id.as_str()),
+                SourceRef::StepOutput { step_id, .. } => reached.contains(step_id),
+            });
         if hit {
             reached.insert(step.step_id.clone());
         }

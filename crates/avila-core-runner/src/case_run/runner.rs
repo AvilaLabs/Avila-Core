@@ -75,6 +75,10 @@ pub(super) struct Runner<'a> {
     /// from `options.capability_dirs` in declared order. The manifest's
     /// `executable_sha256` selects; explicit `--capability` supplies win.
     catalog: BTreeMap<String, PathBuf>,
+    /// SC-12.3 reuse rules that resolved this run: authorized, unexpired,
+    /// scoped to real binding edges. Each exempts its `(step, slot)` edge's
+    /// input changes from disqualifying reuse.
+    resolved_rules: &'a [super::reuse_rules::ResolvedRule],
 }
 
 impl<'a> Runner<'a> {
@@ -89,6 +93,7 @@ impl<'a> Runner<'a> {
         envelopes: &'a Envelopes,
         trust_root: Option<&'a TrustRoot>,
         runner_key: Option<[u8; 32]>,
+        resolved_rules: &'a [super::reuse_rules::ResolvedRule],
     ) -> Self {
         let artifact_checks = package
             .integrity
@@ -161,6 +166,7 @@ impl<'a> Runner<'a> {
             runner_key,
             runner_key_id,
             catalog,
+            resolved_rules,
         }
     }
 
@@ -398,9 +404,13 @@ impl<'a> Runner<'a> {
     fn impact_report(&self, steps: &[BoundStep]) -> ImpactReport {
         let mut reached: BTreeSet<&str> = BTreeSet::new();
         let mut condemned: BTreeMap<&str, Vec<String>> = BTreeMap::new();
+        let exempted = super::reuse_rules::exempted_edges(self.resolved_rules);
         for step in &self.compiled.workflow {
             let mut edges = Vec::new();
             for binding in &step.bindings {
+                if exempted.contains(&(step.step_id.clone(), binding.input_slot.clone())) {
+                    continue;
+                }
                 let carries = match &binding.source {
                     avila_core_compiler::SourceRef::ContractInput { input_id } => {
                         self.supplied_input_ids.contains(input_id)
@@ -441,7 +451,15 @@ impl<'a> Runner<'a> {
             .filter(|step| step.decision == BoundDecision::ReuseCommitted)
             .map(|step| ReusedNode {
                 step_id: step.step_id.clone(),
-                reused_under: "deterministic_memo".to_string(),
+                // A step whose reuse rode on an SC-12.3 non-dependence
+                // claim names the rule; a clean reuse names the memo.
+                reused_under: step
+                    .changes
+                    .iter()
+                    .find_map(|change| change.exempted_by.as_ref())
+                    .map_or_else(|| "deterministic_memo".to_string(), |rule| {
+                        format!("reuse_rule:{rule}")
+                    }),
             })
             .collect();
         let rerun_subgraph: Vec<String> = steps
@@ -1109,6 +1127,8 @@ impl<'a> Runner<'a> {
             None => vec![ChangeRecord {
                 class: ChangeClass::NoCommittedReceipt,
                 detail: "the package commits no execution receipt for this step".into(),
+                input_slot: None,
+                exempted_by: None,
             }],
         };
 
@@ -1131,11 +1151,15 @@ impl<'a> Runner<'a> {
                     SignatureStatus::Unsigned => report.changes.push(ChangeRecord {
                         class: ChangeClass::ReceiptUnsigned,
                         detail: "the committed receipt has no signature document verified against a listed runner key".into(),
-                    }),
+                     input_slot: None,
+                exempted_by: None,
+            }),
                     SignatureStatus::Invalid { reason } => report.changes.push(ChangeRecord {
                         class: ChangeClass::ReceiptSignatureInvalid,
                         detail: reason.clone(),
-                    }),
+                     input_slot: None,
+                exempted_by: None,
+            }),
                     SignatureStatus::NotChecked => unreachable!(
                         "receipt_signature_status never returns NotChecked when a trust root is supplied"
                     ),
@@ -1154,13 +1178,37 @@ impl<'a> Runner<'a> {
             report.changes.push(ChangeRecord {
                 class: ChangeClass::Nondeterministic,
                 detail: "the step's capability type is nondeterministic; committed receipts are never reused for it".into(),
+             input_slot: None,
+                exempted_by: None,
             });
+        }
+
+        // SC-12.3: a resolved reuse rule exempts the input-slot changes on
+        // the binding edge it scopes — the change stays recorded, and its
+        // exemption names the rule that stands behind the non-dependence.
+        // Signature, determinism, and case-identity changes are never
+        // exemptable: they are not claims about an input edge.
+        for change in &mut report.changes {
+            if matches!(
+                change.class,
+                ChangeClass::InputBytes | ChangeClass::InputBinding | ChangeClass::Invocation
+            ) && let Some(slot) = &change.input_slot
+                && let Some(rule) =
+                    super::reuse_rules::rule_for(self.resolved_rules, &step.step_id, slot)
+            {
+                change.exempted_by = Some(rule.rule_id.clone());
+            }
         }
 
         // Reuse: same invocation identity, a completed receipt, and every
         // recorded output verifiable at a bound identity (SC-12 memoization).
+        // A change exempted by a resolved reuse rule does not disqualify —
+        // that is exactly what a non-dependence claim asserts.
         if self.options.reuse
-            && report.changes.is_empty()
+            && report
+                .changes
+                .iter()
+                .all(|change| change.exempted_by.is_some())
             && let Some((document_id, receipt)) = &committed
         {
             match self.reusable_outputs(receipt) {
@@ -1246,7 +1294,9 @@ impl<'a> Runner<'a> {
                 Err(detail) => report.changes.push(ChangeRecord {
                     class: ChangeClass::OutputsUnavailable,
                     detail,
-                }),
+                 input_slot: None,
+                exempted_by: None,
+            }),
             }
         }
 

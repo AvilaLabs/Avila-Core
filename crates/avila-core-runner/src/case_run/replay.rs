@@ -49,7 +49,9 @@ pub(super) fn changes_since(
                 "receipt was produced for case `{}`, not `{case_id}`",
                 committed.case_id
             ),
-        });
+         input_slot: None,
+                exempted_by: None,
+            });
     }
     if committed.capability != *capability {
         changes.push(ChangeRecord {
@@ -58,7 +60,9 @@ pub(super) fn changes_since(
                 "executable {} → {}",
                 committed.capability.executable_sha256, capability.executable_sha256
             ),
-        });
+         input_slot: None,
+                exempted_by: None,
+            });
     }
     let keys: BTreeSet<&String> = committed
         .parameters
@@ -79,6 +83,8 @@ pub(super) fn changes_since(
                         .get(key)
                         .map_or("absent".to_string(), Value::to_string)
                 ),
+             input_slot: None,
+                exempted_by: None,
             });
         }
     }
@@ -103,29 +109,39 @@ pub(super) fn changes_since(
                             "slot `{slot}` bound `{}` → `{}`",
                             old.evidence_id, new.evidence_id
                         ),
-                    });
+                     input_slot: Some(slot.to_string()),
+                exempted_by: None,
+            });
                 }
                 if old.sha256 != new.sha256 || old.bytes != new.bytes {
                     changes.push(ChangeRecord {
                         class: ChangeClass::InputBytes,
                         detail: format!("slot `{slot}` bytes {} → {}", old.sha256, new.sha256),
-                    });
+                     input_slot: Some(slot.to_string()),
+                exempted_by: None,
+            });
                 } else if old.workspace_path != new.workspace_path
                     || old.media_type != new.media_type
                 {
                     changes.push(ChangeRecord {
                         class: ChangeClass::Invocation,
                         detail: format!("slot `{slot}` staging path or media type differs"),
-                    });
+                     input_slot: Some(slot.to_string()),
+                exempted_by: None,
+            });
                 }
             }
             (Some(_), None) => changes.push(ChangeRecord {
                 class: ChangeClass::InputBinding,
                 detail: format!("slot `{slot}` is no longer bound"),
+             input_slot: Some(slot.to_string()),
+                exempted_by: None,
             }),
             (None, Some(_)) => changes.push(ChangeRecord {
                 class: ChangeClass::InputBinding,
                 detail: format!("slot `{slot}` is newly bound"),
+             input_slot: Some(slot.to_string()),
+                exempted_by: None,
             }),
             (None, None) => {}
         }
@@ -142,7 +158,9 @@ pub(super) fn changes_since(
             class: ChangeClass::Invocation,
             detail: "the adapter's arguments, environment, working directory, or timeout differ"
                 .into(),
-        });
+         input_slot: None,
+                exempted_by: None,
+            });
     }
     // The descriptor digest is invocation identity: extraction or mapping
     // edits that leave argv untouched must still invalidate the receipt.
@@ -154,13 +172,17 @@ pub(super) fn changes_since(
                 old.adapter_sha256.as_deref().unwrap_or("none"),
                 new.adapter_sha256.as_deref().unwrap_or("none")
             ),
-        });
+         input_slot: None,
+                exempted_by: None,
+            });
     }
     if committed.status != ReceiptStatus::Completed || committed.process.exit_status != Some(0) {
         changes.push(ChangeRecord {
             class: ChangeClass::ReceiptNotCompleted,
             detail: "the committed receipt did not complete with exit status 0".into(),
-        });
+         input_slot: None,
+                exempted_by: None,
+            });
     }
     changes
 }

@@ -59,7 +59,7 @@ impl SignatureStatus {
 /// package document's own `document_id` alongside its parsed content: the
 /// former is what a manifest signature's own digest rule excludes from the
 /// manifest it covers.
-fn find_signature_for(
+pub(super) fn find_signature_for(
     package: &VerifiedCasePackage,
     target_role: &str,
     target_document_id: &str,

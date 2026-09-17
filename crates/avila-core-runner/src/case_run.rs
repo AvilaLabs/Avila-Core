@@ -63,6 +63,7 @@ mod signing;
 pub use signing::SignatureStatus;
 mod inputs;
 use inputs::{steps_reached_by_inputs, supply_free_inputs, validate_free_inputs};
+mod reuse_rules;
 mod compare;
 pub use compare::VerdictMargin;
 #[cfg(test)]
@@ -301,6 +302,14 @@ pub enum ChangeClass {
 pub struct ChangeRecord {
     pub class: ChangeClass,
     pub detail: String,
+    /// For input-slot changes: the bound input slot the change is on, so a
+    /// reuse rule scoped to `(step, slot)` can name exactly this edge.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_slot: Option<String>,
+    /// The reuse rule (SC-12.3) whose scope exempts this change — the
+    /// change is still recorded; the exemption names its authority.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exempted_by: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -893,7 +902,19 @@ fn execute_case_inner(
         .compiled
         .as_ref()
         .ok_or("compiler reported `compiled` without a compiled snapshot")?;
-    let invalidated_steps = steps_reached_by_inputs(compiled, &supplied_inputs);
+    // SC-12.3 reuse rules: authorized non-dependence claims exempt the
+    // binding edges they scope from propagation. Evaluated before reach —
+    // an exempted edge does not condemn the step it points at.
+    let (resolved_rules, rule_findings) = reuse_rules::evaluate(
+        &package,
+        compiled,
+        trust_root,
+        &crate::execute::rfc3339_now(),
+    );
+    report.findings.extend(rule_findings);
+    let exempted_edges = reuse_rules::exempted_edges(&resolved_rules);
+    let invalidated_steps =
+        steps_reached_by_inputs(compiled, &supplied_inputs, &exempted_edges);
     report.invalidated_steps = invalidated_steps.iter().cloned().collect();
 
     // A contract that requires signed execution cannot be run at all without
@@ -1021,6 +1042,7 @@ fn execute_case_inner(
             &envelopes,
             trust_root,
             runner_key,
+            &resolved_rules,
         );
         let execution = runner.run_all()?;
         if options.plan_only {

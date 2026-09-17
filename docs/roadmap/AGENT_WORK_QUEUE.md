@@ -749,10 +749,38 @@ requirement metric resolves to real choices, and a malformed buffer is
 reported rather than panicking.
 
 **Limits:** the form covers the *question* the workflow answers — workflow
-steps, inputs, bindings, parameters, seeds, and review declarations stay
-JSON-level in Sources, as do categorical requirements. There is no
-schema-driven generic form generator; each field is written against the
-contract shape explicitly.
+steps, bindings, parameters, seeds, and review declarations stay
+JSON-level in Sources. There is no schema-driven generic form generator;
+each field is written against the contract shape explicitly.
+
+Follow-up 2026-09-17: the form now also covers contract inputs (registry
+role, with media-type and claim-model dropdowns constrained to that role's
+admitted values, and a `worst_case` side when the model needs it) and
+categorical requirements (`equals`/`in_set` predicates over the same
+metric surface). Method wiring — steps, bindings, parameters, review —
+remains JSON-level.
+
+### Byte-reading evaluator and diagnostic coverage — implemented 2026-09-17
+
+Two gaps in the campaign-evaluation row closed: the standalone evaluator
+now reads bytes (`evaluate --artifact FILE`, repeatable — each supplied
+file is re-hashed and every admission's attested artifact is marked
+`verified` or `not_checked`; digest-only reports keep their identity
+unchanged), and every catalogued diagnostic code is pinned by a committed
+check — `tests/diagnostic_coverage.rs` walks `DIAGNOSTIC_CATALOG` against
+all fixture suites' expected findings and verdict reasons, with a
+`TEST_PINNED` map naming the runner tests that cover runtime-only codes
+(CORE-A4401/A4402). One campaign fixture (`campaign.unknown-input.finding`)
+pins CORE-E7002 as a finding and CORE-A4403 as a verdict reason.
+
+**Validation evidence:** `cargo test --workspace --all-targets` green (17
+suites); `evaluate --artifact` exercised on a claims doc attesting a real
+file — one `verified`, two `not_checked`.
+
+Also landed: a Windows-only race fix — a lineage-log read that collided
+with an in-flight append's mandatory lock (os error 33) now retries
+briefly so a racing append loses on the under-lock duplicate check, not
+on contention.
 
 A public catalog, package installation, browser client, cloud/HPC scheduling,
 organization governance, autonomous search orchestration, and comprehensive

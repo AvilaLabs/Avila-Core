@@ -43,14 +43,17 @@ log's History view also carries a supervision roll-up: run-state counts
 verdict per requirement, and the records needing attention — all derived
 from the log, never inferred. The Question workspace is form-based
 authoring over the question layer — the bounded question, status,
-assumptions, execution policy, and every requirement's statement, purpose,
-metric (with registry-driven choices for kinds, units, purposes, and
-declared output slots), comparison, limit, tolerance, and basis — writing
-the same contract buffer the compiler checks. Form fields over the
-workflow, inputs, and bindings (the method layer), plan approval, a
-dedicated design-history view over recorded lineage, live in-progress
-supervision, and cross-campaign dashboards are not implemented; nothing
-in the interface has semantics the runner and kernel do not.
+assumptions, execution policy, contract inputs (with registry-driven
+role, media-type, and claim-model choices), and every requirement's
+statement, purpose, metric (with registry-driven choices for kinds,
+units, purposes, and declared output slots), comparison, limit,
+tolerance, and basis — plus categorical requirements' closed-set
+predicates — writing the same contract buffer the compiler checks. Form
+fields over the workflow's wiring (steps, bindings, parameters, review
+declarations), plan approval, a dedicated design-history view over
+recorded lineage, live in-progress supervision, and cross-campaign
+dashboards are not implemented; nothing in the interface has semantics
+the runner and kernel do not.
 
 ## Design premise
 

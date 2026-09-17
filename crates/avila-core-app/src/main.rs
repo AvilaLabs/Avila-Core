@@ -1176,6 +1176,59 @@ fn registry_choices(registry: Option<&serde_json::Value>) -> (Vec<String>, Vec<S
     (kinds, purposes)
 }
 
+/// Role ids the registry declares, for contract-input dropdowns.
+fn registry_roles(registry: Option<&serde_json::Value>) -> Vec<String> {
+    registry
+        .and_then(|doc| doc["roles"].as_array())
+        .map(|roles| {
+            roles
+                .iter()
+                .filter_map(|role| role["role"]["id"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// A registry role entry for `role_id`, when the registry declares it.
+fn registry_role<'a>(
+    registry: Option<&'a serde_json::Value>,
+    role_id: &str,
+) -> Option<&'a serde_json::Value> {
+    registry
+        .and_then(|doc| doc["roles"].as_array())
+        .and_then(|roles| {
+            roles
+                .iter()
+                .find(|role| role["role"]["id"].as_str() == Some(role_id))
+        })
+}
+
+/// Media types the registry admits for `role_id`.
+fn role_media_types(registry: Option<&serde_json::Value>, role_id: &str) -> Vec<String> {
+    registry_role(registry, role_id)
+        .and_then(|role| role["accepted_media_types"].as_array())
+        .map(|types| {
+            types
+                .iter()
+                .filter_map(|value| value.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Claim-model names the registry admits for `role_id`.
+fn role_claim_models(registry: Option<&serde_json::Value>, role_id: &str) -> Vec<String> {
+    registry_role(registry, role_id)
+        .and_then(|role| role["permitted_claim_models"].as_array())
+        .map(|models| {
+            models
+                .iter()
+                .filter_map(|model| model["model"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 /// Unit symbols the registry admits for `kind_id`.
 fn registry_units(registry: Option<&serde_json::Value>, kind_id: &str) -> Vec<String> {
     registry
@@ -1514,6 +1567,232 @@ fn requirement_form(
     (changed, remove)
 }
 
+/// One contract input card — id, registry role, the media types and claim
+/// models that role admits. Returns (edited, remove).
+fn input_form(
+    ui: &mut egui::Ui,
+    index: usize,
+    contract: &mut serde_json::Value,
+    registry: Option<&serde_json::Value>,
+) -> (bool, bool) {
+    let mut changed = false;
+    let mut remove = false;
+    let prefix = format!("/inputs/{index}");
+    card(ui, |ui| {
+        ui.horizontal_wrapped(|ui| {
+            ui.label(egui::RichText::new(format!("Input {}", index + 1)).strong());
+            ui.label("id");
+            changed |= form_string(ui, contract, &format!("{prefix}/input_id"));
+            if ui.small_button("remove").clicked() {
+                remove = true;
+            }
+        });
+        ui.horizontal_wrapped(|ui| {
+            ui.label("role");
+            let role_id = contract
+                .pointer(&format!("{prefix}/role/id"))
+                .and_then(|value| value.as_str())
+                .unwrap_or_default()
+                .to_string();
+            let roles = registry_roles(registry);
+            let mut selected = role_id.clone();
+            egui::ComboBox::from_id_salt(format!("input{index}-role"))
+                .selected_text(&selected)
+                .show_ui(ui, |ui| {
+                    for role in &roles {
+                        ui.selectable_value(&mut selected, role.clone(), role);
+                    }
+                });
+            if selected != role_id
+                && let Some(input) = contract.pointer_mut(&prefix)
+            {
+                let major = registry_role(registry, &selected)
+                    .and_then(|role| role["role"]["major"].as_u64())
+                    .unwrap_or(1);
+                input["role"] = serde_json::json!({"id": selected, "major": major});
+                // A changed role admits different media types and models;
+                // reset them to the role's first admitted value so the
+                // authored input stays admissible while it is edited.
+                let media = role_media_types(registry, &selected);
+                if let Some(first) = media.first() {
+                    input["media_type"] = serde_json::Value::String(first.clone());
+                }
+                let models = role_claim_models(registry, &selected);
+                if let Some(first) = models.first() {
+                    input["claim_model"] = serde_json::json!({"model": first});
+                }
+                changed = true;
+            }
+            let media = role_media_types(registry, &role_id);
+            if media.is_empty() {
+                ui.label("media type");
+                changed |= form_string(ui, contract, &format!("{prefix}/media_type"));
+            } else {
+                ui.label("media type");
+                let refs: Vec<&str> = media.iter().map(String::as_str).collect();
+                changed |= form_choice(
+                    ui,
+                    &format!("input{index}-media"),
+                    contract,
+                    &format!("{prefix}/media_type"),
+                    &refs,
+                );
+            }
+            let models = role_claim_models(registry, &role_id);
+            if models.is_empty() {
+                ui.label("claim model");
+                changed |= form_string(ui, contract, &format!("{prefix}/claim_model/model"));
+            } else {
+                ui.label("claim model");
+                let refs: Vec<&str> = models.iter().map(String::as_str).collect();
+                changed |= form_choice(
+                    ui,
+                    &format!("input{index}-model"),
+                    contract,
+                    &format!("{prefix}/claim_model/model"),
+                    &refs,
+                );
+            }
+            if contract
+                .pointer(&format!("{prefix}/claim_model/model"))
+                .and_then(|value| value.as_str())
+                == Some("worst_case")
+            {
+                ui.label("side");
+                changed |= form_choice(
+                    ui,
+                    &format!("input{index}-side"),
+                    contract,
+                    &format!("{prefix}/claim_model/side"),
+                    &["lower", "upper"],
+                );
+            }
+        });
+    });
+    (changed, remove)
+}
+
+/// One categorical requirement card — the same id/statement/purpose/metric
+/// surface as a numeric requirement, plus an `equals`/`in_set` predicate.
+fn categorical_form(
+    ui: &mut egui::Ui,
+    index: usize,
+    contract: &mut serde_json::Value,
+    purposes: &[String],
+    registry: Option<&serde_json::Value>,
+) -> (bool, bool) {
+    let mut changed = false;
+    let mut remove = false;
+    let prefix = format!("/categorical_requirements/{index}");
+    card(ui, |ui| {
+        ui.horizontal_wrapped(|ui| {
+            ui.label(
+                egui::RichText::new(format!("Categorical requirement {}", index + 1)).strong(),
+            );
+            ui.label("id");
+            changed |= form_string(ui, contract, &format!("{prefix}/requirement_id"));
+            if ui.small_button("remove").clicked() {
+                remove = true;
+            }
+        });
+        ui.label("statement — what the requirement claims, in words");
+        changed |= form_text(ui, contract, &format!("{prefix}/statement"), 2);
+        ui.horizontal_wrapped(|ui| {
+            ui.label("purpose");
+            let purpose_refs: Vec<&str> = purposes.iter().map(String::as_str).collect();
+            changed |= form_choice(
+                ui,
+                &format!("cat{index}-purpose"),
+                contract,
+                &format!("{prefix}/purpose/id"),
+                &purpose_refs,
+            );
+            ui.label("major");
+            changed |= form_u64(ui, contract, &format!("{prefix}/purpose/major"));
+        });
+        {
+            let contract_snapshot = contract.clone();
+            let mut requirement = contract
+                .pointer_mut(&prefix)
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
+            changed |= metric_form(
+                ui,
+                &format!("cat{index}"),
+                &mut requirement,
+                &contract_snapshot,
+                registry,
+            );
+            if let Some(slot) = contract.pointer_mut(&prefix) {
+                *slot = requirement;
+            }
+        }
+        ui.horizontal_wrapped(|ui| {
+            ui.label("predicate");
+            let current = contract
+                .pointer(&format!("{prefix}/predicate/operator"))
+                .and_then(|value| value.as_str())
+                .unwrap_or("equals")
+                .to_string();
+            let mut selected = current.clone();
+            egui::ComboBox::from_id_salt(format!("cat{index}-operator"))
+                .selected_text(&selected)
+                .show_ui(ui, |ui| {
+                    for operator in ["equals", "in_set"] {
+                        ui.selectable_value(&mut selected, operator.to_string(), operator);
+                    }
+                });
+            if selected != current
+                && let Some(requirement) = contract.pointer_mut(&prefix)
+            {
+                requirement["predicate"] = if selected == "in_set" {
+                    serde_json::json!({"operator": "in_set", "values": []})
+                } else {
+                    serde_json::json!({"operator": "equals", "value": ""})
+                };
+                changed = true;
+            }
+            match contract
+                .pointer(&format!("{prefix}/predicate/operator"))
+                .and_then(|value| value.as_str())
+            {
+                Some("in_set") => {
+                    ui.label("values (comma-separated)");
+                    let joined = contract
+                        .pointer(&format!("{prefix}/predicate/values"))
+                        .and_then(|value| value.as_array())
+                        .map(|values| {
+                            values
+                                .iter()
+                                .filter_map(|value| value.as_str())
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        })
+                        .unwrap_or_default();
+                    let mut edited = joined.clone();
+                    if ui.text_edit_singleline(&mut edited).changed() {
+                        let values: Vec<serde_json::Value> = edited
+                            .split(',')
+                            .map(str::trim)
+                            .filter(|value| !value.is_empty())
+                            .map(|value| serde_json::Value::String(value.to_string()))
+                            .collect();
+                        if let Some(requirement) = contract.pointer_mut(&prefix) {
+                            requirement["predicate"]["values"] = serde_json::Value::Array(values);
+                        }
+                        changed = true;
+                    }
+                }
+                _ => {
+                    ui.label("value");
+                    changed |= form_string(ui, contract, &format!("{prefix}/predicate/value"));
+                }
+            }
+        });
+    });
+    (changed, remove)
+}
+
 fn show_question(ui: &mut egui::Ui, specimen: &mut Specimen) {
     section_heading(
         ui,
@@ -1617,6 +1896,48 @@ fn show_question(ui: &mut egui::Ui, specimen: &mut Specimen) {
         }
     });
 
+    ui.label(egui::RichText::new("Inputs — what the workflow consumes").strong());
+    let count = contract["inputs"].as_array().map_or(0, Vec::len);
+    let mut remove: Option<usize> = None;
+    for index in 0..count {
+        let (edited, delete) = input_form(ui, index, &mut contract, registry.as_ref());
+        changed |= edited;
+        if delete {
+            remove = Some(index);
+        }
+    }
+    if let Some(index) = remove {
+        contract["inputs"].as_array_mut().unwrap().remove(index);
+        changed = true;
+    }
+    if ui
+        .button("+ input")
+        .on_hover_text("Append a contract input; the compiler reports what it still needs.")
+        .clicked()
+    {
+        if !contract["inputs"].is_array() {
+            contract["inputs"] = serde_json::json!([]);
+        }
+        let role = registry_roles(registry.as_ref());
+        let first = role.first().cloned().unwrap_or_default();
+        contract["inputs"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({
+                "input_id": "",
+                "role": {"id": first, "major": 1},
+                "media_type": role_media_types(registry.as_ref(), &first)
+                    .first()
+                    .cloned()
+                    .unwrap_or_default(),
+                "claim_model": {"model": role_claim_models(registry.as_ref(), &first)
+                    .first()
+                    .cloned()
+                    .unwrap_or_default()},
+            }));
+        changed = true;
+    }
+
     ui.label(egui::RichText::new("Requirements — what an answer must establish").strong());
     let count = contract["requirements"].as_array().map_or(0, Vec::len);
     let mut remove: Option<usize> = None;
@@ -1675,10 +1996,57 @@ fn show_question(ui: &mut egui::Ui, specimen: &mut Specimen) {
             }));
         changed = true;
     }
+    ui.label(
+        egui::RichText::new("Categorical requirements — closed-set checks on named outcomes")
+            .strong(),
+    );
+    let count = contract["categorical_requirements"]
+        .as_array()
+        .map_or(0, Vec::len);
+    let mut remove: Option<usize> = None;
+    for index in 0..count {
+        let (edited, delete) =
+            categorical_form(ui, index, &mut contract, &purposes, registry.as_ref());
+        changed |= edited;
+        if delete {
+            remove = Some(index);
+        }
+    }
+    if let Some(index) = remove {
+        contract["categorical_requirements"]
+            .as_array_mut()
+            .unwrap()
+            .remove(index);
+        changed = true;
+    }
+    if ui
+        .button("+ categorical requirement")
+        .on_hover_text(
+            "Append a categorical requirement; the compiler reports what it still needs.",
+        )
+        .clicked()
+    {
+        if !contract["categorical_requirements"].is_array() {
+            contract["categorical_requirements"] = serde_json::json!([]);
+        }
+        contract["categorical_requirements"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({
+                "requirement_id": "",
+                "statement": "",
+                "purpose": purposes
+                    .first()
+                    .map(|id| serde_json::json!({"id": id, "major": 1}))
+                    .unwrap_or_else(|| serde_json::json!({"id": "", "major": 1})),
+                "predicate": {"operator": "equals", "value": ""},
+            }));
+        changed = true;
+    }
     ui.add_space(4.0);
     ui.colored_label(
         muted(ui),
-        "Workflow steps, inputs, and bindings stay under Sources — the form covers the question the workflow answers, not the method.",
+        "Workflow steps, bindings, parameters, and review declarations stay under Sources — the form covers the question and its declared inputs, not the method's wiring.",
     );
 
     if changed {
@@ -2383,5 +2751,47 @@ mod tests {
         assert!(contract_inputs(&doc).is_empty());
         let (kinds, purposes) = registry_choices(Some(&serde_json::json!({})));
         assert!(kinds.is_empty() && purposes.is_empty());
+    }
+
+    #[test]
+    fn input_form_choices_come_from_the_registry_roles() {
+        let contract: serde_json::Value =
+            serde_json::from_slice(CONTRACT_JSON).expect("specimen contract parses");
+        let registry: serde_json::Value =
+            serde_json::from_slice(REGISTRY_JSON).expect("specimen registry parses");
+
+        let roles = registry_roles(Some(&registry));
+        assert!(!roles.is_empty());
+        for role in &roles {
+            assert!(
+                !role_media_types(Some(&registry), role).is_empty(),
+                "role {role} admits no media types"
+            );
+            assert!(
+                !role_claim_models(Some(&registry), role).is_empty(),
+                "role {role} admits no claim models"
+            );
+        }
+        // Every authored input's role resolves, and its media type and claim
+        // model are among that role's admitted values.
+        for input in contract["inputs"].as_array().into_iter().flatten() {
+            let role = input["role"]["id"].as_str().unwrap();
+            assert!(roles.iter().any(|declared| declared == role));
+            let media = input["media_type"].as_str().unwrap();
+            assert!(
+                role_media_types(Some(&registry), role)
+                    .iter()
+                    .any(|m| m == media)
+            );
+            let model = input["claim_model"]["model"].as_str().unwrap();
+            assert!(
+                role_claim_models(Some(&registry), role)
+                    .iter()
+                    .any(|m| m == model)
+            );
+        }
+        // An unknown role offers no constrained choices.
+        assert!(role_media_types(Some(&registry), "unknown.role").is_empty());
+        assert!(role_claim_models(Some(&registry), "unknown.role").is_empty());
     }
 }

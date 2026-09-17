@@ -1322,7 +1322,7 @@ mod tests {
         let report = semantic_profile_report().unwrap();
         assert_eq!(report.semantic_profile, SEMANTIC_PROFILE);
         assert_eq!(report.status, "draft");
-        assert_eq!(report.total_vectors, 103);
+        assert_eq!(report.total_vectors, 110);
         assert_eq!(report.implemented_vector_sets.len(), 4);
         assert_eq!(report.total_compiler_fixtures, 70);
         assert_eq!(report.implemented_compiler_fixture_sets.len(), 5);

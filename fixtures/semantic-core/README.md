@@ -15,7 +15,7 @@ multiple historical profiles.
 
 - `unit-scaling.v1.json`: 10 vectors;
 - `scope-predicates.v1.json`: 19 vectors;
-- `verdict-calculus.v1.json`: 62 vectors: 44 requirement-evaluation vectors
+- `verdict-calculus.v1.json`: 66 vectors: 48 requirement-evaluation vectors
   (including the mixed-state `not_evaluated.mixed-*` edges), 10 categorical
   vectors (every `equals`/`in_set` outcome and edge), plus 8
   aggregate-verdict vectors; and
@@ -63,12 +63,12 @@ planned unless files exist for them.
 
 The `avila-core-kernel` conformance tests currently execute all 12 vectors in
 `canon.v1.json`, all 10 vectors in `unit-scaling.v1.json`, and all 19 vectors in
-`scope-predicates.v1.json`, plus the 44 requirement, 10 categorical, and 8
+`scope-predicates.v1.json`, plus the 48 requirement, 10 categorical, and 8
 aggregation vectors in `verdict-calculus.v1.json`. The compiler harness also executes all 70 cases in
 the five compiler manifests plus all 23 real-contract defect cases in
 `defects/defects.v1.json`, and pins each registry digest plus all successful
 compiled-snapshot identities. The campaign harness executes all 15 cases in its
-manifest and pins every successful campaign identity. Passing the 91 pure
+manifest and pins every successful campaign identity. Passing the 98 pure
 vectors, 70 compiler fixtures, and 15 campaign fixtures does not accept
 ADR-0006: full package-level admission, package rule halves, and other vector
 families in this coverage plan remain absent, and no result is scientifically
@@ -201,8 +201,8 @@ canonically.
 | `numerics.decimal-canonical.pass` | `"9.41"` accepted — exercised by `canon.v1.json` vector `decimal.canonical` |
 | `numerics.decimal-noncanonical.fail` | `"9.410"`, `"09.4"` → `CORE-S1102` — exercised by `decimal.trailing-zero-rejected` |
 | `numerics.json-float.fail` | `25.0` as JSON number in `limit` → `CORE-S1102` — exercised by `json.float-number-rejected` and fixture `types.source.json-float.fail` |
-| `numerics.json-int.pass` | `3` as JSON number for `mesh_refinement_levels` |
-| `numerics.nan-inf.fail` | `"NaN"`, `"Infinity"` → `CORE-S1102` |
+| `numerics.json-int.pass` | `3` as JSON number for `mesh_refinement_levels` — exercised by `json.integer-accepted` |
+| `numerics.nan-inf.fail` | `"NaN"`, `"Infinity"` → `CORE-S1102` — exercised by `json.nan-refused` and `json.infinity-refused` |
 | `numerics.display-rounding.pass` | presentation changes, canonical value and verdict do not |
 | `numerics.decision-rounding-without-capability.fail` | outcome-changing rounding must be a typed, qualified capability |
 | `numerics.rational-factor.pass` | `"1/3600000000"` parsed and reduced — exercised by `rational.canonical` |
@@ -393,7 +393,7 @@ canonically.
 | `verdict.le.bounded.within/exceeds/crossing/one_sided` | vectors |
 | `verdict.ge.bounded.within/below/crossing/one_sided` | vectors `ge.bounded.within`, `ge.bounded.below`, `ge.bounded.crossing`, `ge.bounded.upper_only.below`, `ge.bounded.upper_only.inconclusive` |
 | `verdict.lt.bounded.boundary` | hi = L → crossing, not PASS |
-| `verdict.gt.bounded.boundary` | lo = L → crossing |
+| `verdict.gt.bounded.boundary` | lo = L → crossing — exercised by `gt.bounded.boundary`; the `gt` family is `gt.bounded.within/below/crossing/boundary` |
 | `verdict.enclosure.*` | as bounded with coverage 1 required |
 | `verdict.nominal.within/exceeds` | vectors `le.nominal.within`, `le.nominal.exceeds`, `equal.nominal.within` |
 | `verdict.equal.within/outside/partial` | vectors |
@@ -409,8 +409,8 @@ canonically.
 | `verdict.not_evaluated.missing/quarantined/invalidated` | reasons and owners listed; no numbers — exercised by `not_evaluated.missing`, `not_evaluated.quarantined`, `not_evaluated.invalidated`, `not_evaluated.mixed-admitted-quarantined`, `not_evaluated.mixed-admitted-invalidated` |
 | `verdict.not_evaluated.duplicate-claim` | `CORE-E7301` — exercised by `not_evaluated.duplicate-claim` and `campaign.duplicate-claim.quarantine` |
 | `verdict.presentation-policy.not-an-input.pass` | the same admitted claims produce the same verdict with or without optional presentation routing — exercised by `presentation-policy.not-a-verdict-input` and `presentation-policy.cannot-mask-fail` |
-| `verdict.record-fields.pass` | every field of `avila.core/verdict/v0.2` present |
-| `verdict.evaluator-identity.pass` | `kernel:verdict-calculus@1` |
+| `verdict.record-fields.pass` | every field of `avila.core/verdict/v0.2` present — the vector harness compares each `verdict-calculus` vector's full serialized record |
+| `verdict.evaluator-identity.pass` | `kernel:verdict-calculus@1` — every `verdict-calculus` vector's record is produced by that evaluator |
 | `verdict.core-requirement-evaluation-step.pass` | specimen step type maps to kernel |
 | `verdict.kernel-bug-guard.fail` | undefined `hi` reaching the table → `CORE-V8102` |
 

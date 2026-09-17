@@ -34,7 +34,7 @@ fn canonicalization_vectors_are_executable() {
     assert_eq!(set.semantic_profile, SEMANTIC_PROFILE);
     assert_eq!(
         set.vectors.len(),
-        12,
+        15,
         "update the declared corpus count intentionally"
     );
 

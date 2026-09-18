@@ -1272,3 +1272,32 @@ fixtures-check: 95 covered / 162 named / 18 unbounded / 35 absent.
 All remaining absent rows are gated on the three proposed ADRs or on
 record types still undesigned (presentation-routing, approvals,
 preflight, obligations report, role vocabulary, input metadata).
+
+## 2026-09-19 — ADR-0024 and ADR-0025 drafted; the absent map is now complete
+
+Two final proposals map every remaining design-gated cluster:
+
+- `docs/adr/0024-presentation-routing-records.md` — the A9 record: a
+  `routing_record` document binding the exact post-campaign dossier
+  (`campaign_report_sha256` + `claims_sha256`), a disposition checked
+  against the compiled gate's `allowed_dispositions`, the pinned agent
+  policy, and the gate's own declaration digest. `CORE-X6501`
+  quarantines a record bound to a mutated dossier or naming an
+  unallowed disposition — the *record* fails, the artifact/admission/
+  verdict it was attached to is byte-identical (A9's own invariant).
+- `docs/adr/0025-role-attributes-minor-versions-input-metadata.md` —
+  the vocabulary extension the last `roles.*`/`change.*` rows need:
+  `RoleDefinition.attributes` (reusing `ParameterDefinition` value
+  domains) so `input_attribute_in` predicates have something to check
+  against (`CORE-T2701` undeclared attribute, `CORE-T2702` violation);
+  `VersionedRef.minor` with the "optional attributes only" rule
+  (`role@1.x`, `x >= required` satisfies `role@1`); and
+  `ContractInput.input_metadata` — attributes excluded from the
+  consulted-input digest by construction, never evidence.
+
+Every absent fixture row now names the proposed ADR that unblocks it.
+Genuinely undesigned after this batch: the `preflight` record type and
+the obligations report (noted in ADR-0025's boundary), the `human`
+reviewer-role extension (ADR-0024 boundary), `environments` records,
+and EXP-005 (paused). Everything else is implemented, pinned, or
+proposed.

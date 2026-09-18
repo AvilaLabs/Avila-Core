@@ -232,9 +232,9 @@ canonically.
 | --- | --- |
 | `roles.nominal-identity.fail` | same kind, different role id → `CORE-T2101` — exercised by `types.R2.role-mismatch.fail` |
 | `roles.major-version.fail` | `role@2` offered to `role@1` slot → `CORE-T2101` — the resolution half is exercised by `defect.contract.role-major-version` (input references `role@2` absent from the registry → `CORE-R3101`); the binding-level T2101 variant needs a registry carrying both majors |
-| `roles.minor-version.pass` | `role@1` with extra optional attribute accepted — `VersionedRef` carries `major` only; a minor-version compatibility model does not exist |
+| `roles.minor-version.pass` | `role@1` with extra optional attribute accepted — needs the ADR-0025 minor-version compatibility model (proposed) |
 | `roles.validator-required.fail` | role without validator → `CORE-R3501` — exercised by `defect.registry.missing-validator` |
-| `roles.attribute-undeclared-in-predicate.fail` | predicate references undeclared attribute → structural finding before evaluation — roles declare no attribute vocabulary, so there is nothing to check the predicate against |
+| `roles.attribute-undeclared-in-predicate.fail` | predicate references undeclared attribute → `CORE-T2701` under the ADR-0025 role-attribute vocabulary (proposed) |
 | `roles.cardinality-slot-scoped.pass` | two inputs carrying the same role (`actinv-decay-primary`/`actinv-decay-fallback` on `actinv.decay-data`) are distinct admitted records, never a global duplicate — `case_000_is_reproducible_and_technically_evaluated`; predicate addressing stays slot-scoped — `inputs_carrying_the_same_role_are_addressed_by_slot` |
 
 ### types/ (SC-5, SC-6)
@@ -439,12 +439,12 @@ canonically.
 | `admission.A7.actual-context.fail` | the envelope evaluates over the actual extracted facts; an out-of-envelope actual context quarantines → `CORE-A4401` — exercised by `a_run_outside_the_envelope_cannot_establish_a_bounded_requirement` (same mechanism as `scope.a7-actual-context.fail`) |
 | `admission.A7.vacuous-recorded.pass` | no qualification required → sub-record says so — every admitted-claims fixture without `require_qualification`, e.g. `campaign.le.within.pass` |
 | `admission.A8.policy-changed.fail` | claims bound to a different compiled snapshot cannot be attributed — `CORE-E7001` — exercised by `campaign.snapshot-mismatch.rejected`; SC-12 deliberately does not invalidate receipts for a requirement/policy edit — verdicts re-derive over the same evidence (`a_requirement_change_reuses_evidence_and_recomputes_verdicts`) |
-| `admission.A9.pass` | needs the presentation-routing record type (a record binding an exact post-campaign dossier); no such document role exists yet |
+| `admission.A9.pass` | needs the ADR-0024 `routing_record` document type (proposed): dossier digests + allowed disposition + pinned agent policy |
 | `admission.A10.ancestor-invalidated.fail` | `CORE-E7103` cascade — `campaign.parent-missing.not_evaluated` leaves every descendant `not_evaluated` |
 | `admission.state.quarantine-terminal.pass` | a quarantined record never contributes to a verdict — `campaign.model-not-permitted.quarantine`; re-evaluation rederives the quarantine deterministically |
 | `admission.presentation.present/return/abstain.pass` | closed routing dispositions; technical verdict unchanged — exercised by `campaign.practical-review.pass` and `campaign.practical-review.fail` |
-| `admission.presentation.cannot-edit-artifact.fail` | routing record with mutated dossier bytes is quarantined; artifact and verdict remain unchanged — gated on the presentation-routing record type |
-| `admission.non-artifact-records.pass` | snapshot, approvals, selection, preflight, change events are records — receipts, qualification records, revocations, reuse rules, signatures, staged-review records, and provider-selection records exist; approval and preflight record types do not |
+| `admission.presentation.cannot-edit-artifact.fail` | routing record with mutated dossier bytes is quarantined (`CORE-X6501`); artifact and verdict remain unchanged — needs the ADR-0024 `routing_record` (proposed) |
+| `admission.non-artifact-records.pass` | snapshot, approvals, selection, preflight, change events are records — receipts, qualification records, revocations, reuse rules, signatures, staged-review records, and provider-selection records exist; approvals fold into the ADR-0021 attestation record (proposed); the preflight record type is still undesigned |
 | `admission.sub-record-replayable.pass` | the independent verifier replays admission and verdicts from the committed documents alone — `test_every_campaign_fixture` |
 | `admission.undeclared-output-discarded.pass` | `CORE-X6301` note; not evidence — the claims-level half is `campaign.undeclared-slot.rejected` (`CORE-E7002` when a claim names a slot the step does not declare); the artifact-file discard half remains runner-level |
 | `admission.validator-does-not-establish-truth.pass` | obligations report describes the validator's narrow responsibility — no obligations report exists yet |
@@ -456,7 +456,7 @@ canonically.
 | Fixture | Expected |
 | --- | --- |
 | `change.class.<each>.pass` | default invalidation set for every change class defined by SC-12 — classes emitted by `changes_since`; several pinned across the adversarial suite |
-| `change.input_metadata.non-dependence.pass` | attribute not consulted → no invalidation (the `(step, input_slot)` edge scope that reuse rules exempt is implemented; a metadata attribute that is never consulted awaits a contract field that carries it) |
+| `change.input_metadata.non-dependence.pass` | attribute not consulted → no invalidation — needs the ADR-0025 `input_metadata` field (proposed); the `(step, input_slot)` edge scope reuse rules exempt is implemented |
 | `change.propagation.stops-at-unrelated.pass` | upstream and sibling nodes untouched — `a_two_step_chain_reruns_only_what_a_change_reaches` and `a_plan_reports_the_impact_of_every_change_origin` |
 | `change.propagation.selected_over-never.pass` | |
 | `change.requirement.verdict-only.pass` | evidence untouched — `a_requirement_change_reuses_evidence_and_recomputes_verdicts` |

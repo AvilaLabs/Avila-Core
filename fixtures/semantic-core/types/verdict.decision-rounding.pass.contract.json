@@ -1,0 +1,82 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "fixture.verdict.decision-rounding.pass",
+  "revision": 1,
+  "status": "draft",
+  "question": "Specimen question for verdict.decision-rounding-capability; it has no physical meaning.",
+  "inputs": [
+    {
+      "input_id": "case",
+      "role": {
+        "id": "fixture.source_document",
+        "major": 1
+      },
+      "media_type": "application/vnd.fixture.source+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "step_id": "calculate",
+      "capability_type": {
+        "id": "fixture.calculate_dose",
+        "major": 1
+      },
+      "bindings": [
+        {
+          "input_slot": "source",
+          "source": {
+            "source": "contract_input",
+            "input_id": "case"
+          }
+        }
+      ],
+      "parameters": {}
+    },
+    {
+      "step_id": "round",
+      "capability_type": {
+        "id": "core.decision_rounding",
+        "major": 1
+      },
+      "bindings": [
+        {
+          "input_slot": "raw",
+          "source": {
+            "source": "step_output",
+            "step_id": "calculate",
+            "output_slot": "dose_rate"
+          }
+        }
+      ],
+      "parameters": {}
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "R-001",
+      "statement": "The rounded specimen dose rate must not exceed the illustrative limit.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "round",
+        "output_slot": "rounded"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "nuclear.dose_equivalent_rate",
+        "value": "95.3",
+        "unit": "uSv/h"
+      },
+      "basis": {
+        "kind": "bounded"
+      },
+      "purpose": {
+        "id": "fixture.requirement_evaluation",
+        "major": 1
+      }
+    }
+  ]
+}

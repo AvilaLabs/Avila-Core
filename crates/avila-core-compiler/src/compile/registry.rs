@@ -283,6 +283,7 @@ impl<'a> RegistryIndex<'a> {
                 findings,
             );
             validate_review_declaration(capability, index, &roles, findings);
+            validate_rounding_declaration(capability, index, findings);
         }
 
         Self {
@@ -292,6 +293,49 @@ impl<'a> RegistryIndex<'a> {
             roles,
             capability_types,
         }
+    }
+}
+
+/// ADR-0006 clause 8: a decision-rounding capability's declared
+/// transformation must name an existing raw-input edge and a nonempty
+/// authority; the quantum and mode are validated by shape at parse time.
+pub(super) fn validate_rounding_declaration(
+    capability: &CapabilityTypeDefinition,
+    capability_index: usize,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    let Some(rounding) = &capability.rounding else {
+        return;
+    };
+    let rounding_pointer = format!("/capability_types/{capability_index}/rounding");
+    if rounding.authority.trim().is_empty() {
+        registry_incomplete(
+            registry_location(format!("{rounding_pointer}/authority")),
+            "a decision-rounding capability must name the authority requiring the rounding",
+            findings,
+        );
+    }
+    if rounding.raw_input_edge.trim().is_empty() {
+        registry_incomplete(
+            registry_location(format!("{rounding_pointer}/raw_input_edge")),
+            "a decision-rounding capability must name the input slot carrying the raw value",
+            findings,
+        );
+        return;
+    }
+    if !capability
+        .inputs
+        .iter()
+        .any(|input| input.slot_id == rounding.raw_input_edge)
+    {
+        registry_incomplete(
+            registry_location(format!("{rounding_pointer}/raw_input_edge")),
+            format!(
+                "rounding raw-input edge `{}` is not an input slot declared by the capability type",
+                rounding.raw_input_edge
+            ),
+            findings,
+        );
     }
 }
 

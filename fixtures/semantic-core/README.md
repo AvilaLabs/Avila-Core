@@ -210,7 +210,7 @@ canonically.
 | `numerics.json-int.pass` | `3` as JSON number for `mesh_refinement_levels` — exercised by `json.integer-accepted` |
 | `numerics.nan-inf.fail` | `"NaN"`, `"Infinity"` → `CORE-S1102` — exercised by `json.nan-refused` and `json.infinity-refused` |
 | `numerics.display-rounding.pass` | presentation changes, canonical value and verdict do not — exercised by `display_rounding.does-not-change-verdict` |
-| `numerics.decision-rounding-without-capability.fail` | outcome-changing rounding must be a typed, qualified capability — kernel comparisons are exact (`display_rounding.does-not-change-verdict` pins the no-rounding half); the fail fixture needs a contract surface that could express rounding-in-verdict, which does not exist |
+| `numerics.decision-rounding-without-capability.fail` | outcome-changing rounding must be a typed, qualified capability — the requirement vocabulary is closed, so a rounding declaration inside a requirement is rejected before evaluation (`rounding_cannot_be_smuggled_into_a_requirement`); kernel comparisons are exact (`display_rounding.does-not-change-verdict` pins the no-rounding half) |
 | `numerics.rational-factor.pass` | `"1/3600000000"` parsed and reduced — exercised by `rational.canonical` |
 | `numerics.rational-noncanonical.fail` | reducible fraction, negative denominator, leading plus/zeros, zero denominator — exercised by `rational.reducible-rejected` and `rational.negative-denominator-rejected` |
 | `numerics.decimal-exponent-normalizes.pass` | authored exponent lowers to one canonical plain decimal — exercised by `decimal.exponent-authored-lowering` |
@@ -224,7 +224,7 @@ canonically.
 | `uncertainty.reduce.standard_uncertainty.fail` | `CORE-T2203` irreducible; repair names `core.uncertainty.expand@1` — exercised by `types.R3.irreducible.fail` |
 | `uncertainty.reduce.samples.fail` | `CORE-T2203` — same check as `types.R3.irreducible.fail` |
 | `uncertainty.coverage-out-of-range.fail` | coverage `"1.2"` → `CORE-S1102` — exercised by `types.R3.coverage-out-of-range.fail` |
-| `uncertainty.numerical-error-separate.pass` | receipt components recorded, not combined by kernel — the receipt model carries no representation/numerical-error component fields (ADR-0006 clause 9 disclosure is unimplemented) |
+| `uncertainty.numerical-error-separate.pass` | `representation_error` and `numerical_error` are separate optional receipt-output components, shape-checked at verification and never carried onto a claim — exercised by `disclosed_error_components_are_recorded_and_shape_checked` and `error_disclosures_do_not_exist_on_a_claim` |
 
 ### roles/ (SC-4)
 
@@ -407,7 +407,7 @@ canonically.
 | `verdict.equal.within/outside/partial` | vectors |
 | `verdict.equal.no-tolerance.fail` | `CORE-T2104`; the compile-time half is covered by `types.R6.equal-no-tolerance.fail` |
 | `verdict.display-rounding-does-not-change.pass` | exact canonical values determine the verdict — exercised by `display_rounding.does-not-change-verdict` |
-| `verdict.decision-rounding-capability.pass` | admitted transformation output is compared exactly and raw input remains linked — needs the rounding capability type (quantum, mode, authority, raw-input edge), which does not exist |
+| `verdict.decision-rounding-capability.pass` | admitted transformation output is compared exactly and raw input remains linked — exercised by `verdict.decision-rounding-capability.pass` (raw `95.34` rounds to `95.3` under the declared `half_up`/`0.1` quantum; the verdict compares the rounded output, which would fail on the raw) and `a_decision_rounding_capability_declares_its_transformation` |
 | `verdict.unit-scaling-exact.pass` | 100 uSv/h limit vs Sv/s evidence — exercised by `le.bounded.unit-mixed` and `campaign.unit-scaled.pass` |
 | `verdict.aggregation.all.*`, `any.*` | current precedence examples plus planned exhaustive and property-generated truth tables |
 | `verdict.aggregation.max/min.enclosure` | side-aware max/min reduction; a side that cannot be bounded remains absent |

@@ -1190,3 +1190,32 @@ execution-receipt `partial` state. fixtures-check reads 94 covered /
 Still design-gated: everything else — rounding capability, receipt
 numerical-error components, role vocabulary, lifecycle records,
 campaign/authority, the org-policy lattice.
+
+## 2026-09-19 — ADR-0006 clauses 8 and 9: decision rounding and numerical-error disclosure
+
+Two further spec-ratified slices landed. Clause 8: a decision-rounding
+capability is a separately typed and qualified capability — the registry
+model gained an optional `rounding` declaration on `CapabilityTypeDefinition`
+(`quantum: QuantityValue`, closed `mode` vocabulary, `authority`,
+`raw_input_edge`); `validate_rounding_declaration` emits `CORE-R3501` for an
+empty authority or a raw-input edge naming no declared input slot; the
+declaration is bound into the snapshot identity via the registry digest. The
+kernel comparison over the capability's admitted output remains exact —
+rounding is never an implicit comparison. Committed fixture
+`verdict.decision-rounding-capability.pass` (raw `95.34` → declared `half_up`
+quantum `0.1` → `95.3`, which passes a limit the raw would fail) plus a
+compiler pin that a rounding declaration cannot be smuggled into a
+requirement — the closed vocabulary rejects it before evaluation. Clause 9:
+`ReceiptOutput` gains `representation_error` and `numerical_error`
+`ErrorDisclosure` components (`{value, unit}`); receipt verification
+shape-checks each bound value as a canonical exact number; the disclosures
+are evidence only — they cannot appear on a claim and never enter a verdict.
+Independent-verifier parity on both: the lowerer accepts `rounding` and
+`maturity` on capability types (the latter was ADR-0020 drift) and
+shape-checks the declaration; `verify_receipt` re-derives the disclosure
+checks. Schemas: registry `roundingDeclaration`, execution-receipt
+`errorDisclosure`. fixtures-check reads 95 covered / 159 named / 18
+unbounded / 38 absent. Still design-gated: role vocabulary and minor-version
+compat, lifecycle records, campaign/authority records, the org-policy
+lattice, input metadata, presentation-routing and obligations records,
+scenarios.

@@ -632,6 +632,8 @@ pub fn execute_step(
                     state: OutputState::Collected,
                     sha256: Some(sha256),
                     bytes: Some(bytes),
+                    representation_error: None,
+                    numerical_error: None,
                 }
             }
             Ok(_) => {
@@ -707,6 +709,8 @@ fn missing_output(output: &ResolvedAdapterOutput) -> ReceiptOutput {
         state: OutputState::Missing,
         sha256: None,
         bytes: None,
+        representation_error: None,
+        numerical_error: None,
     }
 }
 

@@ -983,6 +983,42 @@
     ],
     "campaign_sha256": "sha256:e9aff788086ea723bf34d8e17a649d413f559b7253d1c739d00b8cc48b6ddd99"
    }
+  },
+  {
+   "fixture_id": "verdict.decision-rounding-capability.pass",
+   "clause": "ADR-0006 clause 8",
+   "contract": "../types/verdict.decision-rounding.pass.contract.json",
+   "registry": "campaign.rounding.registry.json",
+   "claims": "campaign.rounding.claims.json",
+   "expected": {
+    "status": "evaluated",
+    "findings": [],
+    "admissions": [
+     {
+      "evidence_id": "input:case",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "calculated",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "rounded",
+      "state": "admitted",
+      "reasons": []
+     }
+    ],
+    "verdicts": [
+     {
+      "requirement_id": "R-001",
+      "status": "pass",
+      "rule": "bounded.le.within"
+     }
+    ],
+    "campaign_sha256": "sha256:8ebc2db22c6c13a2159d94fe4fa3ebe4fe2291e8dab7456a1bb56ec480352016"
+   }
   }
  ]
 }

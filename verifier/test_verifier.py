@@ -253,6 +253,27 @@ class TestCampaignFixtures(unittest.TestCase):
         for excluded in NOT_RE_DERIVABLE_CAMPAIGN_FIXTURES:
             self.assertIn(excluded, fixture_ids)
 
+    def test_rounding_declaration_lowers_and_shape_is_checked(self):
+        contract = (self.base.parent / "types" / "verdict.decision-rounding.pass.contract.json").read_bytes()
+        registry = json.loads((self.base / "campaign.rounding.registry.json").read_text())
+        # The declared rounding capability lowers alongside the others.
+        lower.lower_compiled_snapshot(contract, json.dumps(registry).encode())
+        # A raw-input edge that names no declared input is refused.
+        rounding = next(c for c in registry["capability_types"] if "rounding" in c)
+        rounding["rounding"]["raw_input_edge"] = "not_an_input"
+        with self.assertRaises(lower.WouldReject):
+            lower.lower_compiled_snapshot(contract, json.dumps(registry).encode())
+        # An undeclared field on the declaration is refused.
+        rounding["rounding"]["raw_input_edge"] = "raw"
+        rounding["rounding"]["hidden"] = True
+        with self.assertRaises(lower.WouldReject):
+            lower.lower_compiled_snapshot(contract, json.dumps(registry).encode())
+        # An unknown rounding mode is refused.
+        del rounding["rounding"]["hidden"]
+        rounding["rounding"]["mode"] = "smuggle"
+        with self.assertRaises(lower.WouldReject):
+            lower.lower_compiled_snapshot(contract, json.dumps(registry).encode())
+
 
 # ---------------------------------------------------------------------------
 # Section 3: every committed execution receipt's invocation_sha256
@@ -1455,6 +1476,39 @@ class TestMutations(unittest.TestCase):
         self.assertEqual(by_check["package.document.case-003-fe-receipt"].status, "verified")
         self.assertEqual(by_check["receipt.fe.invocation_identity"].status, "verified")
         self.assertEqual(by_check["receipt.fe.output.hotspot-temperature"].status, "mismatch")
+
+    def test_disclosed_error_components_verify_and_a_bad_bound_mismatches(self):
+        case_dir = self._copy_case("case-003-thermal-spreader")
+        receipt_path = case_dir / "receipts" / "fe.json"
+        receipt = json.loads(receipt_path.read_text())
+        receipt["outputs"][0]["representation_error"] = {
+            "value": "0.0000000000000002",
+            "unit": "K",
+        }
+        receipt["outputs"][0]["numerical_error"] = {"value": "0.5", "unit": "K"}
+        _write_json(receipt_path, receipt)
+        package_path = case_dir / "package.json"
+        package = json.loads(package_path.read_text())
+        _rehash_document(package, "case-003-fe-receipt", v.sha256_file(receipt_path))
+        _write_json(package_path, package)
+
+        report = v.verify_case(case_dir, {"case": case_dir, "thermal": EXAMPLES.parent / "capabilities" / "thermal"})
+        by_check = {c.check: c for c in report.checks}
+        slot = receipt["outputs"][0]["output_id"]
+        self.assertEqual(
+            by_check[f"receipt.fe.output.{slot}.representation_error"].status, "verified")
+        self.assertEqual(
+            by_check[f"receipt.fe.output.{slot}.numerical_error"].status, "verified")
+
+        receipt["outputs"][0]["numerical_error"] = {"value": "not-a-number", "unit": "K"}
+        _write_json(receipt_path, receipt)
+        package = json.loads(package_path.read_text())
+        _rehash_document(package, "case-003-fe-receipt", v.sha256_file(receipt_path))
+        _write_json(package_path, package)
+        report = v.verify_case(case_dir, {"case": case_dir, "thermal": EXAMPLES.parent / "capabilities" / "thermal"})
+        by_check = {c.check: c for c in report.checks}
+        self.assertEqual(
+            by_check[f"receipt.fe.output.{slot}.numerical_error"].status, "mismatch")
 
     def test_corrupted_manifest_entry_is_named_by_package_identity(self):
         case_dir = self._copy_case("case-001-shield-search")

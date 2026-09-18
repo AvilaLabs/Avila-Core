@@ -548,4 +548,29 @@ mod tests {
         assert_eq!(assessment.status, CompletionStatus::Incomplete);
         assert!(!assessment.entries[0].fulfilling);
     }
+
+    #[test]
+    fn error_disclosures_do_not_exist_on_a_claim() {
+        // ADR-0006 clause 9: the receipt discloses representation and
+        // numerical error; the claims vocabulary cannot name either, so
+        // nothing carries them toward the kernel — recorded, never combined.
+        let claim = serde_json::json!({
+            "claim_id": "c",
+            "step_id": "s",
+            "output_slot": "out",
+            "artifact": {"sha256": format!("sha256:{}", "a".repeat(64)), "media_type": "m"},
+            "claim": {"model": "unquantified"},
+            "representation_error": {"value": "1", "unit": "1"},
+        });
+        assert!(serde_json::from_value::<OutputClaim>(claim).is_err());
+        let claim = serde_json::json!({
+            "claim_id": "c",
+            "step_id": "s",
+            "output_slot": "out",
+            "artifact": {"sha256": format!("sha256:{}", "a".repeat(64)), "media_type": "m"},
+            "claim": {"model": "unquantified"},
+            "numerical_error": {"value": "1", "unit": "1"},
+        });
+        assert!(serde_json::from_value::<OutputClaim>(claim).is_err());
+    }
 }

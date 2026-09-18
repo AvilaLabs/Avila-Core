@@ -123,7 +123,27 @@
           "description": "`collected`: the declared output was produced in full. `partial` (SC-5 clause 6): the output was produced and the receipt explicitly declares its result partial for this slot — bytes still verify; the slot's `permits_partial` declaration decides admission. `missing`: the declared output was not produced."
         },
         "sha256": { "$ref": "#/$defs/sha256" },
-        "bytes": { "type": "integer", "minimum": 0 }
+        "bytes": { "type": "integer", "minimum": 0 },
+        "representation_error": {
+          "$ref": "#/$defs/errorDisclosure",
+          "description": "ADR-0006 clause 9: the adapter's disclosed representation error for this output — the float-to-shortest-round-trip-decimal conversion bound. A disclosure, never a verdict input."
+        },
+        "numerical_error": {
+          "$ref": "#/$defs/errorDisclosure",
+          "description": "The adapter's disclosed numerical error of the computation itself — kept distinct from representation error and never combined by the kernel."
+        }
+      }
+    },
+    "errorDisclosure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit"],
+      "properties": {
+        "value": {
+          "type": "string",
+          "description": "Canonical exact bound on this error component."
+        },
+        "unit": { "$ref": "#/$defs/nonemptyString" }
       }
     }
   }

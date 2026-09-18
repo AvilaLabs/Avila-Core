@@ -1211,3 +1211,140 @@ fn a_cross_kind_conversion_is_an_explicit_capability_type() {
             .any(|requirement| requirement.limit.kind == sv_kind)
     );
 }
+
+#[test]
+fn a_decision_rounding_capability_declares_its_transformation() {
+    // ADR-0006 clause 8: the rounding is a separately typed capability whose
+    // declaration carries quantum, mode, authority, and the raw-input edge —
+    // the declaration is bound into the compiled snapshot identity.
+    let mut reg = serde_json::to_value(registry()).unwrap();
+    reg["capability_types"]
+        .as_array_mut()
+        .unwrap()
+        .push(serde_json::json!({
+            "capability_type": {"id": "core.decision_rounding", "major": 1},
+            "owner": "fixture.method_owner",
+            "inputs": [{
+                "slot_id": "raw",
+                "role": {"id": "nuclear.shutdown_dose_rate", "major": 1},
+                "required": true,
+                "accepted_media_types": ["application/vnd.fixture.quantity+json"]
+            }],
+            "outputs": [{
+                "slot_id": "rounded",
+                "role": {"id": "nuclear.shutdown_dose_rate", "major": 1},
+                "media_type": "application/vnd.fixture.quantity+json",
+                "permitted_claim_models": [{"model": "exact"}]
+            }],
+            "rounding": {
+                "quantum": {"value": "0.1", "unit": "uSv/h"},
+                "mode": "half_up",
+                "authority": "fixture.regulation R-42",
+                "raw_input_edge": "raw"
+            },
+            "reproducibility": {"determinism": "deterministic", "material_factors": []}
+        }));
+    let report = compile_documents(
+        &serde_json::to_vec(&contract()).unwrap(),
+        &reg.to_string().into_bytes(),
+    )
+    .unwrap();
+    assert_eq!(report.status, CompilationStatus::Compiled, "{report:#?}");
+    let compiled = report.compiled.unwrap();
+
+    // The declaration is bound into the snapshot identity: a registry that
+    // differs only in the declared mode lowers to a different identity.
+    let mut other = serde_json::to_value(registry()).unwrap();
+    other["capability_types"]
+        .as_array_mut()
+        .unwrap()
+        .push(serde_json::json!({
+            "capability_type": {"id": "core.decision_rounding", "major": 1},
+            "owner": "fixture.method_owner",
+            "inputs": [{
+                "slot_id": "raw",
+                "role": {"id": "nuclear.shutdown_dose_rate", "major": 1},
+                "required": true,
+                "accepted_media_types": ["application/vnd.fixture.quantity+json"]
+            }],
+            "outputs": [{
+                "slot_id": "rounded",
+                "role": {"id": "nuclear.shutdown_dose_rate", "major": 1},
+                "media_type": "application/vnd.fixture.quantity+json",
+                "permitted_claim_models": [{"model": "exact"}]
+            }],
+            "rounding": {
+                "quantum": {"value": "0.1", "unit": "uSv/h"},
+                "mode": "floor",
+                "authority": "fixture.regulation R-42",
+                "raw_input_edge": "raw"
+            },
+            "reproducibility": {"determinism": "deterministic", "material_factors": []}
+        }));
+    let other_report = compile_documents(
+        &serde_json::to_vec(&contract()).unwrap(),
+        &other.to_string().into_bytes(),
+    )
+    .unwrap();
+    assert_eq!(other_report.status, CompilationStatus::Compiled);
+    assert_ne!(
+        compiled.snapshot_sha256,
+        other_report.compiled.unwrap().snapshot_sha256
+    );
+}
+
+#[test]
+fn a_rounding_raw_input_edge_must_name_a_declared_input() {
+    let mut registry = serde_json::to_value(registry()).unwrap();
+    registry["capability_types"]
+        .as_array_mut()
+        .unwrap()
+        .push(serde_json::json!({
+            "capability_type": {"id": "core.decision_rounding", "major": 1},
+            "owner": "fixture.method_owner",
+            "inputs": [{
+                "slot_id": "raw",
+                "role": {"id": "nuclear.shutdown_dose_rate", "major": 1},
+                "required": true,
+                "accepted_media_types": ["application/vnd.fixture.quantity+json"]
+            }],
+            "outputs": [{
+                "slot_id": "rounded",
+                "role": {"id": "nuclear.shutdown_dose_rate", "major": 1},
+                "media_type": "application/vnd.fixture.quantity+json",
+                "permitted_claim_models": [{"model": "exact"}]
+            }],
+            "rounding": {
+                "quantum": {"value": "0.1", "unit": "uSv/h"},
+                "mode": "half_up",
+                "authority": "fixture.regulation R-42",
+                "raw_input_edge": "not_an_input"
+            },
+            "reproducibility": {"determinism": "deterministic", "material_factors": []}
+        }));
+    let report = compile_documents(
+        &serde_json::to_vec(&contract()).unwrap(),
+        &registry.to_string().into_bytes(),
+    )
+    .unwrap();
+    assert_eq!(report.status, CompilationStatus::Rejected);
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_R3501 && finding.message.contains("not_an_input")),
+        "{report:#?}"
+    );
+}
+
+#[test]
+fn rounding_cannot_be_smuggled_into_a_requirement() {
+    // ADR-0006 clause 8: rounding as part of a decision is a separately
+    // typed capability — the requirement vocabulary is closed, so a
+    // rounding declaration inside a requirement cannot even be named.
+    let mut source = serde_json::to_value(contract()).unwrap();
+    source["requirements"][0]["rounding"] =
+        serde_json::json!({"quantum": {"value": "0.1", "unit": "uSv/h"}, "mode": "half_up"});
+    let report = compile_documents(&serde_json::to_vec(&source).unwrap(), REGISTRY).unwrap();
+    assert_eq!(report.status, CompilationStatus::Rejected);
+}

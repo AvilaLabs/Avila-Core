@@ -1313,12 +1313,29 @@ def verify_receipt(
     for inp in receipt.get("inputs", []):
         report.verified(f"{check_prefix}.input.{inp['input_slot']}.recorded", inp["sha256"])
 
+    # ADR-0006 clause 9: representation and numerical error disclosures are
+    # receipt-recorded components — shape-checked, never verdict inputs.
+    for out in receipt.get("outputs", []):
+        for component in ("representation_error", "numerical_error"):
+            disclosure = out.get(component)
+            if disclosure is None:
+                continue
+            check = f"{check_prefix}.output.{out['output_id']}.{component}"
+            value = disclosure.get("value", "")
+            unit = disclosure.get("unit", "")
+            if not isinstance(value, str) or not EXACT_NUMBER_RE.match(value):
+                report.mismatch(check, f"{component} bound {value!r} is not a canonical exact number")
+            elif not isinstance(unit, str) or not unit:
+                report.mismatch(check, f"{component} carries an empty unit")
+            else:
+                report.verified(check, f"{value} {unit}")
+
     executions = [e for e in package.get("executions", []) if e["step_id"] == step_id]
     if not executions:
         report.not_checked(f"{check_prefix}.outputs_bind_package", f"package.json declares no execution for step {step_id!r}")
         return
     execution = executions[0]
-    receipt_output_digests = {o["sha256"] for o in receipt.get("outputs", []) if o.get("state") == "collected" and "sha256" in o}
+    receipt_output_digests = {o["sha256"] for o in receipt.get("outputs", []) if o.get("state") in ("collected", "partial") and "sha256" in o}
     for out in execution.get("outputs", []):
         claim_id = out["claim_id"]
         output_slot = out["output_slot"]

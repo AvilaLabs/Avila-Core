@@ -105,8 +105,9 @@ _PURPOSE_KEYS = {"purpose", "owner", "description"}
 _ROLE_KEYS = {"role", "owner", "validator", "input_schema", "quantity_kind",
               "unit_class", "accepted_media_types", "permitted_claim_models",
               "categorical_values", "non_claims"}
-_CAPABILITY_KEYS = {"capability_type", "owner", "reproducibility", "inputs",
-                    "outputs", "parameters", "review", "non_claims"}
+_CAPABILITY_KEYS = {"capability_type", "owner", "maturity", "reproducibility",
+                    "inputs", "outputs", "parameters", "review", "rounding",
+                    "non_claims"}
 _REPRO_DECL_KEYS = {"determinism", "material_factors"}
 _FACTOR_KEYS = {"factor_id", "value_type"}
 _SLOT_IN_KEYS = {"slot_id", "role", "accepted_media_types", "required"}
@@ -118,6 +119,7 @@ _BOUND_KEYS = {"value", "inclusive"}
 _QUANTITY_VALUE_KEYS = {"value", "unit"}
 _REVIEW_DECL_KEYS = {"reviewer_role", "presented_input_slots",
                     "decision_output_slot", "allowed_dispositions"}
+_ROUNDING_DECL_KEYS = {"quantum", "mode", "authority", "raw_input_edge"}
 
 _ENUMS = {
     "status": {"draft", "in_review", "approved", "retired"},
@@ -133,6 +135,8 @@ _ENUMS = {
     "bound_side": {"lower", "upper"},
     "parameter_type": {"boolean", "integer", "exact_number", "text", "quantity"},
     "independence_mode": {"none", "constraints"},
+    "rounding_mode": {"floor", "ceiling", "toward_zero", "away_from_zero",
+                      "half_up", "half_even"},
     "review_party": {"requester", "method_owner", "capability_provider",
                      "executor"},
     "separation_level": {"different_person", "different_organization"},
@@ -349,6 +353,24 @@ def _validate_shape(contract: dict, registry: dict) -> None:
             for d_index, disposition in enumerate(review["allowed_dispositions"]):
                 _enum(disposition, "review_disposition",
                       f"{r_where}/allowed_dispositions/{d_index}")
+        rounding = capability.get("rounding")
+        if rounding is not None:
+            r_where = f"{where}/rounding"
+            _shape(rounding, _ROUNDING_DECL_KEYS, r_where)
+            for required in ("quantum", "mode", "authority", "raw_input_edge"):
+                if required not in rounding:
+                    raise WouldReject(f"{r_where} lacks required field `{required}`")
+            _shape(rounding["quantum"], _QUANTITY_VALUE_KEYS,
+                   f"{r_where}/quantum")
+            _enum(rounding["mode"], "rounding_mode", f"{r_where}/mode")
+            if not isinstance(rounding["raw_input_edge"], str) or \
+                    not rounding["raw_input_edge"]:
+                raise WouldReject(f"{r_where}/raw_input_edge must be a nonempty string")
+            input_slots = {s["slot_id"] for s in capability.get("inputs", [])}
+            if rounding["raw_input_edge"] not in input_slots:
+                raise WouldReject(
+                    f"{r_where}/raw_input_edge `{rounding['raw_input_edge']}` "
+                    "is not an input slot declared by the capability type")
 
 
 def _sha256(data: bytes) -> str:

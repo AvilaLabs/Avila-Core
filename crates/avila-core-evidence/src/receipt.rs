@@ -10,7 +10,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use avila_core_kernel::canonicalize_json;
+use avila_core_kernel::{ExactNumber, canonicalize_json};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
@@ -138,6 +138,30 @@ pub struct ReceiptOutput {
     pub sha256: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bytes: Option<u64>,
+    /// ADR-0006 clause 9: the adapter's disclosed representation error for
+    /// this output — the float-to-shortest-round-trip-decimal conversion
+    /// bound. A disclosure, never a verdict input: no claim field carries
+    /// it and the kernel never reads it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub representation_error: Option<ErrorDisclosure>,
+    /// The adapter's disclosed numerical error of the computation itself —
+    /// a component kept distinct from representation error, never combined
+    /// by the kernel.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub numerical_error: Option<ErrorDisclosure>,
+}
+
+/// ADR-0006 clause 9: one disclosed error component — an exact canonical
+/// bound and its unit, recorded on the receipt so downstream readers see
+/// what the adapter knew. It is evidence of what the adapter disclosed,
+/// not a verdict input.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ErrorDisclosure {
+    /// Canonical exact bound on this error component.
+    pub value: String,
+    /// The unit `value` is expressed in.
+    pub unit: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -483,6 +507,25 @@ pub fn verify_receipt(
                 issues.push(format!("output `{}` was not produced", output.output_id));
             }
         }
+        for (component, disclosure) in [
+            ("representation_error", &output.representation_error),
+            ("numerical_error", &output.numerical_error),
+        ] {
+            if let Some(disclosure) = disclosure {
+                if ExactNumber::from_canonical(&disclosure.value).is_err() {
+                    issues.push(format!(
+                        "output `{}` records a {component} bound `{}` that is not a canonical exact number",
+                        output.output_id, disclosure.value
+                    ));
+                }
+                if disclosure.unit.is_empty() {
+                    issues.push(format!(
+                        "output `{}` records a {component} with an empty unit",
+                        output.output_id
+                    ));
+                }
+            }
+        }
     }
     for output_id in &expected.outputs {
         if !seen_outputs.contains(output_id.as_str()) {
@@ -685,6 +728,8 @@ mod tests {
                 state: OutputState::Collected,
                 sha256: Some(digest(b"result")),
                 bytes: Some(6),
+                representation_error: None,
+                numerical_error: None,
             }],
             runner: RunnerIdentity {
                 runner: "test".into(),
@@ -859,6 +904,41 @@ mod tests {
                 .issues
                 .iter()
                 .any(|issue| issue.contains("was staged with digest"))
+        );
+    }
+
+    #[test]
+    fn disclosed_error_components_are_recorded_and_shape_checked() {
+        let root = TestDir::new();
+        let (mut receipt, expected) = fixture(&root.0);
+        // ADR-0006 clause 9: representation and numerical error are two
+        // separately recorded components — the receipt carries both and
+        // verifies them by shape; nothing combines them into the verdict.
+        receipt.outputs[0].representation_error = Some(ErrorDisclosure {
+            value: "0.0000000000000002".into(),
+            unit: "uSv/h".into(),
+        });
+        receipt.outputs[0].numerical_error = Some(ErrorDisclosure {
+            value: "0.5".into(),
+            unit: "uSv/h".into(),
+        });
+        let check = verify_receipt(&receipt, &root.0, &expected).unwrap();
+        assert_eq!(check.state, ReceiptCheckState::Verified);
+        // The components round-trip through receipt bytes unchanged.
+        let reparsed = parse_receipt(&serde_json::to_vec(&receipt).unwrap()).unwrap();
+        assert_eq!(reparsed, receipt);
+
+        receipt.outputs[0].numerical_error = Some(ErrorDisclosure {
+            value: "not-a-number".into(),
+            unit: "uSv/h".into(),
+        });
+        let check = verify_receipt(&receipt, &root.0, &expected).unwrap();
+        assert_eq!(check.state, ReceiptCheckState::Failed);
+        assert!(
+            check
+                .issues
+                .iter()
+                .any(|issue| issue.contains("numerical_error bound"))
         );
     }
 

@@ -33,7 +33,9 @@ agreement against); in short:
 3. **Execution receipts** — recomputes each receipt's `invocation_sha256`
    from its own recorded fields and compares it with the recorded value;
    verifies every declared output's digest against the package artifact it
-   binds.
+   binds (byte-bearing states are `collected` and `partial`); shape-checks
+   each output's ADR-0006 clause-9 `representation_error`/`numerical_error`
+   disclosures — recorded components, never verdict inputs.
 4. **Claims binding** — every claim's artifact identity binds to a
    package-declared artifact that verifies; the claims document's and
    campaign report's compiled-snapshot digests are compared for equality

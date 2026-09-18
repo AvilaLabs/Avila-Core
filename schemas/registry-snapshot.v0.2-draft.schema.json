@@ -259,12 +259,39 @@
         "review": {
           "$ref": "#/$defs/reviewDeclaration"
         },
+        "rounding": {
+          "$ref": "#/$defs/roundingDeclaration",
+          "description": "ADR-0006 clause 8: present only when this type is a decision-rounding capability — the rounding transformation is a separately typed and qualified capability, never an implicit comparison."
+        },
         "non_claims": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/nonemptyString"
           },
           "default": []
+        }
+      }
+    },
+    "roundingDeclaration": {
+      "type": "object",
+      "description": "ADR-0006 clause 8: a decision-rounding capability's declared transformation — exact quantum, mode, authority, and the raw-input edge. The kernel comparison over its output remains exact; rounding is never an implicit comparison.",
+      "additionalProperties": false,
+      "required": ["quantum", "mode", "authority", "raw_input_edge"],
+      "properties": {
+        "quantum": {
+          "$ref": "#/$defs/quantityValue",
+          "description": "The exact rounding quantum, as a `Quantity`."
+        },
+        "mode": {
+          "enum": ["floor", "ceiling", "toward_zero", "away_from_zero", "half_up", "half_even"]
+        },
+        "authority": {
+          "$ref": "#/$defs/nonemptyString",
+          "description": "The authority — regulation or method — requiring the rounding."
+        },
+        "raw_input_edge": {
+          "$ref": "#/$defs/nonemptyString",
+          "description": "The input slot carrying the raw, unrounded value."
         }
       }
     },

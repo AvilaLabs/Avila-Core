@@ -400,8 +400,50 @@ pub struct CapabilityTypeDefinition {
     pub parameters: Vec<ParameterDefinition>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub review: Option<ReviewDeclaration>,
+    /// ADR-0006 clause 8: present only when this type is a decision-rounding
+    /// capability — the rounding transformation is a separately typed and
+    /// qualified capability, never an implicit comparison.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rounding: Option<RoundingDeclaration>,
     #[serde(default)]
     pub non_claims: Vec<String>,
+}
+
+/// ADR-0006 clause 8: a decision-rounding capability's declared
+/// transformation — the capability declares the rounding it performs, so a
+/// requirement's comparison over its output is exact over declared
+/// semantics, never over an implicit rounding.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RoundingDeclaration {
+    /// The exact rounding quantum, as a `Quantity`.
+    pub quantum: QuantityValue,
+    /// The rounding mode the capability applies.
+    pub mode: RoundingMode,
+    /// The authority — regulation or method — requiring the rounding.
+    pub authority: String,
+    /// The input slot carrying the raw, unrounded value — the raw-input
+    /// edge the claim lineage keeps linked.
+    pub raw_input_edge: String,
+}
+
+/// ADR-0006 clause 8: the closed rounding-mode vocabulary a
+/// decision-rounding capability may declare.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RoundingMode {
+    /// Toward negative infinity.
+    Floor,
+    /// Toward positive infinity.
+    Ceiling,
+    /// Discard the fraction — toward zero.
+    TowardZero,
+    /// Increase the magnitude — away from zero.
+    AwayFromZero,
+    /// Nearest quantum; ties move away from zero.
+    HalfUp,
+    /// Nearest quantum; ties move to the even multiple.
+    HalfEven,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

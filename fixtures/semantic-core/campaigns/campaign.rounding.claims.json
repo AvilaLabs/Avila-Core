@@ -1,0 +1,48 @@
+{
+  "schema_version": "avila.core/evidence-claims/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "compiled_snapshot_sha256": "sha256:3d2ee31d0ea865485cf9b98e1a59e174fb0b9d4b0cf74f576ba446efc5636850",
+  "inputs": [
+    {
+      "input_id": "case",
+      "artifact": {
+        "sha256": "sha256:abababababababababababababababababababababababababababababababab",
+        "media_type": "application/vnd.fixture.source+json"
+      }
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "calculated",
+      "step_id": "calculate",
+      "output_slot": "dose_rate",
+      "artifact": {
+        "sha256": "sha256:abababababababababababababababababababababababababababababababab",
+        "media_type": "application/vnd.fixture.quantity+json"
+      },
+      "claim": {
+        "model": "unquantified",
+        "nominal": {
+          "value": "95.34",
+          "unit": "uSv/h"
+        }
+      }
+    },
+    {
+      "claim_id": "rounded",
+      "step_id": "round",
+      "output_slot": "rounded",
+      "artifact": {
+        "sha256": "sha256:abababababababababababababababababababababababababababababababab",
+        "media_type": "application/vnd.fixture.quantity+json"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "value": "95.3",
+          "unit": "uSv/h"
+        }
+      }
+    }
+  ]
+}

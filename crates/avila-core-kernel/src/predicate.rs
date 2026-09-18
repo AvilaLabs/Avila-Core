@@ -492,4 +492,93 @@ mod tests {
             CORE_S1102
         );
     }
+
+    #[test]
+    fn a_wide_predicate_fails_closed_on_the_node_limit() {
+        let registry = KindRegistry::default();
+        let evaluator = ApplicabilityEvaluator::new(&registry);
+        let context = ApplicabilityContext {
+            params: BTreeMap::new(),
+            inputs: BTreeMap::new(),
+            environment: None,
+            facts: BTreeMap::new(),
+        };
+        let predicate = Predicate::All(vec![Predicate::Always(true); DEFAULT_MAX_NODES]);
+        let error = evaluator.evaluate(&predicate, &context).unwrap_err();
+        assert_eq!(error.code(), CORE_S1102);
+        assert!(error.detail().contains("resource limit"), "{error}");
+    }
+
+    #[test]
+    fn inputs_carrying_the_same_role_are_addressed_by_slot() {
+        // A contract may bind two inputs to the same role — a primary and a
+        // fallback, say. The context keys inputs by slot, so a predicate
+        // addresses exactly the slot it names: one input's attribute never
+        // aliases the other's, and a slot the case does not carry is
+        // `unknown`, never a match on its sibling.
+        let registry = KindRegistry::default();
+        let evaluator = ApplicabilityEvaluator::new(&registry);
+        let context = ApplicabilityContext {
+            params: BTreeMap::new(),
+            inputs: BTreeMap::from([
+                (
+                    "decay-primary".to_string(),
+                    InputContext {
+                        attributes: BTreeMap::from([(
+                            "media_type".to_string(),
+                            Value::String("text/plain".to_string()),
+                        )]),
+                    },
+                ),
+                (
+                    "decay-fallback".to_string(),
+                    InputContext {
+                        attributes: BTreeMap::from([(
+                            "media_type".to_string(),
+                            Value::String("application/json".to_string()),
+                        )]),
+                    },
+                ),
+            ]),
+            environment: None,
+            facts: BTreeMap::new(),
+        };
+        let attribute_in = |slot: &str, values: &[&str]| {
+            Predicate::InputAttributeIn(AttributeSetPredicate {
+                slot: slot.to_string(),
+                attribute: "media_type".to_string(),
+                values: values.iter().map(|value| value.to_string()).collect(),
+            })
+        };
+
+        assert_eq!(
+            evaluator
+                .evaluate(&attribute_in("decay-primary", &["text/plain"]), &context)
+                .unwrap(),
+            TruthValue::True
+        );
+        // The same value under the sibling slot does not match — the slot
+        // name, not the shared role, binds the input.
+        assert_eq!(
+            evaluator
+                .evaluate(&attribute_in("decay-fallback", &["text/plain"]), &context)
+                .unwrap(),
+            TruthValue::False
+        );
+        assert_eq!(
+            evaluator
+                .evaluate(
+                    &attribute_in("decay-fallback", &["application/json"]),
+                    &context
+                )
+                .unwrap(),
+            TruthValue::True
+        );
+        assert_eq!(
+            evaluator
+                .evaluate(&attribute_in("decay-other", &["text/plain"]), &context)
+                .unwrap(),
+            TruthValue::Unknown
+        );
+    }
 }

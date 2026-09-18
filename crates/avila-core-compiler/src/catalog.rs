@@ -21,6 +21,13 @@ pub struct DiagnosticExplanation {
 /// Every explained code, sorted by code.
 pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
     DiagnosticExplanation {
+        code: "CORE-A4101",
+        title: "Qualification record superseded",
+        rule: "SC-7; SC-15",
+        meaning: "A bounded or enclosure requirement depends on a claim whose producing capability carries a qualification record that a bound newer record declares superseded — the newer record names this record's digest in its `supersedes` list. Whatever the superseded record's envelope terms evaluated, it no longer stands: a superseded record cannot satisfy a role, so the claim cannot establish the requirement.",
+        next_action: "Rerun the step under the superseding record, or supply evidence from a capability qualified by a current record. The owner is the method owner.",
+    },
+    DiagnosticExplanation {
         code: "CORE-A4201",
         title: "Nominal basis not permitted",
         rule: "SC-8 and SC-10",
@@ -75,6 +82,13 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         rule: "SC-7; SC-10 A7",
         meaning: "A bounded or enclosure requirement depends on a claim whose producing capability carries a qualification record, but the record's `not_after` lapsed before the claim's evaluation instant — the producing receipt's `started_at`. The envelope no longer stands, whatever its terms would have said — the claim cannot establish the requirement. The calculation may be fine; the credential naming where it may be trusted has lapsed.",
         next_action: "Renew the qualification record (a new revision with a later `not_after`) and rerun the step, or supply evidence from a capability whose qualification is current. The owner is the method owner.",
+    },
+    DiagnosticExplanation {
+        code: "CORE-A4603",
+        title: "Qualification record revoked",
+        rule: "SC-7; SC-15",
+        meaning: "A bounded or enclosure requirement depends on a claim whose producing capability carries a qualification record that a bound `qualification_revocation` document withdraws — the package binds a withdrawal naming this record's digest. Whatever the record's envelope terms evaluated, it no longer stands: a revoked record cannot satisfy a role, so the claim cannot establish the requirement. Under issuer recognition only a revocation signed under the declared issuer key can withdraw a record.",
+        next_action: "Supply evidence from a capability qualified by a record that has not been withdrawn, or bind a current qualification and rerun the step. The owner is the method owner.",
     },
     DiagnosticExplanation {
         code: "CORE-E7001",

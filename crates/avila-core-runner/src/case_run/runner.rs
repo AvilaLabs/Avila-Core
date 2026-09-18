@@ -1073,12 +1073,30 @@ impl<'a> Runner<'a> {
 
         // The producer's qualification envelope over this run's facts, when
         // the package binds one for this adapter and capability. Evaluated
-        // before anything runs so a plan can already say "outside".
+        // before anything runs so a plan can already say "outside". Among
+        // matching records a live one wins: a superseded or revoked record
+        // still attaches when it is the only match — its assessment is
+        // marked dead and the campaign refuses it.
         let mut qualification_covered_slots: Option<Vec<String>> = None;
-        if let Some(bound) = self.envelopes.records.iter().find(|bound| {
-            bound.record.adapter == execution.adapter
-                && bound.record.capability.capability_id == execution.capability_id
-        }) {
+        if let Some(bound) = self
+            .envelopes
+            .records
+            .iter()
+            .filter(|bound| {
+                bound.record.adapter == execution.adapter
+                    && bound.record.capability.capability_id == execution.capability_id
+            })
+            .find(|bound| {
+                !self.envelopes.superseded_by.contains_key(&bound.sha256)
+                    && !self.envelopes.revoked_by.contains_key(&bound.sha256)
+            })
+            .or_else(|| {
+                self.envelopes.records.iter().find(|bound| {
+                    bound.record.adapter == execution.adapter
+                        && bound.record.capability.capability_id == execution.capability_id
+                })
+            })
+        {
             qualification_covered_slots = bound.record.covered_output_slots.clone();
             let mut staged_bytes = Vec::with_capacity(staged.len());
             for input in &staged {
@@ -1091,13 +1109,17 @@ impl<'a> Runner<'a> {
             }
             match adapter.applicability(&staged_bytes, &plan.invocation_sha256) {
                 Ok(context) => {
-                    report.qualification = Some(evaluate_envelope(
+                    let mut assessment = evaluate_envelope(
                         &bound.record,
                         &bound.sha256,
                         &self.envelopes.kinds,
                         &context,
                         &rfc3339_now(),
-                    ));
+                    );
+                    assessment.superseded_by =
+                        self.envelopes.superseded_by.get(&bound.sha256).cloned();
+                    assessment.revoked_by = self.envelopes.revoked_by.get(&bound.sha256).cloned();
+                    report.qualification = Some(assessment);
                 }
                 Err(error) => {
                     report.add_finding(

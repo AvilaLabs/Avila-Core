@@ -22,6 +22,8 @@ use crate::compile::registry::RegistryIndex;
 use crate::document::RegistrySnapshot;
 
 pub const QUALIFICATION_SCHEMA_VERSION: &str = "avila.core/qualification/v0.1-draft";
+/// Schema of a `qualification_revocation` package document (SC-7).
+pub const REVOCATION_SCHEMA_VERSION: &str = "avila.core/qualification-revocation/v0.1-draft";
 
 /// A method owner's qualification of one capability implementation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -55,6 +57,15 @@ pub struct QualificationRecord {
     /// stamps the signed evaluation time into each assessment.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub not_after: Option<String>,
+    /// Digests of qualification records this record replaces. An immutable
+    /// record cannot declare its own death; the superseding record carries
+    /// the edge, authenticated by its own signature under issuer
+    /// recognition. A bound record whose digest appears in another bound
+    /// record's `supersedes` is dead: it still may attach an assessment —
+    /// marked `superseded_by` — but no claim citing it can satisfy a
+    /// bounded or enclosure requirement (`CORE-A4101`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supersedes: Vec<String>,
 }
 
 impl QualificationRecord {
@@ -123,6 +134,16 @@ pub struct EnvelopeAssessment {
     /// record one.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub evaluated_at: String,
+    /// Digest of the bound record that supersedes this one, when the bound
+    /// set contains one. A lifecycle fact the runner stamps at evaluation —
+    /// the record is dead whatever its envelope terms say (`CORE-A4101`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub superseded_by: Option<String>,
+    /// Digest of the bound `qualification_revocation` document naming this
+    /// record, when one applies. A lifecycle fact the runner stamps at
+    /// evaluation (`CORE-A4603`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revoked_by: Option<String>,
     /// The kernel applicability context (as JSON) this assessment was
     /// evaluated over: every fact the adapter reported, with its declared
     /// source, and the staged inputs' media types and identities. Persisted
@@ -153,6 +174,16 @@ pub struct ClaimQualification {
     /// receipt's `started_at`, which is the signed evaluation instant.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub not_after: Option<String>,
+    /// Digest of the bound record superseding the cited record — carried
+    /// on the claim so the campaign's supersession check (`CORE-A4101`)
+    /// re-derives without the bound set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub superseded_by: Option<String>,
+    /// Digest of the bound revocation document withdrawing the cited
+    /// record — carried on the claim so the campaign's revocation check
+    /// (`CORE-A4603`) re-derives without the bound set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revoked_by: Option<String>,
     /// The applicability context the assessment was evaluated over; carrying
     /// it on the claim binds the recorded state to the recorded facts.
     pub context: Value,
@@ -179,6 +210,8 @@ impl From<&EnvelopeAssessment> for ClaimQualification {
             owner: assessment.owner.clone(),
             state: assessment.state,
             not_after: assessment.not_after.clone(),
+            superseded_by: assessment.superseded_by.clone(),
+            revoked_by: assessment.revoked_by.clone(),
             context: assessment.context.clone(),
             terms: assessment.terms.clone(),
         }
@@ -244,7 +277,67 @@ pub fn parse_qualification(bytes: &[u8]) -> Result<QualificationRecord, String> 
             ));
         }
     }
+    for digest in &record.supersedes {
+        if !digest.starts_with("sha256:")
+            || digest.len() != 71
+            || !digest[7..]
+                .chars()
+                .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+        {
+            return Err(format!(
+                "qualification `supersedes` entries must be lowercase `sha256:` digests, observed `{digest}`"
+            ));
+        }
+    }
     Ok(record)
+}
+
+/// A withdrawal notice for a qualification record (SC-7). The record is
+/// immutable, so its death is a separate document bound in the same
+/// package, naming the record by exact digest. Under issuer recognition
+/// (`execution_policy.recognized_qualification_owners`) the document must
+/// verify under the issuer key declared for the record's owner; without a
+/// listed owner it is a package-asserted withdrawal — it can only deny
+/// evidence, never manufacture acceptance.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct QualificationRevocation {
+    pub schema_version: String,
+    /// The `qualification_id` of the record being withdrawn — reporting
+    /// only; the digest is authoritative.
+    pub qualification_id: String,
+    /// Exact digest of the record being withdrawn.
+    pub record_sha256: String,
+    /// Why the record is withdrawn — data, never interpreted.
+    #[serde(default)]
+    pub reason: String,
+}
+
+/// Parse and validate a qualification revocation document from its bytes.
+pub fn parse_revocation(bytes: &[u8]) -> Result<QualificationRevocation, String> {
+    let revocation: QualificationRevocation =
+        serde_json::from_slice(bytes).map_err(|error| format!("revocation: {error}"))?;
+    if revocation.schema_version != REVOCATION_SCHEMA_VERSION {
+        return Err(format!(
+            "revocation schema `{}` is not `{REVOCATION_SCHEMA_VERSION}`",
+            revocation.schema_version
+        ));
+    }
+    if revocation.qualification_id.trim().is_empty() {
+        return Err("revocation `qualification_id` must not be empty".into());
+    }
+    if !revocation.record_sha256.starts_with("sha256:")
+        || revocation.record_sha256.len() != 71
+        || !revocation.record_sha256[7..]
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+    {
+        return Err(format!(
+            "revocation `record_sha256` must be a lowercase `sha256:` digest, observed `{}`",
+            revocation.record_sha256
+        ));
+    }
+    Ok(revocation)
 }
 
 /// The quantity kinds of a registry snapshot, for scaling quantity facts.
@@ -274,6 +367,10 @@ pub fn evaluate_envelope(
         state: EnvelopeState::Unknown,
         not_after: record.not_after.clone(),
         evaluated_at: evaluated_at.into(),
+        // Lifecycle facts are the runner's to stamp — envelope evaluation
+        // sees one record, not the bound set.
+        superseded_by: None,
+        revoked_by: None,
         context: context.clone(),
         terms: Vec::new(),
         issues: Vec::new(),
@@ -483,6 +580,33 @@ mod tests {
         weak["facts"]["slab.total_thickness"]["source"]["class"] = json!("claimed");
         let weak = evaluate_envelope(&record, "sha256:q", &kinds, &weak, EVAL_AT);
         assert_eq!(weak.state, EnvelopeState::Unknown);
+    }
+
+    #[test]
+    fn a_scope_term_over_the_resource_limit_is_unknown_not_affirmative() {
+        // The predicate evaluator's node bound trips on a pathologically
+        // wide term; the failure is recorded and the term — and so the
+        // envelope — reads `unknown`. A resource limit can never yield an
+        // affirmative assessment, and the campaign quarantines the claim.
+        let children = vec![json!({ "always": true }); 10_001];
+        let record = record(json!({ "all": [{ "all": children }] }));
+        let assessment = evaluate_envelope(
+            &record,
+            "sha256:q",
+            &kinds(),
+            &context("90", "polyethylene"),
+            EVAL_AT,
+        );
+        assert_eq!(assessment.state, EnvelopeState::Unknown);
+        assert_eq!(assessment.terms[0].result, TruthValue::Unknown);
+        assert!(
+            assessment
+                .issues
+                .iter()
+                .any(|issue| issue.contains("resource limit")),
+            "{:?}",
+            assessment.issues
+        );
     }
 
     #[test]

@@ -71,6 +71,8 @@
             "owner": { "type": "string", "description": "The record's declared owner — carried on the claim so the campaign's recognition policy (execution_policy.recognized_qualification_owners) can be checked without the record document." },
             "state": { "enum": ["inside", "outside", "unknown", "expired"] },
             "not_after": { "type": "string", "description": "The record's expiry bound at evaluation time, normalized `YYYY-MM-DDTHH:MM:SSZ`; carried on the claim so `expired` re-derives against the producing receipt's `started_at`, the signed evaluation instant." },
+            "superseded_by": { "$ref": "#/$defs/sha256", "description": "Digest of the bound record superseding the cited record — a bound-set lifecycle fact stamped at evaluation, carried so the campaign's supersession check (CORE-A4101) re-derives without the bound set." },
+            "revoked_by": { "$ref": "#/$defs/sha256", "description": "Digest of the bound `qualification_revocation` document withdrawing the cited record — carried so the campaign's revocation check (CORE-A4603) re-derives without the bound set." },
             "context": { "$ref": "#/$defs/applicabilityContext" },
             "terms": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["predicate", "result"],
               "properties": { "predicate": { "type": "string" }, "result": { "enum": ["true", "false", "unknown"] } } } }

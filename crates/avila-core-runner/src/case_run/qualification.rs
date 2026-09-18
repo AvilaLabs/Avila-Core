@@ -8,12 +8,13 @@ use std::error::Error;
 use avila_core_compiler::QualificationRecord;
 use avila_core_compiler::SourceLocation;
 use avila_core_compiler::parse_qualification;
+use avila_core_compiler::parse_revocation;
 use avila_core_evidence::VerifiedCasePackage;
 use avila_core_evidence::signature;
 use avila_core_kernel::KindRegistry;
 
 use crate::case_run::FindingClass;
-use crate::diagnostic::{CORE_X3404, RunStage};
+use crate::diagnostic::{CORE_X3404, CORE_X3405, RunStage};
 
 use super::RunFinding;
 
@@ -24,11 +25,30 @@ pub struct BoundQualification {
     pub record: QualificationRecord,
 }
 
-/// What envelope evaluation needs: the bound records and the registry's
-/// quantity kinds.
+/// What envelope evaluation needs: the bound records, the lifecycle facts
+/// the bound set asserts over them, and the registry's quantity kinds.
 pub struct Envelopes {
     pub records: Vec<BoundQualification>,
+    /// Bound record digest → digest of the bound record superseding it.
+    /// A record is dead when another bound record names its digest in
+    /// `supersedes`; its assessment still attaches, marked, but no claim
+    /// citing it can satisfy a bounded or enclosure requirement.
+    pub superseded_by: BTreeMap<String, String>,
+    /// Bound record digest → digest of the bound `qualification_revocation`
+    /// document withdrawing it.
+    pub revoked_by: BTreeMap<String, String>,
     pub kinds: KindRegistry,
+}
+
+/// The package's qualification evidence: the bound records, the lifecycle
+/// facts the bound set asserts over them (supersession edges carried on the
+/// superseding records, withdrawals carried on `qualification_revocation`
+/// documents), and any findings the load produced.
+pub struct LoadedQualifications {
+    pub records: Vec<BoundQualification>,
+    pub superseded_by: BTreeMap<String, String>,
+    pub revoked_by: BTreeMap<String, String>,
+    pub findings: Vec<RunFinding>,
 }
 
 /// Load the package's `qualification` documents and refuse any whose bound
@@ -41,10 +61,18 @@ pub struct Envelopes {
 /// attached, with a `CORE-X3404` finding. A record whose owner is not listed
 /// still loads: its assessment attaches to the step's claims as data, and the
 /// campaign's recognition check refuses it as `CORE-A4601` evidence.
+///
+/// Lifecycle: a bound record is dead when another bound record names its
+/// digest in `supersedes`, or a bound `qualification_revocation` names it.
+/// A revocation against a recognized owner's record must itself verify
+/// under the declared issuer key — an unverifiable one is ignored with a
+/// `CORE-X3405` finding and the record stands. Without a listed owner a
+/// revocation is package-asserted and applies unsigned: it can only deny
+/// evidence, never manufacture acceptance.
 pub(crate) fn load_qualifications(
     package: &VerifiedCasePackage,
     recognized_owners: &BTreeMap<String, String>,
-) -> Result<(Vec<BoundQualification>, Vec<RunFinding>), Box<dyn Error>> {
+) -> Result<LoadedQualifications, Box<dyn Error>> {
     let mut bound = Vec::new();
     let mut findings = Vec::new();
     for document in package
@@ -84,10 +112,18 @@ pub(crate) fn load_qualifications(
             )
             .into());
         }
-        if !package.manifest.executions.iter().any(|execution| {
-            execution.adapter == record.adapter
-                && execution.capability_id == record.capability.capability_id
-        }) {
+        // The pair the record covers must be exercised by the workflow —
+        // unless the record is bound only as a supersession witness: a
+        // record carrying `supersedes` may replace a record for a
+        // capability this package no longer executes. It still must name a
+        // bound capability implementation exactly, checked just above, and
+        // it never applies to a step whose pair is not exercised.
+        if record.supersedes.is_empty()
+            && !package.manifest.executions.iter().any(|execution| {
+                execution.adapter == record.adapter
+                    && execution.capability_id == record.capability.capability_id
+            })
+        {
             return Err(format!(
                 "qualification `{}` covers adapter `{}` under `{}`, but no execution uses that pair",
                 record.qualification_id, record.adapter, record.capability.capability_id
@@ -101,7 +137,8 @@ pub(crate) fn load_qualifications(
         // `CORE-A4601` evidence — but a listed owner's unsigned or
         // unverifiable record is refused here.
         if let Some(declared_key) = recognized_owners.get(&record.owner)
-            && let Some(reason) = check_recognition_signature(package, document, declared_key)
+            && let Some(reason) =
+                check_issuer_signature(package, "qualification", document, declared_key)
         {
             findings.push(RunFinding::runtime(
                 CORE_X3404,
@@ -124,15 +161,88 @@ pub(crate) fn load_qualifications(
             record,
         });
     }
-    Ok((bound, findings))
+
+    // Supersession: a bound record is dead where another bound record names
+    // its digest in `supersedes`. The edge rides on the superseding record,
+    // so it carries exactly that record's own authenticity — under issuer
+    // recognition a listed owner's record was already signature-checked
+    // above; without it the edge is package-asserted.
+    let mut superseded_by = BTreeMap::new();
+    for dead in &bound {
+        if let Some(superseder) = bound
+            .iter()
+            .find(|candidate| candidate.record.supersedes.contains(&dead.sha256))
+        {
+            superseded_by.insert(dead.sha256.clone(), superseder.sha256.clone());
+        }
+    }
+
+    // Revocation: a bound `qualification_revocation` naming a bound record's
+    // digest withdraws it. Against a recognized owner's record the document
+    // must verify under the declared issuer key — an unverifiable one is
+    // ignored with a finding and the record stands. Without a listed owner
+    // it is package-asserted and applies unsigned.
+    let mut revoked_by = BTreeMap::new();
+    for document in package
+        .manifest
+        .documents
+        .iter()
+        .filter(|document| document.role == "qualification_revocation")
+    {
+        let bytes = package
+            .document_by_id(&document.document_id)
+            .ok_or_else(|| {
+                format!(
+                    "qualification revocation `{}` has no bytes",
+                    document.document_id
+                )
+            })?;
+        let revocation = parse_revocation(bytes)
+            .map_err(|error| format!("document `{}`: {error}", document.document_id))?;
+        let Some(target) = bound
+            .iter()
+            .find(|bound| bound.sha256 == revocation.record_sha256)
+        else {
+            continue;
+        };
+        if let Some(declared_key) = recognized_owners.get(&target.record.owner)
+            && let Some(reason) =
+                check_issuer_signature(package, "qualification_revocation", document, declared_key)
+        {
+            findings.push(RunFinding::runtime(
+                CORE_X3405,
+                FindingClass::Inadmissible,
+                RunStage::PackageIntegrity,
+                "policy_owner",
+                SourceLocation::new(
+                    "manifest",
+                    format!("/documents/*/document_id={}", document.document_id),
+                ),
+                format!(
+                    "revocation of qualification `{}` {reason} — the withdrawal is ignored and the record stands",
+                    revocation.qualification_id
+                ),
+            ));
+            continue;
+        }
+        revoked_by.insert(target.sha256.clone(), document.sha256.clone());
+    }
+
+    Ok(LoadedQualifications {
+        records: bound,
+        superseded_by,
+        revoked_by,
+        findings,
+    })
 }
 
-/// Verify a bound qualification document's signature under the issuer key
-/// the contract's recognition policy declares. `Some(reason)` describes
-/// each failure; `None` only when a signature document covers the record's
+/// Verify a bound document's signature under the issuer key the contract's
+/// recognition policy declares for its owner. `Some(reason)` describes each
+/// failure; `None` only when a signature document covers the document's
 /// bound bytes and verifies under exactly that key.
-fn check_recognition_signature(
+fn check_issuer_signature(
     package: &VerifiedCasePackage,
+    role: &str,
     document: &avila_core_evidence::PackageDocument,
     declared_key: &str,
 ) -> Option<String> {
@@ -140,7 +250,7 @@ fn check_recognition_signature(
         return Some("the declared issuer key is malformed".into());
     };
     let Some((_, signature_document)) =
-        super::signing::find_signature_for(package, "qualification", &document.document_id)
+        super::signing::find_signature_for(package, role, &document.document_id)
     else {
         return Some("carries no signature document over its bound bytes".into());
     };

@@ -3861,6 +3861,361 @@ fn an_unlisted_owners_assessment_attaches_but_the_campaign_refuses_it() {
     }
 }
 
+/// The media type the contract declares for its `aftermatter-case` input.
+fn declared_case_media_type(synthetic: &Synthetic) -> String {
+    let contract: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("contract.json")).unwrap())
+            .unwrap();
+    contract["inputs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|input| input["input_id"] == "aftermatter-case")
+        .map(|input| input["media_type"].as_str().unwrap().to_string())
+        .unwrap()
+}
+
+/// The bound digest of a named manifest document.
+fn bound_document_sha(synthetic: &Synthetic, document_id: &str) -> String {
+    read_manifest(&synthetic.case_dir)
+        .documents
+        .iter()
+        .find(|document| document.document_id == document_id)
+        .expect("document is bound")
+        .sha256
+        .clone()
+}
+
+/// Add a capability the package binds but no compiled step exercises, as a
+/// superseding record's anchor would.
+fn bind_spare_capability(synthetic: &Synthetic, capability_id: &str) {
+    let executable = synthetic.root.join(format!("{capability_id}.sh"));
+    write_copy_stub(&executable, &synthetic.canned);
+    let mut package: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    package["capabilities"].as_array_mut().unwrap().push(json!({
+        "capability_id": capability_id,
+        "package_id": format!("test/{capability_id}@1"),
+        "executable_sha256": digest(&executable),
+    }));
+    fs::write(
+        synthetic.case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+}
+
+/// Bind a second qualification record — a newer revision naming the records
+/// it replaces in `supersedes`, under a capability the package binds but
+/// the workflow may no longer exercise.
+fn bind_superseding_qualification(
+    synthetic: &Synthetic,
+    capability_id: &str,
+    media_types: &[&str],
+    supersedes: &[String],
+) {
+    let package_value: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    let bound_sha256 = package_value["capabilities"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|capability| capability["capability_id"] == capability_id)
+        .map(|capability| {
+            capability["executable_sha256"]
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
+        .unwrap();
+    let record = json!({
+        "schema_version": "avila.core/qualification/v0.1-draft",
+        "qualification_id": "test/stub-classification-v2", "revision": 2, "owner": "test",
+        "adapter": "avila-labs.aftermatter/evaluate@1",
+        "capability": { "capability_id": capability_id, "executable_sha256": bound_sha256 },
+        "statement": "the corrected stub is claimed applicable to JSON cases only",
+        "scope": { "all": [
+            { "input_attribute_in": { "slot": "case", "attribute": "media_type", "values": media_types } },
+            { "fact": { "name": "inputs.count", "op": "ge", "value": 1,
+                        "source_requirement": { "class": "runner_measured", "validator": "avila-labs.aftermatter/evaluate@1" } } }
+        ] },
+        "supersedes": supersedes,
+    });
+    fs::write(
+        synthetic.case_dir.join("qualification-2.json"),
+        serde_json::to_vec_pretty(&record).unwrap(),
+    )
+    .unwrap();
+    let mut manifest = read_manifest(&synthetic.case_dir);
+    manifest.documents.push(PackageDocument {
+        document_id: "qualification-2".into(),
+        role: "qualification".into(),
+        path: "qualification-2.json".into(),
+        sha256: digest(&synthetic.case_dir.join("qualification-2.json")),
+        step_id: None,
+    });
+    write_manifest(&synthetic.case_dir, &manifest);
+}
+
+/// Bind a `qualification_revocation` document naming a record's digest,
+/// optionally signed by `seed` — as the issuer would withdraw it.
+fn bind_revocation(case_dir: &Path, record_sha256: &str, seed: Option<&[u8; 32]>) {
+    let revocation = json!({
+        "schema_version": "avila.core/qualification-revocation/v0.1-draft",
+        "qualification_id": "test/stub-classification",
+        "record_sha256": record_sha256,
+        "reason": "the scope overstated the validated range",
+    });
+    let path = "revocation.json";
+    fs::write(
+        case_dir.join(path),
+        serde_json::to_vec_pretty(&revocation).unwrap(),
+    )
+    .unwrap();
+    let sha256 = digest(&case_dir.join(path));
+    let mut manifest = read_manifest(case_dir);
+    manifest.documents.push(PackageDocument {
+        document_id: "revocation".into(),
+        role: "qualification_revocation".into(),
+        path: path.into(),
+        sha256: sha256.clone(),
+        step_id: None,
+    });
+    write_manifest(case_dir, &manifest);
+    if let Some(seed) = seed {
+        let target = signature::digest_from_prefixed(&sha256).unwrap();
+        let document = signature::build_signature_document(
+            seed,
+            "qualification_revocation",
+            "revocation".to_string(),
+            sha256,
+            &target,
+        );
+        bind_signature_document(
+            case_dir,
+            "signature-revocation",
+            "signatures/revocation.sig.json",
+            &document,
+        );
+    }
+}
+
+#[test]
+fn a_superseded_record_attaches_marked_and_the_campaign_refuses_it() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let media_type = declared_case_media_type(&synthetic);
+    declare_qualification(&synthetic, &[media_type.as_str()], None, None);
+    // The method owner replaced the record with one qualifying a capability
+    // this package binds but no longer executes: the dead record is the
+    // only match for the real step, so its assessment attaches marked
+    // superseded — and the campaign refuses it whatever its terms said.
+    let dead_sha256 = bound_document_sha(&synthetic, "qualification");
+    bind_spare_capability(&synthetic, "stub-v2");
+    bind_superseding_qualification(
+        &synthetic,
+        "stub-v2",
+        &[media_type.as_str()],
+        std::slice::from_ref(&dead_sha256),
+    );
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let qualification = step(&report)
+        .qualification
+        .as_ref()
+        .expect("the superseded record's assessment still attaches");
+    assert_eq!(
+        qualification.superseded_by.as_deref(),
+        Some(bound_document_sha(&synthetic, "qualification-2").as_str()),
+        "{summary}"
+    );
+    // The envelope itself holds — the refusal is lifecycle, not scope.
+    assert_eq!(
+        qualification.state,
+        avila_core_compiler::EnvelopeState::Inside,
+        "{summary}"
+    );
+    let campaign = report.campaign.as_ref().expect("campaign evaluates");
+    let bounded: Vec<_> = campaign
+        .verdicts
+        .iter()
+        .filter(|verdict| verdict.requirement_id.starts_with("CASE-000-R"))
+        .collect();
+    assert!(!bounded.is_empty(), "{summary}");
+    for verdict in bounded {
+        assert_eq!(
+            verdict.verdict.rule, "not_evaluated.qualification_superseded",
+            "{summary}"
+        );
+        let reasons = serde_json::to_string(&verdict.verdict.reasons).unwrap();
+        assert!(reasons.contains("CORE-A4101"), "{reasons}");
+    }
+}
+
+#[test]
+fn a_live_record_serves_the_step_its_dead_peer_also_matches() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let media_type = declared_case_media_type(&synthetic);
+    declare_qualification(&synthetic, &[media_type.as_str()], None, None);
+    // Both records cover the step's pair — the superseding record is bound
+    // under the same capability the step executes. The dead record is
+    // listed first in the manifest; the live one must still win.
+    let dead_sha256 = bound_document_sha(&synthetic, "qualification");
+    bind_superseding_qualification(&synthetic, "stub", &[media_type.as_str()], &[dead_sha256]);
+    let mut manifest = read_manifest(&synthetic.case_dir);
+    manifest
+        .documents
+        .retain(|d| d.document_id != "qualification-2");
+    manifest.documents.insert(
+        3,
+        PackageDocument {
+            document_id: "qualification-2".into(),
+            role: "qualification".into(),
+            path: "qualification-2.json".into(),
+            sha256: digest(&synthetic.case_dir.join("qualification-2.json")),
+            step_id: None,
+        },
+    );
+    write_manifest(&synthetic.case_dir, &manifest);
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let qualification = step(&report)
+        .qualification
+        .as_ref()
+        .expect("the live record's assessment attaches");
+    assert_eq!(
+        qualification.qualification_id, "test/stub-classification-v2",
+        "{summary}"
+    );
+    assert_eq!(qualification.superseded_by, None, "{summary}");
+    assert_eq!(
+        qualification.state,
+        avila_core_compiler::EnvelopeState::Inside,
+        "{summary}"
+    );
+}
+
+#[test]
+fn a_package_asserted_revocation_marks_the_record_and_the_campaign_refuses_it() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let media_type = declared_case_media_type(&synthetic);
+    declare_qualification(&synthetic, &[media_type.as_str()], None, None);
+    // Without a recognized issuer the withdrawal is package-asserted: it
+    // applies unsigned, since it can only deny evidence, never manufacture
+    // acceptance.
+    let record_sha256 = bound_document_sha(&synthetic, "qualification");
+    bind_revocation(&synthetic.case_dir, &record_sha256, None);
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let qualification = step(&report)
+        .qualification
+        .as_ref()
+        .expect("the revoked record's assessment still attaches");
+    assert_eq!(
+        qualification.revoked_by.as_deref(),
+        Some(bound_document_sha(&synthetic, "revocation").as_str()),
+        "{summary}"
+    );
+    let campaign = report.campaign.as_ref().expect("campaign evaluates");
+    let bounded: Vec<_> = campaign
+        .verdicts
+        .iter()
+        .filter(|verdict| verdict.requirement_id.starts_with("CASE-000-R"))
+        .collect();
+    assert!(!bounded.is_empty(), "{summary}");
+    for verdict in bounded {
+        assert_eq!(
+            verdict.verdict.rule, "not_evaluated.qualification_revoked",
+            "{summary}"
+        );
+        let reasons = serde_json::to_string(&verdict.verdict.reasons).unwrap();
+        assert!(reasons.contains("CORE-A4603"), "{reasons}");
+    }
+}
+
+#[test]
+fn an_unsigned_revocation_of_a_recognized_record_is_ignored() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let (issuer, _) = recognized_case_setup(&synthetic);
+    set_qualification_owner(&synthetic, "acme-method-owners");
+    sign_qualification(&synthetic.case_dir, &issuer.seed);
+    // Only the declared issuer may withdraw a recognized record — an
+    // unsigned withdrawal is ignored with a finding and the record stands.
+    let record_sha256 = bound_document_sha(&synthetic, "qualification");
+    bind_revocation(&synthetic.case_dir, &record_sha256, None);
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-X3405"), "{summary}");
+    let qualification = step(&report)
+        .qualification
+        .as_ref()
+        .expect("the record stands");
+    assert_eq!(qualification.revoked_by, None, "{summary}");
+    assert_eq!(
+        qualification.state,
+        avila_core_compiler::EnvelopeState::Inside,
+        "{summary}"
+    );
+}
+
+#[test]
+fn a_signed_revocation_withdraws_a_recognized_record() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let (issuer, _) = recognized_case_setup(&synthetic);
+    set_qualification_owner(&synthetic, "acme-method-owners");
+    sign_qualification(&synthetic.case_dir, &issuer.seed);
+    let record_sha256 = bound_document_sha(&synthetic, "qualification");
+    bind_revocation(&synthetic.case_dir, &record_sha256, Some(&issuer.seed));
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(!findings.contains("CORE-X3405"), "{summary}");
+    let qualification = step(&report)
+        .qualification
+        .as_ref()
+        .expect("the revoked record's assessment still attaches");
+    assert_eq!(
+        qualification.revoked_by.as_deref(),
+        Some(bound_document_sha(&synthetic, "revocation").as_str()),
+        "{summary}"
+    );
+    let campaign = report.campaign.as_ref().expect("campaign evaluates");
+    let reasons = serde_json::to_string(&campaign.verdicts).unwrap();
+    assert!(reasons.contains("CORE-A4603"), "{reasons}");
+}
+
 #[test]
 fn signed_manifest_and_receipt_verify_and_reuse_under_a_trust_root() {
     let dir = TestDir::new();

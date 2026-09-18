@@ -1452,6 +1452,21 @@ def apply_qualification_gate(claim: dict, basis_kind: str, require_qualification
             {"code": "CORE-A4601", "evidence_id": claim["claim_id"], "qualification_owner": qualification.get("owner")}
         ]
         return result, []
+    # Lifecycle refusals outrank envelope state too: a withdrawn or
+    # superseded record cannot stand whatever its terms said. `revoked_by`
+    # and `superseded_by` ride on the claim as the bound set's facts.
+    if qualification is not None and basis_kind != "nominal" and qualification.get("revoked_by"):
+        result = VerdictResult(status="not_evaluated", rule="not_evaluated.qualification_revoked")
+        result.reasons = [
+            {"code": "CORE-A4603", "evidence_id": claim["claim_id"], "revoked_by": qualification.get("revoked_by")}
+        ]
+        return result, []
+    if qualification is not None and basis_kind != "nominal" and qualification.get("superseded_by"):
+        result = VerdictResult(status="not_evaluated", rule="not_evaluated.qualification_superseded")
+        result.reasons = [
+            {"code": "CORE-A4101", "evidence_id": claim["claim_id"], "superseded_by": qualification.get("superseded_by")}
+        ]
+        return result, []
     if qualification is not None and qualification.get("state") in ("outside", "unknown", "expired"):
         state = qualification["state"]
         if state == "expired":
@@ -2720,6 +2735,7 @@ def verify_case_qualification_envelopes(
     kinds: dict,
     receipts_by_step: dict,
     report: Report,
+    recognized_owners: Optional[dict] = None,
 ) -> None:
     qualification_docs: list[tuple[dict, str]] = []
     for document in docs_by_role.get("qualification", []):
@@ -2732,6 +2748,45 @@ def verify_case_qualification_envelopes(
         except json.JSONDecodeError:
             continue
         qualification_docs.append((record, sha256_bytes(raw)))
+
+    # Bound `qualification_revocation` documents, target record digest →
+    # revocation document digest, re-derived for claim consistency checks.
+    # Under issuer recognition a revocation counts only when it verifies
+    # under the declared issuer key — the runner ignores it otherwise
+    # (CORE-X3405); an unrecognized owner's withdrawal is package-asserted.
+    owners = recognized_owners or {}
+    records_by_sha = {sha: record for record, sha in qualification_docs}
+    revoked_by: dict[str, str] = {}
+    for document in docs_by_role.get("qualification_revocation", []):
+        path = case_dir / document["path"]
+        if not path.is_file():
+            continue
+        raw = path.read_bytes()
+        try:
+            revocation = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        target = revocation.get("record_sha256")
+        if not isinstance(target, str):
+            continue
+        issuer_key = owners.get((records_by_sha.get(target) or {}).get("owner") or "")
+        if issuer_key is not None:
+            match = find_signature_for(
+                case_dir, package, "qualification_revocation", document["document_id"]
+            )
+            if match is None:
+                continue
+            _, signature_document = match
+            expected_digest = hashlib.sha256(raw).digest()
+            if check_signature_internal_consistency(signature_document, expected_digest) is not None:
+                continue
+            if not ed25519_verify(
+                bytes.fromhex(issuer_key),
+                expected_digest,
+                bytes.fromhex(signature_document["signature_hex"]),
+            ):
+                continue
+        revoked_by.setdefault(target, sha256_bytes(raw))
 
     if claims is None:
         return
@@ -2788,6 +2843,30 @@ def verify_case_qualification_envelopes(
             problems.append(
                 f"claim records owner {qualification.get('owner')!r}, "
                 f"the bound record declares owner {record.get('owner')!r}"
+            )
+
+        # Lifecycle facts are the bound set's assertion, re-derived from the
+        # bound documents: a bound record superseding this one, or a bound
+        # revocation naming its digest.
+        expected_superseder = next(
+            (
+                candidate_sha256
+                for candidate, candidate_sha256 in qualification_docs
+                if actual_sha256 in candidate.get("supersedes", [])
+            ),
+            None,
+        )
+        if qualification.get("superseded_by") != expected_superseder:
+            problems.append(
+                f"claim records superseded_by {qualification.get('superseded_by')!r}, "
+                f"the bound set derives {expected_superseder!r}"
+            )
+
+        expected_revoked_by = revoked_by.get(actual_sha256)
+        if qualification.get("revoked_by") != expected_revoked_by:
+            problems.append(
+                f"claim records revoked_by {qualification.get('revoked_by')!r}, "
+                f"the bound set derives {expected_revoked_by!r}"
             )
 
         # The claim's evaluation instant is its producing receipt's
@@ -3373,7 +3452,8 @@ def verify_case(
 
     verify_case_qualification_envelopes(
         case_dir, package, docs_by_role, claims, kinds_from_registry_doc(registry) if registry is not None else {},
-        receipts_by_step, report
+        receipts_by_step, report,
+        (contract or {}).get("execution_policy", {}).get("recognized_qualification_owners") or {},
     )
 
     verify_staged_reviews(case_dir, package, docs_by_role, claims, campaign_report, report)

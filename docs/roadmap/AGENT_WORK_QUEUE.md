@@ -995,3 +995,37 @@ older-format claims as honest evidence — the verifier tolerates an absent
 need the supersession/revocation record layer; `maturity-migration`,
 `repeated-role-slot-addressing`, and `resource-limits` name semantics not
 yet implemented.
+
+### Scope records: supersession, revocation, and the remaining pins — 2026-09-18
+
+The qualification lifecycle closed out. A newer record names the digests
+it replaces in `supersedes`, authenticated by its own signature under
+issuer recognition; among matching records a live one wins, and a dead
+record attaches only as sole match, marked `superseded_by` — refused by
+the campaign as `not_evaluated.qualification_superseded` (`CORE-A4101`).
+A record bound solely as a supersession witness may cover a pair no
+execution exercises; it still must name a bound capability exactly and
+never applies to a step. `qualification_revocation` is a new package
+document role naming the withdrawn record's digest — under recognition it
+must verify under the declared issuer key (an unverifiable withdrawal is
+ignored, `CORE-X3405`); otherwise it is package-asserted and applies
+unsigned — refused as `not_evaluated.qualification_revoked` (`CORE-A4603`).
+Both flags ride on the claim like `owner` — deterministic, bound-set
+derived — and the verifier re-derives them from the bound set including
+the issuer-signature rule. Refusal precedence: not_recognized > revoked >
+superseded > expired > outside/unknown; nominal basis exempt.
+
+Pins: `campaign.qualification-superseded.not_evaluated`,
+`campaign.qualification-revoked.not_evaluated`,
+`a_superseded_record_attaches_marked_and_the_campaign_refuses_it`,
+`a_live_record_serves_the_step_its_dead_peer_also_matches`,
+`a_package_asserted_revocation_marks_the_record_and_the_campaign_refuses_it`,
+`an_unsigned_revocation_of_a_recognized_record_is_ignored`,
+`a_signed_revocation_withdraws_a_recognized_record`,
+`inputs_carrying_the_same_role_are_addressed_by_slot`,
+`deeply_nested_predicate_fails_closed`,
+`a_wide_predicate_fails_closed_on_the_node_limit`,
+`a_scope_term_over_the_resource_limit_is_unknown_not_affirmative`.
+`scope.maturity-migration` is marked not applicable — no v0.1 contract
+format ever shipped in-tree, so there is nothing to migrate from.
+fixtures-check reads 94 covered / 125 named / 18 unbounded / 62 absent.

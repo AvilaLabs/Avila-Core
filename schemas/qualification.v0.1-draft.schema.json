@@ -45,6 +45,11 @@
       "type": "string",
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
       "description": "The last instant this record's assessment may stand, normalized `YYYY-MM-DDTHH:MM:SSZ` so lexical order is chronological. Evaluation never reads a clock — the runner stamps the signed evaluation time into each assessment, and a claim whose record lapsed carries `expired` rather than `inside` (`CORE-A4602`)."
+    },
+    "supersedes": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+      "description": "Digests of qualification records this record replaces. An immutable record cannot declare its own death; the superseding record carries the edge, authenticated by its own signature under issuer recognition. A bound record whose digest a bound peer names here is dead: its assessment attaches marked `superseded_by`, but no claim citing it can satisfy a bounded or enclosure requirement (`CORE-A4101`)."
     }
   }
 }

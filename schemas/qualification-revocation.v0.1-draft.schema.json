@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/qualification-revocation/v0.1-draft.schema.json",
+  "title": "Avila Core Qualification Revocation v0.1 draft",
+  "description": "A withdrawal notice for a qualification record (SC-7). The record is immutable, so its death is a separate document bound in the same package, naming the record by exact digest. Under issuer recognition (execution_policy.recognized_qualification_owners) the document must carry a signature over its bound bytes verifying under the issuer key declared for the record's owner — an unverifiable withdrawal is ignored (CORE-X3405) and the record stands. Without a listed owner the document is package-asserted and applies unsigned: it can only deny evidence, never manufacture acceptance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "qualification_id", "record_sha256"],
+  "properties": {
+    "schema_version": { "const": "avila.core/qualification-revocation/v0.1-draft" },
+    "qualification_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The `qualification_id` of the record being withdrawn — reporting only; the digest is authoritative."
+    },
+    "record_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "Exact digest of the qualification record being withdrawn. A bound record whose digest a bound revocation names attaches its assessment marked `revoked_by`; no claim citing it can satisfy a bounded or enclosure requirement (CORE-A4603)."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Why the record is withdrawn — data, never interpreted."
+    }
+  }
+}

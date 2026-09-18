@@ -34,13 +34,14 @@ pub const CORE_X3201: &str = "CORE-X3201";
 pub const CORE_X3301: &str = "CORE-X3301";
 pub const CORE_X3401: &str = "CORE-X3401";
 pub const CORE_X3404: &str = "CORE-X3404";
+pub const CORE_X3405: &str = "CORE-X3405";
 pub const CORE_X9001: &str = "CORE-X9001";
 
 pub const RUNTIME_FINDING_CODES: &[&str] = &[
     CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1004, CORE_X1005, CORE_X1101, CORE_X1201, CORE_X1301,
     CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601,
     CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101, CORE_X3201, CORE_X3301, CORE_X3401, CORE_X3404,
-    CORE_X9001,
+    CORE_X3405, CORE_X9001,
 ];
 
 /// Explanations are served by `avila-core explain` alongside compiler codes.
@@ -212,6 +213,13 @@ pub const RUNTIME_DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         rule: "SC-7; execution_policy.recognized_qualification_owners",
         meaning: "The contract names issuers whose qualification records are recognized, and this bound record's owner is listed, but the record carries no signature document over its bound bytes that verifies under the issuer's declared key — it is unsigned, its signature covers different bytes, or the signature does not verify. The record is not applied: the step's claims carry no qualification assessment from it. A record whose owner is not listed loads normally and is refused later as unrecognized evidence (`CORE-A4601`).",
         next_action: "Sign the record with the issuer key the contract declares (`avila-core sign document --id <document> --key <seed>`) and rebind the signature document, or remove the issuer from `recognized_qualification_owners` if the record is not meant to stand as recognized evidence.",
+    },
+    DiagnosticExplanation {
+        code: CORE_X3405,
+        title: "Qualification revocation could not be authenticated",
+        rule: "SC-7; execution_policy.recognized_qualification_owners",
+        meaning: "A bound `qualification_revocation` document names a record whose owner is a recognized issuer, but the document carries no signature over its bound bytes that verifies under the issuer's declared key — it is unsigned, covers different bytes, or does not verify. The withdrawal is ignored and the record stands: only the issuer the contract declares may withdraw a recognized record. A revocation against an unlisted owner's record is package-asserted and applies unsigned, since it can only deny evidence.",
+        next_action: "Sign the revocation with the issuer key the contract declares and rebind the signature document, or remove the document if the record was not meant to be withdrawn.",
     },
     DiagnosticExplanation {
         code: CORE_X9001,

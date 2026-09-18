@@ -13,7 +13,9 @@ use super::document::{ClaimValue, ClaimsDocument};
 use super::{AdmissionRecord, AdmissionState, VerdictBoundary, VerdictRecord};
 use crate::compile::registry::RegistryIndex;
 use crate::compile::{CanonicalTypedQuantity, CompiledContract};
-use crate::diagnostic::{CORE_A4401, CORE_A4402, CORE_A4403, CORE_A4601, CORE_A4602};
+use crate::diagnostic::{
+    CORE_A4101, CORE_A4401, CORE_A4402, CORE_A4403, CORE_A4601, CORE_A4602, CORE_A4603,
+};
 use crate::document::{BasisKind, CategoricalPredicate, Comparison, QuantityValue, SourceRef};
 use crate::qualification::{ClaimQualification, EnvelopeState};
 
@@ -86,15 +88,15 @@ pub(super) fn evaluate(
             // (ADR-0008 clause 4).
             let applies_qualification = requirement.basis.kind != BasisKind::Nominal;
             let quarantined = quarantined_by_qualification(&requirement.metric, claims, admissions);
-            let not_recognized = if applies_qualification {
-                unrecognized_claims(
+            let refusals = if applies_qualification {
+                refused_claims(
                     &requirement.metric,
                     claims,
                     admissions,
                     &compiled.execution_policy.recognized_qualification_owners,
                 )
             } else {
-                Vec::new()
+                LifecycleRefusals::default()
             };
             let unqualified = if applies_qualification {
                 unqualified_claims(&requirement.metric, claims, admissions)
@@ -102,9 +104,9 @@ pub(super) fn evaluate(
                 Vec::new()
             };
             let verdict = if applies_qualification
-                && (!quarantined.is_empty() || !not_recognized.is_empty())
+                && (!quarantined.is_empty() || !refusals.is_empty())
             {
-                qualification_verdict(&quarantined, &not_recognized)
+                qualification_verdict(&quarantined, &refusals)
             } else if applies_qualification
                 && compiled.execution_policy.require_qualification
                 && !unqualified.is_empty()
@@ -212,13 +214,13 @@ pub(super) fn evaluate(
             evidence,
         };
         let quarantined = quarantined_by_qualification(&requirement.metric, claims, admissions);
-        let not_recognized = unrecognized_claims(
+        let refusals = refused_claims(
             &requirement.metric,
             claims,
             admissions,
             &compiled.execution_policy.recognized_qualification_owners,
         );
-        let verdict = if quarantined.is_empty() && not_recognized.is_empty() {
+        let verdict = if quarantined.is_empty() && refusals.is_empty() {
             CategoricalVerdictEvaluator::evaluate(&case).unwrap_or_else(|error| VerdictOutput {
                 status: VerdictStatus::NotEvaluated,
                 rule: "not_evaluated.kernel_refusal".into(),
@@ -241,7 +243,7 @@ pub(super) fn evaluate(
                 display_upper_text: None,
             })
         } else {
-            let mut output = qualification_verdict(&quarantined, &not_recognized);
+            let mut output = qualification_verdict(&quarantined, &refusals);
             output.accepted_categories = Some(case.requirement.accepted_values.clone());
             output
         };
@@ -281,35 +283,61 @@ fn quarantined_by_qualification(
         .collect()
 }
 
-/// Admitted claims for the requirement's metric whose qualification record
-/// declares an owner the contract's recognition policy does not list. When
-/// `recognized_qualification_owners` is non-empty, an unlisted owner's
-/// assessment cannot establish the requirement whatever its envelope terms
-/// evaluated — including `inside`. Distinct from `unqualified_claims`: the
-/// assessment exists, its issuer is simply not one this organization accepts.
-fn unrecognized_claims(
+/// Claims refused on record-lifecycle grounds rather than envelope state:
+/// the assessment attaches and reports what the record said, but the record
+/// itself cannot stand. By refusal class — an unrecognized issuer cannot
+/// count at all; a withdrawn record is dead; a superseded record has been
+/// replaced. `superseded` and `revoked` ride on the claim as the bound
+/// set's lifecycle facts, so the check needs no package access.
+#[derive(Default)]
+struct LifecycleRefusals {
+    not_recognized: Vec<(String, ClaimQualification)>,
+    revoked: Vec<(String, ClaimQualification)>,
+    superseded: Vec<(String, ClaimQualification)>,
+}
+
+impl LifecycleRefusals {
+    fn is_empty(&self) -> bool {
+        self.not_recognized.is_empty() && self.revoked.is_empty() && self.superseded.is_empty()
+    }
+}
+
+/// Admitted claims for the requirement's metric refused on lifecycle
+/// grounds: an owner the contract's recognition policy does not list
+/// (`recognized_qualification_owners` non-empty), a record a bound
+/// revocation document withdrew, or a record a bound peer superseded.
+/// Distinct from `unqualified_claims`: the assessment exists, the record
+/// simply cannot stand.
+fn refused_claims(
     metric: &SourceRef,
     claims: &ClaimsDocument,
     admissions: &[AdmissionRecord],
     recognized_owners: &std::collections::BTreeMap<String, String>,
-) -> Vec<(String, ClaimQualification)> {
-    if recognized_owners.is_empty() {
-        return Vec::new();
-    }
-    admissions
+) -> LifecycleRefusals {
+    let mut refusals = LifecycleRefusals::default();
+    for record in admissions
         .iter()
         .filter(|record| &record.source == metric)
         .filter(|record| record.state == AdmissionState::Admitted)
-        .filter_map(|record| {
-            claims
-                .claims
-                .iter()
-                .find(|claim| claim.claim_id == record.evidence_id)
-                .and_then(|claim| claim.qualification.clone())
-                .filter(|qualification| !recognized_owners.contains_key(&qualification.owner))
-                .map(|qualification| (record.evidence_id.clone(), qualification))
-        })
-        .collect()
+    {
+        let Some(qualification) = claims
+            .claims
+            .iter()
+            .find(|claim| claim.claim_id == record.evidence_id)
+            .and_then(|claim| claim.qualification.clone())
+        else {
+            continue;
+        };
+        let entry = (record.evidence_id.clone(), qualification.clone());
+        if !recognized_owners.is_empty() && !recognized_owners.contains_key(&qualification.owner) {
+            refusals.not_recognized.push(entry);
+        } else if qualification.revoked_by.is_some() {
+            refusals.revoked.push(entry);
+        } else if qualification.superseded_by.is_some() {
+            refusals.superseded.push(entry);
+        }
+    }
+    refusals
 }
 
 /// Admitted claims for the requirement's metric that carry no qualification
@@ -378,7 +406,7 @@ fn unqualified_reasons(code: &str, owner: &str, evidence_ids: &[String]) -> Vec<
 
 fn qualification_reasons(
     quarantined: &[(String, ClaimQualification)],
-    not_recognized: &[(String, ClaimQualification)],
+    refusals: &LifecycleRefusals,
 ) -> Vec<VerdictReason> {
     let expired = quarantined
         .iter()
@@ -387,10 +415,22 @@ fn qualification_reasons(
         .iter()
         .any(|(_, qualification)| qualification.state != EnvelopeState::Expired);
     let mut reasons = Vec::new();
-    if !not_recognized.is_empty() {
+    if !refusals.not_recognized.is_empty() {
         reasons.push(VerdictReason::CodeOwner {
             code: CORE_A4601.into(),
             owner: "policy_owner".into(),
+        });
+    }
+    if !refusals.revoked.is_empty() {
+        reasons.push(VerdictReason::CodeOwner {
+            code: CORE_A4603.into(),
+            owner: "method_owner".into(),
+        });
+    }
+    if !refusals.superseded.is_empty() {
+        reasons.push(VerdictReason::CodeOwner {
+            code: CORE_A4101.into(),
+            owner: "method_owner".into(),
         });
     }
     if expired {
@@ -405,12 +445,34 @@ fn qualification_reasons(
             owner: "method_owner".into(),
         });
     }
-    for (evidence_id, qualification) in not_recognized {
+    for (evidence_id, qualification) in &refusals.not_recognized {
         reasons.push(VerdictReason::EvidenceState {
             evidence_id: evidence_id.clone(),
             state: format!(
                 "qualification_not_recognized ({} rev {}): owner `{}` is not a recognized issuer",
                 qualification.qualification_id, qualification.revision, qualification.owner
+            ),
+        });
+    }
+    for (evidence_id, qualification) in &refusals.revoked {
+        reasons.push(VerdictReason::EvidenceState {
+            evidence_id: evidence_id.clone(),
+            state: format!(
+                "qualification_revoked ({} rev {}): withdrawn by revocation {}",
+                qualification.qualification_id,
+                qualification.revision,
+                qualification.revoked_by.as_deref().unwrap_or("?")
+            ),
+        });
+    }
+    for (evidence_id, qualification) in &refusals.superseded {
+        reasons.push(VerdictReason::EvidenceState {
+            evidence_id: evidence_id.clone(),
+            state: format!(
+                "qualification_superseded ({} rev {}): replaced by record {}",
+                qualification.qualification_id,
+                qualification.revision,
+                qualification.superseded_by.as_deref().unwrap_or("?")
             ),
         });
     }
@@ -444,7 +506,7 @@ fn qualification_reasons(
 
 fn qualification_verdict(
     quarantined: &[(String, ClaimQualification)],
-    not_recognized: &[(String, ClaimQualification)],
+    refusals: &LifecycleRefusals,
 ) -> VerdictOutput {
     let expired = quarantined
         .iter()
@@ -454,10 +516,15 @@ fn qualification_verdict(
         .any(|(_, qualification)| qualification.state == EnvelopeState::Outside);
     VerdictOutput {
         status: VerdictStatus::NotEvaluated,
-        // An unrecognized issuer's assessment cannot count at all — that
-        // refusal outranks whatever the record's own envelope said.
-        rule: if !not_recognized.is_empty() {
+        // A record that cannot stand — unrecognized issuer, withdrawn, or
+        // replaced — outranks whatever its own envelope said, and among the
+        // lifecycle refusals the issuer check is the most fundamental.
+        rule: if !refusals.not_recognized.is_empty() {
             "not_evaluated.qualification_not_recognized".into()
+        } else if !refusals.revoked.is_empty() {
+            "not_evaluated.qualification_revoked".into()
+        } else if !refusals.superseded.is_empty() {
+            "not_evaluated.qualification_superseded".into()
         } else if expired {
             "not_evaluated.qualification_expired".into()
         } else if outside {
@@ -477,7 +544,7 @@ fn qualification_verdict(
         numbers_present: Some(false),
         observed_category: None,
         accepted_categories: None,
-        reasons: qualification_reasons(quarantined, not_recognized),
+        reasons: qualification_reasons(quarantined, refusals),
         display_upper_text: None,
     }
 }

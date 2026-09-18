@@ -178,3 +178,42 @@ Consequences: `qualification.v0.1-draft` gains `not_after`;
 fields (both optional in parsing — claims from earlier drafts stay
 verifiable, and an absent owner simply cannot be recognized under an active
 policy).
+
+## Refinement: record lifecycle — supersession and revocation (SC-7; SC-15)
+
+Two lifecycle facts complete what a bound set can say about a record —
+both derived from the bound documents, never a mutable state on the
+immutable record itself.
+
+- **Supersession.** A newer record names the digests it replaces in
+  `supersedes`; the edge is authenticated by the newer record's own
+  signature under issuer recognition. When more than one bound record
+  matches a step's adapter/capability pair, a live one wins — a superseded
+  record attaches only when it is the sole match, marked `superseded_by`
+  with the superseding record's digest. A record bound solely as a
+  supersession witness (its pair unexercised) is permitted: it still must
+  name a bound capability implementation exactly, and it never applies to
+  a step. Campaign evaluation refuses superseded evidence as
+  `not_evaluated.qualification_superseded` (`CORE-A4101`).
+- **Revocation.** A `qualification_revocation` document
+  (`avila.core/qualification-revocation/v0.1-draft`) names the withdrawn
+  record's exact digest. Under issuer recognition it must verify under the
+  declared issuer key — an unverifiable withdrawal is ignored with
+  `CORE-X3405` and the record stands. Without a listed owner the
+  withdrawal is package-asserted and applies unsigned: it can only deny
+  evidence, never manufacture acceptance. The record attaches marked
+  `revoked_by` with the revocation's digest; the campaign refuses it as
+  `not_evaluated.qualification_revoked` (`CORE-A4603`).
+
+Both flags ride on the assessment and the claim — bound-set-derived,
+deterministic evidence, like `owner` — never a state on the record's
+envelope terms. The refusal precedence is `not_recognized` >
+`revoked` > `superseded` > `expired` > `outside`/`unknown`; nominal-basis
+requirements stay exempt. The verifier re-derives both flags from the
+bound set and checks each claim's copies — including the issuer-signature
+rule for recognized revocations.
+
+Consequences: `qualification.v0.1-draft` gains `supersedes`;
+`evidence-claims.v0.2-draft` gains `superseded_by` and `revoked_by`;
+`avila.core/qualification-revocation/v0.1-draft` is a new package document
+role signed under the issuer's declared key.

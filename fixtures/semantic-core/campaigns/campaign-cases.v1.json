@@ -821,6 +821,84 @@
     ],
     "campaign_sha256": "sha256:85e40e3410ccd4a438c97ec5c0abc648dff03a3044c112792ab121c12795ad72"
    }
+  },
+  {
+   "fixture_id": "campaign.qualification-superseded.not_evaluated",
+   "clause": "SC-7; SC-15",
+   "contract": "../types/types.R1.resolved.pass.contract.json",
+   "registry": "../types/compiler.registry.v1.json",
+   "claims": "campaign.qualification-superseded.not_evaluated.claims.json",
+   "expected": {
+    "status": "evaluated",
+    "findings": [],
+    "admissions": [
+     {
+      "evidence_id": "input:case",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "calculated",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "bounded",
+      "state": "admitted",
+      "reasons": []
+     }
+    ],
+    "verdicts": [
+     {
+      "requirement_id": "R-001",
+      "status": "not_evaluated",
+      "rule": "not_evaluated.qualification_superseded",
+      "reasons": [
+       "CORE-A4101"
+      ]
+     }
+    ],
+    "campaign_sha256": "sha256:9eabb9119ce1fd0eb728478c6ab93383e7974098f86362bbb300236017a274bb"
+   }
+  },
+  {
+   "fixture_id": "campaign.qualification-revoked.not_evaluated",
+   "clause": "SC-7; SC-15",
+   "contract": "../types/types.R1.resolved.pass.contract.json",
+   "registry": "../types/compiler.registry.v1.json",
+   "claims": "campaign.qualification-revoked.not_evaluated.claims.json",
+   "expected": {
+    "status": "evaluated",
+    "findings": [],
+    "admissions": [
+     {
+      "evidence_id": "input:case",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "calculated",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "bounded",
+      "state": "admitted",
+      "reasons": []
+     }
+    ],
+    "verdicts": [
+     {
+      "requirement_id": "R-001",
+      "status": "not_evaluated",
+      "rule": "not_evaluated.qualification_revoked",
+      "reasons": [
+       "CORE-A4603"
+      ]
+     }
+    ],
+    "campaign_sha256": "sha256:ffedbe07960731933867a6bc8b77bf8a9e0bb9272b7441707803f35a82ae80cd"
+   }
   }
  ]
 }

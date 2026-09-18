@@ -351,15 +351,15 @@ canonically.
 | `policy.rule.maturity_floor.pass/fail` | `CORE-P5303` — `a_undeclared_maturity_fails_a_declared_floor`, `a_declared_maturity_meeting_the_floor_runs`; verifier `test_undeclared_maturity_fails_the_floor`, `test_declared_maturity_meeting_the_floor_verifies` |
 | `policy.rule.require_qualification.fail` | `CORE-A4601` — exercised by `campaign.require-qualification.unqualified.not_evaluated` |
 | `policy.rule.deny_providers.fail`, `allow_capabilities.pass` | `CORE-P5301` — `a_denied_provider_is_refused_before_any_execution`, `a_selection_outside_the_allow_list_is_refused`, `a_recorded_selection_matching_the_bound_capability_runs` |
-| `policy.rule.environments.fail` | remote env under local-only policy — no environment record exists yet (ADR-0020 deferred) |
+| `policy.rule.environments.fail` | remote env under local-only policy — needs a package-bound environment record type (ADR-0020 deferred; not yet designed) |
 | `policy.rule.independence.fail` | `CORE-P5302` — `two_steps_sharing_a_provider_violate_independence`; verifier `test_shared_provider_violates_independence` |
 | `policy.rule.diversity.pass` | `CORE-P5304` — `two_steps_sharing_an_executable_violate_diversity`; verifier `test_shared_executable_violates_diversity` |
 | `policy.rule.forbid_self_preference.pinned.pass` | `an_avila_provided_selection_with_the_check_runs` — the recorded `self_preference_check` carries the justification |
 | `policy.rule.forbid_self_preference.unpinned.fail` | `CORE-P5501` — `an_avila_provided_selection_without_the_check_is_refused`; verifier `test_avila_provided_without_the_check_is_a_mismatch` |
 | `policy.rule.permit_nominal_basis.fail` | nominal requirement under governed policy → `CORE-A4201` — exercised by `types.R6.nominal-basis-unpermitted.fail` |
 | `policy.rule.presentation-cannot-gate-verdict.pass` | optional routing policy never enters verdict calculus — exercised by `presentation-policy.not-a-verdict-input` |
-| `policy.rule.separation_of_duties.fail` | two technical roles violate an explicitly declared organization policy → `CORE-A4502` — needs signed role assertions (authority machinery, not yet designed) |
-| `policy.rule.separation_of_duties.waived.pass` | waived; `waived_controls` recorded in package — not yet designed |
+| `policy.rule.separation_of_duties.fail` | two technical roles violate an explicitly declared organization policy → `CORE-A4502` — needs the ADR-0021 attestation record's signed role assertions (proposed) |
+| `policy.rule.separation_of_duties.waived.pass` | waived; `waived_controls` recorded in package — needs the ADR-0021 attestation record carrying the waiver (proposed) |
 | `policy.rule.cost_caps.pass` | `CORE-P5401` — `a_cost_over_the_cap_without_confirmation_is_refused`; a confirmed over-cap selection runs — `a_cost_over_the_cap_with_confirmation_runs`; verifier `test_cost_over_the_cap_*` |
 | `policy.selection.every-candidate-decided.pass` | `CORE-P5602` — `a_candidate_without_a_recorded_decision_is_refused`; verifier `test_undecided_candidate_is_a_mismatch` |
 | `policy.selection.rank-order.pass` | the declared criteria vocabulary is enforced — `a_banned_criterion_is_refused`; the ordering itself is producer-asserted data — the engine verifies the recorded selection, it does not rank |
@@ -510,9 +510,9 @@ canonically.
 | Fixture | Expected |
 | --- | --- |
 | `scenarios.coverage-crosses-limit` | INCONCLUSIVE `bounded.le.crossing`; next actions with owners — the verdict half is exercised by `le.bounded.crossing` (and `campaign.le.crossing.inconclusive` end-to-end); the owner-named next-actions half remains |
-| `scenarios.qualification-narrowed` | exact invalidated set; transport reused; activation has no admissible candidate |
+| `scenarios.qualification-narrowed` | exact invalidated set; transport reused; activation has no admissible candidate — the invalidated-set and reuse halves are exercised (`a_changed_input_reruns_the_step_and_names_the_change`, `a_signed_reuse_rule_permits_reuse_across_its_scoped_edge`, `a_selection_with_no_eligible_candidate_is_refused`); the committed end-to-end scenario package remains |
 | `scenarios.pinned-implementation` | Campaign IR has constraint only; the excluded candidate is recorded as a `CORE-P5201` notice — `a_candidate_excluded_by_a_contract_constraint_carries_a_notice_and_runs`; the persisted Bound Plan record remains |
-| `scenarios.review-rejects-upstream` | descendants invalidated; nothing reused; owners named |
+| `scenarios.review-rejects-upstream` | descendants invalidated; nothing reused; owners named — the cascade and non-reuse halves are exercised (`a_two_step_chain_reruns_only_what_a_change_reaches`, `campaign.parent-missing.not_evaluated`); the owner-attribution half needs ADR-0021 records |
 | `scenarios.verify-without-evaluator` | the independent Python verifier replays every committed case and signature without avila-core — `test_every_campaign_fixture`, `test_every_committed_receipt_invocation_identity_reproduces`, `test_every_committed_signature_document_verifies`; the obligations report's four-category rendering remains |
 | `scenarios.bike-hook` | three findings → plan with rejected Elmer → INCONCLUSIVE → geometry change → memo reuse of `fdm_properties` → PASS → obligations report — the verdict half is exercised by `le.bounded.bike-hook.first-run` and `le.bounded.bike-hook.second-run`; the memo and obligations halves remain |
 

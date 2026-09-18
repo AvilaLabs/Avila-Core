@@ -122,6 +122,7 @@
             }
           }
         },
+        "owner": "avila-labs.thermal",
         "qualification_id": "avila-labs.thermal/spreader-fe-skfem",
         "revision": 1,
         "sha256": "sha256:04b4298ba669a90624fff3e738aa039a502b824b7d74eb95712ad15ba580b623",
@@ -277,6 +278,7 @@
             }
           }
         },
+        "owner": "avila-labs.thermal",
         "qualification_id": "avila-labs.thermal/spreader-fe-skfem",
         "revision": 1,
         "sha256": "sha256:04b4298ba669a90624fff3e738aa039a502b824b7d74eb95712ad15ba580b623",
@@ -456,6 +458,7 @@
             }
           }
         },
+        "owner": "avila-labs.thermal",
         "qualification_id": "avila-labs.thermal/screen-arithmetic",
         "revision": 1,
         "sha256": "sha256:2ce64c7049d319c0b9d9772dbde71cf9cc51240bcebccffa56f61faca024cd91",
@@ -603,6 +606,7 @@
             }
           }
         },
+        "owner": "avila-labs.thermal",
         "qualification_id": "avila-labs.thermal/screen-arithmetic",
         "revision": 1,
         "sha256": "sha256:2ce64c7049d319c0b9d9772dbde71cf9cc51240bcebccffa56f61faca024cd91",

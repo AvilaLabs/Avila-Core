@@ -3640,6 +3640,227 @@ fn set_require_signatures(synthetic: &Synthetic) {
     rehash_document(&synthetic.case_dir, "contract", "contract.json");
 }
 
+// --- SC-7: recognized qualification issuers -------------------------------
+
+/// Sign the bound qualification document with `seed`, exactly as
+/// `avila-core sign document --id qualification --key <seed>` does.
+fn sign_qualification(case_dir: &Path, seed: &[u8; 32]) {
+    let manifest = read_manifest(case_dir);
+    let document = manifest
+        .documents
+        .iter()
+        .find(|document| document.role == "qualification")
+        .expect("a qualification document is bound")
+        .clone();
+    let digest = signature::digest_from_prefixed(&document.sha256).unwrap();
+    let signature_document = signature::build_signature_document(
+        seed,
+        "qualification",
+        document.document_id,
+        document.sha256,
+        &digest,
+    );
+    bind_signature_document(
+        case_dir,
+        "signature-qualification",
+        "signatures/qualification.sig.json",
+        &signature_document,
+    );
+}
+
+/// Rewrite the bound record's `owner` and re-pin the document's identity in
+/// the manifest, as issuing the record under a different issuer would.
+fn set_qualification_owner(synthetic: &Synthetic, owner: &str) {
+    let record_path = synthetic.case_dir.join("qualification.json");
+    let mut record: Value = serde_json::from_slice(&fs::read(&record_path).unwrap()).unwrap();
+    record["owner"] = json!(owner);
+    fs::write(&record_path, serde_json::to_vec_pretty(&record).unwrap()).unwrap();
+    let mut manifest = read_manifest(&synthetic.case_dir);
+    for document in &mut manifest.documents {
+        if document.document_id == "qualification" {
+            document.sha256 = digest(&record_path);
+        }
+    }
+    write_manifest(&synthetic.case_dir, &manifest);
+}
+
+/// Declare the issuers whose qualification records the organization
+/// recognizes: `owner` → the issuer's Ed25519 public key (hex).
+fn set_recognized_owners(synthetic: &Synthetic, owners: &BTreeMap<String, String>) {
+    let contract_path = synthetic.case_dir.join("contract.json");
+    let mut contract: Value = serde_json::from_slice(&fs::read(&contract_path).unwrap()).unwrap();
+    contract["execution_policy"]["recognized_qualification_owners"] =
+        serde_json::to_value(owners).unwrap();
+    fs::write(
+        &contract_path,
+        serde_json::to_vec_pretty(&contract).unwrap(),
+    )
+    .unwrap();
+    rehash_document(&synthetic.case_dir, "contract", "contract.json");
+}
+
+fn recognized_case_setup(synthetic: &Synthetic) -> (GeneratedKeyPair, String) {
+    let issuer = signature::generate_keypair(KeyRole::Requester).unwrap();
+    let contract: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("contract.json")).unwrap())
+            .unwrap();
+    let media_type = contract["inputs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|input| input["input_id"] == "aftermatter-case")
+        .map(|input| input["media_type"].as_str().unwrap().to_string())
+        .unwrap();
+    declare_qualification(synthetic, &[media_type.as_str()], None, None);
+    let owners = BTreeMap::from([(
+        "acme-method-owners".to_string(),
+        issuer.public_key_hex.clone(),
+    )]);
+    set_recognized_owners(synthetic, &owners);
+    (issuer, media_type)
+}
+
+#[test]
+fn a_recognized_owners_signed_record_is_applied_and_names_its_issuer() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let (issuer, _) = recognized_case_setup(&synthetic);
+    set_qualification_owner(&synthetic, "acme-method-owners");
+    sign_qualification(&synthetic.case_dir, &issuer.seed);
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    assert!(
+        !serde_json::to_string(&report.findings)
+            .unwrap()
+            .contains("CORE-X3404"),
+        "{summary}"
+    );
+    let qualification = report
+        .claims
+        .as_ref()
+        .and_then(|claims| {
+            claims
+                .evidence_claims
+                .iter()
+                .map(|claim| claim["qualification"].clone())
+                .find(|qualification| qualification.is_object())
+        })
+        .expect("claims carry the recognized record's assessment");
+    assert_eq!(qualification["owner"], "acme-method-owners", "{summary}");
+    assert_eq!(qualification["state"], "inside", "{summary}");
+}
+
+#[test]
+fn a_listed_owners_unsigned_record_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let _ = recognized_case_setup(&synthetic);
+    set_qualification_owner(&synthetic, "acme-method-owners");
+    // No signature document is bound — a recognized issuer's record must
+    // prove its issuance under the declared key.
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-X3404"), "{summary}");
+    assert!(
+        report.claims.as_ref().is_none_or(|claims| claims
+            .evidence_claims
+            .iter()
+            .all(|claim| !claim["qualification"].is_object())),
+        "a refused record leaves no assessment on the claims: {summary}"
+    );
+}
+
+#[test]
+fn a_listed_owners_record_signed_by_another_key_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let _ = recognized_case_setup(&synthetic);
+    set_qualification_owner(&synthetic, "acme-method-owners");
+    // The document is signed — but under a key that is not the issuer key
+    // the contract declares.
+    let impostor = signature::generate_keypair(KeyRole::Runner).unwrap();
+    sign_qualification(&synthetic.case_dir, &impostor.seed);
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-X3404"), "{summary}");
+    assert!(
+        report.claims.as_ref().is_none_or(|claims| claims
+            .evidence_claims
+            .iter()
+            .all(|claim| !claim["qualification"].is_object())),
+        "{summary}"
+    );
+}
+
+#[test]
+fn an_unlisted_owners_assessment_attaches_but_the_campaign_refuses_it() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let _ = recognized_case_setup(&synthetic);
+    // The record stays under its default owner `test`, which the contract's
+    // recognized list does not name — the assessment still attaches as
+    // evidence about what the bound record says; the campaign refuses it.
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    assert!(
+        !serde_json::to_string(&report.findings)
+            .unwrap()
+            .contains("CORE-X3404"),
+        "unlisted issuers are not signature-checked: {summary}"
+    );
+    let qualification = report
+        .claims
+        .as_ref()
+        .and_then(|claims| {
+            claims
+                .evidence_claims
+                .iter()
+                .map(|claim| claim["qualification"].clone())
+                .find(|qualification| qualification.is_object())
+        })
+        .expect("the unlisted record's assessment still attaches");
+    assert_eq!(qualification["owner"], "test", "{summary}");
+    assert_eq!(qualification["state"], "inside", "{summary}");
+
+    let campaign = report.campaign.as_ref().expect("campaign evaluates");
+    let bounded: Vec<_> = campaign
+        .verdicts
+        .iter()
+        .filter(|verdict| verdict.requirement_id.starts_with("CASE-000-R"))
+        .collect();
+    assert!(!bounded.is_empty(), "{summary}");
+    for verdict in bounded {
+        assert_eq!(
+            verdict.verdict.rule, "not_evaluated.qualification_not_recognized",
+            "{summary}"
+        );
+        let reasons = serde_json::to_string(&verdict.verdict.reasons).unwrap();
+        assert!(reasons.contains("CORE-A4601"), "{reasons}");
+    }
+}
+
 #[test]
 fn signed_manifest_and_receipt_verify_and_reuse_under_a_trust_root() {
     let dir = TestDir::new();

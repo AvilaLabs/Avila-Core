@@ -958,3 +958,40 @@ invocation-identity role is `an_adapter_descriptor_edit_invalidates_the_
 committed_receipt` (a validator version bump needs no new carrier — the
 descriptor is already hash-bound). fixtures-check reads 94 covered /
 112 named / 18 unbounded / 75 absent.
+
+### Scope records: expiry and recognition — 2026-09-17
+
+The ratified scope-records slice started landing. `QualificationRecord.not_after`
+marks the record's last valid instant, evaluated against the producing
+receipt's `process.started_at` — the signed evaluation-time record that
+already exists — so claims stay byte-deterministic and a claim regenerated
+from a pre-lapse committed receipt keeps its original `inside` state while
+the current report's planning-time assessment reads `expired`. Expired
+quarantines campaign evaluation as `not_evaluated.qualification_expired`
+(`CORE-A4602`), outranking outside/unknown.
+
+`execution_policy.recognized_qualification_owners` maps a record owner to
+the Ed25519 key the contract accepts for it. Claims carry the record's
+deterministic `owner`, never a run-varying recognition verdict; campaign
+evaluation refuses an unlisted owner as
+`not_evaluated.qualification_not_recognized` (`CORE-A4601`, above every
+other qualification state), while the runner fails closed at binding when a
+listed owner's record lacks a valid signature over the bound bytes
+(`CORE-X3404`). Malformed keys refuse at compile (`CORE-S1102`).
+
+Pins: `campaign.qualification-expired.not_evaluated`,
+`campaign.qualification-not-recognized.not_evaluated`,
+`a_lapsed_record_is_expired_whatever_its_terms_say`,
+`a_reused_claim_keeps_the_state_of_its_producing_instant`,
+`a_recognized_owners_signed_record_is_applied_and_names_its_issuer`,
+`a_listed_owners_unsigned_record_is_refused`,
+`a_listed_owners_record_signed_by_another_key_is_refused`,
+`an_unlisted_owners_assessment_attaches_but_the_campaign_refuses_it`.
+CASE-003's committed claims were regenerated under the new schema (owner
+carried) and its manifest re-pinned and re-signed; CASE-001/002 keep their
+older-format claims as honest evidence — the verifier tolerates an absent
+`owner`. fixtures-check reads 94 covered / 121 named / 18 unbounded /
+66 absent. Remaining scope rows: `record.superseded` and `record.revoked`
+need the supersession/revocation record layer; `maturity-migration`,
+`repeated-role-slot-addressing`, and `resource-limits` name semantics not
+yet implemented.

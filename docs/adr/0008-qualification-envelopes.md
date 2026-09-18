@@ -144,3 +144,37 @@ record at all and leaving both unqualified.
   and the runner adversarial test
   `a_qualification_scoped_to_one_output_slot_leaves_the_others_unqualified`
   move with this refinement.
+
+## Refinement: expiry and issuer recognition (SC-7)
+
+Two further record properties complete the scope-records intent.
+
+- **Expiry.** `not_after` on the record is its last valid instant. Envelope
+  state is evaluated against the producing receipt's `process.started_at` —
+  the signed evaluation-time record a run already binds — never a wall
+  clock, and never a run-varying stamp on the claim, which would defeat
+  committed-claims byte identity. A claim regenerated from a pre-lapse
+  committed receipt therefore keeps its original `inside` state even after
+  the record has lapsed; the run report's planning-time assessment reads
+  `expired`. `expired` is a fourth `EnvelopeState`; lapsed terms stay
+  evaluated and visible. Campaign evaluation refuses expired evidence as
+  `not_evaluated.qualification_expired` (`CORE-A4602`), outranking
+  outside/unknown.
+- **Recognition.** `execution_policy.recognized_qualification_owners` maps
+  a record `owner` to the Ed25519 public key the contract accepts for that
+  issuer. Claims carry the record's `owner` — deterministic evidence —
+  never a recognition verdict, which would vary with the contract under
+  evaluation. Campaign evaluation refuses a claim whose owner is unlisted
+  as `not_evaluated.qualification_not_recognized` (`CORE-A4601`), outranking
+  every envelope state including `inside`; the runner applies a listed
+  owner's record only when a signature document over its bound bytes
+  verifies under the declared key, refusing unsigned or unverifiable
+  records at binding (`CORE-X3404`). An empty map imposes no constraint;
+  key rotation is a contract revision.
+
+Consequences: `qualification.v0.1-draft` gains `not_after`;
+`evidence-contract.v0.2-draft` gains `recognized_qualification_owners`;
+`evidence-claims.v0.2-draft` gains the qualification `owner` and `not_after`
+fields (both optional in parsing — claims from earlier drafts stay
+verifiable, and an absent owner simply cannot be recognized under an active
+policy).

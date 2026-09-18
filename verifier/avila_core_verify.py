@@ -1436,12 +1436,22 @@ def verify_claims_binding(
 # ---------------------------------------------------------------------------
 
 
-def apply_qualification_gate(claim: dict, basis_kind: str, require_qualification: bool) -> tuple[Optional[VerdictResult], list[dict]]:
+def apply_qualification_gate(claim: dict, basis_kind: str, require_qualification: bool, recognized_owners: Optional[dict] = None) -> tuple[Optional[VerdictResult], list[dict]]:
     """Returns ``(early_result, extra_reasons)``. If ``early_result`` is not
     None the requirement is NOT_EVALUATED before the kernel runs at all;
     otherwise ``extra_reasons`` (possibly empty) is appended to whatever the
     kernel computes."""
     qualification = claim.get("qualification")
+    # Recognition outranks every other qualification state: an unlisted
+    # issuer's assessment cannot establish the requirement whatever the
+    # record's own terms evaluated — including `inside`. Nominal-basis
+    # requirements are unaffected, as in the compiler.
+    if qualification is not None and basis_kind != "nominal" and recognized_owners and qualification.get("owner") not in recognized_owners:
+        result = VerdictResult(status="not_evaluated", rule="not_evaluated.qualification_not_recognized")
+        result.reasons = [
+            {"code": "CORE-A4601", "evidence_id": claim["claim_id"], "qualification_owner": qualification.get("owner")}
+        ]
+        return result, []
     if qualification is not None and qualification.get("state") in ("outside", "unknown", "expired"):
         state = qualification["state"]
         if state == "expired":
@@ -1593,6 +1603,7 @@ def verify_case_verdicts(
 ) -> None:
     kinds = kinds_from_registry_doc(registry)
     require_qualification = bool(contract.get("execution_policy", {}).get("require_qualification", False))
+    recognized_owners = contract.get("execution_policy", {}).get("recognized_qualification_owners", {})
     verdicts_by_req = {v["requirement_id"]: v for v in (campaign_report or {}).get("verdicts", [])}
 
     # A6's slot-declaredness and permitted-claim-model checks ride the
@@ -1714,7 +1725,7 @@ def verify_case_verdicts(
         gated_result: Optional[VerdictResult] = None
         extra_reasons: list[dict] = []
         if len(reduced_evidence) == 1 and reduced_evidence[0].state == "admitted":
-            gated_result, extra_reasons = apply_qualification_gate(matches[0], basis_kind, require_qualification)
+            gated_result, extra_reasons = apply_qualification_gate(matches[0], basis_kind, require_qualification, recognized_owners)
 
         if gated_result is not None:
             result = gated_result
@@ -1735,7 +1746,7 @@ def verify_case_verdicts(
         reduced_evidence = admit_claims_for_metric(matches, permitted_models_for, cascade)
         gated_result, extra_reasons = (None, [])
         if len(reduced_evidence) == 1 and reduced_evidence[0].state == "admitted":
-            gated_result, extra_reasons = apply_qualification_gate(matches[0], "categorical", require_qualification)
+            gated_result, extra_reasons = apply_qualification_gate(matches[0], "categorical", require_qualification, recognized_owners)
         if gated_result is not None:
             result = gated_result
         else:
@@ -2768,6 +2779,15 @@ def verify_case_qualification_envelopes(
             problems.append(
                 f"claim records not_after {qualification.get('not_after')!r}, "
                 f"the bound record carries {record.get('not_after')!r}"
+            )
+
+        # Claims predate `owner`: an absent field is an older claim, not a
+        # mismatch — under a declared recognition policy it simply cannot be
+        # recognized (the gate treats it as an unlisted owner).
+        if "owner" in qualification and qualification["owner"] != record.get("owner"):
+            problems.append(
+                f"claim records owner {qualification.get('owner')!r}, "
+                f"the bound record declares owner {record.get('owner')!r}"
             )
 
         # The claim's evaluation instant is its producing receipt's

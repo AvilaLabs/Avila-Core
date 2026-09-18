@@ -13,7 +13,7 @@ use super::document::{ClaimValue, ClaimsDocument};
 use super::{AdmissionRecord, AdmissionState, VerdictBoundary, VerdictRecord};
 use crate::compile::registry::RegistryIndex;
 use crate::compile::{CanonicalTypedQuantity, CompiledContract};
-use crate::diagnostic::{CORE_A4401, CORE_A4402, CORE_A4403, CORE_A4602};
+use crate::diagnostic::{CORE_A4401, CORE_A4402, CORE_A4403, CORE_A4601, CORE_A4602};
 use crate::document::{BasisKind, CategoricalPredicate, Comparison, QuantityValue, SourceRef};
 use crate::qualification::{ClaimQualification, EnvelopeState};
 
@@ -86,13 +86,25 @@ pub(super) fn evaluate(
             // (ADR-0008 clause 4).
             let applies_qualification = requirement.basis.kind != BasisKind::Nominal;
             let quarantined = quarantined_by_qualification(&requirement.metric, claims, admissions);
+            let not_recognized = if applies_qualification {
+                unrecognized_claims(
+                    &requirement.metric,
+                    claims,
+                    admissions,
+                    &compiled.execution_policy.recognized_qualification_owners,
+                )
+            } else {
+                Vec::new()
+            };
             let unqualified = if applies_qualification {
                 unqualified_claims(&requirement.metric, claims, admissions)
             } else {
                 Vec::new()
             };
-            let verdict = if applies_qualification && !quarantined.is_empty() {
-                qualification_verdict(&quarantined)
+            let verdict = if applies_qualification
+                && (!quarantined.is_empty() || !not_recognized.is_empty())
+            {
+                qualification_verdict(&quarantined, &not_recognized)
             } else if applies_qualification
                 && compiled.execution_policy.require_qualification
                 && !unqualified.is_empty()
@@ -200,7 +212,13 @@ pub(super) fn evaluate(
             evidence,
         };
         let quarantined = quarantined_by_qualification(&requirement.metric, claims, admissions);
-        let verdict = if quarantined.is_empty() {
+        let not_recognized = unrecognized_claims(
+            &requirement.metric,
+            claims,
+            admissions,
+            &compiled.execution_policy.recognized_qualification_owners,
+        );
+        let verdict = if quarantined.is_empty() && not_recognized.is_empty() {
             CategoricalVerdictEvaluator::evaluate(&case).unwrap_or_else(|error| VerdictOutput {
                 status: VerdictStatus::NotEvaluated,
                 rule: "not_evaluated.kernel_refusal".into(),
@@ -223,7 +241,7 @@ pub(super) fn evaluate(
                 display_upper_text: None,
             })
         } else {
-            let mut output = qualification_verdict(&quarantined);
+            let mut output = qualification_verdict(&quarantined, &not_recognized);
             output.accepted_categories = Some(case.requirement.accepted_values.clone());
             output
         };
@@ -258,6 +276,37 @@ fn quarantined_by_qualification(
                 .find(|claim| claim.claim_id == record.evidence_id)
                 .and_then(|claim| claim.qualification.clone())
                 .filter(|qualification| qualification.state != EnvelopeState::Inside)
+                .map(|qualification| (record.evidence_id.clone(), qualification))
+        })
+        .collect()
+}
+
+/// Admitted claims for the requirement's metric whose qualification record
+/// declares an owner the contract's recognition policy does not list. When
+/// `recognized_qualification_owners` is non-empty, an unlisted owner's
+/// assessment cannot establish the requirement whatever its envelope terms
+/// evaluated — including `inside`. Distinct from `unqualified_claims`: the
+/// assessment exists, its issuer is simply not one this organization accepts.
+fn unrecognized_claims(
+    metric: &SourceRef,
+    claims: &ClaimsDocument,
+    admissions: &[AdmissionRecord],
+    recognized_owners: &std::collections::BTreeMap<String, String>,
+) -> Vec<(String, ClaimQualification)> {
+    if recognized_owners.is_empty() {
+        return Vec::new();
+    }
+    admissions
+        .iter()
+        .filter(|record| &record.source == metric)
+        .filter(|record| record.state == AdmissionState::Admitted)
+        .filter_map(|record| {
+            claims
+                .claims
+                .iter()
+                .find(|claim| claim.claim_id == record.evidence_id)
+                .and_then(|claim| claim.qualification.clone())
+                .filter(|qualification| !recognized_owners.contains_key(&qualification.owner))
                 .map(|qualification| (record.evidence_id.clone(), qualification))
         })
         .collect()
@@ -327,7 +376,10 @@ fn unqualified_reasons(code: &str, owner: &str, evidence_ids: &[String]) -> Vec<
     reasons
 }
 
-fn qualification_reasons(quarantined: &[(String, ClaimQualification)]) -> Vec<VerdictReason> {
+fn qualification_reasons(
+    quarantined: &[(String, ClaimQualification)],
+    not_recognized: &[(String, ClaimQualification)],
+) -> Vec<VerdictReason> {
     let expired = quarantined
         .iter()
         .any(|(_, qualification)| qualification.state == EnvelopeState::Expired);
@@ -335,6 +387,12 @@ fn qualification_reasons(quarantined: &[(String, ClaimQualification)]) -> Vec<Ve
         .iter()
         .any(|(_, qualification)| qualification.state != EnvelopeState::Expired);
     let mut reasons = Vec::new();
+    if !not_recognized.is_empty() {
+        reasons.push(VerdictReason::CodeOwner {
+            code: CORE_A4601.into(),
+            owner: "policy_owner".into(),
+        });
+    }
     if expired {
         reasons.push(VerdictReason::CodeOwner {
             code: CORE_A4602.into(),
@@ -345,6 +403,15 @@ fn qualification_reasons(quarantined: &[(String, ClaimQualification)]) -> Vec<Ve
         reasons.push(VerdictReason::CodeOwner {
             code: CORE_A4401.into(),
             owner: "method_owner".into(),
+        });
+    }
+    for (evidence_id, qualification) in not_recognized {
+        reasons.push(VerdictReason::EvidenceState {
+            evidence_id: evidence_id.clone(),
+            state: format!(
+                "qualification_not_recognized ({} rev {}): owner `{}` is not a recognized issuer",
+                qualification.qualification_id, qualification.revision, qualification.owner
+            ),
         });
     }
     for (evidence_id, qualification) in quarantined {
@@ -375,7 +442,10 @@ fn qualification_reasons(quarantined: &[(String, ClaimQualification)]) -> Vec<Ve
     reasons
 }
 
-fn qualification_verdict(quarantined: &[(String, ClaimQualification)]) -> VerdictOutput {
+fn qualification_verdict(
+    quarantined: &[(String, ClaimQualification)],
+    not_recognized: &[(String, ClaimQualification)],
+) -> VerdictOutput {
     let expired = quarantined
         .iter()
         .any(|(_, qualification)| qualification.state == EnvelopeState::Expired);
@@ -384,7 +454,11 @@ fn qualification_verdict(quarantined: &[(String, ClaimQualification)]) -> Verdic
         .any(|(_, qualification)| qualification.state == EnvelopeState::Outside);
     VerdictOutput {
         status: VerdictStatus::NotEvaluated,
-        rule: if expired {
+        // An unrecognized issuer's assessment cannot count at all — that
+        // refusal outranks whatever the record's own envelope said.
+        rule: if !not_recognized.is_empty() {
+            "not_evaluated.qualification_not_recognized".into()
+        } else if expired {
             "not_evaluated.qualification_expired".into()
         } else if outside {
             "not_evaluated.outside_qualification".into()
@@ -403,7 +477,7 @@ fn qualification_verdict(quarantined: &[(String, ClaimQualification)]) -> Verdic
         numbers_present: Some(false),
         observed_category: None,
         accepted_categories: None,
-        reasons: qualification_reasons(quarantined),
+        reasons: qualification_reasons(quarantined, not_recognized),
         display_upper_text: None,
     }
 }

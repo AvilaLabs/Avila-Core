@@ -189,6 +189,15 @@
           "type": "boolean",
           "default": false
         },
+        "recognized_qualification_owners": {
+          "description": "Issuers whose qualification records this organization recognizes: the record's `owner` mapped to the issuer's Ed25519 public key (hex). When non-empty, a claim qualified by a record whose owner is not listed cannot establish a bounded or enclosure requirement (CORE-A4601), and the runner applies a listed owner's record only when a signature document over its bound bytes verifies under the declared key. An empty or absent map imposes no recognition constraint. Key rotation is a contract revision.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "default": {}
+        },
         "require_signatures": {
           "description": "Requires the case runner to refuse an unsigned package and unsigned SC-12 reuse (ADR-0015): a run must be given --trust-root, the package manifest's requester signature must verify, and every declared execution step's operative receipt must carry a signature verified against a listed runner key, or the run is refused. The compiler only carries this flag through to the compiled snapshot and notes it visibly (CORE-A4404); the refusal itself is the case runner's.",
           "type": "boolean",

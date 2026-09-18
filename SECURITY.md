@@ -54,6 +54,16 @@ anything this runner automates. `examples/keys/` deliberately commits both
 the public and private halves of its example keys, stated plainly in its
 own README: they prove nothing and must never be reused for anything real.
 
+A second, independent signature check exists for qualification issuers:
+`execution_policy.recognized_qualification_owners` binds each recognized
+record `owner` to the issuer's Ed25519 key inside the contract itself, so
+the binding is part of the compiled identity — no run-supplied trust root
+is involved. A listed owner's record applies only when a signature
+document over its bound bytes verifies under exactly that key; anything
+else is refused at binding (`CORE-X3404`) and never reaches a claim.
+Recognizing an issuer is a contract revision; rotating a key revises the
+contract, not any operator-side file.
+
 The threat model includes:
 
 - untrusted capability packages and input documents;

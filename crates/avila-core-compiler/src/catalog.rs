@@ -63,6 +63,13 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         next_action: "This is informational and never blocks compilation. Sign the package with a requester key (`avila-core sign manifest`), sign every step's receipt with a runner key, and run with `--trust-root FILE` naming both.",
     },
     DiagnosticExplanation {
+        code: "CORE-A4601",
+        title: "Qualification record not recognized",
+        rule: "SC-7; execution_policy.recognized_qualification_owners",
+        meaning: "The contract's execution policy names the issuers whose qualification records are recognized, and an admitted claim for this requirement's metric carries a qualification assessment whose record declares an owner outside that list. Whatever the record's envelope terms evaluated, this organization does not accept that issuer's word for where the evidence may be trusted, so the claim cannot establish the requirement.",
+        next_action: "Supply evidence from a capability qualified by a recognized issuer, or add the issuer and its key to `recognized_qualification_owners` in a contract revision if the organization accepts the record. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
         code: "CORE-A4602",
         title: "Qualification record expired",
         rule: "SC-7; SC-10 A7",

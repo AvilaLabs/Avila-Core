@@ -33,12 +33,14 @@ pub const CORE_X3101: &str = "CORE-X3101";
 pub const CORE_X3201: &str = "CORE-X3201";
 pub const CORE_X3301: &str = "CORE-X3301";
 pub const CORE_X3401: &str = "CORE-X3401";
+pub const CORE_X3404: &str = "CORE-X3404";
 pub const CORE_X9001: &str = "CORE-X9001";
 
 pub const RUNTIME_FINDING_CODES: &[&str] = &[
     CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1004, CORE_X1005, CORE_X1101, CORE_X1201, CORE_X1301,
     CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601,
-    CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101, CORE_X3201, CORE_X3301, CORE_X3401, CORE_X9001,
+    CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101, CORE_X3201, CORE_X3301, CORE_X3401, CORE_X3404,
+    CORE_X9001,
 ];
 
 /// Explanations are served by `avila-core explain` alongside compiler codes.
@@ -203,6 +205,13 @@ pub const RUNTIME_DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         rule: "SC-12.3 reuse rules",
         meaning: "A `reuse_rule` document could not authorize reuse: it was unsigned or its signature did not verify against a requester key in the supplied trust root, its `not_after` had passed, its scope names a step or bound input slot the compiled contract does not contain (a rule can only narrow, never widen), or the document could not be evaluated at all. The refused rule is inapplicable — default invalidation runs and the affected step reruns.",
         next_action: "Re-sign the rule with a listed requester key, renew its expiry, or correct its scope to a real binding edge; otherwise accept the rerun.",
+    },
+    DiagnosticExplanation {
+        code: CORE_X3404,
+        title: "Qualification record refused under recognition policy",
+        rule: "SC-7; execution_policy.recognized_qualification_owners",
+        meaning: "The contract names issuers whose qualification records are recognized, and this bound record's owner is listed, but the record carries no signature document over its bound bytes that verifies under the issuer's declared key — it is unsigned, its signature covers different bytes, or the signature does not verify. The record is not applied: the step's claims carry no qualification assessment from it. A record whose owner is not listed loads normally and is refused later as unrecognized evidence (`CORE-A4601`).",
+        next_action: "Sign the record with the issuer key the contract declares (`avila-core sign document --id <document> --key <seed>`) and rebind the signature document, or remove the issuer from `recognized_qualification_owners` if the record is not meant to stand as recognized evidence.",
     },
     DiagnosticExplanation {
         code: CORE_X9001,

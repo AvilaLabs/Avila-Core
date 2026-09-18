@@ -1,7 +1,9 @@
 //! Slot resolution, the derived dependency graph, and graph-shape checks.
 
 use super::MAX_WORKFLOW_STEPS;
-use super::findings::{contract_location, invalid_value, logical_input_location};
+use super::findings::{
+    contract_location, escape_pointer_token, invalid_value, logical_input_location,
+};
 use super::ir::ResolvedBinding;
 use super::registry::RegistryIndex;
 use crate::diagnostic::{
@@ -38,6 +40,26 @@ pub(super) fn validate_contract_registry_refs(
                 format!(
                     "nondeterminism policy references role `{}@{}` absent from the supplied registry snapshot",
                     role.id, role.major
+                ),
+            ));
+        }
+    }
+    for (owner, key_hex) in &contract.execution_policy.recognized_qualification_owners {
+        let is_ed25519_hex = key_hex.len() == 64
+            && key_hex
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase());
+        if !is_ed25519_hex {
+            findings.push(CoreDiagnostic::new(
+                CORE_S1102,
+                FindingClass::Invalid,
+                "policy_owner",
+                contract_location(format!(
+                    "/execution_policy/recognized_qualification_owners/{}",
+                    escape_pointer_token(owner)
+                )),
+                format!(
+                    "recognized qualification owner `{owner}` names a key that is not a lowercase hex Ed25519 public key"
                 ),
             ));
         }

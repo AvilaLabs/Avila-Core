@@ -844,6 +844,15 @@
           "description": "Requires a qualification assessment on the admitted evidence of every `bounded` or `enclosure` requirement. When true, evidence with no qualification assessment leaves the requirement NOT_EVALUATED (CORE-A4402). When false or absent, such evidence is still evaluated, but the verdict carries an informational reason (CORE-A4403). Nominal-basis requirements are unaffected either way.",
           "type": "boolean",
           "default": false
+        },
+        "recognized_qualification_owners": {
+          "description": "Issuers whose qualification records this organization recognizes: the record's `owner` mapped to the issuer's Ed25519 public key (hex). When non-empty, a claim qualified by a record whose owner is not listed cannot establish a bounded or enclosure requirement (CORE-A4601). An empty or absent map imposes no recognition constraint.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "default": {}
         }
       }
     },

@@ -2086,9 +2086,10 @@ fn show_execute(ui: &mut egui::Ui, report: &CaseRunReport) {
                         badge(ui, label, color);
                         ui.label(
                             egui::RichText::new(format!(
-                                "{} rev {}; {}/{} terms hold",
+                                "{} rev {} by {}; {}/{} terms hold",
                                 assessment.qualification_id,
                                 assessment.revision,
+                                assessment.owner,
                                 assessment
                                     .terms
                                     .iter()

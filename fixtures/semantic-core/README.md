@@ -330,7 +330,7 @@ canonically.
 | `scope.record.superseded.fail` | `CORE-A4101` via change event |
 | `scope.record.expired.fail` | `CORE-A4602` — exercised by `campaign.qualification-expired.not_evaluated`, `a_lapsed_record_is_expired_whatever_its_terms_say`, and `a_lapsed_qualification_is_expired_and_cannot_establish_a_bounded_requirement`; a claim regenerated from a committed receipt keeps the state of its producing instant (`a_reused_claim_keeps_the_state_of_its_producing_instant`) |
 | `scope.record.revoked.fail` | `CORE-A4603` |
-| `scope.record.not-recognized.fail` | `CORE-A4601` under `require_qualification {recognized_by}` |
+| `scope.record.not-recognized.fail` | `CORE-A4601` under `execution_policy.recognized_qualification_owners` — the record's `owner` is not a listed issuer — exercised by `campaign.qualification-not-recognized.not_evaluated` and `an_unlisted_owners_assessment_attaches_but_the_campaign_refuses_it`; a listed owner must also sign the record under the declared key or the runner refuses it (`CORE-X3404`) — `a_recognized_owners_signed_record_is_applied_and_names_its_issuer`, `a_listed_owners_unsigned_record_is_refused`, `a_listed_owners_record_signed_by_another_key_is_refused` |
 | `scope.record.digest-bound.fail` | record binds the capability's exact `executable_sha256`; a digest the step does not run is refused at binding — exercised by `a_qualification_for_a_different_executable_is_refused` |
 | `scope.maturity-migration.pass` | v0.1 `qualified` → `released`; `allow_unqualified_capabilities` → policy rules |
 | `scope.admission-not-in-manifest.fail` | manifest field `admitted` → unknown-field refusal at package parse — exercised by `admission_is_not_a_manifest_field` |

@@ -41,6 +41,10 @@ const EXACT_NUMBER_PATTERN: &str =
 /// Checked by the review pass as `CORE-R3401`, not here.
 #[cfg(test)]
 const SHA256_PATTERN: &str = "^sha256:[a-f0-9]{64}$";
+/// The bare-hex form of an Ed25519 public key, as
+/// `execution_policy.recognized_qualification_owners` values carry.
+#[cfg(test)]
+const PUBLIC_KEY_HEX_PATTERN: &str = "^[a-f0-9]{64}$";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SchemaDocument {
@@ -709,10 +713,11 @@ mod tests {
         patterns(schema(SchemaDocument::Contract), &mut used);
         patterns(schema(SchemaDocument::Registry), &mut used);
         patterns(schema(SchemaDocument::Claims), &mut used);
-        let known: BTreeSet<String> = [EXACT_NUMBER_PATTERN, SHA256_PATTERN]
-            .into_iter()
-            .map(str::to_owned)
-            .collect();
+        let known: BTreeSet<String> =
+            [EXACT_NUMBER_PATTERN, SHA256_PATTERN, PUBLIC_KEY_HEX_PATTERN]
+                .into_iter()
+                .map(str::to_owned)
+                .collect();
         assert_eq!(
             used, known,
             "every schema pattern is native or semantic-layer owned"

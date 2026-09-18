@@ -1026,8 +1026,13 @@ fn execute_case_inner(
     // stops the workflow: no claim is generated over an unverified run.
     let mut executed_claims = Vec::new();
     let mut workspace = None;
+    let (qualification_records, qualification_findings) = load_qualifications(
+        &package,
+        &compiled.execution_policy.recognized_qualification_owners,
+    )?;
+    report.findings.extend(qualification_findings);
     let envelopes = Envelopes {
-        records: load_qualifications(&package)?,
+        records: qualification_records,
         kinds: registry_kinds(registry)?,
     };
     if !package.manifest.executions.is_empty() {

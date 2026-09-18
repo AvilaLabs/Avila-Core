@@ -110,6 +110,10 @@ pub struct EnvelopeAssessment {
     pub revision: u64,
     /// Identity of the qualification record's bytes.
     pub sha256: String,
+    /// The record's declared owner — carried so a recognition policy can be
+    /// checked without re-fetching the record.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub owner: String,
     pub state: EnvelopeState,
     /// The record's expiry bound at evaluation time, when it carries one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -138,6 +142,11 @@ pub struct ClaimQualification {
     pub qualification_id: String,
     pub revision: u64,
     pub sha256: String,
+    /// The record's declared owner — carried on the claim so the campaign's
+    /// recognition policy (`execution_policy.recognized_qualification_owners`)
+    /// can be checked without the record document.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub owner: String,
     pub state: EnvelopeState,
     /// The record's expiry bound at evaluation time, when it carries one —
     /// carried on the claim so `expired` re-derives against the producing
@@ -167,6 +176,7 @@ impl From<&EnvelopeAssessment> for ClaimQualification {
             qualification_id: assessment.qualification_id.clone(),
             revision: assessment.revision,
             sha256: assessment.sha256.clone(),
+            owner: assessment.owner.clone(),
             state: assessment.state,
             not_after: assessment.not_after.clone(),
             context: assessment.context.clone(),
@@ -260,6 +270,7 @@ pub fn evaluate_envelope(
         qualification_id: record.qualification_id.clone(),
         revision: record.revision,
         sha256: record_sha256.into(),
+        owner: record.owner.clone(),
         state: EnvelopeState::Unknown,
         not_after: record.not_after.clone(),
         evaluated_at: evaluated_at.into(),

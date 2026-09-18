@@ -43,6 +43,17 @@ pub struct ExecutionPolicy {
     /// gap. Nominal-basis requirements are unaffected either way.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub require_qualification: bool,
+    /// Issuers whose qualification records this organization recognizes:
+    /// the record's `owner` mapped to the issuer's Ed25519 public key
+    /// (hex). When non-empty, a claim qualified by a record whose owner is
+    /// not listed cannot establish a bounded or enclosure requirement
+    /// (`CORE-A4601`), and the runner applies a listed owner's record only
+    /// when a signature document over its bound bytes verifies under the
+    /// declared key — an unsigned or unverifiable record is refused at
+    /// binding rather than attached. An empty map imposes no recognition
+    /// constraint. Key rotation is a contract revision.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub recognized_qualification_owners: std::collections::BTreeMap<String, String>,
     /// Requires the case runner to refuse an unsigned package and unsigned
     /// SC-12 reuse (ADR-0015): a run must be given `--trust-root`, the
     /// package manifest's requester signature must verify, and every

@@ -782,6 +782,45 @@
     ],
     "campaign_sha256": "sha256:9fe392e46d1abaf65f63a34d2dda8be8c63e012834e066bf8677d33350c25507"
    }
+  },
+  {
+   "fixture_id": "campaign.qualification-not-recognized.not_evaluated",
+   "clause": "SC-7; SC-10 A7",
+   "contract": "../types/types.R1.resolved.recognized-qualification.contract.json",
+   "registry": "../types/compiler.registry.v1.json",
+   "claims": "campaign.qualification-not-recognized.not_evaluated.claims.json",
+   "expected": {
+    "status": "evaluated",
+    "findings": [],
+    "admissions": [
+     {
+      "evidence_id": "input:case",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "calculated",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "bounded",
+      "state": "admitted",
+      "reasons": []
+     }
+    ],
+    "verdicts": [
+     {
+      "requirement_id": "R-001",
+      "status": "not_evaluated",
+      "rule": "not_evaluated.qualification_not_recognized",
+      "reasons": [
+       "CORE-A4601"
+      ]
+     }
+    ],
+    "campaign_sha256": "sha256:85e40e3410ccd4a438c97ec5c0abc648dff03a3044c112792ab121c12795ad72"
+   }
   }
  ]
 }

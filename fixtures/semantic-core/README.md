@@ -326,19 +326,19 @@ canonically.
 | `scope.pred.param_in_set.*`, `input_attribute_in.*`, `input_attribute_in_range.*`, `environment_image_in.*`, `platform_in.*`, `fact.*` | true/false/unknown each |
 | `scope.exclusions.fail` | exclusion matches → `CORE-A4101` — exercised by `exclusion.matches.false` |
 | `scope.unknown-never-true.pass` | `unknown` under `not` stays `unknown` — exercised by `not.unknown-stays-unknown` |
-| `scope.record.active.pass` | admitted |
+| `scope.record.active.pass` | admitted — exercised by `a_run_inside_the_envelope_carries_the_qualification_on_its_claims` |
 | `scope.record.superseded.fail` | `CORE-A4101` via change event |
-| `scope.record.expired.fail` | `CORE-A4602` |
+| `scope.record.expired.fail` | `CORE-A4602` — exercised by `campaign.qualification-expired.not_evaluated`, `a_lapsed_record_is_expired_whatever_its_terms_say`, and `a_lapsed_qualification_is_expired_and_cannot_establish_a_bounded_requirement`; a claim regenerated from a committed receipt keeps the state of its producing instant (`a_reused_claim_keeps_the_state_of_its_producing_instant`) |
 | `scope.record.revoked.fail` | `CORE-A4603` |
 | `scope.record.not-recognized.fail` | `CORE-A4601` under `require_qualification {recognized_by}` |
-| `scope.record.digest-bound.fail` | record cites a different package digest → not applicable |
+| `scope.record.digest-bound.fail` | record binds the capability's exact `executable_sha256`; a digest the step does not run is refused at binding — exercised by `a_qualification_for_a_different_executable_is_refused` |
 | `scope.maturity-migration.pass` | v0.1 `qualified` → `released`; `allow_unqualified_capabilities` → policy rules |
-| `scope.admission-not-in-manifest.fail` | manifest field `admitted` → `CORE-S1101` unknown field |
-| `scope.a7-actual-context.fail` | planned context in scope, actual preflight fact out of scope → quarantine `CORE-A4101` |
+| `scope.admission-not-in-manifest.fail` | manifest field `admitted` → unknown-field refusal at package parse — exercised by `admission_is_not_a_manifest_field` |
+| `scope.a7-actual-context.fail` | the runner evaluates the envelope over the actual extracted facts before the step runs; an out-of-envelope actual context quarantines → `CORE-A4401` — exercised by `a_run_outside_the_envelope_cannot_establish_a_bounded_requirement` |
 | `scope.repeated-role-slot-addressing.pass` | predicates distinguish two inputs carrying the same role by slot |
-| `scope.fact.provider-asserted-insufficient.fail` | provider assertion cannot satisfy a predicate requiring validated-input or runner-measured authority |
-| `scope.fact.source-and-validator.pass` | fact type, source, validator, and receipt match qualification requirements |
-| `scope.expiry.explicit-time.pass` | expiry uses a signed evaluation-time record; kernel never reads a clock |
+| `scope.fact.provider-asserted-insufficient.fail` | provider assertion cannot satisfy a predicate requiring validated-input or runner-measured authority — exercised by `inside_outside_and_unknown_are_reported_per_term` (`claimed` → `unknown`) |
+| `scope.fact.source-and-validator.pass` | fact type, source, validator, and receipt match qualification requirements — exercised by `a_run_inside_the_envelope_carries_the_qualification_on_its_claims` (`runner_measured` + adapter validator accepted) and the verifier's `_check_context_receipt_binding` |
+| `scope.expiry.explicit-time.pass` | expiry compares `not_after` against the producing receipt's `started_at` — the signed evaluation-time record; the kernel never reads a clock and claims carry no run-varying stamp — exercised by `a_lapsed_record_is_expired_whatever_its_terms_say`, `a_lapsed_qualification_is_expired_and_cannot_establish_a_bounded_requirement`, and `a_reused_claim_keeps_the_state_of_its_producing_instant` |
 | `scope.resource-limits.fail` | depth/count/work limits fail closed without hang |
 
 ### policy/ (SC-8)

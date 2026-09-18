@@ -499,6 +499,45 @@
    }
   },
   {
+   "fixture_id": "campaign.qualification-expired.not_evaluated",
+   "clause": "SC-7; SC-10 A7",
+   "contract": "../types/types.R1.resolved.pass.contract.json",
+   "registry": "../types/compiler.registry.v1.json",
+   "claims": "campaign.qualification-expired.not_evaluated.claims.json",
+   "expected": {
+    "status": "evaluated",
+    "findings": [],
+    "admissions": [
+     {
+      "evidence_id": "input:case",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "calculated",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "bounded",
+      "state": "admitted",
+      "reasons": []
+     }
+    ],
+    "verdicts": [
+     {
+      "requirement_id": "R-001",
+      "status": "not_evaluated",
+      "rule": "not_evaluated.qualification_expired",
+      "reasons": [
+       "CORE-A4602"
+      ]
+     }
+    ],
+    "campaign_sha256": "sha256:68c05db342a59d6ddc57f1237f187e4b21df2a491d083466b465a09120cf4d47"
+   }
+  },
+  {
    "fixture_id": "campaign.require-qualification.unqualified.not_evaluated",
    "clause": "ADR-0008 clause 5",
    "contract": "../types/types.R1.resolved.require-qualification.contract.json",

@@ -56,8 +56,10 @@ pub(super) struct Runner<'a> {
     replay_applicable: bool,
     /// The package's qualification records and the kinds their facts scale by.
     envelopes: &'a Envelopes,
-    /// The envelope assessment of the step being run, attached to its claims.
-    current_qualification: Option<Value>,
+    /// The envelope assessment of the step being run; its claims stamp the
+    /// state at their producing receipt's `started_at`, so the recorded
+    /// `expired` re-derives from committed artifacts alone.
+    current_qualification: Option<EnvelopeAssessment>,
     /// The bound record's covered output slots, when it names any (`None`
     /// covers every output the step produces). Checked per claim in
     /// `promote` so a claim on an uncovered output slot never carries
@@ -1094,6 +1096,7 @@ impl<'a> Runner<'a> {
                         &bound.sha256,
                         &self.envelopes.kinds,
                         &context,
+                        &rfc3339_now(),
                     ));
                 }
                 Err(error) => {
@@ -1109,9 +1112,7 @@ impl<'a> Runner<'a> {
                 }
             }
         }
-        self.current_qualification = report.qualification.as_ref().map(|assessment| {
-            serde_json::to_value(ClaimQualification::from(assessment)).unwrap_or(Value::Null)
-        });
+        self.current_qualification = report.qualification.clone();
         self.current_qualification_covered_slots = qualification_covered_slots;
 
         // Compare with the committed receipt: what changed, by class.
@@ -1286,6 +1287,7 @@ impl<'a> Runner<'a> {
                         &extracted,
                         &outputs,
                         true,
+                        &receipt.process.started_at,
                     )?;
                     report.reused_receipt = Some(document_id.clone());
                     report.state = StepExecutionState::Reused;
@@ -1677,13 +1679,17 @@ impl<'a> Runner<'a> {
             &extracted,
             &produced,
             false,
+            &receipt.process.started_at,
         )?;
         report.state = StepExecutionState::Executed;
         Ok(report)
     }
 
     /// Promote produced or reused outputs: they become available to later
-    /// steps, and their extracted claims enter the generated document.
+    /// steps, and their extracted claims enter the generated document. The
+    /// `evaluated_at` is the producing receipt's `started_at` — the signed
+    /// evaluation instant the claim's qualification state is stamped with.
+    #[allow(clippy::too_many_arguments)]
     fn promote(
         &mut self,
         step: &CompiledStep,
@@ -1692,6 +1698,7 @@ impl<'a> Runner<'a> {
         extracted: &[ExtractedClaim],
         produced: &[(ReceiptOutput, PathBuf)],
         reused: bool,
+        evaluated_at: &str,
     ) -> Result<(), Box<dyn Error>> {
         let qualification = self.current_qualification.clone();
         let covered_slots = self.current_qualification_covered_slots.clone();
@@ -1720,12 +1727,22 @@ impl<'a> Runner<'a> {
             // output slots at all, is attached only to a claim on one of
             // them; an uncovered claim (e.g. a screen's dose estimate next to
             // its qualified geometry claims) carries none, exactly as if no
-            // record had been bound for this capability.
-            let claim_qualification = qualification.clone().filter(|_| {
-                covered_slots
-                    .as_ref()
-                    .is_none_or(|slots| slots.iter().any(|slot| slot == &claim.output_slot))
-            });
+            // record had been bound for this capability. The state is stamped
+            // at the producing receipt's `started_at`, so a claim regenerated
+            // from a committed receipt reproduces its recorded state exactly.
+            let claim_qualification = qualification
+                .as_ref()
+                .filter(|_| {
+                    covered_slots
+                        .as_ref()
+                        .is_none_or(|slots| slots.iter().any(|slot| slot == &claim.output_slot))
+                })
+                .map(|assessment| {
+                    let mut claim_qualification = ClaimQualification::from(assessment);
+                    claim_qualification.state = assessment.state_at(evaluated_at);
+                    serde_json::to_value(claim_qualification)
+                        .expect("claim qualification serializes")
+                });
             self.claims.push(GeneratedClaim {
                 claim_id: (*claim_id).to_string(),
                 step_id: step.step_id.clone(),

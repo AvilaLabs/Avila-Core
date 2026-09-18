@@ -545,6 +545,7 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                         EnvelopeState::Inside => "INSIDE",
                         EnvelopeState::Outside => "OUTSIDE",
                         EnvelopeState::Unknown => "UNKNOWN",
+                        EnvelopeState::Expired => "EXPIRED",
                     };
                     let failed: Vec<String> = assessment
                         .terms

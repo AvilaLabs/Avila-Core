@@ -13,7 +13,7 @@ use super::document::{ClaimValue, ClaimsDocument};
 use super::{AdmissionRecord, AdmissionState, VerdictBoundary, VerdictRecord};
 use crate::compile::registry::RegistryIndex;
 use crate::compile::{CanonicalTypedQuantity, CompiledContract};
-use crate::diagnostic::{CORE_A4401, CORE_A4402, CORE_A4403};
+use crate::diagnostic::{CORE_A4401, CORE_A4402, CORE_A4403, CORE_A4602};
 use crate::document::{BasisKind, CategoricalPredicate, Comparison, QuantityValue, SourceRef};
 use crate::qualification::{ClaimQualification, EnvelopeState};
 
@@ -328,14 +328,30 @@ fn unqualified_reasons(code: &str, owner: &str, evidence_ids: &[String]) -> Vec<
 }
 
 fn qualification_reasons(quarantined: &[(String, ClaimQualification)]) -> Vec<VerdictReason> {
-    let mut reasons = vec![VerdictReason::CodeOwner {
-        code: CORE_A4401.into(),
-        owner: "method_owner".into(),
-    }];
+    let expired = quarantined
+        .iter()
+        .any(|(_, qualification)| qualification.state == EnvelopeState::Expired);
+    let unenclosed = quarantined
+        .iter()
+        .any(|(_, qualification)| qualification.state != EnvelopeState::Expired);
+    let mut reasons = Vec::new();
+    if expired {
+        reasons.push(VerdictReason::CodeOwner {
+            code: CORE_A4602.into(),
+            owner: "method_owner".into(),
+        });
+    }
+    if unenclosed {
+        reasons.push(VerdictReason::CodeOwner {
+            code: CORE_A4401.into(),
+            owner: "method_owner".into(),
+        });
+    }
     for (evidence_id, qualification) in quarantined {
         let state = match qualification.state {
             EnvelopeState::Outside => "outside_qualification",
             EnvelopeState::Unknown => "qualification_unknown",
+            EnvelopeState::Expired => "qualification_expired",
             EnvelopeState::Inside => "inside_qualification",
         };
         let failed = qualification.failed_terms();
@@ -360,12 +376,17 @@ fn qualification_reasons(quarantined: &[(String, ClaimQualification)]) -> Vec<Ve
 }
 
 fn qualification_verdict(quarantined: &[(String, ClaimQualification)]) -> VerdictOutput {
+    let expired = quarantined
+        .iter()
+        .any(|(_, qualification)| qualification.state == EnvelopeState::Expired);
     let outside = quarantined
         .iter()
         .any(|(_, qualification)| qualification.state == EnvelopeState::Outside);
     VerdictOutput {
         status: VerdictStatus::NotEvaluated,
-        rule: if outside {
+        rule: if expired {
+            "not_evaluated.qualification_expired".into()
+        } else if outside {
             "not_evaluated.outside_qualification".into()
         } else {
             "not_evaluated.qualification_unknown".into()

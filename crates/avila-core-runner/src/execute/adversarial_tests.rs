@@ -2798,6 +2798,148 @@ fn a_run_outside_the_envelope_cannot_establish_a_bounded_requirement() {
 }
 
 #[test]
+fn a_lapsed_qualification_is_expired_and_cannot_establish_a_bounded_requirement() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    declare_qualification(&synthetic, &["text/plain"], None, None);
+    // Lapse the record — `not_after` in the past — then re-pin the bound
+    // document digest so the package still binds the exact bytes.
+    let path = synthetic.case_dir.join("qualification.json");
+    let mut record: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    record["not_after"] = json!("2020-01-01T00:00:00Z");
+    fs::write(&path, serde_json::to_vec_pretty(&record).unwrap()).unwrap();
+    let mut package: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    for document in package["documents"].as_array_mut().unwrap() {
+        if document["document_id"] == "qualification" {
+            document["sha256"] = json!(digest(&path));
+        }
+    }
+    fs::write(
+        synthetic.case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+
+    let workspace = dir.workspace();
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, workspace.clone()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let assessment = step(&report)
+        .qualification
+        .as_ref()
+        .expect("envelope assessed");
+    // The facts are inside the envelope — the record itself has lapsed.
+    assert_eq!(
+        assessment.state,
+        avila_core_compiler::EnvelopeState::Expired,
+        "{summary}"
+    );
+    assert!(!assessment.evaluated_at.is_empty(), "{summary}");
+    let claims: Value =
+        serde_json::from_slice(&fs::read(workspace.join("claims.json")).unwrap()).unwrap();
+    for claim in claims["claims"].as_array().unwrap() {
+        if claim["step_id"] == "classification" {
+            assert_eq!(claim["qualification"]["state"], "expired", "{claim}");
+            assert_eq!(
+                claim["qualification"]["not_after"], "2020-01-01T00:00:00Z",
+                "{claim}"
+            );
+        }
+    }
+    let campaign = report.campaign.as_ref().expect("campaign evaluated");
+    for verdict in &campaign.verdicts {
+        assert_eq!(
+            verdict.verdict.status,
+            VerdictStatus::NotEvaluated,
+            "{summary}"
+        );
+        let reasons = serde_json::to_string(&verdict.verdict.reasons).unwrap();
+        assert!(reasons.contains("CORE-A4602"), "{reasons}");
+        assert!(reasons.contains("qualification_expired"), "{reasons}");
+    }
+}
+
+#[test]
+fn a_reused_claim_keeps_the_state_of_its_producing_instant() {
+    // The record lapses *after* the committed receipt's `started_at`: the
+    // regenerated claim reproduces the state of the instant its evidence was
+    // produced, while the run report's assessment — stamped now — says the
+    // record has expired. Evidence does not retroactively lapse; whether a
+    // stale claim still satisfies a requirement is a separate policy call.
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let contract: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("contract.json")).unwrap())
+            .unwrap();
+    let media_type = contract["inputs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|input| input["input_id"] == "aftermatter-case")
+        .map(|input| input["media_type"].as_str().unwrap().to_string())
+        .unwrap();
+    declare_qualification(&synthetic, &[media_type.as_str()], None, None);
+    // The committed receipt stands in 2019, the record through 2020: lapsed
+    // now, standing at the evidence's producing instant.
+    let receipt_path = synthetic.case_dir.join("receipts/classification.json");
+    let mut receipt: Value = serde_json::from_slice(&fs::read(&receipt_path).unwrap()).unwrap();
+    receipt["process"]["started_at"] = json!("2019-01-01T00:00:00Z");
+    fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
+
+    let path = synthetic.case_dir.join("qualification.json");
+    let mut record: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    record["not_after"] = json!("2020-01-01T00:00:00Z");
+    fs::write(&path, serde_json::to_vec_pretty(&record).unwrap()).unwrap();
+    let mut package: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    for document in package["documents"].as_array_mut().unwrap() {
+        if document["document_id"] == "qualification" {
+            document["sha256"] = json!(digest(&path));
+        }
+        if document["role"] == "execution_receipt" && document["step_id"] == "classification" {
+            document["sha256"] = json!(digest(&receipt_path));
+        }
+    }
+    fs::write(
+        synthetic.case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+
+    let workspace = dir.workspace();
+    let report = execute_case(
+        &synthetic.case_dir,
+        &reuse_options(&synthetic, workspace.clone()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let assessment = step(&report)
+        .qualification
+        .as_ref()
+        .expect("envelope assessed");
+    assert_eq!(
+        assessment.state,
+        avila_core_compiler::EnvelopeState::Expired,
+        "{summary}"
+    );
+    for claim in &report.claims.as_ref().unwrap().evidence_claims {
+        if claim["step_id"] == "classification" {
+            assert_eq!(claim["qualification"]["state"], "inside", "{claim}");
+            assert_eq!(
+                claim["qualification"]["not_after"], "2020-01-01T00:00:00Z",
+                "{claim}"
+            );
+        }
+    }
+}
+
+#[test]
 fn a_qualification_for_a_different_executable_is_refused() {
     let dir = TestDir::new();
     let synthetic = blessed(&dir);

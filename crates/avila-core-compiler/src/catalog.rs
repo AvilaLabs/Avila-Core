@@ -63,6 +63,13 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         next_action: "This is informational and never blocks compilation. Sign the package with a requester key (`avila-core sign manifest`), sign every step's receipt with a runner key, and run with `--trust-root FILE` naming both.",
     },
     DiagnosticExplanation {
+        code: "CORE-A4602",
+        title: "Qualification record expired",
+        rule: "SC-7; SC-10 A7",
+        meaning: "A bounded or enclosure requirement depends on a claim whose producing capability carries a qualification record, but the record's `not_after` lapsed before the claim's evaluation instant — the producing receipt's `started_at`. The envelope no longer stands, whatever its terms would have said — the claim cannot establish the requirement. The calculation may be fine; the credential naming where it may be trusted has lapsed.",
+        next_action: "Renew the qualification record (a new revision with a later `not_after`) and rerun the step, or supply evidence from a capability whose qualification is current. The owner is the method owner.",
+    },
+    DiagnosticExplanation {
         code: "CORE-E7001",
         title: "Claims bind a different snapshot",
         rule: "SC-11",

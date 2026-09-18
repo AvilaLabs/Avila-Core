@@ -68,7 +68,8 @@
             "qualification_id": { "$ref": "#/$defs/nonemptyString" },
             "revision": { "type": "integer", "minimum": 1 },
             "sha256": { "$ref": "#/$defs/sha256" },
-            "state": { "enum": ["inside", "outside", "unknown"] },
+            "state": { "enum": ["inside", "outside", "unknown", "expired"] },
+            "not_after": { "type": "string", "description": "The record's expiry bound at evaluation time, normalized `YYYY-MM-DDTHH:MM:SSZ`; carried on the claim so `expired` re-derives against the producing receipt's `started_at`, the signed evaluation instant." },
             "context": { "$ref": "#/$defs/applicabilityContext" },
             "terms": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["predicate", "result"],
               "properties": { "predicate": { "type": "string" }, "result": { "enum": ["true", "false", "unknown"] } } } }

@@ -2079,6 +2079,7 @@ fn show_execute(ui: &mut egui::Ui, report: &CaseRunReport) {
                         avila_core_compiler::EnvelopeState::Inside => ("INSIDE", GREEN),
                         avila_core_compiler::EnvelopeState::Outside => ("OUTSIDE", RED),
                         avila_core_compiler::EnvelopeState::Unknown => ("UNKNOWN", AMBER),
+                        avila_core_compiler::EnvelopeState::Expired => ("EXPIRED", RED),
                     };
                     ui.horizontal_wrapped(|ui| {
                         ui.label(egui::RichText::new("Qualification envelope:").strong());

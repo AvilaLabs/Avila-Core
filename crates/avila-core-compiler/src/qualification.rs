@@ -50,6 +50,11 @@ pub struct QualificationRecord {
     pub validation_evidence: Vec<ValidationEvidence>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub limitations: Vec<String>,
+    /// The last instant (normalized `YYYY-MM-DDTHH:MM:SSZ`) this record's
+    /// assessment may stand. Evaluation never reads a clock — the caller
+    /// stamps the signed evaluation time into each assessment.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_after: Option<String>,
 }
 
 impl QualificationRecord {
@@ -84,6 +89,9 @@ pub enum EnvelopeState {
     Inside,
     Outside,
     Unknown,
+    /// The record's `not_after` lapsed before the evaluation time — the
+    /// envelope no longer stands, whatever its terms would have said.
+    Expired,
 }
 
 /// One top-level term of the scope and how it evaluated.
@@ -103,6 +111,14 @@ pub struct EnvelopeAssessment {
     /// Identity of the qualification record's bytes.
     pub sha256: String,
     pub state: EnvelopeState,
+    /// The record's expiry bound at evaluation time, when it carries one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_after: Option<String>,
+    /// The evaluation instant the caller stamped (normalized
+    /// `YYYY-MM-DDTHH:MM:SSZ`); empty when an older assessment did not
+    /// record one.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub evaluated_at: String,
     /// The kernel applicability context (as JSON) this assessment was
     /// evaluated over: every fact the adapter reported, with its declared
     /// source, and the staged inputs' media types and identities. Persisted
@@ -123,6 +139,11 @@ pub struct ClaimQualification {
     pub revision: u64,
     pub sha256: String,
     pub state: EnvelopeState,
+    /// The record's expiry bound at evaluation time, when it carries one —
+    /// carried on the claim so `expired` re-derives against the producing
+    /// receipt's `started_at`, which is the signed evaluation instant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_after: Option<String>,
     /// The applicability context the assessment was evaluated over; carrying
     /// it on the claim binds the recorded state to the recorded facts.
     pub context: Value,
@@ -147,6 +168,7 @@ impl From<&EnvelopeAssessment> for ClaimQualification {
             revision: assessment.revision,
             sha256: assessment.sha256.clone(),
             state: assessment.state,
+            not_after: assessment.not_after.clone(),
             context: assessment.context.clone(),
             terms: assessment.terms.clone(),
         }
@@ -193,6 +215,25 @@ pub fn parse_qualification(bytes: &[u8]) -> Result<QualificationRecord, String> 
             return Err("qualification `covered_output_slots` entries must not be empty".into());
         }
     }
+    if let Some(not_after) = &record.not_after {
+        // Normalized `YYYY-MM-DDTHH:MM:SSZ` — lexical order is chronological,
+        // which is what expiry comparison relies on.
+        let valid = not_after.len() == 20
+            && not_after.as_bytes()[4] == b'-'
+            && not_after.as_bytes()[7] == b'-'
+            && not_after.as_bytes()[10] == b'T'
+            && not_after.as_bytes()[13] == b':'
+            && not_after.as_bytes()[16] == b':'
+            && not_after.as_bytes()[19] == b'Z'
+            && not_after.bytes().enumerate().all(|(index, byte)| {
+                matches!(index, 4 | 7 | 10 | 13 | 16 | 19) || byte.is_ascii_digit()
+            });
+        if !valid {
+            return Err(format!(
+                "qualification `not_after` must be normalized `YYYY-MM-DDTHH:MM:SSZ`, observed `{not_after}`"
+            ));
+        }
+    }
     Ok(record)
 }
 
@@ -213,16 +254,27 @@ pub fn evaluate_envelope(
     record_sha256: &str,
     kinds: &KindRegistry,
     context: &Value,
+    evaluated_at: &str,
 ) -> EnvelopeAssessment {
     let mut assessment = EnvelopeAssessment {
         qualification_id: record.qualification_id.clone(),
         revision: record.revision,
         sha256: record_sha256.into(),
         state: EnvelopeState::Unknown,
+        not_after: record.not_after.clone(),
+        evaluated_at: evaluated_at.into(),
         context: context.clone(),
         terms: Vec::new(),
         issues: Vec::new(),
     };
+    // Expiry first: `not_after` is the last instant the record stands. Both
+    // sides are normalized `YYYY-MM-DDTHH:MM:SSZ`, so lexical order is
+    // chronological — and the kernel never reads a clock; the caller stamps
+    // the signed evaluation time.
+    let expired = record
+        .not_after
+        .as_deref()
+        .is_some_and(|not_after| evaluated_at >= not_after);
     let context: ApplicabilityContext = match serde_json::from_value(context.clone()) {
         Ok(context) => context,
         Err(error) => {
@@ -270,22 +322,43 @@ pub fn evaluate_envelope(
             result,
         });
     }
-    assessment.state = if assessment
-        .terms
-        .iter()
-        .any(|term| term.result == TruthValue::False)
-    {
+    assessment.state = aggregate_state(&assessment.terms);
+    if expired {
+        // Terms stay evaluated for visibility — the report can still show
+        // where the envelope would have stood — but a lapsed record yields
+        // no `inside`.
+        assessment.state = EnvelopeState::Expired;
+        assessment.issues.push(format!(
+            "qualification expired at {}",
+            record.not_after.as_deref().unwrap_or_default()
+        ));
+    }
+    assessment
+}
+
+/// The state the recorded terms stand for, before any expiry override.
+fn aggregate_state(terms: &[EnvelopeTerm]) -> EnvelopeState {
+    if terms.iter().any(|term| term.result == TruthValue::False) {
         EnvelopeState::Outside
-    } else if assessment
-        .terms
-        .iter()
-        .all(|term| term.result == TruthValue::True)
-    {
+    } else if terms.iter().all(|term| term.result == TruthValue::True) {
         EnvelopeState::Inside
     } else {
         EnvelopeState::Unknown
-    };
-    assessment
+    }
+}
+
+impl EnvelopeAssessment {
+    /// The state this assessment carries at `evaluated_at`: the term
+    /// aggregate unless the record's `not_after` has lapsed by then. The
+    /// claim stamps it with the producing receipt's `started_at` — the
+    /// signed evaluation instant — so the recorded state re-derives from
+    /// committed artifacts alone.
+    pub fn state_at(&self, evaluated_at: &str) -> EnvelopeState {
+        match &self.not_after {
+            Some(not_after) if evaluated_at >= not_after.as_str() => EnvelopeState::Expired,
+            _ => aggregate_state(&self.terms),
+        }
+    }
 }
 
 fn compact(value: &Value) -> String {
@@ -296,6 +369,8 @@ fn compact(value: &Value) -> String {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    const EVAL_AT: &str = "2026-01-01T00:00:00Z";
 
     fn record(scope: Value) -> QualificationRecord {
         parse_qualification(
@@ -342,15 +417,31 @@ mod tests {
     fn inside_outside_and_unknown_are_reported_per_term() {
         let record = record(scope());
         let kinds = kinds();
-        let inside = evaluate_envelope(&record, "sha256:q", &kinds, &context("90", "polyethylene"));
+        let inside = evaluate_envelope(
+            &record,
+            "sha256:q",
+            &kinds,
+            &context("90", "polyethylene"),
+            EVAL_AT,
+        );
         assert_eq!(inside.state, EnvelopeState::Inside, "{inside:?}");
         assert_eq!(inside.terms.len(), 2);
 
-        let outside =
-            evaluate_envelope(&record, "sha256:q", &kinds, &context("1.5", "polyethylene"));
+        let outside = evaluate_envelope(
+            &record,
+            "sha256:q",
+            &kinds,
+            &context("1.5", "polyethylene"),
+            EVAL_AT,
+        );
         assert_eq!(outside.state, EnvelopeState::Inside);
-        let outside =
-            evaluate_envelope(&record, "sha256:q", &kinds, &context("150", "polyethylene"));
+        let outside = evaluate_envelope(
+            &record,
+            "sha256:q",
+            &kinds,
+            &context("150", "polyethylene"),
+            EVAL_AT,
+        );
         assert_eq!(outside.state, EnvelopeState::Outside);
         assert_eq!(outside.terms[0].result, TruthValue::False);
         let claim = ClaimQualification::from(&outside);
@@ -360,7 +451,13 @@ mod tests {
         assert_eq!(outside.context, context("150", "polyethylene"));
         assert_eq!(claim.context, outside.context);
 
-        let unknown = evaluate_envelope(&record, "sha256:q", &kinds, &json!({ "facts": {} }));
+        let unknown = evaluate_envelope(
+            &record,
+            "sha256:q",
+            &kinds,
+            &json!({ "facts": {} }),
+            EVAL_AT,
+        );
         assert_eq!(unknown.state, EnvelopeState::Unknown);
         assert!(
             unknown
@@ -373,8 +470,85 @@ mod tests {
         // accepted.
         let mut weak = context("90", "polyethylene");
         weak["facts"]["slab.total_thickness"]["source"]["class"] = json!("claimed");
-        let weak = evaluate_envelope(&record, "sha256:q", &kinds, &weak);
+        let weak = evaluate_envelope(&record, "sha256:q", &kinds, &weak, EVAL_AT);
         assert_eq!(weak.state, EnvelopeState::Unknown);
+    }
+
+    #[test]
+    fn a_lapsed_record_is_expired_whatever_its_terms_say() {
+        // The envelope's terms would evaluate `inside`, but `not_after` is
+        // the last instant the record stands — expiry is compared against
+        // the stamped evaluation time, never a clock.
+        let mut body = serde_json::to_value(record(scope())).unwrap();
+        body["not_after"] = json!("2025-06-30T00:00:00Z");
+        let record: QualificationRecord = serde_json::from_value(body).unwrap();
+
+        let lapsed = evaluate_envelope(
+            &record,
+            "sha256:q",
+            &kinds(),
+            &context("90", "polyethylene"),
+            "2025-07-01T00:00:00Z",
+        );
+        assert_eq!(lapsed.state, EnvelopeState::Expired);
+        assert!(
+            lapsed
+                .terms
+                .iter()
+                .all(|term| term.result == TruthValue::True),
+            "terms stay evaluated for visibility"
+        );
+        assert_eq!(lapsed.not_after.as_deref(), Some("2025-06-30T00:00:00Z"));
+        assert_eq!(lapsed.evaluated_at, "2025-07-01T00:00:00Z");
+
+        // `not_after` is the last instant the record stands — equality
+        // already lapses.
+        let at_bound = evaluate_envelope(
+            &record,
+            "sha256:q",
+            &kinds(),
+            &context("90", "polyethylene"),
+            "2025-06-30T00:00:00Z",
+        );
+        assert_eq!(at_bound.state, EnvelopeState::Expired);
+
+        let current = evaluate_envelope(
+            &record,
+            "sha256:q",
+            &kinds(),
+            &context("90", "polyethylene"),
+            "2025-06-29T23:59:59Z",
+        );
+        assert_eq!(current.state, EnvelopeState::Inside);
+
+        // The claim carries `not_after` so `expired` re-derives against the
+        // producing receipt's `started_at` — the signed evaluation instant —
+        // without a clock or a run-varying stamp on the claim itself.
+        let claim = ClaimQualification::from(&lapsed);
+        assert_eq!(claim.state, EnvelopeState::Expired);
+        assert_eq!(claim.not_after.as_deref(), Some("2025-06-30T00:00:00Z"));
+
+        // The same assessment re-stamps to either side of the bound.
+        assert_eq!(
+            lapsed.state_at("2025-06-29T23:59:59Z"),
+            EnvelopeState::Inside
+        );
+        assert_eq!(
+            lapsed.state_at("2025-06-30T00:00:00Z"),
+            EnvelopeState::Expired
+        );
+    }
+
+    #[test]
+    fn a_malformed_not_after_is_refused() {
+        for not_after in ["2025-06-30", "2025-06-30T00:00:00+01:00", "soon"] {
+            let mut body = serde_json::to_value(record(scope())).unwrap();
+            body["not_after"] = json!(not_after);
+            assert!(
+                parse_qualification(&serde_json::to_vec(&body).unwrap()).is_err(),
+                "{not_after}"
+            );
+        }
     }
 
     #[test]

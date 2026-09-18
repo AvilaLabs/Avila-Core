@@ -1442,10 +1442,17 @@ def apply_qualification_gate(claim: dict, basis_kind: str, require_qualification
     otherwise ``extra_reasons`` (possibly empty) is appended to whatever the
     kernel computes."""
     qualification = claim.get("qualification")
-    if qualification is not None and qualification.get("state") in ("outside", "unknown"):
-        result = VerdictResult(status="not_evaluated", rule="not_evaluated.outside_qualification")
+    if qualification is not None and qualification.get("state") in ("outside", "unknown", "expired"):
+        state = qualification["state"]
+        if state == "expired":
+            rule, code = "not_evaluated.qualification_expired", "CORE-A4602"
+        elif state == "outside":
+            rule, code = "not_evaluated.outside_qualification", "CORE-A4401"
+        else:
+            rule, code = "not_evaluated.qualification_unknown", "CORE-A4401"
+        result = VerdictResult(status="not_evaluated", rule=rule)
         result.reasons = [
-            {"code": "CORE-A4401", "evidence_id": claim["claim_id"], "qualification_state": qualification["state"]}
+            {"code": code, "evidence_id": claim["claim_id"], "qualification_state": state}
         ]
         return result, []
     if qualification is None and basis_kind in ("bounded", "enclosure"):
@@ -2621,6 +2628,18 @@ def _aggregate_envelope_state(results: list) -> str:
     return "unknown"
 
 
+def _expected_envelope_state(record: dict, term_state: str, evaluated_at: str | None) -> str:
+    """Rust's evaluate_envelope applies expiry after term aggregation: a
+    record whose ``not_after`` lapsed at the evaluation instant yields
+    ``expired`` whatever its terms said. The claim stamps that instant with
+    the producing receipt's ``started_at``; both sides are normalized
+    ``YYYY-MM-DDTHH:MM:SSZ``, so lexical order is chronological."""
+    not_after = record.get("not_after")
+    if not_after and evaluated_at is not None and evaluated_at >= not_after:
+        return "expired"
+    return term_state
+
+
 def evaluate_envelope_terms(record: dict, context: dict, kinds: dict) -> tuple[str, list, list]:
     """Re-derives qualification.rs's evaluate_envelope: splits the record's
     scope into its top-level terms, evaluates each independently over
@@ -2745,6 +2764,22 @@ def verify_case_qualification_envelopes(
                 f"covered_output_slots {covered_slots!r} (S-039)"
             )
 
+        if qualification.get("not_after") != record.get("not_after"):
+            problems.append(
+                f"claim records not_after {qualification.get('not_after')!r}, "
+                f"the bound record carries {record.get('not_after')!r}"
+            )
+
+        # The claim's evaluation instant is its producing receipt's
+        # `started_at` — the signed time record expiry is stamped against.
+        receipt = receipts_by_step.get(claim.get("step_id"))
+        evaluated_at = (receipt or {}).get("process", {}).get("started_at")
+        if qualification.get("state") == "expired" and evaluated_at is None:
+            problems.append(
+                "claim records envelope state 'expired' but no receipt for the "
+                "step is bound, so the evaluation instant cannot be re-derived"
+            )
+
         expected_predicates = [compact_json(term) for term in scope_terms(record["scope"])]
         actual_terms = qualification.get("terms", [])
         actual_predicates = [term.get("predicate") for term in actual_terms]
@@ -2754,7 +2789,9 @@ def verify_case_qualification_envelopes(
                 f"terms in order: recorded {actual_predicates!r}, expected {expected_predicates!r}"
             )
 
-        recomputed_state = _aggregate_envelope_state([term.get("result") for term in actual_terms])
+        recomputed_state = _expected_envelope_state(
+            record, _aggregate_envelope_state([term.get("result") for term in actual_terms]), evaluated_at
+        )
         if recomputed_state != qualification.get("state"):
             problems.append(
                 f"claim's recorded state {qualification.get('state')!r} is not what its own "
@@ -2771,6 +2808,7 @@ def verify_case_qualification_envelopes(
             derived_state, derived_terms, derived_issues = evaluate_envelope_terms(
                 record, context, kinds
             )
+            derived_state = _expected_envelope_state(record, derived_state, evaluated_at)
             if len(derived_terms) == len(actual_terms):
                 for actual_term, derived_term in zip(actual_terms, derived_terms):
                     if actual_term.get("result") != derived_term.get("result"):
@@ -2793,7 +2831,6 @@ def verify_case_qualification_envelopes(
                 problems.append(
                     f"persisted context does not re-evaluate cleanly: {'; '.join(derived_issues)}"
                 )
-            receipt = receipts_by_step.get(claim.get("step_id"))
             if receipt is not None:
                 _check_context_receipt_binding(context, receipt, problems)
 

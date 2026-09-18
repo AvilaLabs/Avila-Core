@@ -980,6 +980,19 @@ mod tests {
     }
 
     #[test]
+    fn admission_is_not_a_manifest_field() {
+        // SC-8: admission is an organization's recorded policy judgment, not
+        // a field on the manifest — an `admitted` field cannot be forged onto
+        // a package; the schema refuses it outright.
+        let root = TestDir::new();
+        let mut manifest: serde_json::Value = serde_json::from_slice(&fixture(&root.0)).unwrap();
+        manifest["admitted"] = serde_json::json!(true);
+        let bytes = serde_json::to_vec(&manifest).unwrap();
+        let error = verify_case_package(&bytes, &root.0, &BTreeMap::new(), None).unwrap_err();
+        assert!(error.to_string().contains("unknown field"), "{error}");
+    }
+
+    #[test]
     fn executions_must_name_declared_capabilities_and_bound_claims() {
         let root = TestDir::new();
         let mut manifest: CasePackageManifest = serde_json::from_slice(&fixture(&root.0)).unwrap();

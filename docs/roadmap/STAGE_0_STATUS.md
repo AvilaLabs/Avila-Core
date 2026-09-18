@@ -122,7 +122,15 @@ Completed since that ordering — recorded here, not remaining work:
    evaluates, since the finite-element record bounds no thickness) and a
    four-layer candidate inside the thickness bound that trips the shared
    layer-count term in both records; both run clean and produce the
-   intended `not_evaluated.outside_qualification` results.
+   intended `not_evaluated.outside_qualification` results. Qualification
+   records now carry an optional `not_after` expiry bound: a claim's
+   envelope state is stamped at its producing receipt's `started_at` — the
+   signed evaluation-time record, so regenerated claims reproduce the
+   recorded state exactly and evidence does not retroactively lapse — with
+   a distinct `expired` envelope state and campaign verdicts refusing as
+   `not_evaluated.qualification_expired` (`CORE-A4602`); the run report's
+   own assessment is stamped at the planning instant, so a record that has
+   since lapsed still shows expired even when a reused claim stands.
 3. Runner integrity fixes are landed: process-group kill on timeout and one
    locked write per campaign-log line (S-037), the opt-in verified-hash
    cache (S-038), the extraction of rendering, log append, qualification

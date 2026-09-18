@@ -697,11 +697,23 @@ fn committed_qualification_contexts_re_derive_the_recorded_assessment() {
                     && record.revision == qualification.revision
             })
             .expect("claim's qualification must name a bound record");
+        // The claim's evaluation instant is its producing receipt's
+        // `started_at` — the signed time record the expiry check runs
+        // against.
+        let receipt: ExecutionReceipt = serde_json::from_slice(
+            &fs::read(
+                case.join("receipts")
+                    .join(format!("{}.json", claim.step_id)),
+            )
+            .unwrap(),
+        )
+        .unwrap();
         let derived = evaluate_envelope(
             record,
             &qualification.sha256,
             &kinds,
             &qualification.context,
+            &receipt.process.started_at,
         );
         assert_eq!(
             derived.state, qualification.state,
@@ -724,14 +736,6 @@ fn committed_qualification_contexts_re_derive_the_recorded_assessment() {
         );
         // The persisted context names the step's own staged inputs by
         // digest, bound through the step's committed receipt.
-        let receipt: ExecutionReceipt = serde_json::from_slice(
-            &fs::read(
-                case.join("receipts")
-                    .join(format!("{}.json", claim.step_id)),
-            )
-            .unwrap(),
-        )
-        .unwrap();
         for (slot, input) in qualification.context["inputs"]
             .as_object()
             .expect("context inputs is an object")

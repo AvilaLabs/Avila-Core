@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use avila_core_kernel::{ExactNumber, SEMANTIC_PROFILE};
+use avila_core_kernel::{ExactNumber, SEMANTIC_PROFILE, VerdictStatus};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -23,6 +23,25 @@ pub enum ContractStatus {
     InReview,
     Approved,
     Retired,
+}
+
+/// SC-9 clause 6: which verdict states fulfill delivery and which named
+/// inconclusive reasons are permitted. The block is a delivery statement,
+/// not a verdict input — it never changes a derived verdict, only whether
+/// the campaign's verdicts complete the contract. `not_evaluated` never
+/// completes a substantive contract, so declaring it here is refused
+/// (`CORE-A4701`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CompletionBlock {
+    /// The verdict states that fulfill delivery — some subset of `pass`,
+    /// `fail`, `inconclusive`. `not_evaluated` is refused at compile.
+    pub fulfilling_verdicts: Vec<VerdictStatus>,
+    /// The inconclusive verdict rules an `inconclusive` verdict may carry
+    /// and still fulfill delivery; any other inconclusive reason does not
+    /// complete. Meaningless unless `inconclusive` is declared fulfilling.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub permitted_inconclusive_reasons: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -132,6 +151,11 @@ pub struct ContractSource {
     pub assumptions: Vec<String>,
     #[serde(default)]
     pub execution_policy: ExecutionPolicy,
+    /// SC-9 clause 6 delivery statement. Absent means the contract declares
+    /// no completion rule — the campaign still derives verdicts but no
+    /// completion assessment.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub completion: Option<CompletionBlock>,
     #[serde(default)]
     pub inputs: Vec<ContractInput>,
     pub workflow: Vec<WorkflowStep>,
@@ -614,6 +638,7 @@ pub fn current_profile_contract(contract_id: impl Into<String>) -> ContractSourc
         contract_id: contract_id.into(),
         revision: 1,
         status: ContractStatus::Draft,
+        completion: None,
         question: String::new(),
         assumptions: Vec::new(),
         execution_policy: ExecutionPolicy::default(),

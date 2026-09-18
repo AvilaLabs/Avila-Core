@@ -1795,6 +1795,63 @@ def verify_case_verdicts(
             result.reasons = list(result.reasons) + extra_reasons
         _compare_verdict(check, result, verdicts_by_req.get(creq["requirement_id"]), report)
 
+    # SC-9 clause 6: the contract's `completion` block is a delivery
+    # statement evaluated against the derived verdicts — never a verdict
+    # input. `not_evaluated` never fulfills; an `inconclusive` verdict
+    # fulfills only under a declared-permitted named reason. campaign/mod.rs
+    # `assess_completion` is the authoritative implementation this mirrors.
+    block = contract.get("completion")
+    if block is None:
+        if (campaign_report or {}).get("completion") is not None:
+            report.mismatch(
+                "completion.block",
+                "campaign report carries a completion assessment the contract never declared",
+            )
+    elif campaign_report is None:
+        report.not_checked("completion.block", "no committed campaign-report.json to compare against")
+    else:
+        fulfilling = set(block.get("fulfilling_verdicts", []))
+        permitted_reasons = set(block.get("permitted_inconclusive_reasons", []))
+        entries = []
+        for v in campaign_report.get("verdicts", []):
+            status = v["verdict"]["status"]
+            rule = v["verdict"].get("rule", "")
+            if status == "not_evaluated":
+                fulfilling_entry = False
+                reason = "`not_evaluated` never completes a substantive contract"
+            elif status == "inconclusive" and "inconclusive" not in fulfilling:
+                fulfilling_entry = False
+                reason = "`inconclusive` is not a declared fulfilling verdict"
+            elif status == "inconclusive" and rule not in permitted_reasons:
+                fulfilling_entry = False
+                reason = f"inconclusive reason `{rule}` is not permitted"
+            elif status in fulfilling:
+                fulfilling_entry = True
+                reason = f"`{status}` is a declared fulfilling verdict"
+            else:
+                fulfilling_entry = False
+                reason = f"`{status}` is not a declared fulfilling verdict"
+            entries.append(
+                {
+                    "requirement_id": v["requirement_id"],
+                    "verdict": status,
+                    "fulfilling": fulfilling_entry,
+                    "reason": reason,
+                }
+            )
+        derived = {
+            "status": "complete" if all(e["fulfilling"] for e in entries) else "incomplete",
+            "entries": entries,
+        }
+        committed = campaign_report.get("completion")
+        if committed == derived:
+            report.verified(
+                "completion.block",
+                "re-derived the completion assessment from the declared block and the committed verdicts",
+            )
+        else:
+            report.mismatch("completion.block", f"derived {derived}, committed {committed}")
+
     if campaign_report is None:
         report.not_checked("verdict.campaign_report", "no committed campaign-report.json supplied to compare against")
         report.not_checked("verdict.campaign_sha256", "no committed campaign-report.json to recompute")

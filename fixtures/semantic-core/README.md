@@ -375,23 +375,23 @@ canonically.
 | Fixture | Expected |
 | --- | --- |
 | `lifecycle.status.draft.permits-check.pass` | exercised by every compiled fixture — e.g. `types.R1.resolved.pass` |
-| `lifecycle.status.draft.refuses-submit.fail` | |
-| `lifecycle.status.in_review.refuses-edit.fail` | amend → new draft |
-| `lifecycle.status.approved.permits-bind.pass` | contract lifecycle is separate from campaign state |
-| `lifecycle.status.retired.read-only.pass` | |
-| `lifecycle.instantiation-is-origin.pass` | template instance is immutable origin metadata, not a status |
-| `lifecycle.campaign-state-not-contract-state.pass` | planned/running/completed exist only on campaigns |
-| `lifecycle.template.instantiate.eligible.pass` | |
-| `lifecycle.template.ineligible.fail` | `CORE-A4401` |
-| `lifecycle.template.eligibility-unknown.fail` | `CORE-A4405` |
-| `lifecycle.template.default-provided_by.pass` | boundary names template digest |
-| `lifecycle.template.instance-pins-version.pass` | template amendment does not touch instance; `template_superseded` notice |
-| `lifecycle.template.validation-cases-must-compile.fail` | template not approvable |
-| `lifecycle.template.policy-only-tightens.fail` | instance loosening → `CORE-A4201` |
-| `lifecycle.amend.new-version-supersedes.pass` | `supersedes` edge; classified change event |
-| `lifecycle.completion.pass-only.pass` | |
-| `lifecycle.completion.permitted-inconclusive.pass` | reason listed → completed |
-| `lifecycle.completion.not_evaluated-never.fail` | |
+| `lifecycle.status.draft.refuses-submit.fail` | `submit` is a lifecycle transition operation — needs a contract-status transition record type (not yet designed); contract status is a document-owner label, not an execution gate |
+| `lifecycle.status.in_review.refuses-edit.fail` | amend → new draft — needs the amendment record type carrying the `supersedes` edge (not yet designed) |
+| `lifecycle.status.approved.permits-bind.pass` | status is carried in the compiled boundary; `approved` permits binding because contract status never gates execution — the transition records that set it are not yet designed |
+| `lifecycle.status.retired.read-only.pass` | needs the contract-status transition record type (not yet designed); `retired` already parses and compiles |
+| `lifecycle.instantiation-is-origin.pass` | needs the `contract_template` document type (not yet designed) |
+| `lifecycle.campaign-state-not-contract-state.pass` | pinned by `campaign_states_do_not_exist_on_a_contract` — the contract vocabulary is closed, so a campaign state cannot be named |
+| `lifecycle.template.instantiate.eligible.pass` | needs the `contract_template` document type (not yet designed) |
+| `lifecycle.template.ineligible.fail` | `CORE-A4401` — needs the `contract_template` document type (not yet designed) |
+| `lifecycle.template.eligibility-unknown.fail` | `CORE-A4405` — needs the `contract_template` document type (not yet designed) |
+| `lifecycle.template.default-provided_by.pass` | boundary names template digest — needs the `contract_template` document type (not yet designed) |
+| `lifecycle.template.instance-pins-version.pass` | template amendment does not touch instance; `template_superseded` notice — needs the `contract_template` document type (not yet designed) |
+| `lifecycle.template.validation-cases-must-compile.fail` | template not approvable — needs the `contract_template` document type (not yet designed) |
+| `lifecycle.template.policy-only-tightens.fail` | instance loosening → `CORE-A4201` — needs the `contract_template` document type (not yet designed) |
+| `lifecycle.amend.new-version-supersedes.pass` | `supersedes` edge; classified change event — needs the amendment record type (not yet designed) |
+| `lifecycle.completion.pass-only.pass` | `a_declared_pass_verdict_completes` — the contract `completion` block declares fulfilling verdicts; the campaign assesses delivery |
+| `lifecycle.completion.permitted-inconclusive.pass` | `an_inconclusive_verdict_completes_only_under_a_permitted_reason` — a listed reason completes; an unlisted one does not |
+| `lifecycle.completion.not_evaluated-never.fail` | `not_evaluated_never_completes` at assessment, `a_completion_block_cannot_declare_not_evaluated_fulfilling` (`CORE-A4701`) at declaration |
 
 ### verdict/ (SC-10) — see `vectors/verdict-calculus.v1.json` for kernel vectors
 

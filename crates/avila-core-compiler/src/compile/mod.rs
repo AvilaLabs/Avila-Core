@@ -32,12 +32,15 @@ use self::schema::SchemaDocument;
 use self::shape::validate_contract_shape;
 use self::source::{read_document, validate_document_headers};
 use self::values::compile_parameters;
-use crate::diagnostic::{CORE_S1102, CoreDiagnostic, FindingClass};
-use crate::document::{
-    COMPILE_REPORT_SCHEMA_VERSION, COMPILED_CONTRACT_SCHEMA_VERSION, ContractInput, ContractSource,
-    ExecutionPolicy, RegistrySnapshot,
+use crate::diagnostic::{
+    CORE_A4701, CORE_S1102, CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability,
+    RepairEdit,
 };
-use avila_core_kernel::{SEMANTIC_PROFILE, canonicalize_json};
+use crate::document::{
+    COMPILE_REPORT_SCHEMA_VERSION, COMPILED_CONTRACT_SCHEMA_VERSION, CompletionBlock,
+    ContractInput, ContractSource, ExecutionPolicy, RegistrySnapshot,
+};
+use avila_core_kernel::{SEMANTIC_PROFILE, VerdictStatus, canonicalize_json};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
@@ -150,6 +153,7 @@ pub fn compile_documents(
         &unknown_type_steps,
         &mut findings,
     );
+    validate_completion_block(&contract, &mut findings);
 
     if !findings.iter().any(CoreDiagnostic::blocks_compilation) {
         report_unconsumed_declarations(
@@ -205,6 +209,61 @@ pub fn compile_documents(
         compiled: Some(compiled),
         notice: COMPILE_NOTICE.into(),
     })
+}
+
+/// SC-9 clause 6: a declared completion block must be internally possible.
+/// `not_evaluated` never completes a substantive contract, and permitted
+/// inconclusive reasons are meaningless unless `inconclusive` is declared
+/// fulfilling — either shape is an unsatisfiable delivery statement.
+fn validate_completion_block(contract: &ContractSource, findings: &mut Vec<CoreDiagnostic>) {
+    let Some(block) = &contract.completion else {
+        return;
+    };
+    if block
+        .fulfilling_verdicts
+        .contains(&VerdictStatus::NotEvaluated)
+    {
+        findings.push(
+            CoreDiagnostic::new(
+                CORE_A4701,
+                FindingClass::Inadmissible,
+                "policy_owner",
+                contract_location("/completion/fulfilling_verdicts"),
+                "`not_evaluated` never completes a substantive contract — it cannot be declared a fulfilling verdict",
+            )
+            .with_repair(
+                DiagnosticRepair::labels(RepairApplicability::ConstrainedChoice, Vec::new())
+                    .alternative(
+                        "remove `not_evaluated` from `fulfilling_verdicts`",
+                        vec![RepairEdit::Remove {
+                            path: "/completion/fulfilling_verdicts".into(),
+                        }],
+                    ),
+            ),
+        );
+    }
+    if !block.permitted_inconclusive_reasons.is_empty()
+        && !block
+            .fulfilling_verdicts
+            .contains(&VerdictStatus::Inconclusive)
+    {
+        findings.push(
+            CoreDiagnostic::new(
+                CORE_A4701,
+                FindingClass::Inadmissible,
+                "policy_owner",
+                contract_location("/completion/permitted_inconclusive_reasons"),
+                "`permitted_inconclusive_reasons` is declared but `inconclusive` is not a fulfilling verdict — no inconclusive verdict can complete this contract",
+            )
+            .with_repair(
+                DiagnosticRepair::labels(RepairApplicability::ConstrainedChoice, Vec::new())
+                    .alternative(
+                        "add `inconclusive` to `fulfilling_verdicts`, or drop `permitted_inconclusive_reasons`",
+                        Vec::new(),
+                    ),
+            ),
+        );
+    }
 }
 
 fn build_compiled_steps(
@@ -266,6 +325,8 @@ fn create_compiled_contract(
         registry_revision: u64,
         registry_sha256: &'a str,
         execution_policy: &'a ExecutionPolicy,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        completion: Option<&'a CompletionBlock>,
         inputs: &'a [ContractInput],
         workflow: &'a [CompiledStep],
         requirements: &'a [CompiledRequirement],
@@ -286,6 +347,7 @@ fn create_compiled_contract(
         registry_revision: registry.revision,
         registry_sha256: &registry_sha256,
         execution_policy: &contract.execution_policy,
+        completion: contract.completion.as_ref(),
         inputs: &inputs,
         workflow: &workflow,
         requirements: &requirements,
@@ -310,6 +372,7 @@ fn create_compiled_contract(
         registry_revision: registry.revision,
         registry_sha256,
         execution_policy: contract.execution_policy.clone(),
+        completion: contract.completion.clone(),
         inputs,
         workflow,
         requirements,

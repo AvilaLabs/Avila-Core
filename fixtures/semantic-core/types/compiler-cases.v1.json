@@ -1238,6 +1238,28 @@
      ]
     }
    }
+  },
+  {
+   "fixture_id": "lifecycle.not_evaluated-declared.fail",
+   "clause": "SC-9 clause 6",
+   "contract": "lifecycle.not_evaluated-declared.fail.contract.json",
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4701",
+      "class": "inadmissible",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/completion/fulfilling_verdicts"
+      },
+      "repairs": [
+       "constrained_choice"
+      ]
+     }
+    ]
+   }
   }
  ]
 }

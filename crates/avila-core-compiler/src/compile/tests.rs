@@ -1025,3 +1025,61 @@ fn independent_root_findings_are_reported_in_one_pass() {
     assert!(actual.contains(CORE_R3203));
     assert!(actual.contains(CORE_R3301));
 }
+
+#[test]
+fn a_completion_block_compiles_into_the_snapshot() {
+    let mut source = contract();
+    source.completion = Some(crate::document::CompletionBlock {
+        fulfilling_verdicts: vec![avila_core_kernel::VerdictStatus::Pass],
+        permitted_inconclusive_reasons: Vec::new(),
+    });
+    let report = compile_contract(&source);
+    assert_eq!(report.status, CompilationStatus::Compiled);
+    let block = report
+        .compiled
+        .as_ref()
+        .and_then(|compiled| compiled.completion.as_ref())
+        .expect("the declared block is carried into the compiled contract");
+    assert_eq!(
+        block.fulfilling_verdicts,
+        vec![avila_core_kernel::VerdictStatus::Pass]
+    );
+}
+
+#[test]
+fn a_completion_block_cannot_declare_not_evaluated_fulfilling() {
+    let mut source = contract();
+    source.completion = Some(crate::document::CompletionBlock {
+        fulfilling_verdicts: vec![
+            avila_core_kernel::VerdictStatus::Pass,
+            avila_core_kernel::VerdictStatus::NotEvaluated,
+        ],
+        permitted_inconclusive_reasons: Vec::new(),
+    });
+    let report = compile_contract(&source);
+    assert_eq!(report.status, CompilationStatus::Rejected);
+    assert!(codes(&report).contains(crate::diagnostic::CORE_A4701));
+}
+
+#[test]
+fn a_completion_block_cannot_permit_reasons_for_a_non_fulfilling_state() {
+    let mut source = contract();
+    source.completion = Some(crate::document::CompletionBlock {
+        fulfilling_verdicts: vec![avila_core_kernel::VerdictStatus::Pass],
+        permitted_inconclusive_reasons: vec!["bounded.le.crossing".into()],
+    });
+    let report = compile_contract(&source);
+    assert_eq!(report.status, CompilationStatus::Rejected);
+    assert!(codes(&report).contains(crate::diagnostic::CORE_A4701));
+}
+
+#[test]
+fn campaign_states_do_not_exist_on_a_contract() {
+    // SC-9: contract status is a document-owner lifecycle label;
+    // planned/running/completed belong to campaigns only. The contract
+    // vocabulary is closed, so a campaign state cannot even be named.
+    let mut document = serde_json::to_value(&contract()).unwrap();
+    document["status"] = serde_json::json!("running");
+    let report = compile_documents(&document.to_string().into_bytes(), REGISTRY).unwrap();
+    assert_eq!(report.status, CompilationStatus::Rejected);
+}

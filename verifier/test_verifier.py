@@ -1145,6 +1145,105 @@ class TestCapabilitySelection(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
+class TestCompletionBlock(unittest.TestCase):
+    def _verify(self, block, verdicts, committed_completion=None, campaign_report=True):
+        contract = {
+            "execution_policy": {},
+            "workflow": [],
+            "requirements": [],
+            "categorical_requirements": [],
+        }
+        if block is not None:
+            contract["completion"] = block
+        report = v.Report("")
+        if campaign_report:
+            campaign = {"verdicts": verdicts}
+            if committed_completion is not None:
+                campaign["completion"] = committed_completion
+        else:
+            campaign = None
+        v.verify_case_verdicts(
+            contract, {"kinds": []}, {"inputs": [], "claims": []}, campaign, report
+        )
+        return {c.check: c for c in report.checks if c.check.startswith("completion.")}
+
+    def _assessment(self, status, entries):
+        return {
+            "status": status,
+            "entries": [
+                {"requirement_id": req, "verdict": st, "fulfilling": ok, "reason": reason}
+                for (req, st, ok, reason) in entries
+            ],
+        }
+
+    def _verdict(self, requirement_id, status, rule):
+        return {"requirement_id": requirement_id, "verdict": {"status": status, "rule": rule}}
+
+    def test_pass_only_block_completes(self):
+        verdicts = [self._verdict("req", "pass", "bounded.le.within")]
+        committed = self._assessment(
+            "complete",
+            [("req", "pass", True, "`pass` is a declared fulfilling verdict")],
+        )
+        checks = self._verify({"fulfilling_verdicts": ["pass"]}, verdicts, committed)
+        self.assertEqual(checks["completion.block"].status, "verified")
+
+    def test_inconclusive_completes_only_under_a_permitted_reason(self):
+        block = {
+            "fulfilling_verdicts": ["inconclusive"],
+            "permitted_inconclusive_reasons": ["bounded.le.crossing"],
+        }
+        verdicts = [self._verdict("req", "inconclusive", "bounded.le.crossing")]
+        committed = self._assessment(
+            "complete",
+            [("req", "inconclusive", True, "`inconclusive` is a declared fulfilling verdict")],
+        )
+        checks = self._verify(block, verdicts, committed)
+        self.assertEqual(checks["completion.block"].status, "verified")
+
+        verdicts = [self._verdict("req", "inconclusive", "bounded.le.upper_only")]
+        committed = self._assessment(
+            "incomplete",
+            [("req", "inconclusive", False, "inconclusive reason `bounded.le.upper_only` is not permitted")],
+        )
+        checks = self._verify(block, verdicts, committed)
+        self.assertEqual(checks["completion.block"].status, "verified")
+
+    def test_not_evaluated_never_completes(self):
+        verdicts = [self._verdict("req", "not_evaluated", "not_evaluated.no_bound")]
+        committed = self._assessment(
+            "incomplete",
+            [("req", "not_evaluated", False, "`not_evaluated` never completes a substantive contract")],
+        )
+        checks = self._verify({"fulfilling_verdicts": ["pass"]}, verdicts, committed)
+        self.assertEqual(checks["completion.block"].status, "verified")
+
+    def test_a_wrong_committed_assessment_is_a_mismatch(self):
+        verdicts = [self._verdict("req", "pass", "bounded.le.within")]
+        committed = self._assessment(
+            "incomplete",
+            [("req", "pass", False, "`pass` is not a declared fulfilling verdict")],
+        )
+        checks = self._verify({"fulfilling_verdicts": ["pass"]}, verdicts, committed)
+        self.assertEqual(checks["completion.block"].status, "mismatch")
+
+    def test_an_undeclared_assessment_is_a_mismatch(self):
+        campaign = {
+            "completion": self._assessment("complete", []),
+        }
+        contract = {"execution_policy": {}, "workflow": [], "requirements": [],
+                    "categorical_requirements": []}
+        report = v.Report("")
+        v.verify_case_verdicts(
+            contract, {"kinds": []}, {"inputs": [], "claims": []}, campaign, report
+        )
+        checks = {c.check: c for c in report.checks if c.check.startswith("completion.")}
+        self.assertEqual(checks["completion.block"].status, "mismatch")
+
+
+# ---------------------------------------------------------------------------
+
+
 class TestCoverageReDerivation(unittest.TestCase):
     BOUND = ["case-001-shield-search", "case-002-coupled-shield", "case-003-thermal-spreader"]
     UNBOUND = ["case-000-actinv-aftermatter", "case-008-mode-selective-quench", "case-009-ncsx-copper-discharge"]

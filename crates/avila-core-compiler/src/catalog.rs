@@ -91,6 +91,13 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         next_action: "Supply evidence from a capability qualified by a record that has not been withdrawn, or bind a current qualification and rerun the step. The owner is the method owner.",
     },
     DiagnosticExplanation {
+        code: "CORE-A4701",
+        title: "Completion block cannot be satisfied",
+        rule: "SC-9 clause 6",
+        meaning: "The contract's `completion` block is internally impossible: either it declares `not_evaluated` among `fulfilling_verdicts` — a state that never completes a substantive contract, whatever is declared — or it permits inconclusive reasons while `inconclusive` is not a fulfilling verdict. The completion statement would promise delivery the declared rules can never establish.",
+        next_action: "Remove `not_evaluated` from `fulfilling_verdicts`, and either add `inconclusive` to `fulfilling_verdicts` or drop `permitted_inconclusive_reasons`. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
         code: "CORE-E7001",
         title: "Claims bind a different snapshot",
         rule: "SC-11",

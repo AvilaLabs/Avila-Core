@@ -51,7 +51,11 @@ agreement against); in short:
    `test_verifier.py`'s `NOT_RE_DERIVABLE_CAMPAIGN_FIXTURES`). Also
    recomputes the committed report's `campaign_sha256` over its semantic
    body — the digest additionally binds the `findings` and `admissions`
-   fields this profile does not individually re-derive.
+   fields this profile does not individually re-derive. When the contract
+   declares a `completion` block (SC-9 clause 6), the `completion.block`
+   check re-derives the delivery assessment from the declared fulfilling
+   verdicts and permitted inconclusive reasons — `not_evaluated` never
+   fulfills — and compares it against the committed `completion` entry.
 6. **Attempt lineage** — verifies a campaign/attempt JSONL log's
    parent-line SHA-256 binding, candidate-state digest, manifest/snapshot
    inheritance, and the recursive RFC 6901 `changes` diff (ADR-0014).

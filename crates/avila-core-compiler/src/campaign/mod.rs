@@ -15,7 +15,7 @@ mod verdicts;
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use avila_core_kernel::{SEMANTIC_PROFILE, VerdictOutput, canonicalize_json};
+use avila_core_kernel::{SEMANTIC_PROFILE, VerdictOutput, VerdictStatus, canonicalize_json};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
@@ -24,7 +24,7 @@ use crate::compile::schema::SchemaDocument;
 use crate::compile::source::read_document;
 use crate::compile::{CompilerError, DocumentIdentity, compile_documents};
 use crate::diagnostic::{CORE_E7001, CORE_S1102, CoreDiagnostic, FindingClass, SourceLocation};
-use crate::document::{RegistrySnapshot, SourceRef};
+use crate::document::{CompletionBlock, RegistrySnapshot, SourceRef};
 
 pub use document::{
     ArtifactIdentity, CAMPAIGN_REPORT_SCHEMA_VERSION, CLAIMS_SCHEMA_VERSION, ClaimValue,
@@ -57,9 +57,39 @@ pub struct CampaignReport {
     pub admissions: Vec<AdmissionRecord>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub verdicts: Vec<VerdictRecord>,
+    /// SC-9 clause 6 delivery assessment — present only when the contract
+    /// declares a `completion` block. Never a verdict input.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub completion: Option<CompletionAssessment>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub campaign_sha256: Option<String>,
     pub notice: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CompletionStatus {
+    Complete,
+    Incomplete,
+}
+
+/// The contract's delivery statement evaluated against derived verdicts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct CompletionAssessment {
+    pub status: CompletionStatus,
+    pub entries: Vec<CompletionEntry>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct CompletionEntry {
+    pub requirement_id: String,
+    pub verdict: VerdictStatus,
+    pub fulfilling: bool,
+    /// Why the verdict does or does not fulfill delivery — the declared
+    /// rule names the reason, not the outcome.
+    pub reason: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -264,6 +294,10 @@ pub fn evaluate_campaign_with_artifacts(
         claims_sha256: claims_sha256.clone(),
     };
     let verdicts = verdicts::evaluate(&compiled, &registry, &claims, &admissions, &boundary);
+    let completion = compiled
+        .completion
+        .as_ref()
+        .map(|block| assess_completion(block, &verdicts));
     crate::compile::sort_findings(&mut findings);
 
     #[derive(Serialize)]
@@ -276,6 +310,8 @@ pub fn evaluate_campaign_with_artifacts(
         findings: &'a [CoreDiagnostic],
         admissions: &'a [AdmissionRecord],
         verdicts: &'a [VerdictRecord],
+        #[serde(skip_serializing_if = "Option::is_none")]
+        completion: Option<&'a CompletionAssessment>,
     }
     let body = IdentityBody {
         schema_version: CAMPAIGN_REPORT_SCHEMA_VERSION,
@@ -286,6 +322,7 @@ pub fn evaluate_campaign_with_artifacts(
         findings: &findings,
         admissions: &admissions,
         verdicts: &verdicts,
+        completion: completion.as_ref(),
     };
     let bytes = serde_json::to_vec(&body)
         .map_err(|error| CompilerError::Serialization(error.to_string()))?;
@@ -302,9 +339,84 @@ pub fn evaluate_campaign_with_artifacts(
         findings,
         admissions,
         verdicts,
+        completion,
         campaign_sha256: Some(campaign_sha256),
         notice: CAMPAIGN_NOTICE.into(),
     })
+}
+
+/// SC-9 clause 6: the declared delivery statement against the derived
+/// verdicts. A verdict fulfills delivery when its state is declared
+/// fulfilling — and for `inconclusive`, only under a permitted named
+/// reason. `not_evaluated` never fulfills, whatever the block declares.
+fn assess_completion(block: &CompletionBlock, verdicts: &[VerdictRecord]) -> CompletionAssessment {
+    let inconclusive_fulfilling = block
+        .fulfilling_verdicts
+        .contains(&VerdictStatus::Inconclusive);
+    let entries: Vec<CompletionEntry> = verdicts
+        .iter()
+        .map(|record| {
+            let status = record.verdict.status;
+            let (fulfilling, reason) = match status {
+                VerdictStatus::NotEvaluated => (
+                    false,
+                    "`not_evaluated` never completes a substantive contract".to_string(),
+                ),
+                VerdictStatus::Inconclusive if !inconclusive_fulfilling => (
+                    false,
+                    "`inconclusive` is not a declared fulfilling verdict".to_string(),
+                ),
+                VerdictStatus::Inconclusive
+                    if !block
+                        .permitted_inconclusive_reasons
+                        .contains(&record.verdict.rule) =>
+                {
+                    (
+                        false,
+                        format!(
+                            "inconclusive reason `{}` is not permitted",
+                            record.verdict.rule
+                        ),
+                    )
+                }
+                status if block.fulfilling_verdicts.contains(&status) => (
+                    true,
+                    format!(
+                        "`{}` is a declared fulfilling verdict",
+                        verdict_label(status)
+                    ),
+                ),
+                status => (
+                    false,
+                    format!(
+                        "`{}` is not a declared fulfilling verdict",
+                        verdict_label(status)
+                    ),
+                ),
+            };
+            CompletionEntry {
+                requirement_id: record.requirement_id.clone(),
+                verdict: status,
+                fulfilling,
+                reason,
+            }
+        })
+        .collect();
+    let status = if entries.iter().all(|entry| entry.fulfilling) {
+        CompletionStatus::Complete
+    } else {
+        CompletionStatus::Incomplete
+    };
+    CompletionAssessment { status, entries }
+}
+
+const fn verdict_label(status: VerdictStatus) -> &'static str {
+    match status {
+        VerdictStatus::Pass => "pass",
+        VerdictStatus::Fail => "fail",
+        VerdictStatus::Inconclusive => "inconclusive",
+        VerdictStatus::NotEvaluated => "not_evaluated",
+    }
 }
 
 fn rejected(
@@ -321,7 +433,119 @@ fn rejected(
         findings,
         admissions: Vec::new(),
         verdicts: Vec::new(),
+        completion: None,
         campaign_sha256: None,
         notice: CAMPAIGN_NOTICE.into(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::document::SourceRef;
+
+    fn verdict_record(status: VerdictStatus, rule: &str) -> VerdictRecord {
+        VerdictRecord {
+            requirement_id: "req".into(),
+            statement: String::new(),
+            metric: SourceRef::ContractInput {
+                input_id: "any".into(),
+            },
+            evidence_ids: Vec::new(),
+            verdict: VerdictOutput {
+                status,
+                rule: rule.into(),
+                aggregation: None,
+                canonical_unit: None,
+                limit_canonical: None,
+                lower_canonical: None,
+                upper_canonical: None,
+                nominal_canonical: None,
+                tolerance_canonical: None,
+                coverage: None,
+                basis_visible: None,
+                numbers_present: None,
+                observed_category: None,
+                accepted_categories: None,
+                reasons: Vec::new(),
+                display_upper_text: None,
+            },
+            boundary: VerdictBoundary {
+                semantic_profile: String::new(),
+                compiler: String::new(),
+                evaluator: String::new(),
+                compiled_snapshot_sha256: String::new(),
+                claims_sha256: String::new(),
+            },
+        }
+    }
+
+    fn block(fulfilling: &[VerdictStatus], permitted: &[&str]) -> CompletionBlock {
+        CompletionBlock {
+            fulfilling_verdicts: fulfilling.to_vec(),
+            permitted_inconclusive_reasons: permitted
+                .iter()
+                .map(|reason| (*reason).into())
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn a_declared_pass_verdict_completes() {
+        let assessment = assess_completion(
+            &block(&[VerdictStatus::Pass], &[]),
+            &[verdict_record(VerdictStatus::Pass, "bounded.le.within")],
+        );
+        assert_eq!(assessment.status, CompletionStatus::Complete);
+        assert!(assessment.entries[0].fulfilling);
+    }
+
+    #[test]
+    fn an_inconclusive_verdict_completes_only_under_a_permitted_reason() {
+        let declared = block(&[VerdictStatus::Inconclusive], &["bounded.le.crossing"]);
+        let permitted = assess_completion(
+            &declared,
+            &[verdict_record(
+                VerdictStatus::Inconclusive,
+                "bounded.le.crossing",
+            )],
+        );
+        assert_eq!(permitted.status, CompletionStatus::Complete);
+
+        let unlisted = assess_completion(
+            &declared,
+            &[verdict_record(
+                VerdictStatus::Inconclusive,
+                "bounded.le.upper_only",
+            )],
+        );
+        assert_eq!(unlisted.status, CompletionStatus::Incomplete);
+        assert!(!unlisted.entries[0].fulfilling);
+    }
+
+    #[test]
+    fn an_inconclusive_verdict_never_completes_when_not_declared_fulfilling() {
+        let assessment = assess_completion(
+            &block(&[VerdictStatus::Pass], &["bounded.le.crossing"]),
+            &[verdict_record(
+                VerdictStatus::Inconclusive,
+                "bounded.le.crossing",
+            )],
+        );
+        assert_eq!(assessment.status, CompletionStatus::Incomplete);
+        assert!(!assessment.entries[0].fulfilling);
+    }
+
+    #[test]
+    fn not_evaluated_never_completes() {
+        let assessment = assess_completion(
+            &block(&[VerdictStatus::Pass], &[]),
+            &[verdict_record(
+                VerdictStatus::NotEvaluated,
+                "not_evaluated.no_bound",
+            )],
+        );
+        assert_eq!(assessment.status, CompletionStatus::Incomplete);
+        assert!(!assessment.entries[0].fulfilling);
     }
 }

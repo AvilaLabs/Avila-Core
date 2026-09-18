@@ -1137,3 +1137,28 @@ credited. Still design-gated: the `organization_policy` document and
 `tightens` lattice, signed role-assertion separation of duties,
 environments allow-list, automated discovery, interactive cost
 confirmation.
+
+### SC-9 completion block implemented — 2026-09-25
+
+The SC-9 clause-6 completion machinery is landed without the lifecycle
+state machine. `ContractSource` carries an optional `completion` block
+(`fulfilling_verdicts`, `permitted_inconclusive_reasons`) validated at
+compile time — declaring `not_evaluated` fulfilling, or permitting
+inconclusive reasons without `inconclusive` fulfilling, refuses
+compilation with `CORE-A4701`. The block is carried in the compiled
+snapshot's canonical identity, and `evaluate_campaign` layers a delivery
+assessment over the derived verdicts: `not_evaluated` never fulfills, an
+`inconclusive` verdict fulfills only under a listed reason, and the
+campaign is `complete` only when every requirement entry fulfills.
+Completion never touches the verdicts — verdicts are inputs to it, not
+outputs of it. The report's `campaign_sha256` binds the assessment; the
+independent verifier re-derives `completion.block` and `render` prints
+`completion: complete|incomplete`. A committed lifecycle fixture plus
+seven compiler/campaign tests and five verifier tests pin the semantics.
+fixtures-check reads 94 covered / 154 named / 18 unbounded / 44 absent —
+four `lifecycle.*` rows credited (the count also counts five rows whose
+Expected cells were previously empty). Still design-gated: the
+contract-status transition records (`submit`, edit-refusal, `retired`
+read-only), the `contract_template` document type and its eligibility
+rules, and the amendment chain machinery.
+

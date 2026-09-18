@@ -356,6 +356,13 @@ pub fn render_campaign_report(report: &CampaignReport, sources: &[(&str, &[u8])]
                     verdict.requirement_id, verdict.verdict.status, verdict.verdict.rule
                 );
             }
+            if let Some(completion) = &report.completion {
+                let state = match completion.status {
+                    crate::campaign::CompletionStatus::Complete => "complete",
+                    crate::campaign::CompletionStatus::Incomplete => "incomplete",
+                };
+                let _ = writeln!(out, "completion: {state}");
+            }
             if let Some(identity) = &report.campaign_sha256 {
                 let _ = writeln!(out, "evaluated: campaign {identity}");
             }

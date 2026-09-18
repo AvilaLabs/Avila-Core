@@ -51,6 +51,9 @@
     "execution_policy": {
       "$ref": "#/$defs/executionPolicy"
     },
+    "completion": {
+      "$ref": "#/$defs/completionBlock"
+    },
     "inputs": {
       "type": "array",
       "items": {
@@ -246,6 +249,30 @@
             "value": { "$ref": "#/$defs/exactNumber" },
             "currency": { "$ref": "#/$defs/nonemptyString" }
           }
+        }
+      }
+    },
+    "completionBlock": {
+      "description": "SC-9 clause 6 delivery statement: which verdict states fulfill delivery and which named inconclusive reasons are permitted. `not_evaluated` never completes a substantive contract — declaring it is CORE-A4701. The block is not a verdict input.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fulfilling_verdicts"],
+      "properties": {
+        "fulfilling_verdicts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["pass", "fail", "inconclusive", "not_evaluated"]
+          }
+        },
+        "permitted_inconclusive_reasons": {
+          "description": "Verdict rules an `inconclusive` verdict may carry and still fulfill delivery; any other inconclusive reason does not complete.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonemptyString" },
+          "default": []
         }
       }
     },

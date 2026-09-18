@@ -481,7 +481,7 @@ canonically.
 | `campaign.illegal-transition.fail` | e.g. completed→running |
 | `campaign.step-states.<each>.pass` | actor allowed to move it |
 | `campaign.step.moved-by-wrong-actor.fail` | provider cannot mark `admitted` |
-| `campaign.resume.new-run-reuses.pass` | crashed step only |
+| `campaign.resume.new-run-reuses.pass` | crashed step only — `a_resumed_run_reuses_the_completed_steps_and_executes_only_the_crashed_one` (activation's committed receipt reuses; the receipt-less crashed step executes) — the campaign-state record proving it is ADR-0021 machinery |
 | `campaign.human.deadline-escalation.pass` | `CORE-X6401`, no decision produced |
 | `campaign.amend-in-flight.pass` | superseded; in-flight steps `cancelled` with receipts |
 
@@ -489,15 +489,15 @@ canonically.
 
 | Fixture | Expected |
 | --- | --- |
-| `authority.approvals-required.fail` | `CORE-A4501` |
-| `authority.signature-over-canonical-bytes.pass/fail` | pretty-printed payload signature → `CORE-V8201` |
-| `authority.trust-roots-are-verifier-policy.pass` | producer trusts root, verifier does not → `refused` |
-| `authority.neutrality-record-fields.pass` | `avila_provided`, `self_preference_check` mandatory |
-| `authority.uncredentialed-client-cannot-apply-judgment.fail` | judgment requires an authority record regardless of client type |
-| `authority.agent-cannot-submit.fail` | `runner/submit` without authorization record |
-| `authority.key-role-not-cognition.pass` | Core enforces key/role authority and does not claim to detect whether a human used assistance |
+| `authority.approvals-required.fail` | `CORE-A4501` — needs the attestation machinery (proposed ADR-0021) |
+| `authority.signature-over-canonical-bytes.pass/fail` | a signature binds the target's re-hashed canonical digest, so a signature over any other byte representation fails consistency — `a_rewritten_manifest_with_the_old_signature_is_refused`, `test_flipped_signature_byte_is_named_by_signature_verification`; the dedicated `CORE-V8201` code does not exist |
+| `authority.trust-roots-are-verifier-policy.pass` | producer trusts root, verifier does not → `not_checked`, never `verified` — `test_without_a_trust_root_no_signature_reports_verified`, `without_a_trust_root_signatures_are_reported_but_never_verified` |
+| `authority.neutrality-record-fields.pass` | `avila_provided`, `self_preference_check` mandatory — `an_avila_provided_selection_without_the_check_is_refused`, `an_avila_provided_selection_with_the_check_runs` |
+| `authority.uncredentialed-client-cannot-apply-judgment.fail` | judgment requires an authority record regardless of client type — needs the attestation machinery (proposed ADR-0021) |
+| `authority.agent-cannot-submit.fail` | `runner/submit` without authorization record — needs ADR-0021 transition/attestation records |
+| `authority.key-role-not-cognition.pass` | Core enforces key/role authority and does not claim to detect whether a human used assistance — `a_reuse_rule_signed_by_a_runner_key_is_refused`, `a_signature_made_with_an_unlisted_key_is_refused`, `require_signatures_refuses_a_run_without_a_trust_root` |
 | `authority.frontend-cannot-construct-verdict.build` | no `VerdictOutput {` / `AdmissionRecord {` construction outside the kernel/compiler boundary — pinned by `authority_boundaries.rs` |
-| `ownership.OM-1..OM-7.pass/fail` | one pair per invariant (in-place edit; use after invalidation; unsigned reuse; duplicate claim; hidden nominal basis; snapshot drift) |
+| `ownership.OM-1..OM-7.pass/fail` | the seven SC-15 invariants are each enforced and pinned: immutability — `a_rewritten_manifest_with_the_old_signature_is_refused`, `an_edited_receipt_cannot_be_reused_and_the_rerun_drifts_from_it`; `as_of` dependence — `test_as_of_lines_emit_alongside_recorded_checks`; invalidated/quarantined never satisfies — `campaign.model-not-permitted.quarantine`, `campaign.parent-missing.not_evaluated`; cross-campaign use needs memo/reuse rule — `a_signed_reuse_rule_permits_reuse_across_its_scoped_edge`, `a_reuse_rule_without_a_trust_root_fails_closed`; cardinality — admission's per-slot claim binding (`campaign.parent-missing` cascade); weakening explicit — `permit_nominal_basis` is a declared policy flag and nominal basis cannot enter bounded evaluation (`verdict.rs`); immutable snapshots — `campaign.snapshot-mismatch.rejected`, `a_selection_describing_a_different_registry_snapshot_is_refused`. A committed one-pair-per-invariant fixture corpus does not exist |
 
 ### canon/ (SC-2, ADR-0005)
 

@@ -1362,6 +1362,19 @@ class TestPositivePathOnRealCases(unittest.TestCase):
         "case-009-ncsx-copper-discharge",
     ]
 
+    def test_without_a_trust_root_no_signature_reports_verified(self):
+        # authority.trust-roots-are-verifier-policy: the trust root is the
+        # verifier's policy input, not the producer's — with none supplied,
+        # signature checks come back `not_checked` and `verified` never
+        # appears, whatever the package claims.
+        case_dir = EXAMPLES / "case-003-thermal-spreader"
+        report = v.verify_case(case_dir, {"case": case_dir}, trust_root=None)
+        signature_checks = [c for c in report.checks if c.check.startswith("signature")]
+        self.assertGreater(len(signature_checks), 0)
+        states = {c.status for c in signature_checks}
+        self.assertNotIn("verified", states)
+        self.assertIn("not_checked", states)
+
     def test_every_named_case_has_zero_mismatches(self):
         trust_root = v.load_trust_root(REPO_ROOT / "examples" / "keys" / "trust-root.json")
         for case_name in self.CASES:

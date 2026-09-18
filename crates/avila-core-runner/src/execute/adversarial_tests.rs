@@ -2067,6 +2067,54 @@ fn a_two_step_chain_reruns_only_what_a_change_reaches() {
 }
 
 #[test]
+fn a_resumed_run_reuses_the_completed_steps_and_executes_only_the_crashed_one() {
+    // SC-13: resumption is a new run over the same bound plan; admitted
+    // current work is reused under SC-12. A crash after activation's
+    // receipt but before classification's leaves a package that carries
+    // the first receipt and no claims — the resume must reuse activation
+    // and execute only classification, then evaluate the campaign.
+    let dir = TestDir::new();
+    let synthetic = blessed_chain(&dir);
+    let case_dir = &synthetic.case_dir;
+
+    // The crash's residue: activation's receipt stands; classification's
+    // receipt never committed — the step that crashed has nothing to
+    // reuse and must execute again.
+    fs::remove_file(case_dir.join("receipts/classification.json")).unwrap();
+    let mut package: Value =
+        serde_json::from_slice(&fs::read(case_dir.join("package.json")).unwrap()).unwrap();
+    package["documents"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|document| document["document_id"].as_str() != Some("receipt"));
+    fs::write(
+        case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &chain_options(&dir, &synthetic, true, false),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let steps = &report.execution.as_ref().unwrap().steps;
+    assert_eq!(steps[0].step_id, "activation");
+    assert_eq!(steps[0].state, StepExecutionState::Reused, "{summary}");
+    assert_eq!(
+        steps[0].reused_receipt.as_deref(),
+        Some("activation-receipt")
+    );
+    assert_eq!(steps[1].step_id, "classification");
+    assert_eq!(steps[1].state, StepExecutionState::Executed, "{summary}");
+    assert_eq!(report.status, CaseRunStatus::Evaluated, "{summary}");
+    let claims = report.claims.as_ref().unwrap();
+    assert_eq!(claims.reused_claims, 3);
+    assert_eq!(claims.executed_claims, 3);
+}
+
+#[test]
 fn a_plan_reports_the_impact_of_every_change_origin() {
     let dir = TestDir::new();
     let synthetic = blessed_chain(&dir);

@@ -2706,6 +2706,107 @@ fn declare_qualification(
     .unwrap();
 }
 
+/// Merge `fields` into the contract's `execution_policy` and re-pin the
+/// manifest's contract document digest.
+fn edit_execution_policy(synthetic: &Synthetic, fields: Value) {
+    let mut contract: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("contract.json")).unwrap())
+            .unwrap();
+    for (key, value) in fields.as_object().unwrap() {
+        contract["execution_policy"][key] = value.clone();
+    }
+    fs::write(
+        synthetic.case_dir.join("contract.json"),
+        serde_json::to_vec_pretty(&contract).unwrap(),
+    )
+    .unwrap();
+    let mut package: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    for document in package["documents"].as_array_mut().unwrap() {
+        if document["document_id"] == "contract" {
+            document["sha256"] = json!(digest(&synthetic.case_dir.join("contract.json")));
+        }
+    }
+    fs::write(
+        synthetic.case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+}
+
+/// The capability triple the synthetic `classification` step binds — what
+/// an honest selection record names as `selected`.
+fn classification_candidate(synthetic: &Synthetic, decision: &str) -> Value {
+    json!({
+        "capability_type": {"id": "aftermatter.activated-metal-disposition", "major": 1},
+        "capability_id": "stub",
+        "adapter": "avila-labs.aftermatter/evaluate@1",
+        "executable_sha256": digest(&synthetic.stub),
+        "decision": decision,
+        "reasons": [{"rule_id": "criteria.technical", "detail": "winner"}]
+    })
+}
+
+/// One step's selection entry: `extra` may override the entry's remaining
+/// fields (criteria, avila_provided, self_preference_check, cost_estimate).
+fn selection_entry(step_id: &str, candidates: Value, extra: Value) -> Value {
+    let mut step = json!({
+        "step_id": step_id,
+        "candidates": candidates,
+        "criteria": ["technical"]
+    });
+    for (key, value) in extra.as_object().unwrap() {
+        step[key] = value.clone();
+    }
+    step
+}
+
+/// Write and bind a `capability_selection` document over the synthetic
+/// `classification` step.
+fn declare_selection(synthetic: &Synthetic, candidates: Value, extra: Value) {
+    declare_selection_entries(
+        synthetic,
+        json!([selection_entry("classification", candidates, extra)]),
+    );
+}
+
+/// Write and bind a `capability_selection` document carrying `entries`.
+fn declare_selection_entries(synthetic: &Synthetic, entries: Value) {
+    let registry: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("registry.json")).unwrap())
+            .unwrap();
+    let record = json!({
+        "schema_version": "avila.core/capability-selection/v0.1-draft",
+        "registry_snapshot": {
+            "registry_id": registry["registry_id"],
+            "revision": registry["revision"],
+            "sha256": digest(&synthetic.case_dir.join("registry.json"))
+        },
+        "query": "registry scan",
+        "selections": entries
+    });
+    fs::write(
+        synthetic.case_dir.join("selection.json"),
+        serde_json::to_vec_pretty(&record).unwrap(),
+    )
+    .unwrap();
+    let mut package: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    let documents = package["documents"].as_array_mut().unwrap();
+    documents.retain(|document| document["document_id"] != "selection");
+    documents.push(json!({
+        "document_id": "selection", "role": "capability_selection", "path": "selection.json",
+        "sha256": digest(&synthetic.case_dir.join("selection.json"))
+    }));
+    fs::write(
+        synthetic.case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+}
+
 #[test]
 fn a_run_inside_the_envelope_carries_the_qualification_on_its_claims() {
     let dir = TestDir::new();
@@ -4214,6 +4315,486 @@ fn a_signed_revocation_withdraws_a_recognized_record() {
     let campaign = report.campaign.as_ref().expect("campaign evaluates");
     let reasons = serde_json::to_string(&campaign.verdicts).unwrap();
     assert!(reasons.contains("CORE-A4603"), "{reasons}");
+}
+
+#[test]
+fn a_recorded_selection_matching_the_bound_capability_runs() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    edit_execution_policy(&synthetic, json!({"deny_providers": ["acme-competitor"]}));
+    declare_selection(
+        &synthetic,
+        json!([classification_candidate(&synthetic, "selected")]),
+        json!({}),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(!findings.contains("CORE-P"), "{summary}");
+    assert!(report.execution.is_some(), "{summary}");
+}
+
+#[test]
+fn a_denied_provider_is_refused_before_any_execution() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    edit_execution_policy(
+        &synthetic,
+        json!({"deny_providers": ["avila-labs.aftermatter"]}),
+    );
+    declare_selection(
+        &synthetic,
+        json!([classification_candidate(&synthetic, "selected")]),
+        json!({}),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-P5301"), "{summary}");
+    assert!(findings.contains("avila-labs.aftermatter"), "{summary}");
+    assert!(report.execution.is_none(), "{summary}");
+}
+
+#[test]
+fn a_selection_outside_the_allow_list_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    edit_execution_policy(&synthetic, json!({"allow_providers": ["acme-competitor"]}));
+    declare_selection(
+        &synthetic,
+        json!([classification_candidate(&synthetic, "selected")]),
+        json!({}),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-P5301"), "{findings}");
+    assert!(report.execution.is_none(), "{findings}");
+}
+
+#[test]
+fn a_selection_naming_a_different_capability_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let mut selected = classification_candidate(&synthetic, "selected");
+    selected["capability_id"] = json!("other-implementation");
+    declare_selection(&synthetic, json!([selected]), json!({}));
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-P5102"), "{findings}");
+    assert!(report.execution.is_none(), "{findings}");
+}
+
+#[test]
+fn a_selection_describing_a_different_registry_snapshot_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    declare_selection(
+        &synthetic,
+        json!([classification_candidate(&synthetic, "selected")]),
+        json!({}),
+    );
+    // Rewrite the bound registry after the record was made — the snapshot
+    // the record names is no longer the package's bound registry.
+    declare_role_input_schema(&synthetic, CANDIDATE_ROLE, candidate_schema());
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-P5102"), "{findings}");
+    assert!(report.execution.is_none(), "{findings}");
+}
+
+#[test]
+fn a_candidate_without_a_recorded_decision_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let mut undecided = classification_candidate(&synthetic, "selected");
+    undecided.as_object_mut().unwrap().remove("decision");
+    declare_selection(&synthetic, json!([undecided]), json!({}));
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-P5602"), "{findings}");
+    assert!(report.execution.is_none(), "{findings}");
+}
+
+#[test]
+fn a_banned_criterion_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    declare_selection(
+        &synthetic,
+        json!([classification_candidate(&synthetic, "selected")]),
+        json!({"criteria": ["cost", "avila_margin"]}),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-P5601"), "{findings}");
+    assert!(findings.contains("avila_margin"), "{findings}");
+    assert!(report.execution.is_none(), "{findings}");
+}
+
+#[test]
+fn a_selection_with_no_eligible_candidate_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    declare_selection(
+        &synthetic,
+        json!([classification_candidate(&synthetic, "excluded")]),
+        json!({}),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-P5101"), "{findings}");
+    assert!(report.execution.is_none(), "{findings}");
+}
+
+#[test]
+fn an_active_policy_without_a_selection_record_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    edit_execution_policy(&synthetic, json!({"deny_providers": ["acme-competitor"]}));
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-P5103"), "{findings}");
+    assert!(report.execution.is_none(), "{findings}");
+}
+
+#[test]
+fn an_avila_provided_selection_without_the_check_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    edit_execution_policy(&synthetic, json!({"forbid_self_preference": true}));
+    declare_selection(
+        &synthetic,
+        json!([classification_candidate(&synthetic, "selected")]),
+        json!({"avila_provided": true}),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-P5501"), "{findings}");
+    assert!(report.execution.is_none(), "{findings}");
+}
+
+#[test]
+fn an_avila_provided_selection_with_the_check_runs() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    edit_execution_policy(&synthetic, json!({"forbid_self_preference": true}));
+    declare_selection(
+        &synthetic,
+        json!([classification_candidate(&synthetic, "selected")]),
+        json!({
+            "avila_provided": true,
+            "self_preference_check": {
+                "check_id": "org/policy-review-2026",
+                "justification": "the only qualified implementation for this type"
+            }
+        }),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(!findings.contains("CORE-P"), "{findings}");
+    assert!(report.execution.is_some(), "{findings}");
+}
+
+#[test]
+fn a_undeclared_maturity_fails_a_declared_floor() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    edit_execution_policy(&synthetic, json!({"maturity_floor": "production"}));
+    declare_selection(
+        &synthetic,
+        json!([classification_candidate(&synthetic, "selected")]),
+        json!({}),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-P5303"), "{findings}");
+    assert!(findings.contains("no maturity"), "{findings}");
+    assert!(report.execution.is_none(), "{findings}");
+}
+
+#[test]
+fn a_cost_over_the_cap_without_confirmation_is_refused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    edit_execution_policy(
+        &synthetic,
+        json!({"cost_cap": {"value": "10", "currency": "EUR"}}),
+    );
+    declare_selection(
+        &synthetic,
+        json!([classification_candidate(&synthetic, "selected")]),
+        json!({"cost_estimate": {"value": "25", "currency": "EUR"}}),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-P5401"), "{findings}");
+    assert!(report.execution.is_none(), "{findings}");
+}
+
+#[test]
+fn a_cost_over_the_cap_with_confirmation_runs() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    edit_execution_policy(
+        &synthetic,
+        json!({"cost_cap": {"value": "10", "currency": "EUR"}}),
+    );
+    declare_selection(
+        &synthetic,
+        json!([classification_candidate(&synthetic, "selected")]),
+        json!({
+            "cost_estimate": {"value": "25", "currency": "EUR"},
+            "cost_confirmed_by": "org/procurement-officer"
+        }),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(!findings.contains("CORE-P"), "{findings}");
+    assert!(report.execution.is_some(), "{findings}");
+}
+
+/// Point one manifest execution at a different bound capability id — how a
+/// two-step package ends up sharing an executable for the diversity rule.
+fn set_execution_capability(synthetic: &Synthetic, step_id: &str, capability_id: &str) {
+    let mut package: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    for execution in package["executions"].as_array_mut().unwrap() {
+        if execution["step_id"] == step_id {
+            execution["capability_id"] = json!(capability_id);
+        }
+    }
+    fs::write(
+        synthetic.case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+}
+
+/// The capability triple a chained synthetic's `activation` step binds —
+/// `executable_sha256` is the bound capability's pinned digest.
+fn activation_candidate(decision: &str, capability_id: &str, executable_sha256: &str) -> Value {
+    json!({
+        "capability_type": {"id": "aftermatter.r0-inventory-build", "major": 1},
+        "capability_id": capability_id,
+        "adapter": "avila-labs.aftermatter/build-r0-case@1",
+        "executable_sha256": executable_sha256,
+        "decision": decision,
+        "reasons": [{"rule_id": "criteria.technical", "detail": "winner"}]
+    })
+}
+
+/// The executable digest a manifest capability is pinned to.
+fn bound_executable_sha(synthetic: &Synthetic, capability_id: &str) -> String {
+    let package: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    package["capabilities"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|capability| capability["capability_id"] == capability_id)
+        .unwrap()["executable_sha256"]
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
+#[test]
+fn two_steps_sharing_a_provider_violate_independence() {
+    let dir = TestDir::new();
+    let synthetic = blessed_chain(&dir);
+    // Both selected types are owned by `avila-labs.aftermatter` — the honest
+    // record trips the independence rule without lying about anything.
+    let activation = activation_candidate(
+        "selected",
+        "python3",
+        &bound_executable_sha(&synthetic, "python3"),
+    );
+    edit_execution_policy(&synthetic, json!({"require_provider_independence": true}));
+    declare_selection_entries(
+        &synthetic,
+        json!([
+            selection_entry("activation", json!([activation]), json!({})),
+            selection_entry(
+                "classification",
+                json!([classification_candidate(&synthetic, "selected")]),
+                json!({})
+            ),
+        ]),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-P5302"), "{findings}");
+    assert!(report.execution.is_none(), "{findings}");
+}
+
+#[test]
+fn two_steps_sharing_an_executable_violate_diversity() {
+    let dir = TestDir::new();
+    let synthetic = blessed_chain(&dir);
+    // Bind the activation execution to the same capability the
+    // classification step uses — both selected triples honestly record the
+    // same executable bytes.
+    set_execution_capability(&synthetic, "activation", "stub");
+    let activation = activation_candidate(
+        "selected",
+        "stub",
+        &bound_executable_sha(&synthetic, "stub"),
+    );
+    edit_execution_policy(&synthetic, json!({"require_diverse_implementations": true}));
+    declare_selection_entries(
+        &synthetic,
+        json!([
+            selection_entry("activation", json!([activation]), json!({})),
+            selection_entry(
+                "classification",
+                json!([classification_candidate(&synthetic, "selected")]),
+                json!({})
+            ),
+        ]),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(findings.contains("CORE-P5304"), "{findings}");
+    assert!(report.execution.is_none(), "{findings}");
+}
+
+#[test]
+fn a_declared_maturity_meeting_the_floor_runs() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    // Declare `qualified` maturity on the selected type — the floor passes.
+    let mut registry: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("registry.json")).unwrap())
+            .unwrap();
+    for capability in registry["capability_types"].as_array_mut().unwrap() {
+        if capability["capability_type"]["id"] == "aftermatter.activated-metal-disposition" {
+            capability["maturity"] = json!("qualified");
+        }
+    }
+    fs::write(
+        synthetic.case_dir.join("registry.json"),
+        serde_json::to_vec_pretty(&registry).unwrap(),
+    )
+    .unwrap();
+    let mut package: Value =
+        serde_json::from_slice(&fs::read(synthetic.case_dir.join("package.json")).unwrap())
+            .unwrap();
+    for document in package["documents"].as_array_mut().unwrap() {
+        if document["document_id"] == "registry" {
+            document["sha256"] = json!(digest(&synthetic.case_dir.join("registry.json")));
+        }
+    }
+    fs::write(
+        synthetic.case_dir.join("package.json"),
+        serde_json::to_vec_pretty(&package).unwrap(),
+    )
+    .unwrap();
+    edit_execution_policy(&synthetic, json!({"maturity_floor": "development"}));
+    declare_selection(
+        &synthetic,
+        json!([classification_candidate(&synthetic, "selected")]),
+        json!({}),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    assert!(!findings.contains("CORE-P"), "{findings}");
+    assert!(report.execution.is_some(), "{findings}");
+}
+
+#[test]
+fn a_candidate_excluded_by_a_contract_constraint_carries_a_notice_and_runs() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let mut excluded = classification_candidate(&synthetic, "excluded");
+    excluded["capability_id"] = json!("disallowed-impl");
+    excluded["reasons"] = json!([{
+        "rule_id": "contract_constraint",
+        "detail": "execution_policy.deny_providers names its owner"
+    }]);
+    declare_selection(
+        &synthetic,
+        json!([classification_candidate(&synthetic, "selected"), excluded]),
+        json!({}),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let findings = serde_json::to_string(&report.findings).unwrap();
+    // The exclusion datum surfaces as a notice; it does not block the run.
+    assert!(findings.contains("CORE-P5201"), "{findings}");
+    assert!(report.execution.is_some(), "{findings}");
 }
 
 #[test]

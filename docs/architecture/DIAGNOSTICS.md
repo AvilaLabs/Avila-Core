@@ -70,8 +70,28 @@ environment values, Core withholds the excerpt rather than risk exposing a
 partial value. The complete hashed log remains in the execution workspace and
 receipt; the excerpt is feedback, not evidence or instructions.
 
+When a contract's execution policy declares provider-selection rules
+(ADR-0020, SC-8), the runner loads the package's bound
+`capability_selection` document and checks the recorded selection against
+the manifest's actual bindings at execution-planning time. Every refusal
+below is plan-time: the run stops before any capability executes and the
+finding never enters a verdict. The independent verifier re-derives the
+same checks as `selection.*` mismatches.
+
 | Code | Title | Stage |
 | --- | --- | --- |
+| `CORE-P5101` | No eligible capability candidate | execution planning |
+| `CORE-P5102` | Bound capability differs from recorded selection | execution planning |
+| `CORE-P5103` | Selection record required but absent | execution planning |
+| `CORE-P5201` | Candidate excluded by contract constraint | execution planning |
+| `CORE-P5301` | Selected provider denied or not allowed | execution planning |
+| `CORE-P5302` | Provider independence violated | execution planning |
+| `CORE-P5303` | Declared maturity below policy floor | execution planning |
+| `CORE-P5304` | Diverse implementations required | execution planning |
+| `CORE-P5401` | Cost cap exceeded without recorded confirmation | execution planning |
+| `CORE-P5501` | Avila-provided selection without self-preference check | execution planning |
+| `CORE-P5601` | Forbidden selection criterion | execution planning |
+| `CORE-P5602` | Candidate without a recorded decision | execution planning |
 | `CORE-X1001` | Package byte identity failed | package integrity |
 | `CORE-X1002` | Package manifest pin differs | package integrity |
 | `CORE-X1003` | Hash cache could not be used or updated | package integrity |

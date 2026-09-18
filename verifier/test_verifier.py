@@ -900,11 +900,248 @@ class TestAsOfVerification(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Item 9.5: provider selection records (ADR-0020, SC-8) — a bound
+# capability_selection is re-checked for consistency against the package
+# it describes, and each declared execution_policy rule is re-derived.
+# ---------------------------------------------------------------------------
+
+
+class TestCapabilitySelection(unittest.TestCase):
+    REGISTRY_SHA = "sha256:" + "aa" * 32
+    EXEC_SHA = "sha256:" + "bb" * 32
+    OTHER_EXEC_SHA = "sha256:" + "cc" * 32
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="avila-core-verifier-selection-"))
+
+    def _candidate(self, decision="selected", capability_id="impl-a", adapter="adapter-a@1",
+                   executable_sha256=None, **overrides):
+        candidate = {
+            "capability_type": {"id": "test.type", "major": 1},
+            "capability_id": capability_id,
+            "adapter": adapter,
+            "executable_sha256": executable_sha256 or self.EXEC_SHA,
+            "reasons": [{"rule_id": "criteria.technical", "detail": "winner"}],
+        }
+        if decision is not None:
+            candidate["decision"] = decision
+        candidate.update(overrides)
+        return candidate
+
+    def _step_entry(self, step_id="classification", candidates=None, **overrides):
+        entry = {
+            "step_id": step_id,
+            "candidates": candidates if candidates is not None else [self._candidate()],
+            "criteria": ["technical"],
+        }
+        entry.update(overrides)
+        return entry
+
+    def _verify(self, entries, policy=None, executions=None, bound_registry_sha=None,
+                snapshot_sha=None, registry_maturity=None, type_b_owner="provider-b",
+                write_doc=True):
+        package = {
+            "case_id": "CASE-SELECTION",
+            "documents": [
+                {"document_id": "contract", "role": "contract", "path": "contract.json",
+                 "sha256": "sha256:" + "00" * 32},
+                {"document_id": "registry", "role": "registry", "path": "registry.json",
+                 "sha256": bound_registry_sha or self.REGISTRY_SHA},
+            ],
+            "capabilities": [
+                {"capability_id": "impl-a", "package_id": "t/impl-a@1",
+                 "executable_sha256": self.EXEC_SHA},
+                {"capability_id": "impl-b", "package_id": "t/impl-b@1",
+                 "executable_sha256": self.OTHER_EXEC_SHA},
+            ],
+            "executions": executions if executions is not None else [
+                {"step_id": "classification", "adapter": "adapter-a@1", "capability_id": "impl-a"}
+            ],
+        }
+        if write_doc:
+            selection = {
+                "schema_version": "avila.core/capability-selection/v0.1-draft",
+                "registry_snapshot": {
+                    "registry_id": "test.registry", "revision": 3,
+                    "sha256": snapshot_sha or self.REGISTRY_SHA,
+                },
+                "query": "registry scan",
+                "selections": entries,
+            }
+            (self.tmp / "selection.json").write_text(json.dumps(selection))
+            package["documents"].append(
+                {"document_id": "selection", "role": "capability_selection",
+                 "path": "selection.json", "sha256": "sha256:" + "dd" * 32}
+            )
+        contract = {
+            "execution_policy": policy or {},
+            "workflow": [
+                {"step_id": "classification", "capability_type": {"id": "test.type", "major": 1}},
+                {"step_id": "activation", "capability_type": {"id": "test.type-b", "major": 1}},
+            ],
+        }
+        registry = {
+            "registry_id": "test.registry", "revision": 3,
+            "capability_types": [
+                {"capability_type": {"id": "test.type", "major": 1},
+                 "owner": "provider-a", **({"maturity": registry_maturity} if registry_maturity else {})},
+                {"capability_type": {"id": "test.type-b", "major": 1},
+                 "owner": type_b_owner},
+            ],
+        }
+        report = v.Report(str(self.tmp))
+        v.verify_case_selections(self.tmp, package, contract, registry, report)
+        return {c.check: c for c in report.checks}
+
+    def test_honest_record_all_checks_verify(self):
+        checks = self._verify(
+            [self._step_entry()], policy={"deny_providers": ["provider-b"]}
+        )
+        for name, check in checks.items():
+            self.assertEqual(check.status, "verified", f"{name}: {check.to_dict()}")
+
+    def test_active_policy_without_a_document_is_a_mismatch(self):
+        checks = self._verify([], policy={"deny_providers": ["provider-b"]}, write_doc=False)
+        self.assertEqual(checks["selection.document"].status, "mismatch")
+        self.assertIn("CORE-P5103", checks["selection.document"].detail)
+
+    def test_no_document_no_policy_emits_nothing(self):
+        checks = self._verify([], write_doc=False)
+        self.assertEqual(checks, {})
+
+    def test_snapshot_of_a_different_registry_is_a_mismatch(self):
+        checks = self._verify([self._step_entry()], snapshot_sha="sha256:" + "ff" * 32)
+        self.assertEqual(checks["selection.registry_snapshot"].status, "mismatch")
+        self.assertIn("CORE-P5102", checks["selection.registry_snapshot"].detail)
+
+    def test_selected_must_be_the_bound_triple(self):
+        checks = self._verify(
+            [self._step_entry(candidates=[self._candidate(capability_id="impl-b")])]
+        )
+        check = checks["selection.classification.selected"]
+        self.assertEqual(check.status, "mismatch")
+        self.assertIn("CORE-P5102", check.detail)
+
+    def test_no_winner_is_a_mismatch(self):
+        checks = self._verify(
+            [self._step_entry(candidates=[self._candidate(decision="excluded")])]
+        )
+        check = checks["selection.classification.selected"]
+        self.assertEqual(check.status, "mismatch")
+        self.assertIn("CORE-P5101", check.detail)
+
+    def test_banned_criterion_is_a_mismatch(self):
+        checks = self._verify([self._step_entry(criteria=["cost", "avila_margin"])])
+        check = checks["selection.classification.criteria"]
+        self.assertEqual(check.status, "mismatch")
+        self.assertIn("CORE-P5601", check.detail)
+
+    def test_undecided_candidate_is_a_mismatch(self):
+        checks = self._verify(
+            [self._step_entry(candidates=[self._candidate(decision=None)])]
+        )
+        check = checks["selection.classification.candidates"]
+        self.assertEqual(check.status, "mismatch")
+        self.assertIn("CORE-P5602", check.detail)
+
+    def test_denied_provider_is_a_mismatch(self):
+        checks = self._verify(
+            [self._step_entry()], policy={"deny_providers": ["provider-a"]}
+        )
+        check = checks["selection.classification.provider"]
+        self.assertEqual(check.status, "mismatch")
+        self.assertIn("CORE-P5301", check.detail)
+
+    def test_undeclared_maturity_fails_the_floor(self):
+        checks = self._verify([self._step_entry()], policy={"maturity_floor": "production"})
+        check = checks["selection.classification.maturity"]
+        self.assertEqual(check.status, "mismatch")
+        self.assertIn("CORE-P5303", check.detail)
+
+    def test_declared_maturity_meeting_the_floor_verifies(self):
+        checks = self._verify(
+            [self._step_entry()], policy={"maturity_floor": "qualified"},
+            registry_maturity="production",
+        )
+        check = checks["selection.classification.maturity"]
+        self.assertEqual(check.status, "verified")
+
+    def test_cost_over_the_cap_unconfirmed_is_a_mismatch(self):
+        checks = self._verify(
+            [self._step_entry(cost_estimate={"value": "25", "currency": "EUR"})],
+            policy={"cost_cap": {"value": "10", "currency": "EUR"}},
+        )
+        check = checks["selection.classification.cost_cap"]
+        self.assertEqual(check.status, "mismatch")
+        self.assertIn("CORE-P5401", check.detail)
+
+    def test_cost_over_the_cap_confirmed_verifies(self):
+        checks = self._verify(
+            [self._step_entry(cost_estimate={"value": "25", "currency": "EUR"},
+                              cost_confirmed_by="org/procurement")],
+            policy={"cost_cap": {"value": "10", "currency": "EUR"}},
+        )
+        check = checks["selection.classification.cost_cap"]
+        self.assertEqual(check.status, "verified")
+
+    def test_avila_provided_without_the_check_is_a_mismatch(self):
+        checks = self._verify(
+            [self._step_entry(avila_provided=True)],
+            policy={"forbid_self_preference": True},
+        )
+        check = checks["selection.classification.self_preference"]
+        self.assertEqual(check.status, "mismatch")
+        self.assertIn("CORE-P5501", check.detail)
+
+    def test_shared_provider_violates_independence(self):
+        executions = [
+            {"step_id": "activation", "adapter": "adapter-b@1", "capability_id": "impl-b"},
+            {"step_id": "classification", "adapter": "adapter-a@1", "capability_id": "impl-a"},
+        ]
+        # Both types are owned by provider-a — an honest record trips the
+        # independence rule without lying about anything.
+        entries = [
+            self._step_entry(
+                step_id="activation",
+                candidates=[self._candidate(capability_type={"id": "test.type-b", "major": 1},
+                                            capability_id="impl-b", adapter="adapter-b@1",
+                                            executable_sha256=self.OTHER_EXEC_SHA)],
+            ),
+            self._step_entry(),
+        ]
+        checks = self._verify(
+            entries, policy={"require_provider_independence": True},
+            executions=executions, type_b_owner="provider-a",
+        )
+        self.assertEqual(checks["selection.independence"].status, "mismatch")
+        self.assertIn("CORE-P5302", checks["selection.independence"].detail)
+
+    def test_shared_executable_violates_diversity(self):
+        executions = [
+            {"step_id": "activation", "adapter": "adapter-a@1", "capability_id": "impl-a"},
+            {"step_id": "classification", "adapter": "adapter-a@1", "capability_id": "impl-a"},
+        ]
+        entries = [
+            self._step_entry(
+                step_id="activation",
+                candidates=[self._candidate(
+                    capability_type={"id": "test.type-b", "major": 1},
+                    capability_id="impl-a", adapter="adapter-a@1",
+                )],
+            ),
+            self._step_entry(),
+        ]
+        checks = self._verify(
+            entries, policy={"require_diverse_implementations": True}, executions=executions
+        )
+        self.assertEqual(checks["selection.diversity"].status, "mismatch")
+        self.assertIn("CORE-P5304", checks["selection.diversity"].detail)
+
+
+# ---------------------------------------------------------------------------
 # Item 10: requirement-set coverage (S-024) — every case binding a
 # requirement_set re-derives a complete declaration; a case without one
-# gets no check at all. CASE-002 is included here deliberately: its stale
-# claims only affect item 9's qualification checks; its coverage
-# declaration is current and must still re-derive.
+# gets no check at all.
 # ---------------------------------------------------------------------------
 
 

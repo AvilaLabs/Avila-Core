@@ -16,9 +16,10 @@ use avila_core_compiler::{
     CampaignReport, CampaignStatus, ClaimQualification, ClaimsDocument, CompilationStatus,
     CompileReport, CompiledContract, CompiledStep, CoverageDeclaration, CoverageReport,
     CoverageStatus, DeclaredOmission, EnvelopeAssessment, FindingClass, ImmutablePolicyRef,
-    PresentationGateState, ReviewDisposition, ReviewIndependence, ReviewerRole, SourceLocation,
-    SourceRef, assess_coverage, compile_documents, evaluate_campaign, evaluate_envelope,
-    parse_requirement_set, registry_kinds, render_campaign_report, render_compile_report,
+    PresentationGateState, RegistrySnapshot, ReviewDisposition, ReviewIndependence, ReviewerRole,
+    SourceLocation, SourceRef, assess_coverage, compile_documents, evaluate_campaign,
+    evaluate_envelope, parse_requirement_set, registry_kinds, render_campaign_report,
+    render_compile_report,
 };
 use avila_core_evidence::signature::{self, TrustRoot};
 use avila_core_evidence::{
@@ -59,6 +60,7 @@ mod qualification;
 #[allow(unused_imports)]
 use qualification::BoundQualification;
 use qualification::{Envelopes, load_qualifications};
+mod selection;
 mod signing;
 pub use signing::SignatureStatus;
 mod inputs;
@@ -1037,6 +1039,35 @@ fn execute_case_inner(
         revoked_by: loaded.revoked_by,
         kinds: registry_kinds(registry)?,
     };
+
+    // Provider selection records (ADR-0020): the recorded decision is
+    // checked against what the package binds and against the contract's
+    // declared provider rules. An inadmissible finding refuses the run
+    // here — before any execution is spent — and never enters a verdict.
+    let selection_findings = selection::load_selection(
+        &package,
+        compiled,
+        &serde_json::from_slice::<RegistrySnapshot>(registry)?,
+        package
+            .manifest
+            .documents
+            .iter()
+            .find(|document| document.role == "registry")
+            .map(|document| document.sha256.as_str())
+            .unwrap_or_default(),
+        trust_root,
+    )?;
+    let selection_refused = selection_findings
+        .iter()
+        .any(|finding| finding.class == FindingClass::Inadmissible);
+    report.findings.extend(selection_findings);
+    if selection_refused {
+        report.notice =
+            "the recorded capability selection does not satisfy the contract's provider policy"
+                .into();
+        return Ok(report);
+    }
+
     if !package.manifest.executions.is_empty() {
         let mut runner = Runner::new(
             &package,

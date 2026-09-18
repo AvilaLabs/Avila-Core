@@ -3314,6 +3314,338 @@ def _assess_coverage(set_doc: dict, declaration: dict, requirements: dict, categ
     return issues, entries, "incomplete" if incomplete else "complete"
 
 
+# ---------------------------------------------------------------------------
+# Section 10.5: provider selection records (ADR-0020, SC-8)
+#
+# Rule source: crates/avila-core-compiler/src/selection.rs's model and
+# crates/avila-core-runner/src/case_run/selection.rs's load_selection, read
+# to learn which fields the record carries and which refusal each rule
+# produces — never to copy control flow. The engine does not perform
+# selection; it verifies the recorded one. This section re-derives every
+# check the runner makes: the record's registry snapshot is exactly the
+# bound registry, every considered candidate carries a decision and
+# reasons, the criteria stay inside the legitimate vocabulary (provider
+# payment and Avila margin never appear), at most one candidate is
+# selected, and the selected triple is exactly the capability the manifest
+# binds for the step. When the contract's execution_policy declares
+# provider rules, the record is required and each rule is re-checked —
+# deny/allow on the selected type's registry owner, provider independence
+# and implementation diversity across steps, the declared maturity floor,
+# the self-preference check for an Avila-provided selection, and the cost
+# cap's recorded confirmation.
+#
+# What the runner refuses at bind/plan time this section reports as a
+# mismatch — the same truth, checked without trusting the runner.
+
+
+_LEGITIMATE_SELECTION_CRITERIA = frozenset(
+    {"cost", "time", "locality", "technical", "diversity", "preference"}
+)
+_BANNED_SELECTION_CRITERIA = frozenset({"provider_payment", "avila_margin"})
+_MATURITY_ORDER = ["prototype", "development", "qualified", "production"]
+_SELECTION_SCHEMA_VERSION = "avila.core/capability-selection/v0.1-draft"
+
+
+def _selection_policy_active(policy: dict) -> bool:
+    return bool(
+        policy.get("deny_providers")
+        or policy.get("allow_providers")
+        or policy.get("require_provider_independence")
+        or policy.get("require_diverse_implementations")
+        or policy.get("maturity_floor") is not None
+        or policy.get("forbid_self_preference")
+        or policy.get("cost_cap") is not None
+    )
+
+
+def verify_case_selections(
+    case_dir: Path,
+    package: dict,
+    contract: Optional[dict],
+    registry: Optional[dict],
+    report: Report,
+) -> None:
+    policy = (contract or {}).get("execution_policy") or {}
+    docs = [d for d in package.get("documents", []) if d.get("role") == "capability_selection"]
+    if len(docs) > 1:
+        report.mismatch(
+            "selection.document",
+            f"the package binds {len(docs)} capability_selection documents; one document records the whole package's selections",
+        )
+        return
+    if not docs:
+        if _selection_policy_active(policy):
+            report.mismatch(
+                "selection.document",
+                "the contract's execution policy declares provider-selection rules, but no capability_selection document is bound (CORE-P5103)",
+            )
+        return
+    doc = docs[0]
+    path = case_dir / doc["path"]
+    if not path.is_file():
+        report.mismatch("selection.document", f"capability_selection document {doc['path']!r} is missing")
+        return
+    try:
+        selection = load_json(path)
+    except (OSError, json.JSONDecodeError) as error:
+        report.mismatch("selection.document", f"capability_selection document does not parse: {error}")
+        return
+    if selection.get("schema_version") != _SELECTION_SCHEMA_VERSION:
+        report.mismatch(
+            "selection.document",
+            f"capability_selection schema_version {selection.get('schema_version')!r} is not {_SELECTION_SCHEMA_VERSION!r}",
+        )
+        return
+    report.verified("selection.document", f"bound {doc['document_id']!r} parses as {_SELECTION_SCHEMA_VERSION}")
+
+    # The record's discovery boundary must be the package's bound registry.
+    if registry is not None:
+        bound_registry_doc = next(
+            (d for d in package.get("documents", []) if d.get("role") == "registry"), None
+        )
+        snapshot = selection.get("registry_snapshot", {})
+        if (
+            snapshot.get("registry_id") != registry.get("registry_id")
+            or snapshot.get("revision") != registry.get("revision")
+            or snapshot.get("sha256") != (bound_registry_doc or {}).get("sha256")
+        ):
+            report.mismatch(
+                "selection.registry_snapshot",
+                "the record's registry_snapshot does not equal the package's bound registry — its candidate set is bounded by different material (CORE-P5102)",
+            )
+        else:
+            report.verified(
+                "selection.registry_snapshot",
+                f"{registry['registry_id']}@{registry['revision']} matches the bound registry digest",
+            )
+
+    selections = selection.get("selections", [])
+    entries = {entry.get("step_id"): entry for entry in selections if isinstance(entry, dict)}
+    executions = package.get("executions", [])
+    workflow = {step["step_id"]: step for step in (contract or {}).get("workflow", [])}
+    capabilities = {c["capability_id"]: c for c in package.get("capabilities", [])}
+    registry_types = {
+        c.get("capability_type", {}).get("id"): c for c in (registry or {}).get("capability_types", [])
+    }
+
+    # A selection entry for a step the package does not execute is dangling.
+    for step_id in entries:
+        if not any(execution.get("step_id") == step_id for execution in executions):
+            report.mismatch(
+                "selection.entries",
+                f"the record selects for step {step_id!r}, which the package does not execute",
+            )
+            break
+
+    selected_owners: list[tuple[str, str]] = []
+    selected_executables: list[tuple[str, str]] = []
+    for execution in executions:
+        step_id = execution["step_id"]
+        entry = entries.get(step_id)
+        if entry is None:
+            if _selection_policy_active(policy):
+                report.mismatch(
+                    f"selection.{step_id}.entry",
+                    f"step {step_id!r} has no selection entry — the policy's rules cannot be checked for it (CORE-P5103)",
+                )
+            continue
+
+        undecided = [
+            f"{c.get('capability_id')}/{c.get('adapter')}"
+            for c in entry.get("candidates", [])
+            if not c.get("decision") or not c.get("reasons")
+        ]
+        if undecided:
+            report.mismatch(
+                f"selection.{step_id}.candidates",
+                f"candidates without a recorded decision or reasons: {', '.join(undecided)} (CORE-P5602)",
+            )
+        else:
+            report.verified(
+                f"selection.{step_id}.candidates",
+                f"{len(entry.get('candidates', []))} candidate(s) all decided and reasoned",
+            )
+
+        criteria = entry.get("criteria", [])
+        banned = [c for c in criteria if c in _BANNED_SELECTION_CRITERIA]
+        unknown = [c for c in criteria if c not in _LEGITIMATE_SELECTION_CRITERIA and c not in _BANNED_SELECTION_CRITERIA]
+        if banned or unknown:
+            detail = []
+            if banned:
+                detail.append(f"banned: {', '.join(banned)}")
+            if unknown:
+                detail.append(f"outside the legitimate vocabulary: {', '.join(unknown)}")
+            report.mismatch(
+                f"selection.{step_id}.criteria",
+                "; ".join(detail) + " (CORE-P5601)",
+            )
+        else:
+            report.verified(
+                f"selection.{step_id}.criteria",
+                f"criteria {criteria} are legitimate vocabulary" if criteria else "no criteria recorded",
+            )
+
+        winners = [c for c in entry.get("candidates", []) if c.get("decision") == "selected"]
+        if len(winners) != 1:
+            reasons = [
+                f"{r.get('rule_id')} ({r.get('detail')})"
+                for c in entry.get("candidates", [])
+                for r in c.get("reasons", [])
+            ]
+            report.mismatch(
+                f"selection.{step_id}.selected",
+                f"{len(winners)} candidates carry decision 'selected' — the run refuses with CORE-P5101: {', '.join(reasons)}",
+            )
+            continue
+        selected = winners[0]
+
+        step = workflow.get(step_id)
+        capability = capabilities.get(execution.get("capability_id"), {})
+        bound_type = (step or {}).get("capability_type", {})
+        differences = []
+        if selected.get("capability_type") != bound_type:
+            differences.append(f"type {selected.get('capability_type')} != bound {bound_type}")
+        if selected.get("capability_id") != execution.get("capability_id"):
+            differences.append(
+                f"capability {selected.get('capability_id')!r} != bound {execution.get('capability_id')!r}"
+            )
+        if selected.get("adapter") != execution.get("adapter"):
+            differences.append(f"adapter {selected.get('adapter')!r} != bound {execution.get('adapter')!r}")
+        if selected.get("executable_sha256") != capability.get("executable_sha256"):
+            differences.append(
+                f"executable {selected.get('executable_sha256')} != bound {capability.get('executable_sha256')}"
+            )
+        if differences:
+            report.mismatch(
+                f"selection.{step_id}.selected",
+                "the recorded selection is not what the package binds — " + "; ".join(differences) + " (CORE-P5102)",
+            )
+            continue
+        report.verified(
+            f"selection.{step_id}.selected",
+            f"the recorded winner is the bound {execution.get('capability_id')}/{execution.get('adapter')}",
+        )
+
+        type_id = (selected.get("capability_type") or {}).get("id")
+        registry_type = registry_types.get(type_id)
+        owner = (registry_type or {}).get("owner")
+        if registry_type is None:
+            report.mismatch(
+                f"selection.{step_id}.provider",
+                f"the selected capability type {type_id!r} is not declared in the bound registry",
+            )
+        else:
+            denied = policy.get("deny_providers") or []
+            allowed = policy.get("allow_providers") or []
+            if owner in denied:
+                report.mismatch(
+                    f"selection.{step_id}.provider",
+                    f"provider {owner!r} is in execution_policy.deny_providers (CORE-P5301)",
+                )
+            elif allowed and owner not in allowed:
+                report.mismatch(
+                    f"selection.{step_id}.provider",
+                    f"provider {owner!r} is not in execution_policy.allow_providers (CORE-P5301)",
+                )
+            elif denied or allowed:
+                report.verified(f"selection.{step_id}.provider", f"provider {owner!r} is permitted")
+            floor = policy.get("maturity_floor")
+            if floor is not None:
+                declared = registry_type.get("maturity")
+                if declared is None or _MATURITY_ORDER.index(declared) < _MATURITY_ORDER.index(floor):
+                    report.mismatch(
+                        f"selection.{step_id}.maturity",
+                        (
+                            f"the selected type declares no maturity — the floor {floor!r} cannot be met (CORE-P5303)"
+                            if declared is None
+                            else f"declared maturity {declared!r} is below the floor {floor!r} (CORE-P5303)"
+                        ),
+                    )
+                else:
+                    report.verified(
+                        f"selection.{step_id}.maturity",
+                        f"declared maturity {declared!r} meets the floor {floor!r}",
+                    )
+            if owner is not None:
+                selected_owners.append((step_id, owner))
+        selected_executables.append((step_id, selected.get("executable_sha256")))
+
+        if policy.get("forbid_self_preference") and entry.get("avila_provided"):
+            if entry.get("self_preference_check") is None:
+                report.mismatch(
+                    f"selection.{step_id}.self_preference",
+                    "an Avila-provided selection carries no recorded self_preference_check (CORE-P5501)",
+                )
+            else:
+                report.verified(
+                    f"selection.{step_id}.self_preference",
+                    "the self-preference check is recorded",
+                )
+
+        cap = policy.get("cost_cap")
+        if cap is not None:
+            estimate = entry.get("cost_estimate")
+            confirmed = bool(entry.get("cost_confirmed_by"))
+            refusal = None
+            if estimate is None:
+                refusal = "no cost estimate is recorded — the cap cannot be checked"
+            elif estimate.get("currency") != cap.get("currency"):
+                refusal = f"estimate is in {estimate.get('currency')!r} but the cap is in {cap.get('currency')!r} — the cap cannot be checked across currencies"
+            else:
+                try:
+                    over = read_authoritative_decimal(estimate["value"]) > read_authoritative_decimal(cap["value"])
+                except Exception:
+                    over = True
+                if over:
+                    refusal = f"cost estimate {estimate.get('value')} {estimate.get('currency')} exceeds the cap {cap.get('value')} {cap.get('currency')}"
+            if refusal is not None and not confirmed:
+                report.mismatch(
+                    f"selection.{step_id}.cost_cap",
+                    f"{refusal} with no recorded confirmation (CORE-P5401)",
+                )
+            elif refusal is not None:
+                report.verified(
+                    f"selection.{step_id}.cost_cap",
+                    f"{refusal} — confirmed by {entry['cost_confirmed_by']}",
+                )
+            else:
+                report.verified(
+                    f"selection.{step_id}.cost_cap",
+                    f"cost estimate {estimate.get('value')} {estimate.get('currency')} is within the cap",
+                )
+
+    if policy.get("require_provider_independence"):
+        seen: dict[str, str] = {}
+        violation = None
+        for step_id, owner in selected_owners:
+            if owner in seen:
+                violation = f"steps {seen[owner]!r} and {step_id!r} both selected provider {owner!r} (CORE-P5302)"
+                break
+            seen[owner] = step_id
+        if violation:
+            report.mismatch("selection.independence", violation)
+        elif selected_owners:
+            report.verified(
+                "selection.independence",
+                f"{len(selected_owners)} step(s) select distinct providers",
+            )
+    if policy.get("require_diverse_implementations"):
+        seen: dict[str, str] = {}
+        violation = None
+        for step_id, executable in selected_executables:
+            if executable in seen:
+                violation = f"steps {seen[executable]!r} and {step_id!r} selected the same executable bytes (CORE-P5304)"
+                break
+            seen[executable] = step_id
+        if violation:
+            report.mismatch("selection.diversity", violation)
+        elif selected_executables:
+            report.verified(
+                "selection.diversity",
+                f"{len(selected_executables)} step(s) select distinct executables",
+            )
+
+
 def verify_case_coverage(case_dir: Path, package: dict, contract: Optional[dict], report: Report) -> None:
     coverage = package.get("coverage")
     if coverage is None:
@@ -3669,6 +4001,8 @@ def verify_case(
         as_of=as_of,
         as_of_material_dir=as_of_material_dir,
     )
+
+    verify_case_selections(case_dir, package, contract, registry, report)
 
     verify_staged_reviews(case_dir, package, docs_by_role, claims, campaign_report, report)
 

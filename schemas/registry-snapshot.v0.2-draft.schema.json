@@ -227,6 +227,11 @@
         "owner": {
           "$ref": "#/$defs/nonemptyString"
         },
+        "maturity": {
+          "description": "The provider's declared implementation maturity — a policy fact per ADR-0020, used only by execution_policy.maturity_floor; never a scientific quality score.",
+          "type": "string",
+          "enum": ["prototype", "development", "qualified", "production"]
+        },
         "reproducibility": {
           "$ref": "#/$defs/reproducibilityDeclaration"
         },

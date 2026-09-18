@@ -12,7 +12,7 @@
     "title": { "$ref": "#/$defs/nonemptyString" },
     "documents": {
       "type": "array",
-      "description": "Package documents hashed by raw bytes. Exactly one each of contract, registry, and claims; at most one expected_campaign_report; execution_receipt documents name their step. A package-declared checker uses role external_checker_adapter and a document_id equal to its adapter_id.",
+      "description": "Package documents hashed by raw bytes. Exactly one each of contract, registry, and claims; at most one expected_campaign_report; execution_receipt documents name their step. A package-declared checker uses role external_checker_adapter and a document_id equal to its adapter_id. A package operating under declared provider-selection rules binds one capability_selection document (ADR-0020).",
       "items": { "$ref": "#/$defs/document" }
     },
     "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },

@@ -103,6 +103,28 @@ agreement against); in short:
    revocations, signatures, and contract policy; without it the case's
    own bound set is the material. A divergence is a datum, never a
    failure.
+9.5. **Provider selection records** (ADR-0020, SC-8) — a package operating
+   under declared `execution_policy` provider rules binds one
+   `capability_selection` document recording which capability
+   implementation serves each step. The engine verifies the recorded
+   selection rather than performing one; the verifier re-derives every
+   check the runner makes: the record's `registry_snapshot` equals the
+   bound registry, every considered candidate carries a decision and
+   reasons, criteria stay inside the closed legitimate vocabulary
+   (`provider_payment` and `avila_margin` never appear), at most one
+   candidate is `selected`, and the selected triple is exactly the
+   capability the manifest binds (contract capability type, execution's
+   capability id + adapter, the capability's pinned executable digest).
+   Each declared rule is re-checked — `deny_providers`/`allow_providers`
+   on the selected type's registry `owner`, `require_provider_independence`
+   and `require_diverse_implementations` across steps, `maturity_floor`
+   against the type's declared `maturity` (undeclared fails a declared
+   floor), `forbid_self_preference` against an `avila_provided` selection's
+   recorded `self_preference_check`, and `cost_cap` against the recorded
+   `cost_estimate` unless `cost_confirmed_by` is present. What the runner
+   refuses at bind/plan time (`CORE-P5101`–`P5602`) the verifier reports
+   as `selection.*` mismatches — the same truth, checked without trusting
+   the runner.
 10. **Requirement-set coverage** (S-024) — a case package may bind one
     `requirement_set` document and declare in its manifest which contract
     requirements cover each set entry and, for the rest, a reason and an
@@ -228,9 +250,13 @@ or committed example case it proves agreement against — see
   plus hand-written cases for the string/bool/integer fact and structural-
   error paths those 19 vectors don't happen to reach.
 - `TestQualificationEnvelopeConsistency`: every qualification-carrying
-  claim in CASE-001 and 003 re-derives from its persisted context and
-  binds to its step's receipt; CASE-002's pre-ADR-0018 claims are named
-  as mismatches by the missing context.
+  claim in CASE-001, 002, and 003 re-derives from its persisted context
+  and binds to its step's receipt.
+- `TestCapabilitySelection`: the ADR-0020 `selection.*` checks — honest
+  records verify; wrong snapshot, wrong selected triple, missing winner,
+  banned criterion, undecided candidate, denied provider, maturity floor,
+  unconfirmed cost cap, missing self-preference check, shared provider,
+  and shared executable each report the `CORE-P5xxx` mismatch.
 - `TestCoverageReDerivation`: CASE-001, 002, and 003's bound requirement
   sets each re-derive a `complete` coverage declaration; the unbound
   cases emit no coverage check.

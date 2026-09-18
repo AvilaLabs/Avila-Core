@@ -64,6 +64,55 @@ pub struct ExecutionPolicy {
     /// the case runner's, because only it can see receipts and signatures.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub require_signatures: bool,
+    /// Capability-type owners (the registry's provider identities) whose
+    /// implementations may not be selected for any step (`CORE-P5301`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub deny_providers: Vec<String>,
+    /// When non-empty, the closed set of capability-type owners a selected
+    /// implementation may come from (`CORE-P5301`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub allow_providers: Vec<String>,
+    /// No two steps' selected capability types may share an owner
+    /// (`CORE-P5302`).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub require_provider_independence: bool,
+    /// No two steps' selected executable digests may be identical
+    /// (`CORE-P5304`).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub require_diverse_implementations: bool,
+    /// The minimum provider-declared maturity a selected capability type
+    /// must carry (`CORE-P5303`); maturity is a policy fact, never a
+    /// quality score. A type with no declared maturity fails any declared
+    /// floor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub maturity_floor: Option<CapabilityMaturity>,
+    /// An `avila_provided` selection must carry a recorded
+    /// `self_preference_check` (`CORE-P5501`).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub forbid_self_preference: bool,
+    /// A selected cost estimate above the cap must carry a recorded
+    /// confirmation (`CORE-P5401`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_cap: Option<PolicyCostCap>,
+}
+
+/// A provider's declared implementation maturity — a policy fact per
+/// ADR-0020 clause 2, ordered for `maturity_floor` comparisons.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CapabilityMaturity {
+    Prototype,
+    Development,
+    Qualified,
+    Production,
+}
+
+/// A cost ceiling in a named currency; estimates are exact-number strings.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PolicyCostCap {
+    pub value: String,
+    pub currency: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -313,6 +362,11 @@ pub struct RoleDefinition {
 pub struct CapabilityTypeDefinition {
     pub capability_type: VersionedRef,
     pub owner: String,
+    /// The provider's declared implementation maturity — a policy fact per
+    /// ADR-0020, used only by `execution_policy.maturity_floor`; it is not
+    /// a scientific quality score and never enters a verdict.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub maturity: Option<CapabilityMaturity>,
     pub reproducibility: ReproducibilityDeclaration,
     #[serde(default)]
     pub inputs: Vec<InputSlotDefinition>,

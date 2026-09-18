@@ -202,6 +202,50 @@
           "description": "Requires the case runner to refuse an unsigned package and unsigned SC-12 reuse (ADR-0015): a run must be given --trust-root, the package manifest's requester signature must verify, and every declared execution step's operative receipt must carry a signature verified against a listed runner key, or the run is refused. The compiler only carries this flag through to the compiled snapshot and notes it visibly (CORE-A4404); the refusal itself is the case runner's.",
           "type": "boolean",
           "default": false
+        },
+        "deny_providers": {
+          "description": "Capability-type owners (the registry's provider identities) whose implementations may not be selected for any step (CORE-P5301).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonemptyString" },
+          "default": []
+        },
+        "allow_providers": {
+          "description": "When non-empty, the closed set of capability-type owners a selected implementation may come from (CORE-P5301).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonemptyString" },
+          "default": []
+        },
+        "require_provider_independence": {
+          "description": "No two steps' selected capability types may share an owner (CORE-P5302).",
+          "type": "boolean",
+          "default": false
+        },
+        "require_diverse_implementations": {
+          "description": "No two steps' selected executable digests may be identical (CORE-P5304).",
+          "type": "boolean",
+          "default": false
+        },
+        "maturity_floor": {
+          "description": "The minimum provider-declared maturity a selected capability type must carry (CORE-P5303). Maturity is a policy fact, never a quality score; a type with no declared maturity fails any declared floor.",
+          "type": "string",
+          "enum": ["prototype", "development", "qualified", "production"]
+        },
+        "forbid_self_preference": {
+          "description": "An avila_provided selection must carry a recorded self_preference_check (CORE-P5501).",
+          "type": "boolean",
+          "default": false
+        },
+        "cost_cap": {
+          "description": "A selected cost estimate above the cap must carry a recorded confirmation (CORE-P5401).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value", "currency"],
+          "properties": {
+            "value": { "$ref": "#/$defs/exactNumber" },
+            "currency": { "$ref": "#/$defs/nonemptyString" }
+          }
         }
       }
     },

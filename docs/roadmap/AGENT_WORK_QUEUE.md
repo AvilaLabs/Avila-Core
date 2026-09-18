@@ -1091,3 +1091,49 @@ on CASE-002, and a supplied snapshot revoking the transport record labels
 exactly the transport claims `revoked`. `admission.as-of-historical` and
 `admission.current` credit it. fixtures-check reads 94 covered / 133 named
 / 18 unbounded / 54 absent.
+
+### ADR-0020 drafted: provider selection records — 2026-09-18
+
+The `policy.*` family (16 absent rows) needs a ratified design before code.
+ADR-0020 proposes the smallest honest slice of SC-8 on the qualification
+posture: the engine verifies a recorded selection rather than performing
+one — a requester-signed `capability_selection` document (registry-bounded
+candidates, per-candidate decisions and reasons, ordered closed-vocabulary
+criteria, Avila-provided flag with self-preference check, cost estimate and
+recorded confirmation), `execution_policy` rule fields (provider deny/allow,
+independence, diversity, maturity floor, self-preference, cost cap), a new
+`CORE-P5xxx` refusal family at bind/plan time, and verifier parity. Deferred
+by name: the `organization_policy` document and `tightens` lattice, signed
+role-assertion separation of duties, environments allow-list, automated
+discovery, and interactive cost confirmation. Awaiting ratification.
+
+### ADR-0020 implemented: provider selection records — 2026-09-24
+
+The ratified v1 slice is landed. `capability_selection` is a
+requester-signed, digest-bound package document (`selection.rs` in the
+compiler, `capability-selection.v0.1-draft` schema): one document per
+package, a `registry_snapshot` identity pin, per-step entries listing every
+considered candidate with an explicit `decision` and `reasons`, ordered
+criteria from the closed vocabulary (`cost|time|locality|technical|
+diversity|preference` — `provider_payment`/`avila_margin` banned), the
+`avila_provided` flag with `self_preference_check`, and
+`cost_estimate`/`cost_confirmed_by`. `execution_policy` grew the rule
+fields (`deny_providers`, `allow_providers`,
+`require_provider_independence`, `require_diverse_implementations`,
+`maturity_floor`, `forbid_self_preference`, `cost_cap`) and registry
+capability types carry an optional declared `maturity` — a policy fact,
+never a verdict input. `case_run/selection.rs` loads the record after
+qualifications and before planning: the recorded winner must be exactly
+the bound triple (contract type, manifest capability id + adapter +
+executable digest), the snapshot must be the bound registry, every
+candidate must be decided, and each declared rule is checked — refusing
+with `CORE-P5101`-`P5602` at execution-planning time, never a verdict
+(ADR-0010's wall). Under `require_signatures` the record must verify
+under a requester key. The independent verifier re-derives every check as
+`selection.*` results (`verify_case_selections`). 19 adversarial runner
+tests + 16 verifier tests pin the semantics; fixtures-check reads 94
+covered / 150 named / 18 unbounded / 43 absent — eleven `policy.*` rows
+credited. Still design-gated: the `organization_policy` document and
+`tightens` lattice, signed role-assertion separation of duties,
+environments allow-list, automated discovery, interactive cost
+confirmation.

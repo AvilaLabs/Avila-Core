@@ -36,16 +36,113 @@ pub const CORE_X3401: &str = "CORE-X3401";
 pub const CORE_X3404: &str = "CORE-X3404";
 pub const CORE_X3405: &str = "CORE-X3405";
 pub const CORE_X9001: &str = "CORE-X9001";
+pub const CORE_P5101: &str = "CORE-P5101";
+pub const CORE_P5102: &str = "CORE-P5102";
+pub const CORE_P5103: &str = "CORE-P5103";
+pub const CORE_P5201: &str = "CORE-P5201";
+pub const CORE_P5301: &str = "CORE-P5301";
+pub const CORE_P5302: &str = "CORE-P5302";
+pub const CORE_P5303: &str = "CORE-P5303";
+pub const CORE_P5304: &str = "CORE-P5304";
+pub const CORE_P5401: &str = "CORE-P5401";
+pub const CORE_P5501: &str = "CORE-P5501";
+pub const CORE_P5601: &str = "CORE-P5601";
+pub const CORE_P5602: &str = "CORE-P5602";
 
 pub const RUNTIME_FINDING_CODES: &[&str] = &[
-    CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1004, CORE_X1005, CORE_X1101, CORE_X1201, CORE_X1301,
-    CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601,
-    CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101, CORE_X3201, CORE_X3301, CORE_X3401, CORE_X3404,
-    CORE_X3405, CORE_X9001,
+    CORE_P5101, CORE_P5102, CORE_P5103, CORE_P5201, CORE_P5301, CORE_P5302, CORE_P5303, CORE_P5304,
+    CORE_P5401, CORE_P5501, CORE_P5601, CORE_P5602, CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1004,
+    CORE_X1005, CORE_X1101, CORE_X1201, CORE_X1301, CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301,
+    CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101,
+    CORE_X3201, CORE_X3301, CORE_X3401, CORE_X3404, CORE_X3405, CORE_X9001,
 ];
 
 /// Explanations are served by `avila-core explain` alongside compiler codes.
 pub const RUNTIME_DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
+    DiagnosticExplanation {
+        code: CORE_P5101,
+        title: "No eligible capability candidate",
+        rule: "SC-8.6: recorded selection",
+        meaning: "A step's bound `capability_selection` record lists candidates but none carries decision `selected` — every considered implementation was excluded or inadmissible. The refusal carries each candidate's recorded reasons; nothing may execute for the step.",
+        next_action: "Record a selection that admits a candidate, widen the candidate set in a new record, or loosen the contract policy that made every candidate inadmissible. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
+        code: CORE_P5102,
+        title: "Bound capability differs from the recorded selection",
+        rule: "SC-8.6: recorded selection",
+        meaning: "The candidate a `capability_selection` record marks `selected` does not equal the capability the manifest binds for the step — the capability type, capability id, adapter, or executable digest differs. The record and the package disagree, so the selection proves nothing about what would run.",
+        next_action: "Re-record the selection against the bound implementation, or re-pin the manifest to the recorded selection. The owner is the requester.",
+    },
+    DiagnosticExplanation {
+        code: CORE_P5103,
+        title: "Selection record required but absent",
+        rule: "SC-8.6: recorded selection",
+        meaning: "The contract's execution policy declares provider-selection rules, but no `capability_selection` document is bound, a step has no selection entry, or — under `require_signatures` — the record carries no requester signature that verifies. A policy without its record cannot be checked.",
+        next_action: "Bind and sign a `capability_selection` document recording every step's candidates and decisions. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
+        code: CORE_P5201,
+        title: "Candidate excluded by contract constraint",
+        rule: "SC-8.4: legitimate criteria",
+        meaning: "A selection record marks a candidate `excluded` with reason `contract_constraint` — the candidate lost to a contract rule, not to a merit ranking. Informational: the exclusion is visible rather than hidden in a score.",
+        next_action: "None required; the record is honest. Loosen the constraint in a contract revision if the excluded candidate should compete.",
+    },
+    DiagnosticExplanation {
+        code: CORE_P5301,
+        title: "Selected provider denied or not allowed",
+        rule: "SC-8.4: admissibility before optimization",
+        meaning: "The selected candidate's capability-type owner appears in `execution_policy.deny_providers`, or `allow_providers` is declared and the owner is not in it. Provider constraints gate admissibility — an inadmissible implementation cannot win on any merit.",
+        next_action: "Select an implementation from a permitted provider, or revise the contract's provider lists. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
+        code: CORE_P5302,
+        title: "Provider independence violated",
+        rule: "SC-8: organization policy",
+        meaning: "`execution_policy.require_provider_independence` is declared but two steps selected capability types sharing an owner — the same provider would serve both, so a provider-level failure or bias could reach both steps at once.",
+        next_action: "Select a differently-owned implementation for one step, or drop the independence declaration. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
+        code: CORE_P5303,
+        title: "Declared maturity below the policy floor",
+        rule: "SC-8.5: maturity is a policy fact",
+        meaning: "The selected capability type's registry-declared `maturity` is below `execution_policy.maturity_floor`, or the type declares no maturity at all. Maturity gates admissibility as a declared fact — it is never read as a quality score.",
+        next_action: "Select a type whose provider declares a qualifying maturity, declare the maturity in a registry revision, or lower the floor. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
+        code: CORE_P5304,
+        title: "Diverse implementations required",
+        rule: "SC-8: organization policy",
+        meaning: "`execution_policy.require_diverse_implementations` is declared but two steps selected the same executable digest — identical bytes cannot catch an implementation fault the other shares.",
+        next_action: "Select a distinct implementation for one step, or drop the diversity declaration. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
+        code: CORE_P5401,
+        title: "Cost cap exceeded without recorded confirmation",
+        rule: "SC-8.4: visible cost criteria",
+        meaning: "The selected cost estimate exceeds `execution_policy.cost_cap` and the record carries no `cost_confirmed_by`. Cost may legitimately drive selection, but a breach of the declared cap requires a recorded human confirmation before execution.",
+        next_action: "Record the confirmation in the selection document, select a cheaper candidate, or raise the cap in a contract revision. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
+        code: CORE_P5501,
+        title: "Avila-provided selection without self-preference check",
+        rule: "SC-8.7: self-preference disclosure",
+        meaning: "`execution_policy.forbid_self_preference` is declared and the selected implementation is `avila_provided`, but the record carries no `self_preference_check`. Choosing one's own implementation is not forbidden — hiding the check applied is.",
+        next_action: "Record the self-preference check and its justification in the selection document, or select a non-Avila implementation. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
+        code: CORE_P5601,
+        title: "Forbidden selection criterion",
+        rule: "SC-8.4: legitimate criteria",
+        meaning: "A selection record's `criteria` names a value outside the legitimate vocabulary (`cost`, `time`, `locality`, `technical`, `diversity`, `preference`) — including the banned `provider_payment` and `avila_margin`, which may never rank a selection, visibly or otherwise.",
+        next_action: "Re-record the selection with only legitimate criteria. Provider payment and Avila margin can never appear. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
+        code: CORE_P5602,
+        title: "Candidate without a recorded decision",
+        rule: "SC-8.6: every candidate decided",
+        meaning: "A selection record lists a candidate that carries no `decision` or no `reasons` — a considered implementation whose fate is unrecorded defeats the audit the record exists for.",
+        next_action: "Record every considered candidate's decision and reasons. The owner is the policy owner.",
+    },
     DiagnosticExplanation {
         code: CORE_X1001,
         title: "Package byte identity failed",

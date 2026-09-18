@@ -346,28 +346,29 @@ canonically.
 | Fixture | Expected |
 | --- | --- |
 | `policy.lattice.contract-weaker.fail` | `CORE-A4201` — exercised by `types.R6.nominal-basis-unpermitted.fail` |
-| `policy.lattice.contract-tighter.pass` | |
-| `policy.rule.maturity_floor.pass/fail` | |
+| `policy.lattice.contract-tighter.pass` | the `organization_policy` document and `tightens` merge order are not yet designed (ADR-0020 deferred) |
+| `policy.rule.maturity_floor.pass/fail` | `CORE-P5303` — `a_undeclared_maturity_fails_a_declared_floor`, `a_declared_maturity_meeting_the_floor_runs`; verifier `test_undeclared_maturity_fails_the_floor`, `test_declared_maturity_meeting_the_floor_verifies` |
 | `policy.rule.require_qualification.fail` | `CORE-A4601` — exercised by `campaign.require-qualification.unqualified.not_evaluated` |
-| `policy.rule.deny_providers.fail`, `allow_capabilities.pass` | |
-| `policy.rule.environments.fail` | remote env under local-only policy |
-| `policy.rule.independence.fail` | same provider on two named steps |
-| `policy.rule.diversity.pass` | two implementations + comparison step |
-| `policy.rule.forbid_self_preference.pinned.pass` | Avila package pinned by contract with justification |
-| `policy.rule.forbid_self_preference.unpinned.fail` | `CORE-P5501` |
+| `policy.rule.deny_providers.fail`, `allow_capabilities.pass` | `CORE-P5301` — `a_denied_provider_is_refused_before_any_execution`, `a_selection_outside_the_allow_list_is_refused`, `a_recorded_selection_matching_the_bound_capability_runs` |
+| `policy.rule.environments.fail` | remote env under local-only policy — no environment record exists yet (ADR-0020 deferred) |
+| `policy.rule.independence.fail` | `CORE-P5302` — `two_steps_sharing_a_provider_violate_independence`; verifier `test_shared_provider_violates_independence` |
+| `policy.rule.diversity.pass` | `CORE-P5304` — `two_steps_sharing_an_executable_violate_diversity`; verifier `test_shared_executable_violates_diversity` |
+| `policy.rule.forbid_self_preference.pinned.pass` | `an_avila_provided_selection_with_the_check_runs` — the recorded `self_preference_check` carries the justification |
+| `policy.rule.forbid_self_preference.unpinned.fail` | `CORE-P5501` — `an_avila_provided_selection_without_the_check_is_refused`; verifier `test_avila_provided_without_the_check_is_a_mismatch` |
 | `policy.rule.permit_nominal_basis.fail` | nominal requirement under governed policy → `CORE-A4201` — exercised by `types.R6.nominal-basis-unpermitted.fail` |
 | `policy.rule.presentation-cannot-gate-verdict.pass` | optional routing policy never enters verdict calculus — exercised by `presentation-policy.not-a-verdict-input` |
-| `policy.rule.separation_of_duties.fail` | two technical roles violate an explicitly declared organization policy → `CORE-A4502` |
-| `policy.rule.separation_of_duties.waived.pass` | waived; `waived_controls` recorded in package |
-| `policy.rule.cost_caps.pass` | `CORE-P5401` → external user confirmation before execution, not before verdict derivation |
-| `policy.selection.every-candidate-decided.pass` | selection record lists all candidates with reasons |
-| `policy.selection.rank-order.pass` | policy-declared technical/operational criteria; provider maturity is not an implicit quality rank |
-| `policy.selection.tie-break.pass` | ascending `capability_id`, descending version |
-| `policy.selection.transparent-cost.pass` | requester may optimize cost after admissibility; value and source are recorded |
-| `policy.selection.hidden-margin.fail` | provider payment or Avila margin cannot be an undeclared ranking input |
-| `policy.selection.no-eligible.fail` | `CORE-P5101` with per-candidate reasons |
-| `policy.selection.excluded-by-constraint.pass` | `excluded_by_contract_constraint`, note `CORE-P5201` |
-| `policy.explainability.pass` | decision record carries rule ids and facts |
+| `policy.rule.separation_of_duties.fail` | two technical roles violate an explicitly declared organization policy → `CORE-A4502` — needs signed role assertions (authority machinery, not yet designed) |
+| `policy.rule.separation_of_duties.waived.pass` | waived; `waived_controls` recorded in package — not yet designed |
+| `policy.rule.cost_caps.pass` | `CORE-P5401` — `a_cost_over_the_cap_without_confirmation_is_refused`; a confirmed over-cap selection runs — `a_cost_over_the_cap_with_confirmation_runs`; verifier `test_cost_over_the_cap_*` |
+| `policy.selection.every-candidate-decided.pass` | `CORE-P5602` — `a_candidate_without_a_recorded_decision_is_refused`; verifier `test_undecided_candidate_is_a_mismatch` |
+| `policy.selection.rank-order.pass` | the declared criteria vocabulary is enforced — `a_banned_criterion_is_refused`; the ordering itself is producer-asserted data — the engine verifies the recorded selection, it does not rank |
+| `policy.selection.tie-break.pass` | not applicable by design — tie-break ordering is producer-side data; the engine verifies a recorded selection (ADR-0020) |
+| `policy.selection.transparent-cost.pass` | `cost_estimate`/`cost_confirmed_by` recorded on the selection — `a_cost_over_the_cap_with_confirmation_runs`, `a_cost_over_the_cap_without_confirmation_is_refused` |
+| `policy.selection.hidden-margin.fail` | `CORE-P5601` — `a_banned_criterion_is_refused`; verifier `test_banned_criterion_is_a_mismatch` |
+| `policy.selection.no-eligible.fail` | `CORE-P5101` — `a_selection_with_no_eligible_candidate_is_refused`; verifier `test_no_winner_is_a_mismatch` |
+| `policy.selection.excluded-by-constraint.pass` | `CORE-P5201` notice — `a_candidate_excluded_by_a_contract_constraint_carries_a_notice_and_runs` |
+| `policy.explainability.pass` | decision reasons carry `rule_id` + fact — enforced structurally via `CORE-P5602`, `a_candidate_without_a_recorded_decision_is_refused` |
+| `policy.selection.record-consistency.fail` | `CORE-P5102`/`CORE-P5103` — `a_selection_naming_a_different_capability_is_refused`, `a_selection_describing_a_different_registry_snapshot_is_refused`, `an_active_policy_without_a_selection_record_is_refused` |
 
 ### lifecycle/ (SC-9)
 

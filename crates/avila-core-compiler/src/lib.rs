@@ -14,6 +14,7 @@ mod diagnostic;
 mod document;
 mod qualification;
 mod render;
+mod selection;
 
 pub use campaign::{
     AdmissionReason, AdmissionRecord, AdmissionState, ArtifactIdentity, CAMPAIGN_NOTICE,
@@ -46,16 +47,17 @@ pub use diagnostic::{
 };
 pub use document::{
     AuthoredBinding, BasisKind, BoundSide, COMPILE_REPORT_SCHEMA_VERSION,
-    COMPILED_CONTRACT_SCHEMA_VERSION, CONTRACT_SCHEMA_VERSION, CapabilityTypeDefinition,
-    CategoricalPredicate, CategoricalRequirementSource, ClaimModelDeclaration, Comparison,
-    ContractInput, ContractSource, ContractStatus, DeterminismClass, ExactBound,
-    ExecutionFactorDefinition, ExecutionPolicy, ImmutablePolicyRef, IndependenceRequirement,
-    InputSlotDefinition, IntegerBound, KindRecord, OutputSlotDefinition, ParameterDefinition,
-    ParameterType, PurposeDefinition, QuantityBound, QuantityValue, REGISTRY_SCHEMA_VERSION,
-    RegistrySnapshot, ReproducibilityBinding, ReproducibilityDeclaration, RequirementBasis,
-    RequirementSource, ReviewDeclaration, ReviewDisposition, ReviewIndependence, ReviewParty,
-    ReviewPolicyBinding, ReviewerRole, RoleDefinition, SeparationLevel, SourceRef, TypedQuantity,
-    UnitRecord, VersionedRef, WorkflowStep, current_profile_contract,
+    COMPILED_CONTRACT_SCHEMA_VERSION, CONTRACT_SCHEMA_VERSION, CapabilityMaturity,
+    CapabilityTypeDefinition, CategoricalPredicate, CategoricalRequirementSource,
+    ClaimModelDeclaration, Comparison, ContractInput, ContractSource, ContractStatus,
+    DeterminismClass, ExactBound, ExecutionFactorDefinition, ExecutionPolicy, ImmutablePolicyRef,
+    IndependenceRequirement, InputSlotDefinition, IntegerBound, KindRecord, OutputSlotDefinition,
+    ParameterDefinition, ParameterType, PolicyCostCap, PurposeDefinition, QuantityBound,
+    QuantityValue, REGISTRY_SCHEMA_VERSION, RegistrySnapshot, ReproducibilityBinding,
+    ReproducibilityDeclaration, RequirementBasis, RequirementSource, ReviewDeclaration,
+    ReviewDisposition, ReviewIndependence, ReviewParty, ReviewPolicyBinding, ReviewerRole,
+    RoleDefinition, SeparationLevel, SourceRef, TypedQuantity, UnitRecord, VersionedRef,
+    WorkflowStep, current_profile_contract,
 };
 pub use qualification::{
     ClaimQualification, EnvelopeAssessment, EnvelopeState, EnvelopeTerm,
@@ -65,4 +67,9 @@ pub use qualification::{
 };
 pub use render::{
     SourceSpan, locate, render_campaign_report, render_compile_report, render_findings,
+};
+pub use selection::{
+    BANNED_CRITERIA, CandidateDecision, CandidateReason, CandidateTriple, CapabilitySelection,
+    CostEstimate, LEGITIMATE_CRITERIA, RegistrySnapshotRef, SELECTION_SCHEMA_VERSION,
+    SelectionCandidate, SelfPreferenceCheck, StepSelection, parse_selection,
 };

@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/capability-selection/v0.1-draft.schema.json",
+  "title": "Avila Core Capability Selection v0.1 draft",
+  "description": "The organization's recorded decision of which capability implementation serves each workflow step (ADR-0020, SC-8). The engine does not perform selection — it verifies the recorded one: every considered candidate carries a decision and reasons, the criteria applied come from a closed legitimate vocabulary, the selected candidate must be exactly the capability the manifest binds, and the disclosures the contract's execution_policy demands (Avila-provided, self-preference check, cost estimate and confirmation) are present. A refusal stops the run at bind/plan time and never enters a verdict.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_snapshot", "selections"],
+  "properties": {
+    "schema_version": { "const": "avila.core/capability-selection/v0.1-draft" },
+    "registry_snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["registry_id", "revision", "sha256"],
+      "description": "The exact registry snapshot the candidates were discovered against — must equal the package's bound registry document.",
+      "properties": {
+        "registry_id": { "type": "string", "minLength": 1 },
+        "revision": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    },
+    "query": {
+      "type": "string",
+      "default": "",
+      "description": "How candidates were found — data, never interpreted."
+    },
+    "selections": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/stepSelection" }
+    }
+  },
+  "$defs": {
+    "nonemptyString": { "type": "string", "minLength": 1 },
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "versionedRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "major"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonemptyString" },
+        "major": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "stepSelection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["step_id", "candidates"],
+      "properties": {
+        "step_id": { "$ref": "#/$defs/nonemptyString" },
+        "candidates": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Every candidate considered; at most one carries decision `selected`, and none may lack a recorded decision (SC-8.6).",
+          "items": { "$ref": "#/$defs/candidate" }
+        },
+        "criteria": {
+          "type": "array",
+          "default": [],
+          "description": "The ordered criteria applied — closed vocabulary: cost, time, locality, technical, diversity, preference. provider_payment and avila_margin may never appear (CORE-P5601).",
+          "items": { "type": "string" }
+        },
+        "avila_provided": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the selected implementation is Avila-provided (SC-8.7)."
+        },
+        "self_preference_check": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["check_id", "justification"],
+          "description": "The self-preference check applied — required when avila_provided and execution_policy.forbid_self_preference is declared (CORE-P5501).",
+          "properties": {
+            "check_id": { "$ref": "#/$defs/nonemptyString" },
+            "justification": { "type": "string" }
+          }
+        },
+        "cost_estimate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value", "currency"],
+          "description": "The recorded cost estimate for the selected candidate — required when the contract declares a cost_cap so the cap can be checked (CORE-P5401).",
+          "properties": {
+            "value": {
+              "type": "string",
+              "pattern": "^(?:(?:0|-?[1-9][0-9]*)(?:\\.[0-9]*[1-9])?|-?[1-9][0-9]*/[1-9][0-9]*)$",
+              "description": "Exact-number string in `currency`."
+            },
+            "currency": { "$ref": "#/$defs/nonemptyString" }
+          }
+        },
+        "cost_confirmed_by": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Who confirmed a cost above the cap — the recorded human datum."
+        }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability_type",
+        "capability_id",
+        "adapter",
+        "executable_sha256"
+      ],
+      "description": "One considered implementation: the same identity the manifest binds — capability type, capability id, adapter, and executable digest.",
+      "properties": {
+        "capability_type": { "$ref": "#/$defs/versionedRef" },
+        "capability_id": { "$ref": "#/$defs/nonemptyString" },
+        "adapter": { "$ref": "#/$defs/nonemptyString" },
+        "executable_sha256": { "$ref": "#/$defs/sha256" },
+        "decision": {
+          "type": "string",
+          "enum": ["selected", "excluded", "inadmissible"],
+          "description": "selected for at most one candidate; excluded for one ruled out by a stated reason; inadmissible for one that fails policy."
+        },
+        "reasons": {
+          "type": "array",
+          "default": [],
+          "description": "Why this decision — each reason carries a rule id and a fact. An empty list is a CORE-P5602 refusal.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["rule_id", "detail"],
+            "properties": {
+              "rule_id": { "$ref": "#/$defs/nonemptyString" },
+              "detail": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

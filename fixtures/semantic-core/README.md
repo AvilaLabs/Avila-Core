@@ -210,7 +210,7 @@ canonically.
 | `numerics.json-int.pass` | `3` as JSON number for `mesh_refinement_levels` — exercised by `json.integer-accepted` |
 | `numerics.nan-inf.fail` | `"NaN"`, `"Infinity"` → `CORE-S1102` — exercised by `json.nan-refused` and `json.infinity-refused` |
 | `numerics.display-rounding.pass` | presentation changes, canonical value and verdict do not — exercised by `display_rounding.does-not-change-verdict` |
-| `numerics.decision-rounding-without-capability.fail` | outcome-changing rounding must be a typed, qualified capability |
+| `numerics.decision-rounding-without-capability.fail` | outcome-changing rounding must be a typed, qualified capability — kernel comparisons are exact (`display_rounding.does-not-change-verdict` pins the no-rounding half); the fail fixture needs a contract surface that could express rounding-in-verdict, which does not exist |
 | `numerics.rational-factor.pass` | `"1/3600000000"` parsed and reduced — exercised by `rational.canonical` |
 | `numerics.rational-noncanonical.fail` | reducible fraction, negative denominator, leading plus/zeros, zero denominator — exercised by `rational.reducible-rejected` and `rational.negative-denominator-rejected` |
 | `numerics.decimal-exponent-normalizes.pass` | authored exponent lowers to one canonical plain decimal — exercised by `decimal.exponent-authored-lowering` |
@@ -224,7 +224,7 @@ canonically.
 | `uncertainty.reduce.standard_uncertainty.fail` | `CORE-T2203` irreducible; repair names `core.uncertainty.expand@1` — exercised by `types.R3.irreducible.fail` |
 | `uncertainty.reduce.samples.fail` | `CORE-T2203` — same check as `types.R3.irreducible.fail` |
 | `uncertainty.coverage-out-of-range.fail` | coverage `"1.2"` → `CORE-S1102` — exercised by `types.R3.coverage-out-of-range.fail` |
-| `uncertainty.numerical-error-separate.pass` | receipt components recorded, not combined by kernel |
+| `uncertainty.numerical-error-separate.pass` | receipt components recorded, not combined by kernel — the receipt model carries no representation/numerical-error component fields (ADR-0006 clause 9 disclosure is unimplemented) |
 
 ### roles/ (SC-4)
 
@@ -232,10 +232,10 @@ canonically.
 | --- | --- |
 | `roles.nominal-identity.fail` | same kind, different role id → `CORE-T2101` — exercised by `types.R2.role-mismatch.fail` |
 | `roles.major-version.fail` | `role@2` offered to `role@1` slot → `CORE-T2101` — the resolution half is exercised by `defect.contract.role-major-version` (input references `role@2` absent from the registry → `CORE-R3101`); the binding-level T2101 variant needs a registry carrying both majors |
-| `roles.minor-version.pass` | `role@1` with extra optional attribute accepted |
+| `roles.minor-version.pass` | `role@1` with extra optional attribute accepted — `VersionedRef` carries `major` only; a minor-version compatibility model does not exist |
 | `roles.validator-required.fail` | role without validator → `CORE-R3501` — exercised by `defect.registry.missing-validator` |
-| `roles.attribute-undeclared-in-predicate.fail` | predicate references undeclared attribute → structural finding before evaluation |
-| `roles.cardinality-slot-scoped.pass` | two aggregation instances may carry the same role without creating a global duplicate |
+| `roles.attribute-undeclared-in-predicate.fail` | predicate references undeclared attribute → structural finding before evaluation — roles declare no attribute vocabulary, so there is nothing to check the predicate against |
+| `roles.cardinality-slot-scoped.pass` | two inputs carrying the same role (`actinv-decay-primary`/`actinv-decay-fallback` on `actinv.decay-data`) are distinct admitted records, never a global duplicate — `case_000_is_reproducible_and_technically_evaluated`; predicate addressing stays slot-scoped — `inputs_carrying_the_same_role_are_addressed_by_slot` |
 
 ### types/ (SC-5, SC-6)
 
@@ -405,7 +405,7 @@ canonically.
 | `verdict.equal.within/outside/partial` | vectors |
 | `verdict.equal.no-tolerance.fail` | `CORE-T2104`; the compile-time half is covered by `types.R6.equal-no-tolerance.fail` |
 | `verdict.display-rounding-does-not-change.pass` | exact canonical values determine the verdict — exercised by `display_rounding.does-not-change-verdict` |
-| `verdict.decision-rounding-capability.pass` | admitted transformation output is compared exactly and raw input remains linked |
+| `verdict.decision-rounding-capability.pass` | admitted transformation output is compared exactly and raw input remains linked — needs the rounding capability type (quantum, mode, authority, raw-input edge), which does not exist |
 | `verdict.unit-scaling-exact.pass` | 100 uSv/h limit vs Sv/s evidence — exercised by `le.bounded.unit-mixed` and `campaign.unit-scaled.pass` |
 | `verdict.aggregation.all.*`, `any.*` | current precedence examples plus planned exhaustive and property-generated truth tables |
 | `verdict.aggregation.max/min.enclosure` | side-aware max/min reduction; a side that cannot be bounded remains absent |
@@ -426,27 +426,27 @@ canonically.
 | --- | --- |
 | `admission.A1..A8.pass` / `admission.A10.pass` | each pass condition runs inside the admitted-claims fixtures — `campaign.le.within.pass` exercises A1–A6, A7-vacuous, A8, and A10; `campaign.require-qualification.qualified-inside.pass` exercises A7-as-required — dedicated per-condition pinpoint fixtures remain |
 | `admission.A1.hash-mismatch.fail` | `CORE-E7101` → quarantined — exercised by `campaign.snapshot-mismatch.rejected` |
-| `admission.A2.foreign-receipt.fail` | `CORE-E7102` |
-| `admission.A2.untrusted-runner-key.fail` | `CORE-E7102` |
+| `admission.A2.foreign-receipt.fail` | a receipt produced for another case is never reused — `ChangeClass::DifferentCase` — exercised by `a_receipt_copied_from_a_donor_package_is_refused` |
+| `admission.A2.untrusted-runner-key.fail` | a receipt signature that does not verify under a listed runner key is never reused — `ChangeClass::ReceiptSignatureInvalid` — exercised by `a_receipt_signed_by_an_unlisted_runner_key_is_not_reused` and `a_hand_forged_receipt_signature_does_not_verify` |
 | `admission.A3.unadmitted-parent.fail` | `CORE-E7103`; cascade to root — exercised by `campaign.parent-missing.not_evaluated` |
 | `admission.A4.package-mismatch.fail` | `CORE-E7001` (the profile has no distinct E7104) — exercised by `campaign.snapshot-mismatch.rejected` |
 | `admission.A5.exit-zero-insufficient.fail` | exit 0 with a declared output missing → `CORE-X2501`; nothing admitted — `a_clean_exit_without_the_declared_output_is_not_evidence` |
 | `admission.A5.timeout/crash/sandbox.fail` | timeout and crash land as `CORE-X2501` — `timeout_kills_the_whole_process_group` and `a_failing_execution_produces_a_failed_receipt_and_no_verdict`; a sandbox boundary is not implemented |
 | `admission.A6.validator-rejected.fail` | `CORE-E7201` — exercised by `campaign.model-not-permitted.quarantine` |
 | `admission.A6.model-mismatch.fail` | declared interval-only slot, emitted unquantified → `CORE-E7201` — exercised by `campaign.model-mismatch.quarantine` |
-| `admission.A7.actual-context.fail` | see `scope.a7-actual-context.fail` |
+| `admission.A7.actual-context.fail` | the envelope evaluates over the actual extracted facts; an out-of-envelope actual context quarantines → `CORE-A4401` — exercised by `a_run_outside_the_envelope_cannot_establish_a_bounded_requirement` (same mechanism as `scope.a7-actual-context.fail`) |
 | `admission.A7.vacuous-recorded.pass` | no qualification required → sub-record says so — every admitted-claims fixture without `require_qualification`, e.g. `campaign.le.within.pass` |
-| `admission.A8.policy-changed.fail` | → invalidated |
-| `admission.A9.pass` | one fixture |
+| `admission.A8.policy-changed.fail` | claims bound to a different compiled snapshot cannot be attributed — `CORE-E7001` — exercised by `campaign.snapshot-mismatch.rejected`; SC-12 deliberately does not invalidate receipts for a requirement/policy edit — verdicts re-derive over the same evidence (`a_requirement_change_reuses_evidence_and_recomputes_verdicts`) |
+| `admission.A9.pass` | needs the presentation-routing record type (a record binding an exact post-campaign dossier); no such document role exists yet |
 | `admission.A10.ancestor-invalidated.fail` | `CORE-E7103` cascade — `campaign.parent-missing.not_evaluated` leaves every descendant `not_evaluated` |
 | `admission.state.quarantine-terminal.pass` | a quarantined record never contributes to a verdict — `campaign.model-not-permitted.quarantine`; re-evaluation rederives the quarantine deterministically |
 | `admission.presentation.present/return/abstain.pass` | closed routing dispositions; technical verdict unchanged — exercised by `campaign.practical-review.pass` and `campaign.practical-review.fail` |
-| `admission.presentation.cannot-edit-artifact.fail` | routing record with mutated dossier bytes is quarantined; artifact and verdict remain unchanged |
-| `admission.non-artifact-records.pass` | snapshot, approvals, selection, preflight, change events are records |
+| `admission.presentation.cannot-edit-artifact.fail` | routing record with mutated dossier bytes is quarantined; artifact and verdict remain unchanged — gated on the presentation-routing record type |
+| `admission.non-artifact-records.pass` | snapshot, approvals, selection, preflight, change events are records — receipts, qualification records, revocations, reuse rules, signatures, and staged-review records exist; approvals, selection, and preflight record types do not |
 | `admission.sub-record-replayable.pass` | the independent verifier replays admission and verdicts from the committed documents alone — `test_every_campaign_fixture` |
 | `admission.undeclared-output-discarded.pass` | `CORE-X6301` note; not evidence — the claims-level half is `campaign.undeclared-slot.rejected` (`CORE-E7002` when a claim names a slot the step does not declare); the artifact-file discard half remains runner-level |
-| `admission.validator-does-not-establish-truth.pass` | obligations report describes the validator's narrow responsibility |
-| `admission.as-of-historical/current.pass` | package snapshot and supplied current revocation material produce distinct labeled results |
+| `admission.validator-does-not-establish-truth.pass` | obligations report describes the validator's narrow responsibility — no obligations report exists yet |
+| `admission.as-of-historical/current.pass` | package snapshot and supplied current revocation material produce distinct labeled results — needs an as-of query surface over supplied policy/qualification/revocation snapshots |
 
 ### change/ (SC-12)
 

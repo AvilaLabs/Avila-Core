@@ -1029,3 +1029,32 @@ Pins: `campaign.qualification-superseded.not_evaluated`,
 `scope.maturity-migration` is marked not applicable — no v0.1 contract
 format ever shipped in-tree, so there is nothing to migrate from.
 fixtures-check reads 94 covered / 125 named / 18 unbounded / 62 absent.
+
+### Admission audit: crediting what is live, naming what is gated — 2026-09-18
+
+The `admission/` family was audited row by row against runner and verifier
+behavior. A2's halves were already live and now carry direct pins:
+`a_receipt_copied_from_a_donor_package_is_refused` (a foreign receipt fails
+`ChangeClass::DifferentCase` — the invocation-matches-bound-plan half) and the
+new `a_receipt_signed_by_an_unlisted_runner_key_is_not_reused` plus
+`a_hand_forged_receipt_signature_does_not_verify` (the trusted-runner-key half,
+`ChangeClass::ReceiptSignatureInvalid`). A7's actual-context half credits
+`a_run_outside_the_envelope_cannot_establish_a_bounded_requirement`. A8 splits
+honestly: claims bound to a different compiled snapshot cannot be attributed
+(`campaign.snapshot-mismatch.rejected`, `CORE-E7001`) while SC-12 deliberately
+does not invalidate receipts for a requirement/policy edit — verdicts
+re-derive over the same evidence
+(`a_requirement_change_reuses_evidence_and_recomputes_verdicts`).
+`roles.cardinality-slot-scoped` credits `case_000`'s same-role input pair plus
+`inputs_carrying_the_same_role_are_addressed_by_slot`.
+
+Everything still absent in the family is gated on machinery that does not
+exist and is now named in the README rows: the presentation-routing record
+type (A9, `presentation.cannot-edit-artifact`), approvals/selection/preflight
+record types (`non-artifact-records`), an obligations report
+(`validator-does-not-establish-truth`), an as-of query surface
+(`as-of-historical`/`current`), a role attribute vocabulary and minor-version
+model (`roles.*`), the rounding capability type (`decision-rounding`),
+receipt numerical-error components (`uncertainty.numerical-error-separate`),
+and an input-metadata contract field (`change.input_metadata.non-dependence`).
+fixtures-check reads 94 covered / 131 named / 18 unbounded / 56 absent.

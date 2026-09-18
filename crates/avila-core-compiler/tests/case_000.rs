@@ -39,6 +39,32 @@ fn case_000_is_reproducible_and_technically_evaluated() {
         "every frozen attestation and claim must remain admitted"
     );
 
+    // Cardinality is scoped to the named slot, not the role:
+    // `actinv-decay-primary` and `actinv-decay-fallback` carry the same role
+    // (`actinv.decay-data`) yet are distinct inputs with distinct admitted
+    // records — the repeated role is no global duplicate.
+    let contract: Value = serde_json::from_slice(&contract).unwrap();
+    let role_of = |slot: &str| {
+        contract["inputs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|input| input["input_id"] == json!(slot))
+            .unwrap()["role"]["id"]
+            .clone()
+    };
+    assert_eq!(role_of("actinv-decay-primary"), json!("actinv.decay-data"));
+    assert_eq!(role_of("actinv-decay-fallback"), json!("actinv.decay-data"));
+    for slot in ["actinv-decay-primary", "actinv-decay-fallback"] {
+        assert!(
+            admissions.iter().any(
+                |record| record["evidence_id"] == json!(format!("input:{slot}"))
+                    && record["state"] == json!("admitted")
+            ),
+            "same-role input `{slot}` must be admitted under its own slot"
+        );
+    }
+
     let verdicts = actual["verdicts"].as_array().unwrap();
     assert_eq!(verdicts.len(), 3);
     assert!(verdicts[..2].iter().all(|record| {

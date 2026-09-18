@@ -4460,6 +4460,48 @@ fn a_receipt_copied_from_a_donor_package_is_refused() {
 }
 
 #[test]
+fn a_receipt_signed_by_an_unlisted_runner_key_is_not_reused() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let requester = signature::generate_keypair(KeyRole::Requester).unwrap();
+    let listed_runner = signature::generate_keypair(KeyRole::Runner).unwrap();
+    let other_runner = signature::generate_keypair(KeyRole::Runner).unwrap();
+
+    // A2's signature half: the receipt's signature document is genuine and
+    // internally consistent — it verifies under `other_runner`'s real key —
+    // but that key is not the runner key the supplied trust root lists for
+    // this case. An untrusted runner's receipt cannot stand for reuse, so
+    // the step reruns rather than adopting it.
+    sign_receipt(&synthetic.case_dir, "classification", &other_runner.seed);
+    sign_manifest(&synthetic.case_dir, &requester.seed);
+    let root = trust_root(&[
+        (&requester, KeyRole::Requester),
+        (&listed_runner, KeyRole::Runner),
+    ]);
+    let trust_root_path = dir.0.join("trust-root.json");
+    write_trust_root(&trust_root_path, &root);
+
+    let mut options = reuse_options(&synthetic, dir.workspace());
+    options.trust_root = Some(trust_root_path);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    let executed = step(&report);
+    assert_ne!(
+        executed.state,
+        StepExecutionState::Reused,
+        "{}",
+        human_summary(&report)
+    );
+    assert!(
+        executed
+            .changes
+            .iter()
+            .any(|change| change.class == ChangeClass::ReceiptSignatureInvalid),
+        "{:?}",
+        executed.changes
+    );
+}
+
+#[test]
 fn a_signature_made_with_an_unlisted_key_is_refused() {
     let dir = TestDir::new();
     let synthetic = blessed(&dir);

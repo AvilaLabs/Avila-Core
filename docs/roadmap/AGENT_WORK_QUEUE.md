@@ -1219,3 +1219,25 @@ unbounded / 38 absent. Still design-gated: role vocabulary and minor-version
 compat, lifecycle records, campaign/authority records, the org-policy
 lattice, input metadata, presentation-routing and obligations records,
 scenarios.
+
+## 2026-09-19 — ADR-0021 drafted: state-transition records and actor attestations
+
+With every spec-ratified row implemented, the remaining absent corpus is
+design-gated machinery. The largest family — campaign/authority
+(`campaign.illegal-transition`, `campaign.step.moved-by-wrong-actor`,
+`campaign.resume.new-run-reuses`, `campaign.human.deadline-escalation`,
+`campaign.amend-in-flight`, the `authority.*` rows) plus the contract
+lifecycle transitions (`lifecycle.submit-*`, `lifecycle.retired-*`) — is
+proposed in `docs/adr/0021-state-transitions-and-attestations.md`:
+an `attestation` record binding a key+role to a digest (the SC-14
+authority primitive, extending `KeyRole` with `policy_owner`), a unified
+`state_transition` record over contract/campaign/step subjects with a
+closed legality table checked mechanically (`completed→running` illegal),
+step states derived from receipts rather than recorded, a `CORE-X6xxx`
+finding family (`X6401` deadline lapse, `X6402` illegal transition,
+`X6403` wrong-role actor, `X6404` resume/reuse disagreement), and
+ADR-0019 amendment linkage superseding live campaigns with cancelled
+in-flight steps keeping receipts. Proposed, not implemented — awaiting
+review before code. Still gated after it: contract templates,
+presentation-routing records, the org-policy lattice, approval/preflight
+records, role vocabulary, input metadata, scenarios, EXP-005.

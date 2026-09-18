@@ -444,7 +444,7 @@ canonically.
 | `admission.state.quarantine-terminal.pass` | a quarantined record never contributes to a verdict — `campaign.model-not-permitted.quarantine`; re-evaluation rederives the quarantine deterministically |
 | `admission.presentation.present/return/abstain.pass` | closed routing dispositions; technical verdict unchanged — exercised by `campaign.practical-review.pass` and `campaign.practical-review.fail` |
 | `admission.presentation.cannot-edit-artifact.fail` | routing record with mutated dossier bytes is quarantined; artifact and verdict remain unchanged — gated on the presentation-routing record type |
-| `admission.non-artifact-records.pass` | snapshot, approvals, selection, preflight, change events are records — receipts, qualification records, revocations, reuse rules, signatures, and staged-review records exist; approvals, selection, and preflight record types do not |
+| `admission.non-artifact-records.pass` | snapshot, approvals, selection, preflight, change events are records — receipts, qualification records, revocations, reuse rules, signatures, staged-review records, and provider-selection records exist; approval and preflight record types do not |
 | `admission.sub-record-replayable.pass` | the independent verifier replays admission and verdicts from the committed documents alone — `test_every_campaign_fixture` |
 | `admission.undeclared-output-discarded.pass` | `CORE-X6301` note; not evidence — the claims-level half is `campaign.undeclared-slot.rejected` (`CORE-E7002` when a claim names a slot the step does not declare); the artifact-file discard half remains runner-level |
 | `admission.validator-does-not-establish-truth.pass` | obligations report describes the validator's narrow responsibility — no obligations report exists yet |
@@ -511,7 +511,7 @@ canonically.
 | --- | --- |
 | `scenarios.coverage-crosses-limit` | INCONCLUSIVE `bounded.le.crossing`; next actions with owners — the verdict half is exercised by `le.bounded.crossing` (and `campaign.le.crossing.inconclusive` end-to-end); the owner-named next-actions half remains |
 | `scenarios.qualification-narrowed` | exact invalidated set; transport reused; activation has no admissible candidate |
-| `scenarios.pinned-implementation` | Campaign IR has constraint only; Bound Plan records the excluded candidate as `excluded_by_contract_constraint` |
+| `scenarios.pinned-implementation` | Campaign IR has constraint only; the excluded candidate is recorded as a `CORE-P5201` notice — `a_candidate_excluded_by_a_contract_constraint_carries_a_notice_and_runs`; the persisted Bound Plan record remains |
 | `scenarios.review-rejects-upstream` | descendants invalidated; nothing reused; owners named |
 | `scenarios.verify-without-evaluator` | the independent Python verifier replays every committed case and signature without avila-core — `test_every_campaign_fixture`, `test_every_committed_receipt_invocation_identity_reproduces`, `test_every_committed_signature_document_verifies`; the obligations report's four-category rendering remains |
 | `scenarios.bike-hook` | three findings → plan with rejected Elmer → INCONCLUSIVE → geometry change → memo reuse of `fdm_properties` → PASS → obligations report — the verdict half is exercised by `le.bounded.bike-hook.first-run` and `le.bounded.bike-hook.second-run`; the memo and obligations halves remain |

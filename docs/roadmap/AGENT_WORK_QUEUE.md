@@ -1058,3 +1058,36 @@ model (`roles.*`), the rounding capability type (`decision-rounding`),
 receipt numerical-error components (`uncertainty.numerical-error-separate`),
 and an input-metadata contract field (`change.input_metadata.non-dependence`).
 fixtures-check reads 94 covered / 131 named / 18 unbounded / 56 absent.
+
+### CASE-002 re-blessed; as-of historical verification — 2026-09-18
+
+CASE-002's committed claims predated ADR-0018 and carried no persisted
+applicability context, so the independent verifier could not re-derive any
+of its nine qualification assessments. The claims were regenerated through
+the normal runner path with every declared source root supplied (the
+pinned ACTINV executable resolved in `workspaces/case-002-bless`), the
+campaign report re-derived with only `claims_sha256` identity propagation
+drifting, document digests re-pinned, and the manifest re-signed under the
+same requester key. `run` now reports `claims match: True` with all 11
+claims reused and the independent verifier reports every qualification
+check `verified`; the debt-pinning test is removed and CASE-002 rejoined
+`TestQualificationEnvelopeConsistency.CASES`.
+
+Historical verification (ADR-0006's supplied-snapshot semantics) landed in
+the independent verifier: `verify-case --as-of INSTANT` emits one
+informational `as_of` line per qualified claim — its recorded state beside
+the labeled state at the supplied instant under the supplied material, in
+campaign-refusal precedence (`absent` > `revoked` > `superseded` >
+`expired` > the envelope its recorded facts imply); an unrecognized owner
+under the supplied policy is a suffix, not the label, because recognition
+is a per-requirement gate. `--as-of-material DIR` supplies the snapshot as
+another case package whose bound records, revocations, signatures, and
+contract policy stand in for "what was known then" — the honest answer to
+"was it revoked at T", since revocations are timeless package assertions.
+A new `as_of` check status (`[ASOF]`) is informational and never fails a
+report; the report schema is `independent-verifier-report/v2`. Pinned by
+`TestAsOfVerification` — recorded states reproduce at the recorded instant
+on CASE-002, and a supplied snapshot revoking the transport record labels
+exactly the transport claims `revoked`. `admission.as-of-historical` and
+`admission.current` credit it. fixtures-check reads 94 covered / 133 named
+/ 18 unbounded / 54 absent.

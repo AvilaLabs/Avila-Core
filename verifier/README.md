@@ -93,11 +93,16 @@ agreement against); in short:
    **not** establish, by name: that the adapter extracted the facts
    correctly from the bytes — the context remains the producer's
    assertion about verified inputs, not independent proof of its truth.
-   CASE-002's committed claims are in the pre-ADR-0018 shape (its pinned
-   ACTINV executable no longer resolves on this machine, so its claims
-   cannot be regenerated); every one of its qualified claims' missing
-   context is reported as a mismatch until the case is deliberately
-   re-pinned and re-blessed.
+   With `--as-of INSTANT` (ADR-0006's supplied-snapshot historical
+   verification), each qualified claim additionally earns an
+   informational `as_of` line: its recorded state beside the labeled
+   state at the supplied instant under the supplied material — `absent`,
+   `revoked`, `superseded`, `expired`, or the envelope its recorded
+   facts imply, in campaign-refusal precedence. `--as-of-material DIR`
+   supplies the snapshot as another case package's bound records,
+   revocations, signatures, and contract policy; without it the case's
+   own bound set is the material. A divergence is a datum, never a
+   failure.
 10. **Requirement-set coverage** (S-024) — a case package may bind one
     `requirement_set` document and declare in its manifest which contract
     requirements cover each set entry and, for the rest, a reason and an
@@ -143,6 +148,18 @@ python3 avila_core_verify.py verify-case ../examples/cases/case-003-thermal-spre
 
 # Same, machine-readable.
 python3 avila_core_verify.py verify-case ../examples/cases/case-000-actinv-aftermatter --json
+
+# Same, plus a historical-verification pass (ADR-0006): one informational
+# [ASOF] line per qualified claim naming its recorded state beside the
+# labeled state at the supplied instant under the bound material.
+python3 avila_core_verify.py verify-case ../examples/cases/case-002-coupled-shield \
+  --as-of 2026-09-03T02:17:52Z
+
+# Same, against a supplied material snapshot: another case package whose
+# bound records, revocations, signatures, and contract policy stand in for
+# "what was known then" (requires --as-of).
+python3 avila_core_verify.py verify-case ../examples/cases/case-002-coupled-shield \
+  --as-of 2026-09-18 --as-of-material ../snapshots/case-002-before-revocation
 
 # Run this file's own fixture-vector proofs as a Report (same CLI surface).
 python3 avila_core_verify.py self-test

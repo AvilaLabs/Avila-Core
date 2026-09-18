@@ -75,6 +75,13 @@ avila-core export CASE --source-root name=DIR --out BUNDLE_DIR
 avila-core run BUNDLE_DIR --plan --source-root name=BUNDLE_DIR/roots/name
 python3 verifier/avila_core_verify.py verify-case BUNDLE_DIR \
     --source-root name=BUNDLE_DIR/roots/name
+
+# Historical verification (ADR-0006) — per qualified claim, an
+# informational [ASOF] line naming its recorded state beside the labeled
+# state at the supplied instant; --as-of-material DIR supplies a snapshot
+# as another package's bound records, revocations, and policy:
+python3 verifier/avila_core_verify.py verify-case BUNDLE_DIR \
+    --as-of YYYY-MM-DDTHH:MM:SSZ [--as-of-material SNAPSHOT_DIR]
 ```
 
 Add `--json` to any query for machine-readable output. `inspect` reads a saved

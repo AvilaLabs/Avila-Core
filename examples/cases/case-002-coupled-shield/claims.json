@@ -39,6 +39,91 @@
         "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
       },
       "qualification": {
+        "context": {
+          "facts": {
+            "inputs.count": {
+              "source": {
+                "class": "runner_measured",
+                "identity": "runner:local",
+                "receipt": "plan:sha256:d96dc148ebb760da4c90ff10bfe11143ea86909d6a57be3741df8985907bd50a",
+                "validator": "avila-labs.shielding/screen@1"
+              },
+              "value": 4
+            },
+            "slab.layer_count": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80",
+                "receipt": "plan:sha256:d96dc148ebb760da4c90ff10bfe11143ea86909d6a57be3741df8985907bd50a",
+                "validator": "avila-labs.shielding/screen@1"
+              },
+              "value": 2
+            },
+            "slab.total_thickness": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80",
+                "receipt": "plan:sha256:d96dc148ebb760da4c90ff10bfe11143ea86909d6a57be3741df8985907bd50a",
+                "validator": "avila-labs.shielding/screen@1"
+              },
+              "value": {
+                "unit": "cm",
+                "value": "85"
+              }
+            },
+            "source.energy": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+                "receipt": "plan:sha256:d96dc148ebb760da4c90ff10bfe11143ea86909d6a57be3741df8985907bd50a",
+                "validator": "avila-labs.shielding/screen@1"
+              },
+              "value": {
+                "unit": "MeV",
+                "value": "14.1"
+              }
+            },
+            "source.geometry": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+                "receipt": "plan:sha256:d96dc148ebb760da4c90ff10bfe11143ea86909d6a57be3741df8985907bd50a",
+                "validator": "avila-labs.shielding/screen@1"
+              },
+              "value": "plane"
+            }
+          },
+          "inputs": {
+            "candidate": {
+              "attributes": {
+                "layer.1.material": "polyethylene",
+                "layer.2.material": "lead",
+                "layer.3.material": "none",
+                "media_type": "application/vnd.avila.shield-candidate+json",
+                "sha256": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80"
+              }
+            },
+            "materials": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-materials+json",
+                "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb"
+              }
+            },
+            "script": {
+              "attributes": {
+                "media_type": "text/x-python",
+                "sha256": "sha256:5fd0bd9415ec19e7f15d5bd167976d5852b6984efeea7443aa6323d13cd0253d"
+              }
+            },
+            "source": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-source+json",
+                "sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b"
+              }
+            }
+          }
+        },
+        "owner": "avila-labs.shielding",
         "qualification_id": "avila-labs.shielding/screen-arithmetic",
         "revision": 1,
         "sha256": "sha256:add3f5ff6a00f1cdb3ef95835cfaed4a74ea2f09646a535d13d936df831170d5",
@@ -87,6 +172,91 @@
         "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
       },
       "qualification": {
+        "context": {
+          "facts": {
+            "inputs.count": {
+              "source": {
+                "class": "runner_measured",
+                "identity": "runner:local",
+                "receipt": "plan:sha256:d96dc148ebb760da4c90ff10bfe11143ea86909d6a57be3741df8985907bd50a",
+                "validator": "avila-labs.shielding/screen@1"
+              },
+              "value": 4
+            },
+            "slab.layer_count": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80",
+                "receipt": "plan:sha256:d96dc148ebb760da4c90ff10bfe11143ea86909d6a57be3741df8985907bd50a",
+                "validator": "avila-labs.shielding/screen@1"
+              },
+              "value": 2
+            },
+            "slab.total_thickness": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80",
+                "receipt": "plan:sha256:d96dc148ebb760da4c90ff10bfe11143ea86909d6a57be3741df8985907bd50a",
+                "validator": "avila-labs.shielding/screen@1"
+              },
+              "value": {
+                "unit": "cm",
+                "value": "85"
+              }
+            },
+            "source.energy": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+                "receipt": "plan:sha256:d96dc148ebb760da4c90ff10bfe11143ea86909d6a57be3741df8985907bd50a",
+                "validator": "avila-labs.shielding/screen@1"
+              },
+              "value": {
+                "unit": "MeV",
+                "value": "14.1"
+              }
+            },
+            "source.geometry": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+                "receipt": "plan:sha256:d96dc148ebb760da4c90ff10bfe11143ea86909d6a57be3741df8985907bd50a",
+                "validator": "avila-labs.shielding/screen@1"
+              },
+              "value": "plane"
+            }
+          },
+          "inputs": {
+            "candidate": {
+              "attributes": {
+                "layer.1.material": "polyethylene",
+                "layer.2.material": "lead",
+                "layer.3.material": "none",
+                "media_type": "application/vnd.avila.shield-candidate+json",
+                "sha256": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80"
+              }
+            },
+            "materials": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-materials+json",
+                "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb"
+              }
+            },
+            "script": {
+              "attributes": {
+                "media_type": "text/x-python",
+                "sha256": "sha256:5fd0bd9415ec19e7f15d5bd167976d5852b6984efeea7443aa6323d13cd0253d"
+              }
+            },
+            "source": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-source+json",
+                "sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b"
+              }
+            }
+          }
+        },
+        "owner": "avila-labs.shielding",
         "qualification_id": "avila-labs.shielding/screen-arithmetic",
         "revision": 1,
         "sha256": "sha256:add3f5ff6a00f1cdb3ef95835cfaed4a74ea2f09646a535d13d936df831170d5",
@@ -160,6 +330,103 @@
         "sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
       },
       "qualification": {
+        "context": {
+          "facts": {
+            "inputs.count": {
+              "source": {
+                "class": "runner_measured",
+                "identity": "runner:local",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": 6
+            },
+            "slab.layer_count": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": 2
+            },
+            "slab.total_thickness": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": {
+                "unit": "cm",
+                "value": "85"
+              }
+            },
+            "source.energy": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": {
+                "unit": "MeV",
+                "value": "14.1"
+              }
+            },
+            "source.geometry": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": "plane"
+            }
+          },
+          "inputs": {
+            "candidate": {
+              "attributes": {
+                "layer.1.material": "polyethylene",
+                "layer.2.material": "lead",
+                "layer.3.material": "none",
+                "media_type": "application/vnd.avila.shield-candidate+json",
+                "sha256": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80"
+              }
+            },
+            "cross-section-index": {
+              "attributes": {
+                "media_type": "application/xml",
+                "sha256": "sha256:2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db"
+              }
+            },
+            "groups": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-groups+json",
+                "sha256": "sha256:5d5cc7fbc486339158a6f87fb78ab2ac2d336f0c795dfc725c2d05d101cb94f4"
+              }
+            },
+            "materials": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-materials+json",
+                "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb"
+              }
+            },
+            "script": {
+              "attributes": {
+                "media_type": "text/x-python",
+                "sha256": "sha256:7578e1c101320dd8c811a3cc5958e77d5e490cc21af10385af76b6e845a39fb9"
+              }
+            },
+            "source": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-source+json",
+                "sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b"
+              }
+            }
+          }
+        },
+        "owner": "avila-labs.shielding",
         "qualification_id": "avila-labs.shielding/slab-transport-coupled-openmc",
         "revision": 1,
         "sha256": "sha256:8e27e777b2ddaf7ba22cb85ef09f7fa29aee6ab7911e9ff31ebe87a22c1645f5",
@@ -229,6 +496,103 @@
         "sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
       },
       "qualification": {
+        "context": {
+          "facts": {
+            "inputs.count": {
+              "source": {
+                "class": "runner_measured",
+                "identity": "runner:local",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": 6
+            },
+            "slab.layer_count": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": 2
+            },
+            "slab.total_thickness": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": {
+                "unit": "cm",
+                "value": "85"
+              }
+            },
+            "source.energy": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": {
+                "unit": "MeV",
+                "value": "14.1"
+              }
+            },
+            "source.geometry": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": "plane"
+            }
+          },
+          "inputs": {
+            "candidate": {
+              "attributes": {
+                "layer.1.material": "polyethylene",
+                "layer.2.material": "lead",
+                "layer.3.material": "none",
+                "media_type": "application/vnd.avila.shield-candidate+json",
+                "sha256": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80"
+              }
+            },
+            "cross-section-index": {
+              "attributes": {
+                "media_type": "application/xml",
+                "sha256": "sha256:2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db"
+              }
+            },
+            "groups": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-groups+json",
+                "sha256": "sha256:5d5cc7fbc486339158a6f87fb78ab2ac2d336f0c795dfc725c2d05d101cb94f4"
+              }
+            },
+            "materials": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-materials+json",
+                "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb"
+              }
+            },
+            "script": {
+              "attributes": {
+                "media_type": "text/x-python",
+                "sha256": "sha256:7578e1c101320dd8c811a3cc5958e77d5e490cc21af10385af76b6e845a39fb9"
+              }
+            },
+            "source": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-source+json",
+                "sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b"
+              }
+            }
+          }
+        },
+        "owner": "avila-labs.shielding",
         "qualification_id": "avila-labs.shielding/slab-transport-coupled-openmc",
         "revision": 1,
         "sha256": "sha256:8e27e777b2ddaf7ba22cb85ef09f7fa29aee6ab7911e9ff31ebe87a22c1645f5",
@@ -285,6 +649,103 @@
         "sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
       },
       "qualification": {
+        "context": {
+          "facts": {
+            "inputs.count": {
+              "source": {
+                "class": "runner_measured",
+                "identity": "runner:local",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": 6
+            },
+            "slab.layer_count": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": 2
+            },
+            "slab.total_thickness": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": {
+                "unit": "cm",
+                "value": "85"
+              }
+            },
+            "source.energy": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": {
+                "unit": "MeV",
+                "value": "14.1"
+              }
+            },
+            "source.geometry": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": "plane"
+            }
+          },
+          "inputs": {
+            "candidate": {
+              "attributes": {
+                "layer.1.material": "polyethylene",
+                "layer.2.material": "lead",
+                "layer.3.material": "none",
+                "media_type": "application/vnd.avila.shield-candidate+json",
+                "sha256": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80"
+              }
+            },
+            "cross-section-index": {
+              "attributes": {
+                "media_type": "application/xml",
+                "sha256": "sha256:2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db"
+              }
+            },
+            "groups": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-groups+json",
+                "sha256": "sha256:5d5cc7fbc486339158a6f87fb78ab2ac2d336f0c795dfc725c2d05d101cb94f4"
+              }
+            },
+            "materials": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-materials+json",
+                "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb"
+              }
+            },
+            "script": {
+              "attributes": {
+                "media_type": "text/x-python",
+                "sha256": "sha256:7578e1c101320dd8c811a3cc5958e77d5e490cc21af10385af76b6e845a39fb9"
+              }
+            },
+            "source": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-source+json",
+                "sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b"
+              }
+            }
+          }
+        },
+        "owner": "avila-labs.shielding",
         "qualification_id": "avila-labs.shielding/slab-transport-coupled-openmc",
         "revision": 1,
         "sha256": "sha256:8e27e777b2ddaf7ba22cb85ef09f7fa29aee6ab7911e9ff31ebe87a22c1645f5",
@@ -341,6 +802,103 @@
         "sha256": "sha256:269c86d9d69d286d2dfdd94999c4d65b885ab62f09f78a596dec584d56877cf4"
       },
       "qualification": {
+        "context": {
+          "facts": {
+            "inputs.count": {
+              "source": {
+                "class": "runner_measured",
+                "identity": "runner:local",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": 6
+            },
+            "slab.layer_count": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": 2
+            },
+            "slab.total_thickness": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": {
+                "unit": "cm",
+                "value": "85"
+              }
+            },
+            "source.energy": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": {
+                "unit": "MeV",
+                "value": "14.1"
+              }
+            },
+            "source.geometry": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b",
+                "receipt": "plan:sha256:dd845ddb2b5c1d5796c6ce49e83abc445a36ad73d042fefa5727b0b9433d5859",
+                "validator": "avila-labs.shielding/slab-transport@2"
+              },
+              "value": "plane"
+            }
+          },
+          "inputs": {
+            "candidate": {
+              "attributes": {
+                "layer.1.material": "polyethylene",
+                "layer.2.material": "lead",
+                "layer.3.material": "none",
+                "media_type": "application/vnd.avila.shield-candidate+json",
+                "sha256": "sha256:b75358097468217b496b679017258e61f08f9073b54a70461710e26f44ab6d80"
+              }
+            },
+            "cross-section-index": {
+              "attributes": {
+                "media_type": "application/xml",
+                "sha256": "sha256:2789cb61537a56a14b555ca97f439ed14896bd6db9bfe6460e066db3c96843db"
+              }
+            },
+            "groups": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-groups+json",
+                "sha256": "sha256:5d5cc7fbc486339158a6f87fb78ab2ac2d336f0c795dfc725c2d05d101cb94f4"
+              }
+            },
+            "materials": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-materials+json",
+                "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb"
+              }
+            },
+            "script": {
+              "attributes": {
+                "media_type": "text/x-python",
+                "sha256": "sha256:7578e1c101320dd8c811a3cc5958e77d5e490cc21af10385af76b6e845a39fb9"
+              }
+            },
+            "source": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-source+json",
+                "sha256": "sha256:9f444a138267a772f59118c67c514cf40b0506dc1d2164818e1a12c841d9200b"
+              }
+            }
+          }
+        },
+        "owner": "avila-labs.shielding",
         "qualification_id": "avila-labs.shielding/slab-transport-coupled-openmc",
         "revision": 1,
         "sha256": "sha256:8e27e777b2ddaf7ba22cb85ef09f7fa29aee6ab7911e9ff31ebe87a22c1645f5",
@@ -401,6 +959,112 @@
         "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
       },
       "qualification": {
+        "context": {
+          "facts": {
+            "inputs.count": {
+              "source": {
+                "class": "runner_measured",
+                "identity": "runner:local",
+                "receipt": "plan:sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
+                "validator": "avila-labs.shielding/activation@1"
+              },
+              "value": 9
+            },
+            "schedule.cooling": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03",
+                "receipt": "plan:sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
+                "validator": "avila-labs.shielding/activation@1"
+              },
+              "value": {
+                "unit": "s",
+                "value": "86400"
+              }
+            },
+            "schedule.irradiation": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03",
+                "receipt": "plan:sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
+                "validator": "avila-labs.shielding/activation@1"
+              },
+              "value": {
+                "unit": "s",
+                "value": "2592000"
+              }
+            },
+            "slab.layer_count": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:567999c7d7c6bc4b02aa310603078314125e20cfa9c14eb5a3c08646dfbf66d6",
+                "receipt": "plan:sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
+                "validator": "avila-labs.shielding/activation@1"
+              },
+              "value": 2
+            }
+          },
+          "inputs": {
+            "actinv": {
+              "attributes": {
+                "media_type": "application/x-executable",
+                "sha256": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426"
+              }
+            },
+            "activation-index": {
+              "attributes": {
+                "media_type": "application/json",
+                "sha256": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb"
+              }
+            },
+            "activation-library": {
+              "attributes": {
+                "media_type": "application/vnd.numpy.npz",
+                "sha256": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44"
+              }
+            },
+            "decay-fallback": {
+              "attributes": {
+                "media_type": "application/octet-stream",
+                "sha256": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123"
+              }
+            },
+            "decay-primary": {
+              "attributes": {
+                "media_type": "application/octet-stream",
+                "sha256": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb"
+              }
+            },
+            "materials": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-materials+json",
+                "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb"
+              }
+            },
+            "schedule": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-schedule+json",
+                "sha256": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03"
+              }
+            },
+            "script": {
+              "attributes": {
+                "media_type": "text/x-python",
+                "sha256": "sha256:0ce443ee6b182e7bcc954b64920f4d5554d258851511c3a031b5e15bc51d3fc4"
+              }
+            },
+            "spectra": {
+              "attributes": {
+                "layer.1.material": "polyethylene",
+                "layer.2.material": "lead",
+                "layer.3.material": "none",
+                "media_type": "application/vnd.avila.shield-layer-spectra+json",
+                "sha256": "sha256:567999c7d7c6bc4b02aa310603078314125e20cfa9c14eb5a3c08646dfbf66d6"
+              }
+            }
+          }
+        },
+        "owner": "avila-labs.shielding",
         "qualification_id": "avila-labs.shielding/slab-activation-actinv",
         "revision": 1,
         "sha256": "sha256:e0cce97d7b93b88289550df0ea83750af1e6c94cd9f4250e3fa5efa186b62c64",
@@ -453,6 +1117,112 @@
         "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
       },
       "qualification": {
+        "context": {
+          "facts": {
+            "inputs.count": {
+              "source": {
+                "class": "runner_measured",
+                "identity": "runner:local",
+                "receipt": "plan:sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
+                "validator": "avila-labs.shielding/activation@1"
+              },
+              "value": 9
+            },
+            "schedule.cooling": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03",
+                "receipt": "plan:sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
+                "validator": "avila-labs.shielding/activation@1"
+              },
+              "value": {
+                "unit": "s",
+                "value": "86400"
+              }
+            },
+            "schedule.irradiation": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03",
+                "receipt": "plan:sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
+                "validator": "avila-labs.shielding/activation@1"
+              },
+              "value": {
+                "unit": "s",
+                "value": "2592000"
+              }
+            },
+            "slab.layer_count": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:567999c7d7c6bc4b02aa310603078314125e20cfa9c14eb5a3c08646dfbf66d6",
+                "receipt": "plan:sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
+                "validator": "avila-labs.shielding/activation@1"
+              },
+              "value": 2
+            }
+          },
+          "inputs": {
+            "actinv": {
+              "attributes": {
+                "media_type": "application/x-executable",
+                "sha256": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426"
+              }
+            },
+            "activation-index": {
+              "attributes": {
+                "media_type": "application/json",
+                "sha256": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb"
+              }
+            },
+            "activation-library": {
+              "attributes": {
+                "media_type": "application/vnd.numpy.npz",
+                "sha256": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44"
+              }
+            },
+            "decay-fallback": {
+              "attributes": {
+                "media_type": "application/octet-stream",
+                "sha256": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123"
+              }
+            },
+            "decay-primary": {
+              "attributes": {
+                "media_type": "application/octet-stream",
+                "sha256": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb"
+              }
+            },
+            "materials": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-materials+json",
+                "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb"
+              }
+            },
+            "schedule": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-schedule+json",
+                "sha256": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03"
+              }
+            },
+            "script": {
+              "attributes": {
+                "media_type": "text/x-python",
+                "sha256": "sha256:0ce443ee6b182e7bcc954b64920f4d5554d258851511c3a031b5e15bc51d3fc4"
+              }
+            },
+            "spectra": {
+              "attributes": {
+                "layer.1.material": "polyethylene",
+                "layer.2.material": "lead",
+                "layer.3.material": "none",
+                "media_type": "application/vnd.avila.shield-layer-spectra+json",
+                "sha256": "sha256:567999c7d7c6bc4b02aa310603078314125e20cfa9c14eb5a3c08646dfbf66d6"
+              }
+            }
+          }
+        },
+        "owner": "avila-labs.shielding",
         "qualification_id": "avila-labs.shielding/slab-activation-actinv",
         "revision": 1,
         "sha256": "sha256:e0cce97d7b93b88289550df0ea83750af1e6c94cd9f4250e3fa5efa186b62c64",
@@ -501,6 +1271,112 @@
         "sha256": "sha256:b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
       },
       "qualification": {
+        "context": {
+          "facts": {
+            "inputs.count": {
+              "source": {
+                "class": "runner_measured",
+                "identity": "runner:local",
+                "receipt": "plan:sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
+                "validator": "avila-labs.shielding/activation@1"
+              },
+              "value": 9
+            },
+            "schedule.cooling": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03",
+                "receipt": "plan:sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
+                "validator": "avila-labs.shielding/activation@1"
+              },
+              "value": {
+                "unit": "s",
+                "value": "86400"
+              }
+            },
+            "schedule.irradiation": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03",
+                "receipt": "plan:sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
+                "validator": "avila-labs.shielding/activation@1"
+              },
+              "value": {
+                "unit": "s",
+                "value": "2592000"
+              }
+            },
+            "slab.layer_count": {
+              "source": {
+                "class": "validated_input",
+                "identity": "sha256:567999c7d7c6bc4b02aa310603078314125e20cfa9c14eb5a3c08646dfbf66d6",
+                "receipt": "plan:sha256:0c2987f72599d0748bdbedabd1094b6cb5c523db8385da2ddb36fbe30ddcb8a8",
+                "validator": "avila-labs.shielding/activation@1"
+              },
+              "value": 2
+            }
+          },
+          "inputs": {
+            "actinv": {
+              "attributes": {
+                "media_type": "application/x-executable",
+                "sha256": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426"
+              }
+            },
+            "activation-index": {
+              "attributes": {
+                "media_type": "application/json",
+                "sha256": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb"
+              }
+            },
+            "activation-library": {
+              "attributes": {
+                "media_type": "application/vnd.numpy.npz",
+                "sha256": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44"
+              }
+            },
+            "decay-fallback": {
+              "attributes": {
+                "media_type": "application/octet-stream",
+                "sha256": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123"
+              }
+            },
+            "decay-primary": {
+              "attributes": {
+                "media_type": "application/octet-stream",
+                "sha256": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb"
+              }
+            },
+            "materials": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-materials+json",
+                "sha256": "sha256:4011982e46ebfda8a098b1120ef8cabcbf259a28b7bed466267b99cf78f0ebeb"
+              }
+            },
+            "schedule": {
+              "attributes": {
+                "media_type": "application/vnd.avila.shield-schedule+json",
+                "sha256": "sha256:f779608a1d6b844c1639a3357d106294e7a3cd49d45ff7289478f614aa7b2a03"
+              }
+            },
+            "script": {
+              "attributes": {
+                "media_type": "text/x-python",
+                "sha256": "sha256:0ce443ee6b182e7bcc954b64920f4d5554d258851511c3a031b5e15bc51d3fc4"
+              }
+            },
+            "spectra": {
+              "attributes": {
+                "layer.1.material": "polyethylene",
+                "layer.2.material": "lead",
+                "layer.3.material": "none",
+                "media_type": "application/vnd.avila.shield-layer-spectra+json",
+                "sha256": "sha256:567999c7d7c6bc4b02aa310603078314125e20cfa9c14eb5a3c08646dfbf66d6"
+              }
+            }
+          }
+        },
+        "owner": "avila-labs.shielding",
         "qualification_id": "avila-labs.shielding/slab-activation-actinv",
         "revision": 1,
         "sha256": "sha256:e0cce97d7b93b88289550df0ea83750af1e6c94cd9f4250e3fa5efa186b62c64",

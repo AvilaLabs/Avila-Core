@@ -446,7 +446,8 @@ canonically.
 | `admission.sub-record-replayable.pass` | the independent verifier replays admission and verdicts from the committed documents alone — `test_every_campaign_fixture` |
 | `admission.undeclared-output-discarded.pass` | `CORE-X6301` note; not evidence — the claims-level half is `campaign.undeclared-slot.rejected` (`CORE-E7002` when a claim names a slot the step does not declare); the artifact-file discard half remains runner-level |
 | `admission.validator-does-not-establish-truth.pass` | obligations report describes the validator's narrow responsibility — no obligations report exists yet |
-| `admission.as-of-historical/current.pass` | package snapshot and supplied current revocation material produce distinct labeled results — needs an as-of query surface over supplied policy/qualification/revocation snapshots |
+| `admission.as-of-historical.pass` | the same material verified as_of its recorded timestamp returns the recorded states — `avila_core_verify.py verify-case --as-of <instant>`; `test_as_of_lines_emit_alongside_recorded_checks` reproduces all 9 recorded states on CASE-002 |
+| `admission.current.pass` | the same material verified under a supplied snapshot may return a distinct labeled result — `--as-of-material <package dir>` supplies the ADR-0006 policy/qualification/revocation snapshot; `test_supplied_material_snapshot_labels_the_revoked_record` labels transport claims `revoked` while siblings stay `inside` |
 
 ### change/ (SC-12)
 

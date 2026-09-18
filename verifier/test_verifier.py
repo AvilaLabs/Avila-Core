@@ -638,11 +638,7 @@ class TestScopePredicateVectors(unittest.TestCase):
 
 
 class TestQualificationEnvelopeConsistency(unittest.TestCase):
-    # CASE-002 is excluded while its committed claims predate ADR-0018: its
-    # pinned ACTINV binary no longer resolves on this machine, so its
-    # claims cannot be regenerated to carry `context`; the next test pins
-    # that known state by name rather than silently skipping it.
-    CASES = ["case-001-shield-search", "case-003-thermal-spreader"]
+    CASES = ["case-001-shield-search", "case-002-coupled-shield", "case-003-thermal-spreader"]
 
     @staticmethod
     def _case_inputs(case_dir: Path):
@@ -678,31 +674,7 @@ class TestQualificationEnvelopeConsistency(unittest.TestCase):
                 self.assertIn("re-derive", check.detail)
             total_checked += len(qualification_checks)
 
-        self.assertGreaterEqual(total_checked, 8, "screen mass/thickness + transport claims on CASE-001, screen/fe claims on CASE-003")
-
-    def test_case_002_qualifying_claims_pending_actinv_re_pin(self):
-        # CASE-002's committed claims still predate ADR-0018 (its pinned
-        # ACTINV binary no longer resolves, so claims cannot be re-blessed):
-        # every qualification-carrying claim must be named for the missing
-        # context, never silently passed. When CASE-002 is re-blessed this
-        # test is removed and the case rejoins CASES above.
-        case_name = "case-002-coupled-shield"
-        case_dir = EXAMPLES / case_name
-        package, docs_by_role, receipts_by_step = self._case_inputs(case_dir)
-        claims = load(case_dir / "claims.json")
-
-        report = v.Report(case_name)
-        v.verify_case_qualification_envelopes(
-            case_dir, package, docs_by_role, claims,
-            v.kinds_from_registry_doc(load(case_dir / "registry.json")),
-            receipts_by_step, report,
-        )
-
-        qualification_checks = [c for c in report.checks if c.check.startswith("qualification.")]
-        self.assertEqual(len(qualification_checks), 9)
-        for check in qualification_checks:
-            self.assertEqual(check.status, "mismatch", f"{case_name}: {check.to_dict()}")
-            self.assertIn("no persisted applicability context", check.detail)
+        self.assertGreaterEqual(total_checked, 17, "4 screen/transport on CASE-001, 9 on CASE-002, 4 screen/fe on CASE-003")
 
     def test_evaluate_envelope_terms_splits_case_001_screen_scope_exactly_as_committed(self):
         # A term-splitting cross-check independent of verify_case_qualification_envelopes
@@ -720,6 +692,211 @@ class TestQualificationEnvelopeConsistency(unittest.TestCase):
         recorded_predicates = [t["predicate"] for t in screen_mass["qualification"]["terms"]]
         self.assertEqual(predicates, recorded_predicates)
         self.assertEqual(len(predicates), 5)
+
+
+# ---------------------------------------------------------------------------
+# ADR-0006 historical verification — `--as-of INSTANT [--as-of-material
+# DIR]`: one informational `as_of` line per qualified claim naming its
+# recorded state beside the labeled state at the supplied instant under the
+# supplied material. A divergence is a datum, never a failure.
+# ---------------------------------------------------------------------------
+
+
+class TestAsOfVerification(unittest.TestCase):
+    def test_instant_normalization(self):
+        self.assertEqual(v.normalize_as_of_instant("2026-09-18"), "2026-09-18T00:00:00Z")
+        self.assertEqual(
+            v.normalize_as_of_instant("2026-09-18T12:30:05Z"), "2026-09-18T12:30:05Z"
+        )
+        for bad in ("2026/09/18", "2026-09-18 12:30:05", "soon"):
+            with self.assertRaises(ValueError, msg=bad):
+                v.normalize_as_of_instant(bad)
+        # Format-valid instants pass even when calendar-impossible: the
+        # record side validates structure, not ranges (qualification.rs).
+        self.assertEqual(
+            v.normalize_as_of_instant("2026-13-01"), "2026-13-01T00:00:00Z"
+        )
+
+    @staticmethod
+    def _synthetic_claim_and_material():
+        record = {
+            "qualification_id": "test/record",
+            "revision": 1,
+            "owner": "test-owner",
+            "scope": {
+                "fact": {
+                    "name": "lab.ok",
+                    "op": "eq",
+                    "value": 1,
+                    "source_requirement": {
+                        "class": "runner_measured",
+                        "validator": "test-validator",
+                    },
+                }
+            },
+            "covered_output_slots": ["out"],
+        }
+        raw = json.dumps(record, sort_keys=True).encode()
+        record_sha = v.sha256_bytes(raw)
+        claim = {
+            "claim_id": "c1",
+            "qualification": {
+                "qualification_id": "test/record",
+                "revision": 1,
+                "sha256": record_sha,
+                "owner": "test-owner",
+                "state": "inside",
+                "terms": [{"predicate": v.compact_json(record["scope"]), "result": "true"}],
+            },
+        }
+        return claim, record, record_sha
+
+    def test_absent_when_the_bound_digest_is_not_in_the_material(self):
+        claim, _record, _sha = self._synthetic_claim_and_material()
+        other = dict(self._synthetic_claim_and_material()[1])
+        other["owner"] = "someone-else"
+        label, suffix = v._as_of_state(
+            claim, [(other, "sha256:" + "0" * 64)], {}, {}, "2030-01-01T00:00:00Z", {}
+        )
+        self.assertEqual(label, "absent")
+
+    def test_revoked_and_superseded_outrank_expiry_and_terms(self):
+        claim, record, sha = self._synthetic_claim_and_material()
+        label, _ = v._as_of_state(
+            claim, [(record, sha)], {sha: "sha256:deadbeef"}, {}, "2030-01-01T00:00:00Z", {}
+        )
+        self.assertEqual(label, "revoked")
+        superseder = dict(record)
+        superseder["qualification_id"] = "test/record"
+        superseder["revision"] = 2
+        superseder["supersedes"] = [sha]
+        label, _ = v._as_of_state(
+            claim,
+            [(record, sha), (superseder, "sha256:" + "1" * 64)],
+            {},
+            {},
+            "2030-01-01T00:00:00Z",
+            {},
+        )
+        self.assertEqual(label, "superseded")
+
+    def test_expired_at_and_after_not_after_boundary(self):
+        claim, record, sha = self._synthetic_claim_and_material()
+        record = dict(record)
+        record["not_after"] = "2030-06-01T00:00:00Z"
+        label, _ = v._as_of_state(
+            claim, [(record, sha)], {}, {}, "2030-06-01T00:00:00Z", {}
+        )
+        self.assertEqual(label, "expired")
+        label, _ = v._as_of_state(
+            claim, [(record, sha)], {}, {}, "2030-05-31T23:59:59Z", {}
+        )
+        self.assertEqual(label, "inside")  # recorded terms carry the state
+
+    def test_recorded_terms_carry_the_state_when_no_context(self):
+        claim, record, sha = self._synthetic_claim_and_material()
+        label, suffix = v._as_of_state(
+            claim, [(record, sha)], {}, {}, "2030-01-01T00:00:00Z", {}
+        )
+        self.assertEqual(label, "inside")
+        self.assertIn("recorded terms", suffix)
+
+    def test_unrecognized_owner_is_a_suffix_not_the_label(self):
+        claim, record, sha = self._synthetic_claim_and_material()
+        claim["qualification"]["context"] = {
+            "facts": {
+                "lab.ok": {
+                    "value": 1,
+                    "source": {
+                        "class": "runner_measured",
+                        "validator": "test-validator",
+                    },
+                }
+            },
+            "inputs": {},
+        }
+        label, suffix = v._as_of_state(
+            claim,
+            [(record, sha)],
+            {},
+            {"other-owner": "aa" * 32},
+            "2030-01-01T00:00:00Z",
+            {},
+        )
+        self.assertEqual(label, "inside")
+        self.assertIn("not recognized", suffix)
+
+    def test_as_of_lines_emit_alongside_recorded_checks(self):
+        # End-to-end on the real case: `--as-of` at the producing receipt's
+        # instant must reproduce every recorded state — the historical half
+        # of ADR-0006's as_of requirement.
+        case_dir = EXAMPLES / "case-002-coupled-shield"
+        package, docs_by_role, receipts_by_step = TestQualificationEnvelopeConsistency._case_inputs(case_dir)
+        claims = load(case_dir / "claims.json")
+
+        report = v.Report(str(case_dir))
+        v.verify_case_qualification_envelopes(
+            case_dir, package, docs_by_role, claims,
+            v.kinds_from_registry_doc(load(case_dir / "registry.json")),
+            receipts_by_step, report,
+            as_of="2026-09-03T02:17:52Z",
+        )
+        as_of_checks = [c for c in report.checks if c.status == "as_of"]
+        self.assertEqual(len(as_of_checks), 9)
+        for check in as_of_checks:
+            self.assertIn("recorded 'inside'", check.detail)
+            self.assertIn("'inside'", check.detail.split("under bound material:")[1])
+            self.assertFalse(report.exit_code())
+
+    def test_supplied_material_snapshot_labels_the_revoked_record(self):
+        # A revocation is a timeless package assertion: the only honest
+        # answer to "was it revoked at T" is against a supplied snapshot.
+        # Build one — the case's own material plus a bound revocation naming
+        # the transport record — and the transport claims read 'revoked'
+        # under it while the others stay 'inside'.
+        case_dir = EXAMPLES / "case-002-coupled-shield"
+        material_dir = Path(tempfile.mkdtemp(prefix="asof-material-"))
+        self.addCleanup(shutil.rmtree, material_dir)
+        for name in ("package.json", "contract.json",
+                     "qualification-screen.json", "qualification-transport.json",
+                     "qualification-activation.json"):
+            shutil.copy(case_dir / name, material_dir / name)
+
+        record_sha = v.sha256_file(material_dir / "qualification-transport.json")
+        revocation = {
+            "schema_version": "avila.core/qualification-revocation/v0.1-draft",
+            "qualification_id": "avila-labs.shielding/slab-transport-qualification",
+            "record_sha256": record_sha,
+        }
+        rev_path = material_dir / "revocation-transport.json"
+        _write_json(rev_path, revocation)
+        package = load(material_dir / "package.json")
+        package["documents"].append({
+            "document_id": "revocation-transport",
+            "role": "qualification_revocation",
+            "path": "revocation-transport.json",
+            "sha256": v.sha256_file(rev_path),
+        })
+        _write_json(material_dir / "package.json", package)
+
+        package, docs_by_role, receipts_by_step = TestQualificationEnvelopeConsistency._case_inputs(case_dir)
+        claims = load(case_dir / "claims.json")
+        report = v.Report(str(case_dir))
+        v.verify_case_qualification_envelopes(
+            case_dir, package, docs_by_role, claims,
+            v.kinds_from_registry_doc(load(case_dir / "registry.json")),
+            receipts_by_step, report,
+            as_of="2026-09-18T00:00:00Z",
+            as_of_material_dir=material_dir,
+        )
+        by_check = {c.check: c for c in report.checks if c.status == "as_of"}
+        self.assertEqual(len(by_check), 9)
+        for claim_id, check in by_check.items():
+            if claim_id.startswith("qualification.transport"):
+                self.assertIn("'revoked'", check.detail, claim_id)
+            else:
+                self.assertIn("'inside'", check.detail, claim_id)
+        self.assertFalse(report.exit_code())
 
 
 # ---------------------------------------------------------------------------

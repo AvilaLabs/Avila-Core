@@ -176,6 +176,23 @@ reported as ``not_checked`` with a reason; it is never silently skipped.
      this profile has no committed claims.json to check them against and
      checks none, rather than fabricating one.
 
+     With ``--as-of INSTANT`` (ADR-0006's supplied-snapshot historical
+     verification), every qualified claim additionally earns one
+     informational ``as_of`` line naming its recorded state beside the
+     labeled state it would carry at the supplied instant under the
+     supplied material: ``absent`` when the claim's bound record digest is
+     not in the material, then ``revoked`` / ``superseded`` / ``expired``
+     in campaign-refusal precedence, then the envelope its own recorded
+     facts imply at that instant — an unrecognized owner under the
+     supplied policy is a suffix, never the label, because recognition is
+     a per-requirement gate (nominal basis exempt) rather than an envelope
+     state. ``--as-of-material DIR`` supplies the snapshot as another case
+     package whose bound records, revocations, signatures, and contract
+     policy stand in for the material known then; without it the case's
+     own bound set is the material. A divergence between the recorded and
+     labeled states is a datum, never a failure — that is what the
+     historical question is for.
+
  10. Requirement-set coverage (S-024) — a case package may bind one
      ``requirement_set`` document and declare in its manifest which
      contract requirements cover each set entry and, for the rest, a
@@ -253,7 +270,10 @@ SEMANTIC_PROFILE = "avila.core/semantic/0.2-draft"
 class CheckResult:
     """One line of the verifier's report.
 
-    ``status`` is one of ``verified``, ``mismatch``, ``not_checked``.
+    ``status`` is one of ``verified``, ``mismatch``, ``not_checked``,
+    ``as_of`` — the last an informational labeled result emitted only by
+    ``--as-of`` historical verification (section 10): it never counts as
+    verified and never fails the report.
     """
 
     check: str
@@ -262,7 +282,7 @@ class CheckResult:
     reason: str = ""
 
     def __post_init__(self) -> None:
-        if self.status not in ("verified", "mismatch", "not_checked"):
+        if self.status not in ("verified", "mismatch", "not_checked", "as_of"):
             raise ValueError(f"invalid status {self.status!r}")
 
     def to_dict(self) -> dict:
@@ -290,11 +310,14 @@ class Report:
     def not_checked(self, check: str, reason: str) -> None:
         self.checks.append(CheckResult(check, "not_checked", reason=reason))
 
+    def as_of(self, check: str, detail: str = "") -> None:
+        self.checks.append(CheckResult(check, "as_of", detail=detail))
+
     def extend(self, other: "Report") -> None:
         self.checks.extend(other.checks)
 
     def counts(self) -> dict:
-        out = {"verified": 0, "mismatch": 0, "not_checked": 0}
+        out = {"verified": 0, "mismatch": 0, "not_checked": 0, "as_of": 0}
         for c in self.checks:
             out[c.status] += 1
         return out
@@ -304,7 +327,7 @@ class Report:
 
     def to_dict(self) -> dict:
         return {
-            "schema": "avila.core/independent-verifier-report/v1",
+            "schema": "avila.core/independent-verifier-report/v2",
             "verifier_profile": VERIFIER_PROFILE,
             "target": self.target,
             "counts": self.counts(),
@@ -317,9 +340,10 @@ class Report:
         lines.append(
             f"  {counts['verified']} verified, {counts['mismatch']} mismatch, "
             f"{counts['not_checked']} not_checked"
+            + (f", {counts['as_of']} as_of" if counts["as_of"] else "")
         )
         for c in self.checks:
-            marker = {"verified": "OK  ", "mismatch": "FAIL", "not_checked": "N/C "}[c.status]
+            marker = {"verified": "OK  ", "mismatch": "FAIL", "not_checked": "N/C ", "as_of": "ASOF"}[c.status]
             tail = c.detail or c.reason
             lines.append(f"  [{marker}] {c.check}" + (f" — {tail}" if tail else ""))
         return "\n".join(lines)
@@ -2475,6 +2499,14 @@ def verify_case_signatures(
 # imply; it does not prove the adapter read the bytes correctly — that is
 # what the receipt's byte-identity binding and the qualification record's
 # named validation evidence are for.
+#
+# --as-of (ADR-0006's supplied-snapshot historical verification) adds one
+# informational `as_of` line per qualified claim after the recorded
+# checks: the labeled state at the supplied instant under the supplied
+# material — the case's own bound set, or `--as-of-material`'s package —
+# in campaign-refusal precedence (absent > revoked > superseded > expired
+# > the envelope its recorded facts imply). A divergence between recorded
+# and labeled states is a datum, never a failure.
 # ---------------------------------------------------------------------------
 
 
@@ -2727,16 +2759,21 @@ def _check_context_receipt_binding(context: dict, receipt: dict, problems: list)
             )
 
 
-def verify_case_qualification_envelopes(
+def _load_qualification_material(
     case_dir: Path,
     package: dict,
     docs_by_role: dict,
-    claims: Optional[dict],
-    kinds: dict,
-    receipts_by_step: dict,
-    report: Report,
     recognized_owners: Optional[dict] = None,
-) -> None:
+) -> tuple[list[tuple[dict, str]], dict[str, str]]:
+    """The qualification material one package binds: (record, file sha256)
+    pairs plus the target-record-digest → revocation-doc-digest map.
+
+    Under issuer recognition a revocation counts only when it verifies
+    under the declared issuer key — the runner ignores it otherwise
+    (CORE-X3405); an unrecognized owner's withdrawal is package-asserted.
+    The same function serves both the case's own bound set and a supplied
+    ``--as-of-material`` package, so historical verification derives
+    lifecycle flags from whichever material was supplied."""
     qualification_docs: list[tuple[dict, str]] = []
     for document in docs_by_role.get("qualification", []):
         path = case_dir / document["path"]
@@ -2749,11 +2786,6 @@ def verify_case_qualification_envelopes(
             continue
         qualification_docs.append((record, sha256_bytes(raw)))
 
-    # Bound `qualification_revocation` documents, target record digest →
-    # revocation document digest, re-derived for claim consistency checks.
-    # Under issuer recognition a revocation counts only when it verifies
-    # under the declared issuer key — the runner ignores it otherwise
-    # (CORE-X3405); an unrecognized owner's withdrawal is package-asserted.
     owners = recognized_owners or {}
     records_by_sha = {sha: record for record, sha in qualification_docs}
     revoked_by: dict[str, str] = {}
@@ -2787,12 +2819,28 @@ def verify_case_qualification_envelopes(
             ):
                 continue
         revoked_by.setdefault(target, sha256_bytes(raw))
+    return qualification_docs, revoked_by
+
+
+def verify_case_qualification_envelopes(
+    case_dir: Path,
+    package: dict,
+    docs_by_role: dict,
+    claims: Optional[dict],
+    kinds: dict,
+    receipts_by_step: dict,
+    report: Report,
+    recognized_owners: Optional[dict] = None,
+    as_of: Optional[str] = None,
+    as_of_material_dir: Optional[Path] = None,
+) -> None:
+    qualification_docs, revoked_by = _load_qualification_material(
+        case_dir, package, docs_by_role, recognized_owners
+    )
 
     if claims is None:
         return
     qualifying_claims = [claim for claim in claims.get("claims", []) if claim.get("qualification")]
-    if not qualifying_claims:
-        return
 
     for claim in qualifying_claims:
         check = f"qualification.{claim['claim_id']}"
@@ -2942,6 +2990,162 @@ def verify_case_qualification_envelopes(
                 f"scope and re-derive {qualification['state']!r} from the persisted facts, "
                 "whose input digests and plan identity bind the step's receipt",
             )
+
+    if as_of is None:
+        return
+    _emit_as_of_envelopes(
+        qualifying_claims,
+        as_of,
+        as_of_material_dir,
+        case_dir,
+        package,
+        docs_by_role,
+        recognized_owners or {},
+        kinds,
+        receipts_by_step,
+        report,
+    )
+
+
+def _as_of_state(
+    claim: dict,
+    material_docs: list[tuple[dict, str]],
+    material_revoked: dict[str, str],
+    material_owners: dict,
+    instant: str,
+    kinds: dict,
+) -> tuple[str, str]:
+    """One qualified claim's labeled state at ``instant`` under the supplied
+    material, following the campaign refusal precedence: a record absent
+    from the material, then a bound revocation, then supersession, then
+    expiry, then the envelope its own recorded facts imply. Owner
+    recognition is reported as a suffix, not the label — recognition is a
+    per-requirement gate (nominal basis is exempt), not an envelope state.
+    Returns (label, suffix)."""
+    qualification = claim["qualification"]
+    bound_sha = qualification.get("sha256")
+    match = next(((record, sha) for record, sha in material_docs if sha == bound_sha), None)
+    if match is None:
+        same_identity = next(
+            (
+                record
+                for record, _ in material_docs
+                if record.get("qualification_id") == qualification.get("qualification_id")
+                and record.get("revision") == qualification.get("revision")
+            ),
+            None,
+        )
+        note = (
+            "a record of the same id+revision but a different digest is bound"
+            if same_identity is not None
+            else "the claim's bound record digest is not bound"
+        )
+        return "absent", f" ({note} in the supplied material)"
+    record, record_sha = match
+
+    revoker = material_revoked.get(record_sha)
+    if revoker is not None:
+        return "revoked", f" (revocation {revoker})"
+    superseder = next(
+        (sha for candidate, sha in material_docs if record_sha in candidate.get("supersedes", [])),
+        None,
+    )
+    if superseder is not None:
+        return "superseded", f" (superseding record {superseder})"
+
+    context = qualification.get("context")
+    if isinstance(context, dict):
+        term_state, _, _ = evaluate_envelope_terms(record, context, kinds)
+        source = "the persisted facts"
+    else:
+        results = [term.get("result") for term in qualification.get("terms", [])]
+        if not results:
+            return "underivable", " (no persisted context and no recorded terms)"
+        term_state = _aggregate_envelope_state(results)
+        source = "the recorded terms"
+    state = _expected_envelope_state(record, term_state, instant)
+
+    suffix = f" (from {source})"
+    if material_owners and qualification.get("owner") not in material_owners:
+        suffix += f"; owner {qualification.get('owner')!r} is not recognized under the supplied policy"
+    return state, suffix
+
+
+def _emit_as_of_envelopes(
+    qualifying_claims: list,
+    as_of: str,
+    as_of_material_dir: Optional[Path],
+    case_dir: Path,
+    package: dict,
+    docs_by_role: dict,
+    recognized_owners: dict,
+    kinds: dict,
+    receipts_by_step: dict,
+    report: Report,
+) -> None:
+    """ADR-0006: historical verification is explicitly as_of a supplied
+    policy, qualification, revocation, and time snapshot. Each qualified
+    claim gets one informational ``as_of`` line naming its recorded state
+    and the labeled state it would carry at the supplied instant under the
+    supplied material — a divergence is a datum, never a failure."""
+    material_dir = as_of_material_dir or case_dir
+    if as_of_material_dir is None:
+        material_docs, material_revoked = _load_qualification_material(
+            case_dir, package, docs_by_role, recognized_owners
+        )
+        material_owners = recognized_owners
+        material_desc = "bound material"
+    else:
+        material_package_path = material_dir / "package.json"
+        if not material_package_path.is_file():
+            report.not_checked(
+                "qualification.as_of",
+                f"--as-of-material {material_dir} names no package.json — the supplied snapshot cannot be read",
+            )
+            return
+        material_package = json.loads(material_package_path.read_bytes())
+        material_docs_by_role: dict[str, list[dict]] = {}
+        for d in material_package.get("documents", []):
+            material_docs_by_role.setdefault(d["role"], []).append(d)
+        material_contract_entries = material_docs_by_role.get("contract", [])
+        material_contract = None
+        if material_contract_entries:
+            contract_path = material_dir / material_contract_entries[0]["path"]
+            if contract_path.is_file():
+                material_contract = load_json(contract_path)
+        material_owners = (
+            (material_contract or {}).get("execution_policy", {}).get("recognized_qualification_owners") or {}
+        )
+        material_docs, material_revoked = _load_qualification_material(
+            material_dir, material_package, material_docs_by_role, material_owners
+        )
+        material_desc = f"supplied material {material_dir}"
+
+    if not qualifying_claims:
+        report.not_checked(
+            "qualification.as_of",
+            "--as-of supplied but no claim carries a qualification assessment",
+        )
+        return
+
+    for claim in qualifying_claims:
+        qualification = claim["qualification"]
+        check = f"qualification.{claim['claim_id']}.as_of"
+        receipt = receipts_by_step.get(claim.get("step_id"))
+        evaluated_at = (receipt or {}).get("process", {}).get("started_at") or "unrecorded instant"
+        recorded_flags = ""
+        if qualification.get("revoked_by"):
+            recorded_flags = f" [revoked {qualification['revoked_by'][:19]}…]"
+        elif qualification.get("superseded_by"):
+            recorded_flags = f" [superseded {qualification['superseded_by'][:19]}…]"
+        label, suffix = _as_of_state(
+            claim, material_docs, material_revoked, material_owners, as_of, kinds
+        )
+        report.as_of(
+            check,
+            f"recorded {qualification.get('state')!r}{recorded_flags} @{evaluated_at}; "
+            f"as_of {as_of} under {material_desc}: {label!r}{suffix}",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -3392,14 +3596,22 @@ def verify_staged_reviews(
 
 
 def verify_case(
-    case_dir: Path, roots: dict[str, Path], trust_root: Optional[TrustRoot] = None
+    case_dir: Path,
+    roots: dict[str, Path],
+    trust_root: Optional[TrustRoot] = None,
+    as_of: Optional[str] = None,
+    as_of_material_dir: Optional[Path] = None,
 ) -> Report:
     """Runs every applicable section of the profile against one case
     directory (an examples/cases/CASE-NNN-* layout: package.json plus the
     documents it names). ``trust_root``, when supplied, is the ADR-0015
     requester/runner public keys (``load_trust_root``); without one, every
     signature is reported ``not_checked`` or ``invalid``, never
-    ``verified``."""
+    ``verified``. ``as_of``, a normalized ``YYYY-MM-DDTHH:MM:SSZ`` instant,
+    adds one informational labeled state per qualified claim, evaluated
+    under ``as_of_material_dir``'s bound qualification material when
+    supplied (ADR-0006's supplied-snapshot historical verification) or the
+    case's own bound set otherwise."""
     report = Report(str(case_dir))
     package_path = case_dir / "package.json"
     if not package_path.is_file():
@@ -3454,6 +3666,8 @@ def verify_case(
         case_dir, package, docs_by_role, claims, kinds_from_registry_doc(registry) if registry is not None else {},
         receipts_by_step, report,
         (contract or {}).get("execution_policy", {}).get("recognized_qualification_owners") or {},
+        as_of=as_of,
+        as_of_material_dir=as_of_material_dir,
     )
 
     verify_staged_reviews(case_dir, package, docs_by_role, claims, campaign_report, report)
@@ -3468,10 +3682,38 @@ def verify_case(
     return report
 
 
+def normalize_as_of_instant(value: str) -> str:
+    """``--as-of`` accepts the same normalized instant form a qualification
+    record's ``not_after`` carries — ``YYYY-MM-DDTHH:MM:SSZ`` — or a bare
+    ``YYYY-MM-DD`` date, expanded to its first instant ``T00:00:00Z``.
+    Normalized instants compare lexically as chronological."""
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        return f"{value}T00:00:00Z"
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", value):
+        return value
+    raise ValueError(
+        f"--as-of instant {value!r} is not a normalized `YYYY-MM-DDTHH:MM:SSZ` "
+        "(or a bare `YYYY-MM-DD` date)"
+    )
+
+
 def cmd_verify_case(args: argparse.Namespace) -> int:
     roots = parse_source_roots(args.source_root or [])
     trust_root = load_trust_root(Path(args.trust_root)) if args.trust_root else None
-    report = verify_case(Path(args.case_dir), roots, trust_root=trust_root)
+    try:
+        as_of = normalize_as_of_instant(args.as_of) if args.as_of else None
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
+    as_of_material_dir = Path(args.as_of_material) if args.as_of_material else None
+    if as_of_material_dir is not None and as_of is None:
+        raise SystemExit("--as-of-material requires --as-of: a material snapshot is read at an instant")
+    report = verify_case(
+        Path(args.case_dir),
+        roots,
+        trust_root=trust_root,
+        as_of=as_of,
+        as_of_material_dir=as_of_material_dir,
+    )
     _emit(report, args)
     return report.exit_code()
 
@@ -3524,6 +3766,20 @@ def build_arg_parser() -> argparse.ArgumentParser:
         metavar="FILE",
         help="ADR-0015 trust root (avila.core/trust-root/v0.1-draft: requester/runner public keys) to verify "
         "signatures against; without it every signature is reported not_checked or invalid, never verified",
+    )
+    p_case.add_argument(
+        "--as-of",
+        metavar="INSTANT",
+        help="Historical verification (ADR-0006): report every qualified claim's labeled state at this "
+        "instant — normalized `YYYY-MM-DDTHH:MM:SSZ`, or `YYYY-MM-DD` for its first instant — alongside "
+        "its recorded state. Informational [ASOF] lines; a divergence is a datum, never a failure",
+    )
+    p_case.add_argument(
+        "--as-of-material",
+        metavar="DIR",
+        help="Another case package directory whose bound qualification records, revocations, signatures, "
+        "and contract policy stand in as the supplied material snapshot for --as-of (requires --as-of); "
+        "without it the case's own bound set is the material",
     )
     p_case.add_argument("--json", action="store_true", help="Emit the machine-readable JSON report instead of text")
     p_case.set_defaults(func=cmd_verify_case)

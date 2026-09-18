@@ -1241,3 +1241,34 @@ in-flight steps keeping receipts. Proposed, not implemented — awaiting
 review before code. Still gated after it: contract templates,
 presentation-routing records, the org-policy lattice, approval/preflight
 records, role vocabulary, input metadata, scenarios, EXP-005.
+
+## 2026-09-19 — ADR-0022 and ADR-0023 drafted; resume + authority rows pinned
+
+Two more design proposals cover the next-gated families:
+
+- `docs/adr/0022-contract-templates.md` — `contract_template` document
+  (typed parameters/domains reusing `ParameterDefinition`, workflow and
+  requirement templates, `policy_floor`, decidable `eligibility` rules,
+  `validation_cases`) plus a digest-pinned `contract_instantiation`
+  record checked by `CORE-A48xx` (identity mismatch, parameter outside
+  domain, policy-floor loosening under a mechanical `tightens` order,
+  ineligible/unknown eligibility, validation-case compile failure).
+  Template amendments pin `(id, revision, sha256)` — instances never
+  rewrite; `template_superseded` is a notice, not a gate.
+- `docs/adr/0023-organization-policy-and-tightens.md` — the ADR-0020
+  deferral closed on paper: `organization_policy` document carrying the
+  same rule vocabulary as `execution_policy`, a `relation` vocabulary
+  (`tightens`/`exact`/`replaces`/`none`), the total per-field merge
+  order, `policy_owner`-signed replacement attestations, `CORE-A49xx`
+  diagnostics, and verifier parity over the merged policy.
+
+Also pinned without new machinery: `campaign.resume.new-run-reuses`
+(the runner reuses the completed step's committed receipt and executes
+only the crashed step), `authority.trust-roots-are-verifier-policy` (no
+`verified` without a supplied trust root, runner + verifier sides), and
+`ownership.OM-1..7` mapped to the tests enforcing each SC-15 invariant.
+fixtures-check: 95 covered / 162 named / 18 unbounded / 35 absent.
+
+All remaining absent rows are gated on the three proposed ADRs or on
+record types still undesigned (presentation-routing, approvals,
+preflight, obligations report, role vocabulary, input metadata).

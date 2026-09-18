@@ -264,7 +264,7 @@ fn compiler_defect_fixtures_are_executable() {
             ),
         }
     }
-    assert_eq!(suite.fixtures.len(), 34);
+    assert_eq!(suite.fixtures.len(), 35);
 }
 
 fn apply_mutations(document: &mut serde_json::Value, mutations: &[Mutation]) {

@@ -923,3 +923,38 @@ construction exists outside `avila-core-kernel`/`avila-core-compiler` —
 verified by planting a violation and watching it fail. `fixtures-check`
 credits a plan row's reference to a test file stem as `named`, so the
 counting rule sees boundary checks it cannot express as data.
+
+### SC-12 change propagation + signed reuse rules — 2026-09-17
+
+`run --plan` now carries an `impact` report: invalidated nodes with their
+condemning edge paths (`input:<id> -> <step>.<slot>`), permitted reuse under
+`deterministic_memo` or `reuse_rule:<id>`, the minimal rerun subgraph, and a
+cost estimate from recorded receipt durations. Dependency follows content: a
+condemned step whose recorded inputs are byte-identical still reuses, and the
+report names both halves. `ChangeClass::Nondeterministic` defeats memoization
+outright — a nondeterministic invocation has no reproducible identity.
+SC-12.3 reuse rules are `reuse-rule/v0.1-draft` documents: a requester-signed
+non-dependence claim scoped to exactly one `(step, input_slot)` binding edge
+that can only narrow invalidation. Evaluation checks schema, nonempty
+justification and validation evidence, scope against the compiled bindings,
+`not_after` expiry, and signature against a requester key in a supplied trust
+root — every failure surfaces `CORE-X3401`, exempted changes stay recorded
+with `exempted_by`, and unknown authority fails closed. `fixtures-check` now
+credits `#[test]` fn names under `src/` and `def test_*` fns in
+`verifier/test_verifier.py` as `named` pins.
+
+### Operator-side reuse rules + Tier-1 sweep — 2026-09-17
+
+`avila-core sign document --document <id> [--role <role>]` signs any bound
+manifest document — the missing half of SC-12.3, so operators can actually
+author signed reuse rules. The sweep closed rows the implemented semantics
+already satisfy: coverage vs. basis is pinned at both ends
+(`le.bounded.coverage-meets-basis` and the kernel's S1102 refusal in
+`coverage_below_the_requirement_basis_refuses_evaluation`), exit-0-without-
+declared-output is `a_clean_exit_without_the_declared_output_is_not_evidence`,
+timeout/crash pin `CORE-X2501`, a kind without owner is
+`defect.registry.kind-owner-missing`, and the descriptor digest's
+invocation-identity role is `an_adapter_descriptor_edit_invalidates_the_
+committed_receipt` (a validator version bump needs no new carrier — the
+descriptor is already hash-bound). fixtures-check reads 94 covered /
+112 named / 18 unbounded / 75 absent.

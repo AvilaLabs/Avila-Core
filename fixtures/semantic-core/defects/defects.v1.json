@@ -1281,6 +1281,43 @@
    }
   },
   {
+   "fixture_id": "defect.registry.kind-owner-missing",
+   "defect": "a quantity kind loses its owner",
+   "contract_mutations": [],
+   "registry_mutations": [
+    {
+     "op": "set",
+     "pointer": "/kinds/0/owner",
+     "value": ""
+    }
+   ],
+   "expected": {
+    "status": "rejected",
+    "findings": [
+     {
+      "code": "CORE-A4404",
+      "class": "notice",
+      "owner": "policy_owner",
+      "primary": {
+       "document": "contract",
+       "pointer": "/execution_policy/require_signatures"
+      },
+      "repairs": []
+     },
+     {
+      "code": "CORE-S1102",
+      "class": "invalid",
+      "owner": "registry_owner",
+      "primary": {
+       "document": "registry",
+       "pointer": "/kinds/0/owner"
+      },
+      "repairs": []
+     }
+    ]
+   }
+  },
+  {
    "fixture_id": "defect.registry.duplicate-unit",
    "defect": "a kind declares the same unit symbol twice",
    "contract_mutations": [],

@@ -305,6 +305,21 @@ fn corpus() -> Result<Corpus, Box<dyn Error>> {
             index_test_fns(&src, &mut index.test_ids)?;
         }
     }
+    // The independent Python verifier pins rows too — index each
+    // `def test_*` in `verifier/test_verifier.py` by name.
+    let verifier_tests =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../verifier/test_verifier.py");
+    if verifier_tests.is_file() {
+        let text = fs::read_to_string(&verifier_tests)?;
+        for line in text.lines() {
+            let trimmed = line.trim();
+            if let Some(rest) = trimmed.strip_prefix("def test_")
+                && let Some(name) = rest.split('(').next()
+            {
+                index.test_ids.insert(format!("test_{}", name.trim()));
+            }
+        }
+    }
     for bytes in VECTOR_SETS {
         let document: serde_json::Value = serde_json::from_slice(bytes)?;
         index.vector_sets.insert(

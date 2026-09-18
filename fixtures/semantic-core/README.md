@@ -15,7 +15,7 @@ multiple historical profiles.
 
 - `unit-scaling.v1.json`: 10 vectors;
 - `scope-predicates.v1.json`: 19 vectors;
-- `verdict-calculus.v1.json`: 66 vectors: 48 requirement-evaluation vectors
+- `verdict-calculus.v1.json`: 79 vectors: 61 requirement-evaluation vectors
   (including the mixed-state `not_evaluated.mixed-*` edges), 10 categorical
   vectors (every `equals`/`in_set` outcome and edge), plus 8
   aggregate-verdict vectors; and
@@ -41,7 +41,7 @@ multiple historical profiles.
   cases and 3 rejected cases covering governed purpose resolution, exact nominal
   exclusions, unrelated and similarly named purposes, and major-version
   mismatch;
-- `defects/defects.v1.json`: 34 executable real-contract defect fixtures. The
+- `defects/defects.v1.json`: 35 executable real-contract defect fixtures. The
   base pair is CASE-001's committed contract+registry verbatim; each fixture
   seeds one realistic defect as JSON-pointer mutations (a typo'd field, an
   unresolvable metric step, a mismatched binding role or media type, an
@@ -193,12 +193,12 @@ canonically.
 | `kinds.same-dimension-distinct.fail` | Gy metric vs Sv role → `CORE-T2102` — exercised by `types.R6.limit-kind.fail` |
 | `kinds.unit-in-class.pass` | `uSv/h` accepted for `nuclear.dose_equivalent_rate` — exercised by `types.R6.equal-tolerance.pass` |
 | `kinds.unit-not-in-class.fail` | a known unit belonging to another class → `CORE-T2301`-adjacent `CORE-T2103`; repair `constrained_choice` = unit class — exercised by `types.R6.limit-unit.fail` |
-| `kinds.unit-not-in-profile.fail` | `rem` under the current restricted profile → `CORE-T2001` |
+| `kinds.unit-not-in-profile.fail` | `rem` is absent from the profile's unit table → `CORE-T2001`, same check as `types.R6.unknown-unit.fail` |
 | `kinds.unit-symbol-unknown.fail` | `Mpa` → `CORE-T2001`; correction requires confirmation unless a governed typo alias makes identity and scale unique — exercised by `types.R6.unknown-unit.fail` |
 | `kinds.prefix-case.fail` | `MSv` (mega-sievert) is not `mSv` → `CORE-T2001` — exercised by `defect.contract.prefix-case` |
-| `kinds.cross-kind-conversion.fail` | absorbed-dose producer bound to dose-equivalent slot → `CORE-T2101`; repair `method_owner_judgment` naming the conversion capability |
+| `kinds.cross-kind-conversion.fail` | a wrong-role source bound to a slot → `CORE-T2101` — exercised by `defect.contract.role-mismatched-binding`; the conversion-capability repair path itself is unimplemented |
 | `kinds.exact-scaling.pass` | vectors `unit-scaling.v1` |
-| `kinds.registry-namespace-owner.fail` | kind in `nuclear.*` without owner → `CORE-R3501` |
+| `kinds.registry-namespace-owner.fail` | a quantity kind without owner → `CORE-S1102` at `/kinds/*/owner` — exercised by `defect.registry.kind-owner-missing` |
 
 ### numerics/ (SC-2)
 
@@ -247,8 +247,8 @@ canonically.
 | `types.R1.explicit-binding.pass` | `bindings` resolves ambiguity; the input left unbound is reported as notice `CORE-R3601` |
 | `types.R2.role-mismatch.fail` | `CORE-T2101` |
 | `types.R3.type-satisfiable.pass` | capability type permits a model capable of satisfying the basis — exercised by every compiled fixture, e.g. `types.R1.resolved.pass` |
-| `types.R3.bound-package-coverage-sufficient.pass` | selected package declares 0.95, basis 0.95 |
-| `types.R3.coverage-insufficient.fail` | producer 0.90, basis 0.95 → `CORE-T2201` |
+| `types.R3.bound-package-coverage-sufficient.pass` | declared coverage meets the basis exactly — exercised by `le.bounded.coverage-meets-basis` |
+| `types.R3.coverage-insufficient.fail` | declared coverage below the basis is a verdict-level refusal `CORE-S1102` — `coverage_below_the_requirement_basis_refuses_evaluation` |
 | `types.R3.unquantified-governed.fail` | an unquantified claim cannot satisfy a quantified basis → `CORE-T2201` (the profile has no distinct T2202) — executable fixture |
 | `types.R3.unquantified-nominal.pass` | policy permits nominal basis — executable fixture |
 | `types.R3.irreducible.fail` | `CORE-T2203` |
@@ -418,7 +418,7 @@ canonically.
 | `verdict.record-fields.pass` | every field of `avila.core/verdict/v0.2` present — the vector harness compares each `verdict-calculus` vector's full serialized record |
 | `verdict.evaluator-identity.pass` | `kernel:verdict-calculus@1` — every `verdict-calculus` vector's record is produced by that evaluator |
 | `verdict.core-requirement-evaluation-step.pass` | specimen step type maps to kernel — exercised by every compiled fixture carrying a `fixture.requirement_evaluation` requirement, e.g. `types.R1.resolved.pass` |
-| `verdict.kernel-bug-guard.fail` | undefined `hi` reaching the table → `CORE-V8102` |
+| `verdict.kernel-bug-guard.fail` | the bounds tables are total over their inputs — no undefined `hi` path exists to guard — `bounded_inequality_tables_cover_every_small_interval` and `equality_table_covers_every_small_interval` |
 
 ### admission/ (SC-11)
 
@@ -429,21 +429,21 @@ canonically.
 | `admission.A2.foreign-receipt.fail` | `CORE-E7102` |
 | `admission.A2.untrusted-runner-key.fail` | `CORE-E7102` |
 | `admission.A3.unadmitted-parent.fail` | `CORE-E7103`; cascade to root — exercised by `campaign.parent-missing.not_evaluated` |
-| `admission.A4.package-mismatch.fail` | `CORE-E7104` |
-| `admission.A5.exit-zero-insufficient.fail` | exit 0 with missing declared output → `CORE-X6202`; nothing admitted |
-| `admission.A5.timeout/crash/sandbox.fail` | `CORE-X6101/6102/6103` |
+| `admission.A4.package-mismatch.fail` | `CORE-E7001` (the profile has no distinct E7104) — exercised by `campaign.snapshot-mismatch.rejected` |
+| `admission.A5.exit-zero-insufficient.fail` | exit 0 with a declared output missing → `CORE-X2501`; nothing admitted — `a_clean_exit_without_the_declared_output_is_not_evidence` |
+| `admission.A5.timeout/crash/sandbox.fail` | timeout and crash land as `CORE-X2501` — `timeout_kills_the_whole_process_group` and `a_failing_execution_produces_a_failed_receipt_and_no_verdict`; a sandbox boundary is not implemented |
 | `admission.A6.validator-rejected.fail` | `CORE-E7201` — exercised by `campaign.model-not-permitted.quarantine` |
 | `admission.A6.model-mismatch.fail` | declared interval-only slot, emitted unquantified → `CORE-E7201` — exercised by `campaign.model-mismatch.quarantine` |
 | `admission.A7.actual-context.fail` | see `scope.a7-actual-context.fail` |
 | `admission.A7.vacuous-recorded.pass` | no qualification required → sub-record says so — every admitted-claims fixture without `require_qualification`, e.g. `campaign.le.within.pass` |
 | `admission.A8.policy-changed.fail` | → invalidated |
 | `admission.A9.pass` | one fixture |
-| `admission.A10.ancestor-invalidated.fail` | |
-| `admission.state.quarantine-terminal.pass` | rerun yields new artifact id |
+| `admission.A10.ancestor-invalidated.fail` | `CORE-E7103` cascade — `campaign.parent-missing.not_evaluated` leaves every descendant `not_evaluated` |
+| `admission.state.quarantine-terminal.pass` | a quarantined record never contributes to a verdict — `campaign.model-not-permitted.quarantine`; re-evaluation rederives the quarantine deterministically |
 | `admission.presentation.present/return/abstain.pass` | closed routing dispositions; technical verdict unchanged — exercised by `campaign.practical-review.pass` and `campaign.practical-review.fail` |
 | `admission.presentation.cannot-edit-artifact.fail` | routing record with mutated dossier bytes is quarantined; artifact and verdict remain unchanged |
 | `admission.non-artifact-records.pass` | snapshot, approvals, selection, preflight, change events are records |
-| `admission.sub-record-replayable.pass` | verifier replays A1–A4, A6(kernel), A7, A8, A10 from package alone |
+| `admission.sub-record-replayable.pass` | the independent verifier replays admission and verdicts from the committed documents alone — `test_every_campaign_fixture` |
 | `admission.undeclared-output-discarded.pass` | `CORE-X6301` note; not evidence — the claims-level half is `campaign.undeclared-slot.rejected` (`CORE-E7002` when a claim names a slot the step does not declare); the artifact-file discard half remains runner-level |
 | `admission.validator-does-not-establish-truth.pass` | obligations report describes the validator's narrow responsibility |
 | `admission.as-of-historical/current.pass` | package snapshot and supplied current revocation material produce distinct labeled results |
@@ -466,7 +466,7 @@ canonically.
 | `change.memo.seeded-same-seed.pass` / `different-seed.fail` | seed enters argv → invocation identity — `transport_arguments_carry_seed_and_parameters` |
 | `change.memo.nondeterministic-never.fail` | `a_nondeterministic_step_never_reuses_its_committed_receipt` — `ChangeClass::Nondeterministic` defeats reuse |
 | `change.memo.admission-under-new-policy.fail` | old evidence, new policy forbids → rerun; the re-evaluation half is `a_requirement_change_reuses_evidence_and_recomputes_verdicts` |
-| `change.memo.validator-version.fail` | validator version changed → rerun (adapter descriptor digests are compared before reuse; a version field on the descriptor awaits its carrier) |
+| `change.memo.validator-version.fail` | a descriptor change — a validator version bump — is invocation identity → `ChangeClass::Invocation` — `an_adapter_descriptor_edit_invalidates_the_committed_receipt` |
 | `change.impact-report.edge-paths.pass` | each invalidated node names its condemning path — `impact.invalidated[].condemned_by` on the bound plan, pinned by `a_plan_reports_the_impact_of_every_change_origin` |
 | `change.engine-vs-language.pass` | cold vs incremental equality is tested elsewhere; this fixture only asserts the module boundary — `authority_boundaries` |
 
@@ -510,7 +510,7 @@ canonically.
 | `scenarios.qualification-narrowed` | exact invalidated set; transport reused; activation has no admissible candidate |
 | `scenarios.pinned-implementation` | Campaign IR has constraint only; Bound Plan records the excluded candidate as `excluded_by_contract_constraint` |
 | `scenarios.review-rejects-upstream` | descendants invalidated; nothing reused; owners named |
-| `scenarios.verify-without-evaluator` | obligations report uses the four verifier categories in SC-17 — the Python verifier produces verified/mismatch/not_checked/refused per check and runs on every committed case (CI step); the report's four-category rendering remains |
+| `scenarios.verify-without-evaluator` | the independent Python verifier replays every committed case and signature without avila-core — `test_every_campaign_fixture`, `test_every_committed_receipt_invocation_identity_reproduces`, `test_every_committed_signature_document_verifies`; the obligations report's four-category rendering remains |
 | `scenarios.bike-hook` | three findings → plan with rejected Elmer → INCONCLUSIVE → geometry change → memo reuse of `fdm_properties` → PASS → obligations report — the verdict half is exercised by `le.bounded.bike-hook.first-run` and `le.bounded.bike-hook.second-run`; the memo and obligations halves remain |
 
 ## Campaign corpus

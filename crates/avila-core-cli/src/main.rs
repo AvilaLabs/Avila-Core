@@ -363,6 +363,23 @@ enum SignCommand {
         #[arg(long, value_name = "FILE")]
         key: PathBuf,
     },
+    /// Sign any other document bound into CASE's manifest — for example a
+    /// `reuse_rule` (SC-12.3) — by its document_id. The signature names the
+    /// document's own role and bound digest, so a package that commits the
+    /// document can carry its signature. Re-run after editing the document;
+    /// running it again replaces the prior signature.
+    Document {
+        /// Case directory containing package.json, or the manifest path itself.
+        case: PathBuf,
+        /// The bound document_id to sign.
+        #[arg(long)]
+        document: String,
+        /// Restrict the match to documents with this role.
+        #[arg(long)]
+        role: Option<String>,
+        #[arg(long, value_name = "FILE")]
+        key: PathBuf,
+    },
 }
 
 /// `$XDG_CONFIG_HOME/avila-core/keys`, or `$HOME/.config/avila-core/keys`
@@ -1016,6 +1033,108 @@ fn run_sign(command: SignCommand) -> Result<serde_json::Value, Box<dyn Error>> {
                 "signature_path": signature_path.display().to_string(),
             }))
         }
+        SignCommand::Document {
+            case,
+            document: document_id,
+            role,
+            key,
+        } => {
+            let manifest_path = if case.is_dir() {
+                case.join("package.json")
+            } else {
+                case.clone()
+            };
+            let case_dir = manifest_path
+                .parent()
+                .filter(|path| !path.as_os_str().is_empty())
+                .unwrap_or_else(|| Path::new("."))
+                .to_path_buf();
+            let manifest_bytes = fs::read(&manifest_path)?;
+            let mut manifest: avila_core_evidence::CasePackageManifest =
+                serde_json::from_slice(&manifest_bytes)?;
+            let seed = signature::parse_seed_bytes(&fs::read(&key)?)?;
+
+            let target = manifest
+                .documents
+                .iter()
+                .find(|document| {
+                    document.document_id == document_id
+                        && role.as_deref().is_none_or(|role| document.role == role)
+                })
+                .ok_or_else(|| {
+                    format!(
+                        "no bound document names `{document_id}`{}",
+                        role.as_deref()
+                            .map_or(String::new(), |role| format!(" with role `{role}`"))
+                    )
+                })?
+                .clone();
+            if target.role == "signature" {
+                return Err("refusing to sign a signature document".into());
+            }
+            let target_bytes = fs::read(case_dir.join(&target.path))?;
+            let actual_sha256 = format!("sha256:{}", sha256_hex(&target_bytes));
+            if actual_sha256 != target.sha256 {
+                return Err(format!(
+                    "document `{}` on disk hashes to {actual_sha256}, but the manifest binds {}; rehash before signing",
+                    target.path, target.sha256
+                )
+                .into());
+            }
+            let digest = signature::digest_from_prefixed(&actual_sha256)?;
+            let document = signature::build_signature_document(
+                &seed,
+                target.role.clone(),
+                document_id.clone(),
+                actual_sha256,
+                &digest,
+            );
+            let mut document_bytes = serde_json::to_vec_pretty(&document)?;
+            document_bytes.push(b'\n');
+
+            let signatures_dir = case_dir.join("signatures");
+            fs::create_dir_all(&signatures_dir)?;
+            let safe_id: String = document_id
+                .chars()
+                .map(|c| {
+                    if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                        c
+                    } else {
+                        '-'
+                    }
+                })
+                .collect();
+            let signature_relative_path = format!("signatures/{safe_id}.sig.json");
+            let signature_path = case_dir.join(&signature_relative_path);
+            fs::write(&signature_path, &document_bytes)?;
+            let signature_document_sha256 = format!("sha256:{}", sha256_hex(&document_bytes));
+
+            let signature_document_id = format!("signature-{document_id}");
+            manifest
+                .documents
+                .retain(|document| document.document_id != signature_document_id);
+            manifest
+                .documents
+                .push(avila_core_evidence::PackageDocument {
+                    document_id: signature_document_id,
+                    role: "signature".into(),
+                    path: signature_relative_path,
+                    sha256: signature_document_sha256,
+                    step_id: None,
+                });
+            let mut manifest_bytes_out = serde_json::to_vec_pretty(&manifest)?;
+            manifest_bytes_out.push(b'\n');
+            fs::write(&manifest_path, &manifest_bytes_out)?;
+
+            Ok(serde_json::json!({
+                "case_id": manifest.case_id,
+                "document_id": document_id,
+                "role": target.role,
+                "signed_document_sha256": document.signed_document.sha256,
+                "key_id": document.key_id,
+                "signature_path": signature_path.display().to_string(),
+            }))
+        }
     }
 }
 
@@ -1354,12 +1473,12 @@ mod tests {
         let report = semantic_profile_report().unwrap();
         assert_eq!(report.semantic_profile, SEMANTIC_PROFILE);
         assert_eq!(report.status, "draft");
-        assert_eq!(report.total_vectors, 122);
+        assert_eq!(report.total_vectors, 123);
         assert_eq!(report.implemented_vector_sets.len(), 4);
         assert_eq!(report.total_compiler_fixtures, 70);
         assert_eq!(report.implemented_compiler_fixture_sets.len(), 5);
         assert_eq!(report.total_campaign_fixtures, 18);
-        assert_eq!(report.total_supplemental_fixtures, 38);
+        assert_eq!(report.total_supplemental_fixtures, 39);
         assert_eq!(report.implemented_supplemental_fixture_sets.len(), 2);
         assert_eq!(report.implemented_campaign_fixture_sets.len(), 1);
         assert!(
@@ -1817,6 +1936,92 @@ mod tests {
         })
         .unwrap_err();
         assert!(error.to_string().contains("rehash before signing"));
+    }
+
+    #[test]
+    fn sign_document_signs_a_bound_reuse_rule_under_its_own_role() {
+        let scratch = ScratchDir::new("sign-document-reuse-rule");
+        let case_dir = write_minimal_case(&scratch, "CLI-SIGN-RULE", None);
+        let key_path = generate_key(&scratch, "keys", KeyRoleArg::Requester);
+
+        // Bind a reuse_rule document into the manifest the way a package
+        // would carry it.
+        let rule_bytes = serde_json::to_vec_pretty(&serde_json::json!({
+            "schema_version": "avila.core/reuse-rule/v0.1-draft",
+            "rule_id": "test/rule-independent",
+            "scope": { "step_id": "classify", "input_slot": "rulepack" },
+            "justification": "the rulepack feeds routing constants only",
+            "validation_evidence": [{ "note": "sensitivity sweep" }],
+            "not_after": "2999-01-01T00:00:00Z"
+        }))
+        .unwrap();
+        fs::create_dir_all(case_dir.join("reuse-rules")).unwrap();
+        fs::write(case_dir.join("reuse-rules/rule.json"), &rule_bytes).unwrap();
+        let mut manifest: avila_core_evidence::CasePackageManifest =
+            serde_json::from_slice(&fs::read(case_dir.join("package.json")).unwrap()).unwrap();
+        manifest
+            .documents
+            .push(avila_core_evidence::PackageDocument {
+                document_id: "rule-independent".into(),
+                role: "reuse_rule".into(),
+                path: "reuse-rules/rule.json".into(),
+                sha256: format!("sha256:{}", sha256_hex(&rule_bytes)),
+                step_id: None,
+            });
+        let mut bytes = serde_json::to_vec_pretty(&manifest).unwrap();
+        bytes.push(b'\n');
+        fs::write(case_dir.join("package.json"), bytes).unwrap();
+
+        let result = run_sign(SignCommand::Document {
+            case: case_dir.clone(),
+            document: "rule-independent".into(),
+            role: Some("reuse_rule".into()),
+            key: key_path,
+        })
+        .unwrap();
+        assert_eq!(result["document_id"], "rule-independent");
+        assert_eq!(result["role"], "reuse_rule");
+
+        // The signature names the document's own role and bound digest —
+        // exactly what the runner's reuse-rule evaluator looks up.
+        let signature_path = case_dir
+            .join("signatures")
+            .join("rule-independent.sig.json");
+        let document: signature::SignatureDocument =
+            serde_json::from_slice(&fs::read(&signature_path).unwrap()).unwrap();
+        assert_eq!(document.signed_document.role, "reuse_rule");
+        assert_eq!(document.signed_document.document_id, "rule-independent");
+        assert_eq!(
+            document.signed_document.sha256,
+            format!("sha256:{}", sha256_hex(&rule_bytes))
+        );
+
+        let manifest: avila_core_evidence::CasePackageManifest =
+            serde_json::from_slice(&fs::read(case_dir.join("package.json")).unwrap()).unwrap();
+        assert!(
+            manifest
+                .documents
+                .iter()
+                .any(
+                    |document| document.document_id == "signature-rule-independent"
+                        && document.role == "signature"
+                )
+        );
+    }
+
+    #[test]
+    fn sign_document_refuses_a_document_the_manifest_does_not_bind() {
+        let scratch = ScratchDir::new("sign-document-unknown");
+        let case_dir = write_minimal_case(&scratch, "CLI-NO-DOC", None);
+        let key_path = generate_key(&scratch, "keys", KeyRoleArg::Requester);
+        let error = run_sign(SignCommand::Document {
+            case: case_dir,
+            document: "no-such-document".into(),
+            role: None,
+            key: key_path,
+        })
+        .unwrap_err();
+        assert!(error.to_string().contains("no bound document"));
     }
 
     // --- ADR-0019: design-history record verbs -----------------------

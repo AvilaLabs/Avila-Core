@@ -401,6 +401,53 @@
    "note": "coverage above the basis is accepted; recorded"
   },
   {
+   "id": "le.bounded.coverage-meets-basis",
+   "input": {
+    "kind": "nuclear.dose_equivalent_rate@1",
+    "requirement": {
+     "comparison": "less_than_or_equal",
+     "limit": {
+      "value": "100",
+      "unit": "uSv/h"
+     },
+     "basis": {
+      "kind": "bounded",
+      "coverage": "0.95"
+     }
+    },
+    "evidence": [
+     {
+      "evidence_id": "ev.0001",
+      "state": "admitted",
+      "model": "coverage_interval",
+      "lower": {
+       "value": "94",
+       "unit": "uSv/h"
+      },
+      "upper": {
+       "value": "103",
+       "unit": "uSv/h"
+      },
+      "nominal": {
+       "value": "98.2",
+       "unit": "uSv/h"
+      },
+      "coverage": "0.95"
+     }
+    ]
+   },
+   "expected": {
+    "status": "inconclusive",
+    "rule": "bounded.le.crossing",
+    "canonical_unit": "Sv/s",
+    "limit_canonical": "1/36000000",
+    "lower_canonical": "47/1800000000",
+    "upper_canonical": "103/3600000000",
+    "nominal_canonical": "491/18000000000"
+   },
+   "note": "coverage exactly equal to the basis satisfies it; nothing is recorded"
+  },
+  {
    "id": "le.bounded.unit-mixed",
    "input": {
     "kind": "nuclear.dose_equivalent_rate@1",

@@ -343,3 +343,75 @@ pub(super) fn replay_expected(
         matches: expected == actual,
     }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn minimal_receipt() -> ExecutionReceipt {
+        serde_json::from_value(serde_json::json!({
+            "schema_version": "avila.core/execution-receipt/v0.1-draft",
+            "case_id": "CASE-X",
+            "compiled_snapshot_sha256": "sha256:11",
+            "step_id": "check",
+            "capability_type": { "id": "test.check", "major": 1 },
+            "adapter": "test/check@1",
+            "capability": {
+                "capability_id": "check",
+                "package_id": "test.check@1",
+                "executable_sha256": "sha256:aa"
+            },
+            "inputs": [],
+            "invocation": {
+                "program": "check.sh",
+                "arguments": ["--output", "out.json"],
+                "working_directory": ".",
+                "adapter_sha256": "sha256:old-descriptor",
+                "timeout_ms": 1000
+            },
+            "invocation_sha256": "sha256:22",
+            "process": {
+                "started_at": "2026-01-01T00:00:00Z",
+                "finished_at": "2026-01-01T00:00:01Z",
+                "duration_ms": 1000,
+                "exit_status": 0,
+                "timed_out": false
+            },
+            "outputs": [],
+            "runner": { "runner": "test", "os": "linux", "arch": "x86_64" },
+            "status": "completed",
+            "notice": "test receipt"
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn an_adapter_descriptor_edit_invalidates_the_committed_receipt() {
+        // SC-12.5 memoization: a descriptor-bound field — a validator version
+        // bump, an extraction mapping edit — changes `adapter_sha256`, which
+        // is invocation identity. The memo must not hit even when argv,
+        // inputs, and capability bytes are byte-identical.
+        let receipt = minimal_receipt();
+        let capability = receipt.capability.clone();
+        let mut plan = PlannedInvocation {
+            inputs: receipt.inputs.clone(),
+            invocation: receipt.invocation.clone(),
+            invocation_sha256: receipt.invocation_sha256.clone(),
+            runtime_environment: BTreeMap::new(),
+        };
+
+        // Byte-identical invocation: no changes.
+        let clean = changes_since(&receipt, &plan, &capability, &BTreeMap::new(), "CASE-X");
+        assert!(clean.is_empty(), "{clean:?}");
+
+        // A descriptor edit — say a validator version bump carried in the
+        // descriptor — is an Invocation change and blocks reuse.
+        plan.invocation.adapter_sha256 = Some("sha256:new-descriptor".into());
+        let changes = changes_since(&receipt, &plan, &capability, &BTreeMap::new(), "CASE-X");
+        let [change] = changes.as_slice() else {
+            panic!("one change expected: {changes:?}")
+        };
+        assert_eq!(change.class, ChangeClass::Invocation);
+        assert!(change.detail.contains("adapter descriptor"), "{change:?}");
+    }
+}

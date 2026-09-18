@@ -1330,6 +1330,39 @@ fn a_failing_execution_produces_a_failed_receipt_and_no_verdict() {
 }
 
 #[test]
+fn a_clean_exit_without_the_declared_output_is_not_evidence() {
+    // A5: exit status 0 is never sufficient — a capability that exits
+    // cleanly but leaves a declared output missing still fails the step,
+    // and nothing is admitted from it.
+    let dir = TestDir::new();
+    let quiet = dir.0.join("quiet.sh");
+    fs::write(&quiet, "#!/bin/sh\nexit 0\n").unwrap();
+    fs::set_permissions(&quiet, fs::Permissions::from_mode(0o755)).unwrap();
+    let synthetic = build_package(&dir.0, &quiet);
+
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let summary = human_summary(&report);
+    assert_eq!(report.status, CaseRunStatus::Rejected, "{summary}");
+    let executed = step(&report);
+    assert_eq!(executed.state, StepExecutionState::Failed, "{summary}");
+    assert_eq!(executed.receipt.as_ref().unwrap().exit_status, Some(0));
+    assert!(
+        executed.findings.iter().any(|finding| {
+            finding.code == CORE_X2501
+                && finding.message.contains("exited with status 0")
+                && finding.message.contains("declared output")
+        }),
+        "{summary}"
+    );
+    assert!(report.claims.is_none(), "{summary}");
+    assert!(report.campaign.is_none(), "{summary}");
+}
+
+#[test]
 fn drifting_output_fails_binding_and_receipt_replay() {
     let dir = TestDir::new();
     let synthetic = blessed(&dir);

@@ -1106,6 +1106,49 @@ mod tests {
     }
 
     #[test]
+    fn coverage_below_the_requirement_basis_refuses_evaluation() {
+        // SC-6 R3: admitted evidence whose declared coverage is below the
+        // requirement's basis cannot evaluate — the verdict layer refuses
+        // rather than silently widening the claim's coverage class.
+        let requirement: KernelRequirement = serde_json::from_value(serde_json::json!({
+            "comparison": "less_than_or_equal",
+            "limit": { "value": "100", "unit": "uSv/h" },
+            "basis": { "kind": "bounded", "coverage": "0.95" }
+        }))
+        .unwrap();
+        let claim = |coverage: &str| -> EvidenceClaim {
+            serde_json::from_value(serde_json::json!({
+                "evidence_id": "ev.coverage",
+                "state": "admitted",
+                "model": "coverage_interval",
+                "lower": { "value": "90", "unit": "uSv/h" },
+                "upper": { "value": "99", "unit": "uSv/h" },
+                "coverage": coverage
+            }))
+            .unwrap()
+        };
+
+        let error = coverage_for_output(&requirement, &claim("0.9")).unwrap_err();
+        assert_eq!(error.code(), CORE_S1102);
+        assert!(
+            error.detail().contains("below the requirement basis"),
+            "{}",
+            error.detail()
+        );
+
+        // Exactly meeting the basis satisfies it and records nothing extra;
+        // exceeding it records the higher declared coverage.
+        assert_eq!(
+            coverage_for_output(&requirement, &claim("0.95")).unwrap(),
+            None
+        );
+        assert_eq!(
+            coverage_for_output(&requirement, &claim("0.99")).unwrap(),
+            Some("0.99".to_string())
+        );
+    }
+
+    #[test]
     fn equality_table_covers_every_small_interval() {
         let limit = ExactNumber::from_canonical("0").unwrap();
         let tolerance = ExactNumber::from_canonical("1").unwrap();

@@ -322,6 +322,14 @@ DEFECTS = [
         ],
     ),
     (
+        "defect.registry.kind-owner-missing",
+        "a quantity kind loses its owner",
+        [],
+        [
+            {"op": "set", "pointer": "/kinds/0/owner", "value": ""},
+        ],
+    ),
+    (
         "defect.registry.duplicate-unit",
         "a kind declares the same unit symbol twice",
         [],

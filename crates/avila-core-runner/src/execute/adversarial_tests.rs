@@ -1589,7 +1589,6 @@ fn a_signed_reuse_rule_permits_reuse_across_its_scoped_edge() {
         .unwrap();
     // The InputBytes change is recorded and exempted by the rule; the
     // committed receipt still reuses under the rule's authority.
-    eprintln!("DBG classification changes={:?}", classification.changes);
     assert_eq!(classification.decision, BoundDecision::ReuseCommitted);
     let change = classification
         .changes

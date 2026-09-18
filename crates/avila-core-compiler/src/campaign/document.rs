@@ -44,6 +44,11 @@ pub struct OutputClaim {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub producer: Option<ProducerIdentity>,
     pub claim: ClaimValue,
+    /// SC-5 clause 6: the producing receipt declared this output a partial
+    /// result. Admitted only on a slot whose type declares
+    /// `permits_partial`; anywhere else it quarantines with `CORE-E7201`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub partial: bool,
     /// The producer's qualification envelope evaluated for this run, when
     /// the package bound a qualification for the producing capability.
     #[serde(default, skip_serializing_if = "Option::is_none")]

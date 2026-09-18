@@ -311,10 +311,11 @@ canonically.
 | `types.source.independent-refusals.pass` | a float, a `null`, an unknown field, a non-canonical number, a wrong variant, and a missing required property are all reported in one pass, each at its own pointer |
 | `types.cascade-suppressed.pass` | consequence of a root error summarized under it — exercised by `types.cascade.unknown-type-suppressed.pass` |
 | `types.cascade.unknown-type-suppressed.pass` | a step of unknown capability type is reported once at its `capability_type`; bindings and metrics naming its outputs are suppressed, not reported as nonexistent |
-| `types.cascade-preserves-independent.pass` | dependency-blocked step with its own `CORE-P5101` reports both |
-| `types.conversion-capability.pass` | Gy→Sv via `core.convert.absorbed_dose_to_dose_equivalent@1` type-checks with weighting role bound |
+| `types.cascade-preserves-independent.pass` | a dependency-blocked step's own `CORE-P5101` reports beside the upstream refusal, not under it — exercised by `a_dependency_blocked_step_still_reports_its_own_selection_refusal` |
+| `types.conversion-capability.pass` | Gy→Sv via `core.convert.absorbed_dose_to_dose_equivalent@1` type-checks with the weighting role bound — exercised by `a_cross_kind_conversion_is_an_explicit_capability_type` |
 | `types.presentation-agent.pass` | optional agent presentation request binds an exact dossier and stays outside campaign admission — exercised by `types.R9.review-bound.pass` and `campaign.practical-review.pass` |
-| `types.partial-outputs.pass/fail` | declaration admits only named slots; undeclared partial → `CORE-E7201` |
+| `types.partial-outputs.pass` | `permits_partial` on the output slot admits a claim whose receipt declared `partial` — exercised by `campaign.partial.permitted.pass` |
+| `types.partial-outputs.fail` | a `partial` claim on a slot without `permits_partial` quarantines → `CORE-E7201` — exercised by `campaign.partial-undeclared.fail` |
 
 ### applicability/ (SC-7)
 

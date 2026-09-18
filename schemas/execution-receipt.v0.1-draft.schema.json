@@ -118,7 +118,10 @@
         "output_id": { "$ref": "#/$defs/nonemptyString" },
         "workspace_path": { "$ref": "#/$defs/relativePath" },
         "media_type": { "$ref": "#/$defs/nonemptyString" },
-        "state": { "enum": ["collected", "missing"] },
+        "state": {
+          "enum": ["collected", "partial", "missing"],
+          "description": "`collected`: the declared output was produced in full. `partial` (SC-5 clause 6): the output was produced and the receipt explicitly declares its result partial for this slot — bytes still verify; the slot's `permits_partial` declaration decides admission. `missing`: the declared output was not produced."
+        },
         "sha256": { "$ref": "#/$defs/sha256" },
         "bytes": { "type": "integer", "minimum": 0 }
       }

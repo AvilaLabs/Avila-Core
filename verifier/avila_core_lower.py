@@ -111,7 +111,7 @@ _REPRO_DECL_KEYS = {"determinism", "material_factors"}
 _FACTOR_KEYS = {"factor_id", "value_type"}
 _SLOT_IN_KEYS = {"slot_id", "role", "accepted_media_types", "required"}
 _SLOT_OUT_KEYS = {"slot_id", "role", "media_type", "permitted_claim_models",
-                  "excluded_purposes"}
+                  "excluded_purposes", "permits_partial"}
 _PARAM_KEYS = {"parameter_id", "required", "value_type"}
 _PARAM_TYPE_KEYS = {"type", "min", "max", "allowed_values", "kind"}
 _BOUND_KEYS = {"value", "inclusive"}

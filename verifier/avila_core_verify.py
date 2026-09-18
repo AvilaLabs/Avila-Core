@@ -1728,10 +1728,18 @@ def verify_case_verdicts(
                     }
                     admitted = parents_ok and len(slot_claims) == 1
                     for claim in slot_claims:
+                        # SC-5 clause 6: a `partial` claim is admitted only
+                        # on a slot declaring `permits_partial` — elsewhere
+                        # it quarantines, exactly as campaign/admission.rs's
+                        # CORE-E7201 check does.
                         claim_admitted = (
                             admitted
                             and claim["claim"].get("model") in permitted
                             and _claim_shape_ok(claim["claim"])
+                            and (
+                                not claim.get("partial")
+                                or output.get("permits_partial", False)
+                            )
                         )
                         cascade[claim["claim_id"]] = (
                             "admitted" if claim_admitted else "quarantined"

@@ -32,6 +32,9 @@ pub struct GeneratedClaim {
     pub claim: Value,
     /// The producer's envelope for this run, when the package qualifies it.
     pub qualification: Option<Value>,
+    /// The producing receipt declared this output partial (SC-5 clause 6).
+    /// Admission accepts it only on a slot declaring `permits_partial`.
+    pub partial: bool,
     /// Whether the output was reused from a committed receipt rather than
     /// produced by a fresh execution in this run.
     pub reused: bool,
@@ -134,6 +137,11 @@ pub fn generate_claims(
                     "producer": { "package_id": claim.producer_package_id, "sha256": claim.producer_sha256 },
                     "claim": claim.claim,
                 }));
+                if claim.partial
+                    && let Some(object) = claims.last_mut().and_then(Value::as_object_mut)
+                {
+                    object.insert("partial".into(), json!(true));
+                }
                 if let Some(qualification) = &claim.qualification
                     && let Some(object) = claims.last_mut().and_then(Value::as_object_mut)
                 {

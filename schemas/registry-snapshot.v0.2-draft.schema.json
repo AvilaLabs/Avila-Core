@@ -590,6 +590,11 @@
             "$ref": "#/$defs/versionedRef"
           },
           "default": []
+        },
+        "permits_partial": {
+          "type": "boolean",
+          "description": "SC-5 clause 6: whether a declared partial result is admitted for this slot. Absent means partial results are never admitted here — a claim recorded `partial` on this slot quarantines with CORE-E7201.",
+          "default": false
         }
       }
     },

@@ -74,7 +74,7 @@ conditions checked are the type-level subset of SC-11:
 | A1, partial | the artifact identity is a well-formed `sha256:` digest; an unattested input is missing | `CORE-E7101` |
 | A3 | every parent bound to the producing step is admitted; admission fails closed along the dataflow | `CORE-E7103` |
 | A5 | a claim exists for the output | verdict `not_evaluated.missing` |
-| A6, type level | the claim model is permitted by the output, its shape satisfies the model, quantities scale in the role's kind, bounds are ordered, a nominal lies inside its interval, coverage is in `(0, 1]`, a categorical value is nonempty, belongs to its role's vocabulary when one is declared, and appears only on a non-quantity unquantified role, and the media type matches | `CORE-E7201` |
+| A6, type level | the claim model is permitted by the output, its shape satisfies the model, quantities scale in the role's kind, bounds are ordered, a nominal lies inside its interval, coverage is in `(0, 1]`, a categorical value is nonempty, belongs to its role's vocabulary when one is declared, and appears only on a non-quantity unquantified role, the media type matches, and a `partial` claim sits only on a slot declaring `permits_partial` (SC-5 clause 6) | `CORE-E7201` |
 | cardinality | exactly one claim per output slot; a duplicate quarantines every claim for the slot | `CORE-E7301` |
 
 A quarantined parent quarantines its descendants. That cascade is intended:

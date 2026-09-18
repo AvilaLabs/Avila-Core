@@ -586,6 +586,11 @@ pub struct OutputSlotDefinition {
     pub role: VersionedRef,
     pub media_type: String,
     pub permitted_claim_models: Vec<ClaimModelDeclaration>,
+    /// SC-5 clause 6: whether a declared partial result is admitted for this
+    /// slot. Absent means partial results are never admitted here — a claim
+    /// recorded `partial` on this slot quarantines with `CORE-E7201`.
+    #[serde(default)]
+    pub permits_partial: bool,
     #[serde(default)]
     pub excluded_purposes: Vec<VersionedRef>,
 }

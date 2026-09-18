@@ -1602,7 +1602,7 @@ impl<'a> Runner<'a> {
         if verified {
             let mut output_bytes = BTreeMap::new();
             for output in &receipt.outputs {
-                if output.state == OutputState::Collected {
+                if matches!(output.state, OutputState::Collected | OutputState::Partial) {
                     output_bytes.insert(
                         output.output_id.clone(),
                         fs::read(outcome.step_dir.join(&output.workspace_path))?,
@@ -1775,6 +1775,7 @@ impl<'a> Runner<'a> {
                 producer_sha256: identity.executable_sha256.clone(),
                 claim: claim.claim.clone(),
                 qualification: claim_qualification,
+                partial: output.state == OutputState::Partial,
                 reused,
             });
         }

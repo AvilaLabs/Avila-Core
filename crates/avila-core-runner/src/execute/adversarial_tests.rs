@@ -4725,6 +4725,50 @@ fn two_steps_sharing_an_executable_violate_diversity() {
 }
 
 #[test]
+fn a_dependency_blocked_step_still_reports_its_own_selection_refusal() {
+    let dir = TestDir::new();
+    let synthetic = blessed_chain(&dir);
+    // The upstream step records no eligible candidate, so the downstream
+    // step can never execute — but the downstream step's own no-eligible
+    // selection is an independent finding and must report beside the
+    // first, not be suppressed under it.
+    let activation = activation_candidate(
+        "excluded",
+        "python3",
+        &bound_executable_sha(&synthetic, "python3"),
+    );
+    declare_selection_entries(
+        &synthetic,
+        json!([
+            selection_entry("activation", json!([activation]), json!({})),
+            selection_entry(
+                "classification",
+                json!([classification_candidate(&synthetic, "excluded")]),
+                json!({})
+            ),
+        ]),
+    );
+    let report = execute_case(
+        &synthetic.case_dir,
+        &run_options(&synthetic, dir.workspace()),
+    )
+    .unwrap();
+    let refused: Vec<String> = report
+        .findings
+        .iter()
+        .filter(|finding| finding.code == "CORE-P5101")
+        .filter_map(|finding| finding.step_id.clone())
+        .collect();
+    assert_eq!(
+        refused,
+        vec!["activation".to_string(), "classification".to_string()],
+        "{:#?}",
+        report.findings
+    );
+    assert!(report.execution.is_none());
+}
+
+#[test]
 fn a_declared_maturity_meeting_the_floor_runs() {
     let dir = TestDir::new();
     let synthetic = blessed(&dir);

@@ -899,6 +899,90 @@
     ],
     "campaign_sha256": "sha256:ffedbe07960731933867a6bc8b77bf8a9e0bb9272b7441707803f35a82ae80cd"
    }
+  },
+  {
+   "fixture_id": "campaign.partial.permitted.pass",
+   "clause": "SC-5 clause 6",
+   "contract": "../types/types.R1.resolved.pass.contract.json",
+   "registry": "campaign.partial.permitted.registry.json",
+   "claims": "campaign.partial.permitted.claims.json",
+   "expected": {
+    "status": "evaluated",
+    "findings": [],
+    "admissions": [
+     {
+      "evidence_id": "input:case",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "calculated",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "bounded",
+      "state": "admitted",
+      "reasons": []
+     }
+    ],
+    "verdicts": [
+     {
+      "requirement_id": "R-001",
+      "status": "pass",
+      "rule": "bounded.le.within"
+     }
+    ],
+    "campaign_sha256": "sha256:386907901cd2063b8a9b27f1cdfa6b2164f4c9ae343547a2a845bf5f568c20b2"
+   }
+  },
+  {
+   "fixture_id": "campaign.partial-undeclared.fail",
+   "clause": "SC-5 clause 6",
+   "contract": "../types/types.R1.resolved.pass.contract.json",
+   "registry": "../types/compiler.registry.v1.json",
+   "claims": "campaign.partial.claims.json",
+   "expected": {
+    "status": "evaluated",
+    "findings": [
+     {
+      "code": "CORE-E7201",
+      "class": "inadmissible",
+      "owner": "executor",
+      "primary": {
+       "document": "claims",
+       "pointer": "/claims/1/partial"
+      }
+     }
+    ],
+    "admissions": [
+     {
+      "evidence_id": "input:case",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "calculated",
+      "state": "admitted",
+      "reasons": []
+     },
+     {
+      "evidence_id": "bounded",
+      "state": "quarantined",
+      "reasons": [
+       "CORE-E7201"
+      ]
+     }
+    ],
+    "verdicts": [
+     {
+      "requirement_id": "R-001",
+      "status": "not_evaluated",
+      "rule": "not_evaluated.quarantined"
+     }
+    ],
+    "campaign_sha256": "sha256:e9aff788086ea723bf34d8e17a649d413f559b7253d1c739d00b8cc48b6ddd99"
+   }
   }
  ]
 }

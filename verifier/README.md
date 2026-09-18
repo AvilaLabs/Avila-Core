@@ -152,10 +152,12 @@ otherwise silently pass or silently mismatch:
 - presentation-gate / staged-review realisation or content;
 - recompiling a contract + registry into a compiled-snapshot identity
   (equality is checked; recomputation is not);
-- the A3 parent-admission dataflow cascade and the A6
-  registry-role-permitted-claim-model check (both need a compiled
-  dataflow graph / role table this profile does not build — three
-  campaign fixtures need one of these and are named, not silently passed).
+- the A3 parent-admission dataflow cascade, the A6
+  registry-role-permitted-claim-model check, and the SC-5-clause-6
+  `partial`-vs-`permits_partial` check are re-derived through
+  `avila_core_lower`'s registry index where the documents parse; a
+  campaign fixture whose verdict depends on a step binding the lowerer
+  cannot resolve stays named, not silently passed.
 
 ## Usage
 

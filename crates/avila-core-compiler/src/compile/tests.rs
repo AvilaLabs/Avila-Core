@@ -1078,8 +1078,136 @@ fn campaign_states_do_not_exist_on_a_contract() {
     // SC-9: contract status is a document-owner lifecycle label;
     // planned/running/completed belong to campaigns only. The contract
     // vocabulary is closed, so a campaign state cannot even be named.
-    let mut document = serde_json::to_value(&contract()).unwrap();
+    let mut document = serde_json::to_value(contract()).unwrap();
     document["status"] = serde_json::json!("running");
     let report = compile_documents(&document.to_string().into_bytes(), REGISTRY).unwrap();
     assert_eq!(report.status, CompilationStatus::Rejected);
+}
+
+#[test]
+fn a_cross_kind_conversion_is_an_explicit_capability_type() {
+    // SC-5 clause 7: Gy -> Sv is a capability type with declared inputs and
+    // outputs; no implicit conversion exists anywhere in the compiler. The
+    // weighting factor rides in as a second bound input.
+    let mut registry = serde_json::to_value(registry()).unwrap();
+    registry["kinds"]
+        .as_array_mut()
+        .unwrap()
+        .push(serde_json::json!({
+            "kind_id": "core.dimensionless",
+            "canonical_unit": "1",
+            "unit_class": "core.dimensionless.units@1",
+            "owner": "fixture.method_owner",
+            "units": [{"symbol": "1", "factor": "1"}],
+        }));
+    for (role, kind) in [
+        (
+            "nuclear.dose_equivalent_rate",
+            "nuclear.dose_equivalent_rate",
+        ),
+        ("nuclear.weighting_factor", "core.dimensionless"),
+    ] {
+        registry["roles"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({
+                "role": {"id": role, "major": 1},
+                "owner": "fixture.method_owner",
+                "validator": "fixture.validate.quantity@1",
+                "quantity_kind": kind,
+                "unit_class": format!("{kind}.units@1"),
+                "accepted_media_types": ["application/vnd.fixture.quantity+json"],
+                "permitted_claim_models": [{"model": "exact"}, {"model": "interval"}],
+            }));
+    }
+    registry["capability_types"]
+        .as_array_mut()
+        .unwrap()
+        .push(serde_json::json!({
+            "capability_type": {
+                "id": "core.convert.absorbed_dose_to_dose_equivalent",
+                "major": 1
+            },
+            "owner": "fixture.method_owner",
+            "reproducibility": {
+                "determinism": "deterministic",
+                "material_factors": []
+            },
+            "inputs": [
+                {
+                    "slot_id": "dose",
+                    "role": {"id": "nuclear.absorbed_dose_rate", "major": 1},
+                    "accepted_media_types": ["application/vnd.fixture.quantity+json"],
+                    "required": true
+                },
+                {
+                    "slot_id": "weighting",
+                    "role": {"id": "nuclear.weighting_factor", "major": 1},
+                    "accepted_media_types": ["application/vnd.fixture.quantity+json"],
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "slot_id": "equivalent",
+                    "role": {"id": "nuclear.dose_equivalent_rate", "major": 1},
+                    "media_type": "application/vnd.fixture.quantity+json",
+                    "permitted_claim_models": [{"model": "exact"}, {"model": "interval"}]
+                }
+            ]
+        }));
+
+    let mut source = serde_json::to_value(contract()).unwrap();
+    source["inputs"] = serde_json::json!([
+        {
+            "input_id": "dose",
+            "role": {"id": "nuclear.absorbed_dose_rate", "major": 1},
+            "media_type": "application/vnd.fixture.quantity+json",
+            "claim_model": {"model": "exact"}
+        },
+        {
+            "input_id": "weighting",
+            "role": {"id": "nuclear.weighting_factor", "major": 1},
+            "media_type": "application/vnd.fixture.quantity+json",
+            "claim_model": {"model": "exact"}
+        }
+    ]);
+    source["workflow"] = serde_json::json!([{
+        "step_id": "convert",
+        "capability_type": {
+            "id": "core.convert.absorbed_dose_to_dose_equivalent",
+            "major": 1
+        },
+        "bindings": [
+            {"input_slot": "dose", "source": {"source": "contract_input", "input_id": "dose"}},
+            {"input_slot": "weighting", "source": {"source": "contract_input", "input_id": "weighting"}}
+        ],
+        "parameters": {}
+    }]);
+    source["requirements"] = serde_json::json!([{
+        "requirement_id": "R-001",
+        "statement": "The dose equivalent rate must not exceed the illustrative limit.",
+        "metric": {"source": "step_output", "step_id": "convert", "output_slot": "equivalent"},
+        "comparison": "less_than_or_equal",
+        "limit": {"kind": "nuclear.dose_equivalent_rate", "value": "100", "unit": "Sv/s"},
+        "basis": {"kind": "bounded"},
+        "purpose": {"id": "fixture.requirement_evaluation", "major": 1}
+    }]);
+
+    let report = compile_documents(
+        &source.to_string().into_bytes(),
+        &registry.to_string().into_bytes(),
+    )
+    .unwrap();
+    assert_eq!(report.status, CompilationStatus::Compiled, "{report:#?}");
+    let compiled = report.compiled.unwrap();
+    assert_eq!(compiled.workflow.len(), 1);
+    assert_eq!(compiled.workflow[0].step_id, "convert");
+    let sv_kind = "nuclear.dose_equivalent_rate";
+    assert!(
+        compiled
+            .requirements
+            .iter()
+            .any(|requirement| requirement.limit.kind == sv_kind)
+    );
 }

@@ -144,7 +144,21 @@ pub struct ReceiptOutput {
 #[serde(rename_all = "snake_case")]
 pub enum OutputState {
     Collected,
+    /// SC-5 clause 6: the output was produced and the receipt explicitly
+    /// declares its result partial for this slot. Bytes still verify; the
+    /// slot's `permits_partial` declaration decides admission downstream.
+    Partial,
     Missing,
+}
+
+impl OutputState {
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Collected => "collected",
+            Self::Partial => "partial",
+            Self::Missing => "missing",
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -450,7 +464,7 @@ pub fn verify_receipt(
             ));
         }
         match (output.state, &output.sha256) {
-            (OutputState::Collected, Some(sha256)) => {
+            (OutputState::Collected | OutputState::Partial, Some(sha256)) => {
                 files.push(check_workspace_file(
                     workspace,
                     "output",
@@ -460,9 +474,10 @@ pub fn verify_receipt(
                     &mut issues,
                 )?);
             }
-            (OutputState::Collected, None) => issues.push(format!(
-                "output `{}` is marked collected without a digest",
-                output.output_id
+            (OutputState::Collected | OutputState::Partial, None) => issues.push(format!(
+                "output `{}` is marked {} without a digest",
+                output.output_id,
+                output.state.label()
             )),
             (OutputState::Missing, _) => {
                 issues.push(format!("output `{}` was not produced", output.output_id));
@@ -844,6 +859,29 @@ mod tests {
                 .issues
                 .iter()
                 .any(|issue| issue.contains("was staged with digest"))
+        );
+    }
+
+    #[test]
+    fn a_declared_partial_output_verifies_its_bytes_but_not_its_permission() {
+        let root = TestDir::new();
+        let (mut receipt, expected) = fixture(&root.0);
+        // SC-5 clause 6: a declared partial still produced real bytes —
+        // receipt verification checks them exactly like a collected output.
+        // Whether the slot permits the partial is admission's question, not
+        // this receipt check's.
+        receipt.outputs[0].state = OutputState::Partial;
+        let check = verify_receipt(&receipt, &root.0, &expected).unwrap();
+        assert_eq!(check.state, ReceiptCheckState::Verified);
+
+        receipt.outputs[0].sha256 = None;
+        let check = verify_receipt(&receipt, &root.0, &expected).unwrap();
+        assert_eq!(check.state, ReceiptCheckState::Failed);
+        assert!(
+            check
+                .issues
+                .iter()
+                .any(|issue| issue.contains("marked partial without a digest"))
         );
     }
 }

@@ -1162,3 +1162,31 @@ contract-status transition records (`submit`, edit-refusal, `retired`
 read-only), the `contract_template` document type and its eligibility
 rules, and the amendment chain machinery.
 
+
+### Partial outputs + type-level pins implemented — 2026-09-26
+
+SC-5 clause 6 landed end to end. `OutputSlotDefinition.permits_partial`
+declares the slots a partial result may fill; `OutputState::Partial` is
+the receipt's explicit declaration that it produced a partial result
+(bytes still verify exactly like a collected output — permission is
+admission's question, not the receipt check's); the claim record carries
+`partial` through generation into the committed claims document; and
+campaign admission quarantines a `partial` claim on any slot that does
+not declare `permits_partial` with `CORE-E7201`. The independent
+verifier's admission cascade re-derives the same check through
+`avila_core_lower`. Two committed campaign fixtures pin both directions:
+`campaign.partial.permitted.pass` (declared slot admits, verdict
+unchanged) and `campaign.partial-undeclared.fail` (undeclared slot
+quarantines, `not_evaluated.quarantined`). Two further spec-ratified
+pins landed beside it: a compiler test proving a cross-kind conversion
+is an explicit capability type (Gy→Sv through a declared type, not a
+compiler special case — `types.conversion-capability`), and a runner
+adversarial test proving a dependency-blocked step still reports its own
+`CORE-P5101` selection refusal
+(`types.cascade-preserves-independent`). Schemas updated:
+registry-snapshot `permits_partial`, evidence-claims `partial`,
+execution-receipt `partial` state. fixtures-check reads 94 covered /
+158 named / 18 unbounded / 40 absent — four `types.*` rows credited.
+Still design-gated: everything else — rounding capability, receipt
+numerical-error components, role vocabulary, lifecycle records,
+campaign/authority, the org-policy lattice.

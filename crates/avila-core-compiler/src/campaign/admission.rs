@@ -256,6 +256,20 @@ pub(super) fn admit(
             ));
             reasons.push(reason(CORE_E7201, detail));
         }
+        if claim.partial && !output.permits_partial {
+            let detail = format!(
+                "claim records a partial result, but output slot `{}` of `{}@{}` does not declare `permits_partial`",
+                claim.output_slot, step.capability_type.id, step.capability_type.major
+            );
+            findings.push(CoreDiagnostic::new(
+                CORE_E7201,
+                FindingClass::Inadmissible,
+                "executor",
+                claims_location(format!("/claims/{index}/partial")),
+                detail.clone(),
+            ));
+            reasons.push(reason(CORE_E7201, detail));
+        }
         for parent in &step.bindings {
             if !admitted.contains(&parent.source) {
                 let detail = format!(

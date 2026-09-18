@@ -391,7 +391,12 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                                 receipt.duration_ms,
                                 step.outputs
                                     .iter()
-                                    .filter(|output| output.state == OutputState::Collected)
+                                    .filter(|output| {
+                                        matches!(
+                                            output.state,
+                                            OutputState::Collected | OutputState::Partial
+                                        )
+                                    })
                                     .count(),
                                 step.outputs.len()
                             );
@@ -399,9 +404,14 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                         for output in &step.outputs {
                             let _ = writeln!(
                                 out,
-                                "      {} {}{}",
+                                "      {} {}{}{}",
                                 output.workspace_path,
                                 output.sha256.as_deref().unwrap_or("missing"),
+                                match output.state {
+                                    OutputState::Collected => "",
+                                    OutputState::Partial => " [partial]",
+                                    OutputState::Missing => " [missing]",
+                                },
                                 match output.reproduces_bound_artifact {
                                     Some(true) => " — reproduces the bound artifact",
                                     Some(false) => " — DIFFERS from the bound artifact",

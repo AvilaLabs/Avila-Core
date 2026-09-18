@@ -59,6 +59,11 @@
         "artifact": { "$ref": "#/$defs/artifactIdentity" },
         "producer": { "$ref": "#/$defs/producerIdentity" },
         "claim": { "$ref": "#/$defs/claimValue" },
+        "partial": {
+          "type": "boolean",
+          "description": "SC-5 clause 6: the producing receipt declared this output a partial result. Admitted only on a slot whose type declares `permits_partial`; anywhere else it quarantines with CORE-E7201.",
+          "default": false
+        },
         "qualification": {
           "type": "object",
           "additionalProperties": false,

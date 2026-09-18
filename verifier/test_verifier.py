@@ -1921,7 +1921,7 @@ class TestSnapshotLowering(unittest.TestCase):
                         rejected += 1
         # Pin the corpus breadth so a quietly dropped suite cannot hollow
         # the proof out.
-        self.assertEqual(compiled + rejected, 70)
+        self.assertEqual(compiled + rejected, 71)
 
     def test_every_committed_case_snapshot_recomputes(self):
         case_dirs = sorted(p for p in EXAMPLES.iterdir() if (p / "claims.json").is_file())

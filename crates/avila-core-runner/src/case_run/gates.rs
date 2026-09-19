@@ -60,6 +60,7 @@ pub(super) fn build_presentation_gates(
             independence: gate.independence.clone(),
             instructions: gate.instructions.clone(),
             respond_by: respond_by.map(str::to_owned),
+            routing: None,
         };
         gate.request_sha256 = presentation_request_identity(&gate)?;
         stages.push(gate);
@@ -114,10 +115,15 @@ fn realize_presented_evidence(
 
 fn presentation_request_identity(gate: &PresentationGateReport) -> Result<String, Box<dyn Error>> {
     let mut value = serde_json::to_value(gate)?;
-    value
+    let object = value
         .as_object_mut()
-        .expect("a presentation gate serializes as an object")
-        .remove("request_sha256");
+        .expect("a presentation gate serializes as an object");
+    object.remove("request_sha256");
+    // The routing outcome and the operator's deadline attach outside the
+    // reviewer's dossier; neither rewrites what the reviewer was shown
+    // (ADR-0021 inert data, ADR-0024).
+    object.remove("routing");
+    object.remove("respond_by");
     let bytes = serde_json::to_vec(&value)?;
     let canonical = avila_core_kernel::canonicalize_json(&bytes)?;
     Ok(format!("sha256:{:x}", Sha256::digest(&canonical)))
@@ -125,9 +131,9 @@ fn presentation_request_identity(gate: &PresentationGateReport) -> Result<String
 
 /// ADR-0021 X6401: scan prior run rows in the campaign log for gates whose
 /// recorded `respond_by` is earlier than `now` (lexical compare on RFC3339
-/// UTC strings). No routing-record document type exists yet (ADR-0024), so
-/// any past-deadline gate counts as unresolved by definition. Returns one
-/// entry per distinct `request_sha256`.
+/// UTC strings). A gate whose row records a `recorded` routing (ADR-0024)
+/// is resolved and cannot lapse. Returns one entry per distinct
+/// `request_sha256`.
 pub(super) fn find_lapsed_gates(log_content: &str, now: &str) -> Vec<(String, String, String)> {
     let mut seen = std::collections::BTreeSet::new();
     let mut lapsed = Vec::new();
@@ -139,6 +145,16 @@ pub(super) fn find_lapsed_gates(log_content: &str, now: &str) -> Vec<(String, St
             continue;
         };
         for gate in gates {
+            // ADR-0024: a verified routing is the arrival the deadline was
+            // waiting on — only an unresolved gate can lapse.
+            if gate
+                .get("routing")
+                .and_then(|routing| routing.get("state"))
+                .and_then(|state| state.as_str())
+                == Some("recorded")
+            {
+                continue;
+            }
             let (Some(req), Some(deadline)) = (
                 gate.get("request_sha256").and_then(|v| v.as_str()),
                 gate.get("respond_by").and_then(|v| v.as_str()),

@@ -30,49 +30,67 @@ never touches an artifact, an admission, or a verdict.
 
 ## Proposed decision
 
-### 1. A `routing_record` document binds dossier and disposition
+### 1. The committed `staged_review_record` is the routing record
 
-`avila.core/routing-record/v0.1-draft`, a package document. Fields:
+The record the gate produces already has a committed family:
+`avila.core/staged-review-record/v0.1-draft` — the gate declaration's
+`decision_role` is literally `core.presentation.routing-record`, and
+`examples/cases/case-001-shield-search/reviews/reference.json` is a
+committed instance bound in the package as a `staged_review_record`
+document. The proposal names it the routing record because that is what
+the contract's own vocabulary calls it; no second record type is
+introduced.
 
-- `record_id`, `schema_version`, `semantic_profile`.
-- `gate`: `{ step_id, review_declaration_sha256 }` — the exact compiled
-  gate the record answers, pinned by digest so a re-edited gate can
-  never silently inherit an old routing.
-- `dossier`: `{ campaign_report_sha256, claims_sha256 }` — the exact
-  post-campaign dossier digests. The dossier is what the reviewer saw;
-  binding it by digest is what makes a mutated dossier detectable.
-- `disposition`: one member of the gate's `allowed_dispositions` — the
-  closed vocabulary is enforced by the declaration, not by the record.
-- `agent_policy`: `{ policy_id, sha256 }` — the pinned agent
-  eligibility policy the routing was performed under, matching the
-  `ReviewPolicyBinding`'s `reviewer_eligibility_policy`.
-- `actor`: the stated attribution (`{ actor_id, actor_kind }`), a
-  claim, exactly as ADR-0021 attestations carry.
-- `at`: the recorded instant; `rationale`: inert text.
+The record binds everything A9 requires:
 
-### 2. One check, notice-severity, never a gate
+- `review_request` — the exact materialized request the reviewer
+  answered, verbatim, with `request_sha256` digesting its canonical form
+  with that member absent. A re-edited gate or a different dossier
+  produces a different `request_sha256` and can never silently inherit
+  an old routing.
+- `disposition` — the recorded routing outcome; must be a member of the
+  request's `allowed_dispositions`, whose closed vocabulary is enforced
+  by the declaration, not by the record.
+- `reviewer` — the stated attribution (`{ role, identity }`), a claim,
+  exactly as ADR-0021 attestations carry.
+- `record_sha256` — the document's digest over its canonical form with
+  that member absent, the same rule `request_sha256` uses.
+- `rationale`, `actions`, `limitations`, `attestation` — inert text;
+  data, never instructions.
 
-When a package carries a `routing_record`, the verifier and the runner
-check it against the committed material:
+### 2. One check family, notice-severity, never a gate
 
-- `dossier.campaign_report_sha256` must equal the committed campaign
-  report's digest — a record bound to a mutated dossier is quarantined
+When a package binds a `staged_review_record`, the runner checks it
+against the materialized gates at campaign-evaluation time and the
+verifier checks it independently:
+
+- `review_request.request_sha256` must recompute over the embedded
+  request *and* equal the materialized gate's — a record bound to a
+  mutated dossier or a different campaign is quarantined
   (`CORE-X6501`): the *record* is marked invalid, and the artifact,
   admission state, and verdict it was attached to are byte-for-byte
   unchanged. A9 is explicit: a bad routing record invalidates the
   routing, never the evidence.
-- `disposition` must be a member of the gate's `allowed_dispositions` —
-  a disposition the declaration did not allow is `CORE-X6501` again.
-- `gate.review_declaration_sha256` must equal the compiled gate's
-  digest, and `agent_policy.sha256` must equal the bound policy's — a
-  record answering a different gate or performed under a different
-  policy is `CORE-X6501`.
-- `CORE-X6502` — the record is structurally malformed (unknown fields,
-  a missing digest, a non-canonical form).
+- `reviewer_eligibility_policy` must equal the gate's bound policy —
+  a routing performed under a different policy is `CORE-X6501`.
+- `disposition` must be a member of `allowed_dispositions` — `CORE-X6501`.
+- `record_sha256` must recompute over the document — a record rewritten
+  after binding is `CORE-X6501`.
+- A record answering a `step_id` the contract declares no presentation
+  gate for is `CORE-X6501` — a forged claim about a nonexistent review.
+- A record answering a gate the contract *declares* but this campaign
+  did not materialize (a rejected campaign produces none) is
+  unresolvable: skipped without a finding, exactly as the verifier
+  treats a binding no committed run carries — not forged, not checked.
+- `CORE-X6502` — the record is structurally malformed (does not parse,
+  missing bytes, a foreign schema version).
 
 All findings are notices or quarantines on the *record*. An absent
 record is a clean state — the surrounding workflow simply has no
-recorded routing to show.
+recorded routing to show. A verified record marks its gate `recorded`
+in the run report and the log line — the arrival a pending `respond_by`
+deadline (ADR-0021 `CORE-X6401`) was waiting on; a quarantined record
+does not resolve the deadline.
 
 ### 3. What the record is not
 

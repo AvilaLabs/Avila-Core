@@ -73,6 +73,7 @@ use compare::write_attempt_comparison;
 pub(crate) use compare::{compare_attempt_results, compare_verdict_sets};
 use compare::{compare_attempt_to_parent, margins};
 mod gates;
+mod routing;
 use gates::build_presentation_gates;
 mod replay;
 use replay::{replay_expected, verify_bindings};
@@ -535,6 +536,34 @@ pub struct PresentationGateReport {
     /// verdict input.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub respond_by: Option<String>,
+    /// ADR-0024: the package-bound `staged_review_record` answering this
+    /// gate, with its verification outcome. Absent means no record was
+    /// bound — a clean state, not a failure.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub routing: Option<RoutingReport>,
+}
+
+/// The verification outcome a bound `staged_review_record` receives
+/// (ADR-0024). `Recorded` means every bound digest and the disposition
+/// agreed with the materialized gate; `Quarantined` means
+/// `CORE-X6501`/`X6502` invalidated the *record* — never the evidence it
+/// was attached to.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RoutingState {
+    Recorded,
+    Quarantined,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct RoutingReport {
+    pub record_id: String,
+    pub state: RoutingState,
+    /// The recorded disposition — present only on a `Recorded` routing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disposition: Option<ReviewDisposition>,
+    /// What the record claimed (recorded) or why it was quarantined.
+    pub detail: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -1265,6 +1294,14 @@ fn execute_case_inner(
         &campaign,
         options.gate_respond_by.as_deref(),
     )?;
+    // ADR-0024: verify package-bound routing records against the
+    // materialized gates; a quarantined record marks itself, never the
+    // evidence it was attached to.
+    report.findings.extend(routing::check_routing_records(
+        &package,
+        compiled,
+        &mut report.presentation_gates,
+    ));
     if !campaign.findings.is_empty() {
         report.rendered_findings = Some(render_campaign_report(
             &campaign,

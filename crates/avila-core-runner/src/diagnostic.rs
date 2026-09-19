@@ -39,6 +39,8 @@ pub const CORE_X6401: &str = "CORE-X6401";
 pub const CORE_X6402: &str = "CORE-X6402";
 pub const CORE_X6403: &str = "CORE-X6403";
 pub const CORE_X6404: &str = "CORE-X6404";
+pub const CORE_X6501: &str = "CORE-X6501";
+pub const CORE_X6502: &str = "CORE-X6502";
 pub const CORE_X9001: &str = "CORE-X9001";
 pub const CORE_P5101: &str = "CORE-P5101";
 pub const CORE_P5102: &str = "CORE-P5102";
@@ -59,7 +61,7 @@ pub const RUNTIME_FINDING_CODES: &[&str] = &[
     CORE_X1005, CORE_X1101, CORE_X1201, CORE_X1301, CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301,
     CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101,
     CORE_X3201, CORE_X3301, CORE_X3401, CORE_X3404, CORE_X3405, CORE_X6401, CORE_X6402, CORE_X6403,
-    CORE_X6404, CORE_X9001,
+    CORE_X6404, CORE_X6501, CORE_X6502, CORE_X9001,
 ];
 
 /// Explanations are served by `avila-core explain` alongside compiler codes.
@@ -350,6 +352,20 @@ pub const RUNTIME_DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         rule: "ADR-0021 clause 5: resumption",
         meaning: "A run was appended for a campaign whose recorded state is terminal or blocked — the log's transition records say the campaign ended or suspended, yet new execution evidence appeared. Evidence and action disagree: either the transition was wrong or the run should not have happened.",
         next_action: "Reconcile the log: record the transition that legitimately reopened the campaign, or remove the run row if it was recorded against the wrong campaign. The owner is the requester.",
+    },
+    DiagnosticExplanation {
+        code: CORE_X6501,
+        title: "Routing record does not match the materialized gate",
+        rule: "ADR-0024; SC-11 A9",
+        meaning: "A `staged_review_record` answers a step with no declared presentation gate, binds a `request_sha256` different from what the run materialized, names an eligibility policy different from the gate's binding, records a disposition the request does not allow, or was rewritten after its `record_sha256` bound. The record is quarantined — the artifact, admission state, and verdict it was attached to are byte-for-byte unchanged.",
+        next_action: "Reproduce the routing honestly: route the exact dossier the materialized request binds and record a disposition the gate's declaration allows. The owner is the requester.",
+    },
+    DiagnosticExplanation {
+        code: CORE_X6502,
+        title: "Routing record malformed",
+        rule: "ADR-0024; staged-review-record schema",
+        meaning: "A package-bound `staged_review_record` has no bytes, does not parse, or carries a schema_version other than `avila.core/staged-review-record/v0.1-draft`. The record cannot stand as a recorded routing.",
+        next_action: "Repair the document to the staged-review-record schema, or remove it — an absent record is a clean state. The owner is the requester.",
     },
     DiagnosticExplanation {
         code: CORE_X9001,

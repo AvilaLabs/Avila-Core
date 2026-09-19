@@ -4,6 +4,8 @@ use super::stderr::{
     DiagnosticStderrFeedback, read_diagnostic_stderr, sanitize_diagnostic_stderr,
 };
 use super::*;
+use crate::diagnostic::{CORE_X6501, CORE_X6502};
+use sha2::{Digest, Sha256};
 
 fn comparison_attempt() -> AttemptRecord {
     AttemptRecord {
@@ -300,6 +302,184 @@ fn a_lapsed_presentation_gate_deadline_is_found_once_per_request() {
             "2026-09-18T12:00:00Z".to_string()
         )]
     );
+
+    // ADR-0024: a `recorded` routing is the arrival the deadline waited
+    // on — the same gate no longer lapses; a `quarantined` record is not
+    // an arrival and the gate still lapses.
+    let resolved = concat!(
+        r#"{"record_kind":"run","presentation_gates":[{"step_id":"review","request_sha256":"sha256:aaa","respond_by":"2026-09-18T12:00:00Z","routing":{"record_id":"routing","state":"recorded","disposition":"request_changes","detail":"ok"}}]}"#,
+        "\n",
+        r#"{"record_kind":"run","presentation_gates":[{"step_id":"review","request_sha256":"sha256:bbb","respond_by":"2026-09-18T12:00:00Z","routing":{"record_id":"routing","state":"quarantined","detail":"bad"}}]}"#,
+        "\n"
+    );
+    let lapsed = find_lapsed_gates(resolved, "2026-09-19T00:00:00Z");
+    assert_eq!(
+        lapsed,
+        vec![(
+            "review".to_string(),
+            "sha256:bbb".to_string(),
+            "2026-09-18T12:00:00Z".to_string()
+        )]
+    );
+}
+
+/// ADR-0024: the materialized gate plus a staged-review record whose
+/// embedded request binds it — the honest `Recorded` state — then each
+/// A9 binding broken one at a time.
+#[test]
+fn a_routing_record_verifies_and_each_broken_binding_quarantines() {
+    use super::routing::{StagedReviewRecord, canonical_identity, check_record};
+    let contract = fs::read(case_001().join("contract.json")).unwrap();
+    let registry = fs::read(case_001().join("registry.json")).unwrap();
+    let compile = compile_documents(&contract, &registry).unwrap();
+    let compiled = compile.compiled.as_ref().unwrap();
+    let claims_bytes = fs::read(case_001().join("claims.json")).unwrap();
+    let claims: ClaimsDocument = serde_json::from_slice(&claims_bytes).unwrap();
+    let campaign = evaluate_campaign(&contract, &registry, &claims_bytes).unwrap();
+    let gates = build_presentation_gates(compiled, &claims, &campaign, None).unwrap();
+    assert_eq!(gates.len(), 1);
+    let gate = &gates[0];
+    assert_eq!(gate.step_id, "practical-review");
+
+    // The honest record: the materialized request verbatim, an allowed
+    // disposition, and a self-consistent record digest.
+    let request = serde_json::to_value(gate).unwrap();
+    let mut record = serde_json::json!({
+        "schema_version": super::routing::STAGED_REVIEW_SCHEMA_VERSION,
+        "review_request": request,
+        "reviewer": {"role": "agent", "identity": "sha256:test"},
+        "disposition": "request_changes",
+        "rationale": "checked",
+    });
+    let mut body = record.clone();
+    body.as_object_mut().unwrap().remove("record_sha256");
+    let canonical =
+        avila_core_kernel::canonicalize_json(&serde_json::to_vec(&body).unwrap()).unwrap();
+    record["record_sha256"] = serde_json::json!(format!("sha256:{:x}", Sha256::digest(&canonical)));
+    let record: StagedReviewRecord = serde_json::from_value(record).unwrap();
+    assert_eq!(check_record(&record, &gates), Ok(0));
+
+    // A request that recomputes but binds a different dossier.
+    let mut forged = serde_json::to_value(&record).unwrap();
+    forged["review_request"]["campaign_sha256"] =
+        serde_json::json!(format!("sha256:{}", "0".repeat(64)));
+    let recomputed = canonical_identity(&forged["review_request"], "request_sha256").unwrap();
+    forged["review_request"]["request_sha256"] = serde_json::json!(recomputed.unwrap());
+    let forged: StagedReviewRecord = serde_json::from_value(forged).unwrap();
+    let reason = check_record(&forged, &gates).unwrap_err();
+    assert!(reason.contains("different dossier"), "{reason}");
+
+    // A request whose embedded fields no longer digest to its binding.
+    let mut rewritten = serde_json::to_value(&record).unwrap();
+    rewritten["review_request"]["campaign_sha256"] =
+        serde_json::json!(format!("sha256:{}", "1".repeat(64)));
+    let rewritten: StagedReviewRecord = serde_json::from_value(rewritten).unwrap();
+    let reason = check_record(&rewritten, &gates).unwrap_err();
+    assert!(reason.contains("rewritten"), "{reason}");
+
+    // A record rewritten after its own digest bound.
+    let mut tampered = serde_json::to_value(&record).unwrap();
+    tampered["rationale"] = serde_json::json!("edited after binding");
+    let tampered: StagedReviewRecord = serde_json::from_value(tampered).unwrap();
+    let reason = check_record(&tampered, &gates).unwrap_err();
+    assert!(reason.contains("record_sha256"), "{reason}");
+}
+
+/// The declared-but-unmaterialized case plus the undeclared case, both
+/// through `check_routing_records` on CASE-001's verified package:
+/// a record answering a declared gate that did not materialize is
+/// unresolvable (skipped), while a record answering a step the contract
+/// declares no gate for is quarantined `CORE-X6501`.
+#[test]
+fn routing_records_skip_unmaterialized_gates_and_quarantine_undeclared_ones() {
+    let contract = fs::read(case_001().join("contract.json")).unwrap();
+    let registry = fs::read(case_001().join("registry.json")).unwrap();
+    let compile = compile_documents(&contract, &registry).unwrap();
+    let compiled = compile.compiled.as_ref().unwrap();
+    let claims_bytes = fs::read(case_001().join("claims.json")).unwrap();
+    let claims: ClaimsDocument = serde_json::from_slice(&claims_bytes).unwrap();
+    let campaign = evaluate_campaign(&contract, &registry, &claims_bytes).unwrap();
+    let mut gates = build_presentation_gates(compiled, &claims, &campaign, None).unwrap();
+    assert_eq!(gates.len(), 1);
+
+    let manifest_bytes = fs::read(case_001().join("package.json")).unwrap();
+    let package =
+        verify_case_package(&manifest_bytes, &case_001(), &shielding_root(), None).unwrap();
+
+    // The committed record names `practical-review` — a declared gate,
+    // materialized here. Its request_sha256 was bound by an older
+    // materialization, so it quarantines rather than verifies; the point
+    // is that it is *checked*, never silently skipped.
+    let findings = routing::check_routing_records(&package, compiled, &mut gates);
+    assert!(
+        findings
+            .iter()
+            .all(|finding| finding.code == CORE_X6501 || finding.code == CORE_X6502),
+        "any finding is a routing finding: {findings:?}"
+    );
+
+    // A record answering an undeclared step is quarantined outright.
+    let temp = std::env::temp_dir().join(format!("avila-core-routing-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&temp);
+    copy_dir(&case_001(), &temp);
+    let record_path = temp.join("reviews/reference.json");
+    let mut record: serde_json::Value =
+        serde_json::from_slice(&fs::read(&record_path).unwrap()).unwrap();
+    record["review_request"]["step_id"] = serde_json::json!("no-such-step");
+    let bytes = serde_json::to_vec_pretty(&record).unwrap();
+    fs::write(&record_path, &bytes).unwrap();
+    let manifest_path = temp.join("package.json");
+    let mut manifest: serde_json::Value =
+        serde_json::from_slice(&fs::read(&manifest_path).unwrap()).unwrap();
+    for document in manifest["documents"].as_array_mut().unwrap() {
+        if document["path"] == "reviews/reference.json" {
+            document["sha256"] =
+                serde_json::Value::String(format!("sha256:{:x}", Sha256::digest(&bytes)));
+        }
+    }
+    fs::write(
+        &manifest_path,
+        serde_json::to_vec_pretty(&manifest).unwrap(),
+    )
+    .unwrap();
+
+    let forged_manifest = fs::read(&manifest_path).unwrap();
+    let forged_package =
+        verify_case_package(&forged_manifest, &temp, &shielding_root(), None).unwrap();
+    let findings = routing::check_routing_records(&forged_package, compiled, &mut gates);
+    let finding = findings
+        .iter()
+        .find(|finding| finding.code == CORE_X6501)
+        .expect("a record answering an undeclared gate is quarantined");
+    assert!(finding.message.contains("no-such-step"), "{finding:?}");
+
+    // A declared-but-unmaterialized gate: clear the materialized list —
+    // the same honest record is unresolvable, not quarantined.
+    let mut no_gates: Vec<PresentationGateReport> = Vec::new();
+    let findings = routing::check_routing_records(&package, compiled, &mut no_gates);
+    assert!(
+        findings
+            .iter()
+            .all(|finding| finding.code != CORE_X6501 && finding.code != CORE_X6502),
+        "an honest record against an unmaterialized gate is unresolvable, not quarantined: {findings:?}"
+    );
+
+    let _ = fs::remove_dir_all(&temp);
+}
+
+/// Copy a case directory for mutation tests (no `dir-copy` dependency).
+fn copy_dir(source: &Path, target: &Path) {
+    fs::create_dir_all(target).unwrap();
+    for entry in fs::read_dir(source).unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        let destination = target.join(entry.file_name());
+        if path.is_dir() {
+            copy_dir(&path, &destination);
+        } else {
+            fs::copy(&path, &destination).unwrap();
+        }
+    }
 }
 
 fn shielding_root() -> BTreeMap<String, PathBuf> {

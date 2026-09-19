@@ -1327,3 +1327,45 @@ self-ratify):
 Remaining inside ADR-0021's boundary: `amend` does not emit the
 supersession transition automatically (manual `transition` command
 records it); `admission.A9` still gates on ADR-0024's routing record.
+
+## 2026-09-19 — ADR-0024 implemented (proposed status unchanged)
+
+Implemented the presentation-routing checks end to end under the
+proposed ADR-0024 (status left `proposed` — implementation does not
+self-ratify). The proposal's §1 was amended during implementation: the
+committed `avila.core/staged-review-record/v0.1-draft` family is the
+routing record — the gate's `decision_role` is literally
+`core.presentation.routing-record` — so no second record type exists.
+
+- `case_run/routing.rs` — `StagedReviewRecord` model,
+  `check_routing_records` over package-bound `staged_review_record`
+  documents, `check_record` for the A9 bindings:
+  `request_sha256` self-consistency + materialized-gate equality,
+  `reviewer_eligibility_policy` equality, `allowed_dispositions`
+  membership, `record_sha256` self-consistency, reviewer-role match.
+- `CORE-X6501` semantic mismatch (rewritten dossier binding, different
+  policy, disallowed disposition, forged `record_sha256`, a record
+  answering a step the contract declares no gate for); `CORE-X6502`
+  structural failure (unparseable, missing bytes, foreign schema
+  version). Both notice-severity — the record is quarantined, never the
+  evidence it was attached to.
+- `RoutingReport` on `PresentationGateReport` + the log row; `recorded`
+  vs `quarantined` states. A `recorded` routing resolves a pending
+  `respond_by` deadline (`find_lapsed_gates` skips it); quarantined
+  does not.
+- `respond_by` and `routing` are excluded from `request_sha256` — the
+  operator's deadline and the routing outcome are outside the dossier
+  the reviewer signed off on; including them would make honest records
+  falsely quarantine.
+- Unresolvable semantics: a record answering a gate the contract
+  declares but this campaign did not materialize is skipped without a
+  finding — matching the verifier's "not forged, not checked" posture
+  for uncommitted bindings.
+
+Verifier parity: `verify_staged_reviews` already covered the record's
+bindings at verify-time; the runner-side check is the new half. No
+schema changes — the committed `staged-review-record` schema governs.
+
+Remaining inside ADR-0024's boundary: no CLI path mints a record (the
+surrounding agent workflow writes it, the engine verifies); the
+`human` reviewer role remains a vocabulary extension, not a record type.

@@ -121,6 +121,8 @@ same checks as `selection.*` mismatches.
 | `CORE-X6402` | Illegal state transition recorded | campaign evaluation |
 | `CORE-X6403` | Transition attestation missing or unauthorized | campaign evaluation |
 | `CORE-X6404` | Run disagrees with recorded campaign state | campaign evaluation |
+| `CORE-X6501` | Routing record does not match the materialized gate | campaign evaluation |
+| `CORE-X6502` | Routing record malformed | campaign evaluation |
 | `CORE-X9001` | Runner could not produce a case report | infrastructure |
 
 The full meaning and next action for each runtime code live in the embedded

@@ -154,6 +154,11 @@ pub(crate) fn append_log(
         request_sha256: &'a str,
         #[serde(skip_serializing_if = "Option::is_none")]
         respond_by: Option<&'a str>,
+        /// ADR-0024: the verified routing outcome when a package binds a
+        /// `staged_review_record` for this gate — `recorded` resolves a
+        /// pending deadline; `quarantined` marks the record invalid.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        routing: Option<&'a super::RoutingReport>,
     }
     let entry = LogEntry {
         schema_version: RUN_ATTEMPT_LOG_SCHEMA_VERSION,
@@ -226,6 +231,7 @@ pub(crate) fn append_log(
                 readiness: gate.readiness,
                 request_sha256: &gate.request_sha256,
                 respond_by: gate.respond_by.as_deref(),
+                routing: gate.routing.as_ref(),
             })
             .collect(),
         coverage: report.coverage.as_ref().map(|coverage| CoverageLog {

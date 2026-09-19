@@ -61,6 +61,15 @@
       },
       "default": []
     },
+    "instantiated_from": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["instantiation_id"],
+      "properties": {
+        "instantiation_id": { "type": "string", "minLength": 1 }
+      },
+      "description": "ADR-0022: the instantiation record this contract was derived under — immutable origin metadata, never a status. The named record (bound as a package document) is checked against the pinned template at compile time (CORE-A4801..A4805)."
+    },
     "workflow": {
       "type": "array",
       "minItems": 1,

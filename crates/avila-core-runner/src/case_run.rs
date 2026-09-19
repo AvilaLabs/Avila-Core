@@ -17,9 +17,9 @@ use avila_core_compiler::{
     CompileReport, CompiledContract, CompiledStep, CoverageDeclaration, CoverageReport,
     CoverageStatus, DeclaredOmission, EnvelopeAssessment, FindingClass, ImmutablePolicyRef,
     PresentationGateState, RegistrySnapshot, ReviewDisposition, ReviewIndependence, ReviewerRole,
-    SourceLocation, SourceRef, assess_coverage, compile_documents, evaluate_campaign,
-    evaluate_envelope, parse_requirement_set, registry_kinds, render_campaign_report,
-    render_compile_report,
+    SourceLocation, SourceRef, assess_coverage, compile_documents_with_instantiation,
+    evaluate_campaign, evaluate_envelope, parse_requirement_set, registry_kinds,
+    render_campaign_report, render_compile_report,
 };
 use avila_core_evidence::signature::{self, TrustRoot};
 use avila_core_evidence::{
@@ -979,7 +979,29 @@ fn execute_case_inner(
     let committed_claims_bytes = required_document(&package, "claims")?;
     let committed_claims: Value = serde_json::from_slice(committed_claims_bytes)?;
 
-    let compile = compile_documents(contract, registry)?;
+    // ADR-0022: instantiation material — every bound `contract_instantiation`
+    // record and `contract_template` document. The contract's own
+    // `instantiated_from` pin selects what it is checked against.
+    let instantiation_records: Vec<&[u8]> = package
+        .manifest
+        .documents
+        .iter()
+        .filter(|document| document.role == "contract_instantiation")
+        .filter_map(|document| package.document_by_id(&document.document_id))
+        .collect();
+    let instantiation_templates: Vec<&[u8]> = package
+        .manifest
+        .documents
+        .iter()
+        .filter(|document| document.role == "contract_template")
+        .filter_map(|document| package.document_by_id(&document.document_id))
+        .collect();
+    let instantiation_material = avila_core_compiler::InstantiationMaterial {
+        records: &instantiation_records,
+        templates: &instantiation_templates,
+    };
+    let compile =
+        compile_documents_with_instantiation(contract, registry, &instantiation_material)?;
     if compile.status == CompilationStatus::Rejected {
         report.rendered_findings = Some(render_compile_report(
             &compile,

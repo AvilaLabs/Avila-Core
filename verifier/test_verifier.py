@@ -2526,3 +2526,180 @@ class TestSnapshotLoweringMutations(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestInstantiationVerification(unittest.TestCase):
+    """ADR-0022 verifier parity: the digest chain (contract -> record ->
+    template), parameter/ref coverage, input coverage, and re-derived
+    eligibility outcomes."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="avila-core-verifier-inst-")
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.case_dir = Path(self.tmp)
+
+    def _digest(self, obj) -> str:
+        return v.sha256_bytes(v.canonicalize_json(json.dumps(obj).encode()))
+
+    def _write(self, name: str, obj) -> None:
+        (self.case_dir / name).write_text(json.dumps(obj))
+
+    def _build(self, contract: dict, record: dict, template: dict) -> dict:
+        self._write("contract.json", contract)
+        self._write("instantiation.json", record)
+        self._write("template.json", template)
+        docs_by_role = {
+            "contract": [{"document_id": "contract", "path": "contract.json"}],
+            "contract_instantiation": [
+                {"document_id": "inst", "path": "instantiation.json"}
+            ],
+            "contract_template": [
+                {"document_id": "tmpl", "path": "template.json"}
+            ],
+        }
+        return docs_by_role
+
+    def _template(self) -> dict:
+        return {
+            "schema_version": v.TEMPLATE_SCHEMA_VERSION,
+            "semantic_profile": "avila.core/semantic/0.2-draft",
+            "template_id": "fixture.template.dose",
+            "template_revision": 1,
+            "status": "approved",
+            "owner": "fixture.owner",
+            "parameters": [
+                {
+                    "parameter_id": "limit_value",
+                    "required": True,
+                    "value_type": {"type": "exact_number"},
+                }
+            ],
+            "inputs": [
+                {
+                    "input_id": "case",
+                    "role": {"id": "fixture.source_document", "major": 1},
+                    "media_type": "application/vnd.fixture.source+json",
+                    "claim_model": {"model": "unquantified"},
+                }
+            ],
+            "requirements": [
+                {
+                    "requirement_id": "R-001",
+                    "limit": {"value": {"ref": "limit_value"}},
+                }
+            ],
+            "eligibility": [
+                {
+                    "rule_id": "media_ok",
+                    "input_id": "case",
+                    "predicate": {
+                        "input_field_in": {
+                            "field": "media_type",
+                            "values": ["application/vnd.fixture.source+json"],
+                        }
+                    },
+                }
+            ],
+        }
+
+    def _assemble(self) -> tuple[dict, dict, dict]:
+        template = self._template()
+        contract = {
+            "contract_id": "fixture.instance.dose",
+            "revision": 1,
+            "instantiated_from": {"instantiation_id": "inst.dose.1"},
+            "inputs": [
+                {
+                    "input_id": "case",
+                    "role": {"id": "fixture.source_document", "major": 1},
+                    "media_type": "application/vnd.fixture.source+json",
+                    "claim_model": {"model": "unquantified"},
+                }
+            ],
+        }
+        record = {
+            "schema_version": v.INSTANTIATION_SCHEMA_VERSION,
+            "semantic_profile": "avila.core/semantic/0.2-draft",
+            "instantiation_id": "inst.dose.1",
+            "template": {
+                "template_id": template["template_id"],
+                "template_revision": template["template_revision"],
+                "sha256": self._digest(template),
+            },
+            "parameters": {"limit_value": "100"},
+            "inputs": ["case"],
+            "eligibility": [{"rule_id": "media_ok", "outcome": "eligible"}],
+            "aggregate": "eligible",
+            "contract": {
+                "contract_id": contract["contract_id"],
+                "revision": contract["revision"],
+                "sha256": self._digest(contract),
+            },
+        }
+        return contract, record, template
+
+    def _verify(self, docs_by_role) -> dict[str, object]:
+        report = v.Report(str(self.case_dir))
+        v.verify_instantiations(self.case_dir, {}, docs_by_role, report)
+        return {c.check: c for c in report.checks}
+
+    def test_clean_instantiation_verifies(self):
+        contract, record, template = self._assemble()
+        by_check = self._verify(self._build(contract, record, template))
+        for check in by_check.values():
+            self.assertNotEqual(check.status, "mismatch", check.to_dict())
+        self.assertEqual(by_check["instantiation.inst.contract"].status, "verified")
+        self.assertEqual(by_check["instantiation.inst.template"].status, "verified")
+        self.assertEqual(
+            by_check["instantiation.inst.eligibility.media_ok"].status, "verified"
+        )
+
+    def test_edited_contract_pin_is_named(self):
+        contract, record, template = self._assemble()
+        record["contract"]["sha256"] = "sha256:" + "0" * 64
+        by_check = self._verify(self._build(contract, record, template))
+        self.assertEqual(by_check["instantiation.inst.contract"].status, "mismatch")
+
+    def test_missing_template_is_named(self):
+        contract, record, template = self._assemble()
+        docs = self._build(contract, record, template)
+        docs["contract_template"] = []
+        by_check = self._verify(docs)
+        self.assertEqual(by_check["instantiation.inst.template"].status, "mismatch")
+
+    def test_unbound_required_parameter_is_named(self):
+        contract, record, template = self._assemble()
+        record["parameters"] = {}
+        by_check = self._verify(self._build(contract, record, template))
+        self.assertEqual(by_check["instantiation.inst.parameters"].status, "mismatch")
+
+    def test_derived_ineligible_is_named(self):
+        contract, record, template = self._assemble()
+        contract["inputs"][0]["media_type"] = "application/octet-stream"
+        record["contract"]["sha256"] = self._digest(contract)
+        by_check = self._verify(self._build(contract, record, template))
+        self.assertEqual(
+            by_check["instantiation.inst.eligibility.media_ok"].status, "mismatch"
+        )
+        self.assertEqual(by_check["instantiation.inst.aggregate"].status, "mismatch")
+
+    def test_recorded_outcome_mismatch_is_named(self):
+        contract, record, template = self._assemble()
+        record["eligibility"][0]["outcome"] = "ineligible"
+        record["aggregate"] = "ineligible"
+        by_check = self._verify(self._build(contract, record, template))
+        self.assertEqual(
+            by_check["instantiation.inst.eligibility.media_ok"].status, "mismatch"
+        )
+
+    def test_superseded_template_is_information(self):
+        contract, record, template = self._assemble()
+        newer = dict(template)
+        newer["template_revision"] = 2
+        docs = self._build(contract, record, template)
+        docs["contract_template"].append({"document_id": "tmpl2", "path": "template2.json"})
+        self._write("template2.json", newer)
+        by_check = self._verify(docs)
+        self.assertEqual(
+            by_check["instantiation.inst.template_superseded"].status, "verified"
+        )

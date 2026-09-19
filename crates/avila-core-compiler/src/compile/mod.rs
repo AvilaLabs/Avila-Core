@@ -1,9 +1,13 @@
 //! Deterministic contract compilation, pass by pass.
 //!
-//! `compile_documents` is the only entry point. Each pass lives in its own
-//! module, reports independent findings, and never repairs a source document.
+//! `compile_documents` is the entry point for ordinary contracts;
+//! `compile_documents_with_instantiation` additionally carries the bound
+//! instantiation material an `instantiated_from` contract is checked
+//! against (ADR-0022). Each pass lives in its own module, reports
+//! independent findings, and never repairs a source document.
 
 pub(crate) mod findings;
+pub(crate) mod instantiation;
 mod ir;
 mod notices;
 pub(crate) mod registry;
@@ -64,6 +68,22 @@ const MAX_WORKFLOW_STEPS: usize = 2_048;
 pub fn compile_documents(
     contract_bytes: &[u8],
     registry_bytes: &[u8],
+) -> Result<CompileReport, CompilerError> {
+    compile_documents_with_instantiation(
+        contract_bytes,
+        registry_bytes,
+        &instantiation::InstantiationMaterial::default(),
+    )
+}
+
+/// Compile a contract that may name an ADR-0022 `instantiated_from` record.
+/// `material` carries every package-bound `contract_instantiation` record and
+/// `contract_template` document; the contract's own `instantiated_from` pin
+/// selects the record it is checked against.
+pub fn compile_documents_with_instantiation(
+    contract_bytes: &[u8],
+    registry_bytes: &[u8],
+    material: &instantiation::InstantiationMaterial<'_>,
 ) -> Result<CompileReport, CompilerError> {
     let mut findings = Vec::new();
     let mut source_identities = Vec::new();
@@ -154,6 +174,20 @@ pub fn compile_documents(
         &mut findings,
     );
     validate_completion_block(&contract, &mut findings);
+
+    if contract.instantiated_from.is_some() {
+        let contract_sha256 = identity_for(&source_identities, "contract")
+            .expect("a parsed contract has a canonical identity")
+            .to_owned();
+        instantiation::check_instantiation(
+            &contract,
+            &contract_sha256,
+            registry_bytes,
+            &registry_index.kinds,
+            material,
+            &mut findings,
+        );
+    }
 
     if !findings.iter().any(CoreDiagnostic::blocks_compilation) {
         report_unconsumed_declarations(
@@ -412,6 +446,6 @@ fn identity_for<'a>(identities: &'a [DocumentIdentity], document: &str) -> Optio
         .map(|identity| identity.sha256.as_str())
 }
 
-fn prefixed_sha256(bytes: impl AsRef<[u8]>) -> String {
+pub(crate) fn prefixed_sha256(bytes: impl AsRef<[u8]>) -> String {
     format!("sha256:{:x}", Sha256::digest(bytes.as_ref()))
 }

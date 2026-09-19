@@ -1424,3 +1424,48 @@ metadata. `CORE-T2701` is a compiler-owned code emitted at record load
 (the compiler never sees a bound qualification record); the runtime
 catalog carries a matching entry, and `explain --all` dedupes by code
 preferring the compiler's entry.
+
+## ADR-0022 — contract templates and instantiation records (implemented)
+
+`contract_template`/`contract_instantiation` document types, schemas, and
+the compile-time checks; the contract names its record through
+`instantiated_from`.
+
+- `ContractTemplate` declares parameters (reusing `ParameterDefinition`),
+  input shapes, raw-JSON workflow/requirements templates with `{"ref":
+  "<param>"}` substitution at materialization, `policy_floor`, a closed
+  decidable eligibility grammar, validation cases, and an informational
+  `supersedes` pin.
+- `ContractInstantiation` pins `(template_id, template_revision,
+  sha256)`, bound parameters, filled inputs, per-rule eligibility
+  outcomes + aggregate, and `(contract_id, revision, sha256)`. The pin
+  direction is one-way — the record digest-pins the contract; the
+  contract names the record by `instantiation_id` (a digest in both
+  directions is a cycle no document can satisfy).
+- `compile_documents_with_instantiation` + `InstantiationMaterial`:
+  package-bound `contract_instantiation`/`contract_template` documents
+  are resolved by the contract's own `instantiated_from` pin.
+  `CORE-A4801` binding integrity, `CORE-A4802` parameter domain/ref +
+  input coverage, `CORE-A4803` mechanical policy-floor tightening over
+  every `execution_policy` field, `CORE-A4804` re-derived eligibility
+  (eligible-or-refused; a recorded outcome the fields do not imply is a
+  failure), `CORE-A4805` validation-case materialization + compile under
+  the instance's registry, `CORE-A4806` the `template_superseded` notice.
+- Verifier parity: `verify_instantiations` re-derives the digest chain,
+  parameter/ref coverage, input coverage, and every eligibility outcome.
+- Schemas: `contract-template.v0.1-draft`, `contract-instantiation
+  .v0.1-draft`, `instantiated_from` on the contract.
+
+Coverage pins: all eight `lifecycle.template.*`/`instantiation-is-origin`
+rows move to named.
+
+Honest gaps: the approval-time gate the ADR asked for cannot live in the
+transition log — a transition record names a subject identity and never
+sees document bytes — so `CORE-A4805` is enforced at instance compile
+(the honest boundary: a broken template yields refusing instances); no
+CLI path mints a record or template (the surrounding workflow authors
+them; the engine verifies); the template `supersedes` pin is
+informational — it is not resolved against a bound prior revision;
+signatures on both documents are package-bound `signature` docs under
+the standard trust-root machinery, not embedded fields (ADR amended);
+ADR-0022 stays `proposed`.

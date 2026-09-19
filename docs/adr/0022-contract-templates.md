@@ -46,32 +46,49 @@ noted:
   `ParameterDefinition` machinery capability types already use
   (`parameter_id`, `required`, `value_type` with `min`/`max`/
   `allowed_values`/`kind` domains) — no second parameter vocabulary.
+- `inputs`: the declared input shapes an instance must fill —
+  `{ input_id, role, media_type, claim_model }`. Eligibility rules
+  address these fields; the instance's own attributes and metadata are
+  its own. *(Added in implementation — the draft named eligibility
+  rules over "contract input" claims without declaring the inputs.)*
 - `workflow`: the step template, a list of `{ step_id, capability_type,
   bindings?, parameters }` where `parameters` may bind template
   parameter references (`{"ref": "param_id"}`) as well as literals.
+  Carried as raw JSON — a step cannot be typed until its references are
+  substituted at materialization.
 - `requirements`: the requirement template, the same shape with
   parameter references permitted in `limit` and `tolerance`.
 - `policy_floor`: the `execution_policy` fields the instance must
   declare at least as strict.
 - `eligibility`: an ordered list of eligibility rules — each
   `{ rule_id, input_id, predicate }` where `predicate` is a closed
-  expression over the contract input's declared claim (`media_type`,
-  `claim_model`, `role`, or an exact-number bound on a `contract_input`
-  fact the package supplies). Eligibility is decidable: every predicate
-  is a comparison over declared fields, never free text.
+  expression over the contract input's declared claim. The implemented
+  grammar is `input_field_in` (`field` in `media_type | claim_model |
+  role`, membership over `values`), `attribute_in` (membership over the
+  input's declared `attributes` — the ADR-0025 "contract_input fact"),
+  `attribute_in_range` (an exact-number `min`/`max` bound over an
+  attribute), and `all`/`any`/`not` composition under strong Kleene
+  truth. Eligibility is decidable: every predicate is a comparison over
+  declared fields, never free text.
 - `validation_cases`: a list of `{ case_id, parameters, inputs,
   expected }` — parameter bindings and input references the template
   declares must compile into a contract; `expected` names the verdict
   statuses the case should produce. A validation case is evidence the
   template's own shape compiles, not a scientific qualification.
-- `signature`: the template owner's signature document, verified under
-  the supplied trust root exactly as every other record.
+- The template owner's signature is a package-bound `signature`
+  document over the template's digest, verified under the supplied
+  trust root exactly as every other record — detached, not embedded.
+  *(The draft named an embedded `signature` field; detached binding is
+  the committed signature discipline.)*
 
 ### 2. An `instantiation` record pins the origin
 
 `avila.core/contract-instantiation/v0.1-draft`, carried as a package
 document and named by the instantiated contract's `instantiated_from`
-field (origin metadata — it never becomes a status). Fields:
+field (origin metadata — it never becomes a status). The pin direction
+is one-way: the *record* digest-pins the contract, the contract names
+the record by `instantiation_id` — a digest in both directions is a
+cycle no document can satisfy. Fields:
 
 - `instantiation_id`, `schema_version`, `semantic_profile`.
 - `template`: `{ template_id, template_revision, sha256 }` — the exact
@@ -86,7 +103,8 @@ field (origin metadata — it never becomes a status). Fields:
   unknown`) plus the aggregate the rules imply.
 - `contract`: `{ contract_id, revision, sha256 }` — the instantiated
   contract's identity.
-- `signature`: the instantiator's signature document.
+- The instantiator's signature is likewise a package-bound `signature`
+  document over the record's digest.
 
 ### 3. Compile-time checks against every declared boundary
 
@@ -109,15 +127,24 @@ against its template:
   it eligible for, or the record cannot say. `ineligible` and `unknown`
   fail identically — eligible-or-refused.
 - `CORE-A4805` — a `validation_case` fails to compile its parameter
-  binding, so the template's own declared shape is broken. Checked at
-  template approval time (an ADR-0021 `approved` transition on a
-  template requires every validation case compiling); an instance
-  compiled against an approved template inherits the result.
+  binding, so the template's own declared shape is broken. Checked
+  wherever a template is compiled — at instance compile each case is
+  materialized and compiled against the instance's registry. The
+  approval transition itself cannot see document bytes (a transition
+  record names a subject identity), so the enforceable boundary is the
+  instance compile; a template whose cases cannot compile yields
+  instances that refuse. *(The draft asked for the check "at template
+  approval time"; the log boundary cannot carry that.)*
+- `CORE-A4806` — the `template_superseded` notice (allocated from the
+  same family in implementation).
 
 ### 4. Template amendment pins, never rewrites
 
-A template edit produces a new `template_revision` with a `supersedes`
-edge under the same amendment machinery ADR-0019 names for contracts.
+A template edit produces a new `template_revision`; the superseding
+document carries an informational `supersedes` pin
+(`{ template_id, template_revision, sha256 }`) naming the revision it
+replaces — the document-level edge, since ADR-0019's log amendment
+machinery is manifest-bound and templates are not campaign roots.
 Instances pin `(template_id, template_revision, sha256)`: a superseded
 template changes nothing the instance recorded — the
 `template_superseded` notice reports drift, never invalidates.

@@ -1,0 +1,281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://avila.dev/schemas/contract-template/v0.1-draft",
+  "title": "Contract template",
+  "description": "ADR-0022: the reusable shape an instantiation record pins. Typed parameters and domains, declared input shapes, workflow and requirement templates (parameter references permitted), a policy floor the instance must tighten, decidable eligibility rules, and validation cases the template's own shape must satisfy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "semantic_profile",
+    "template_id",
+    "template_revision",
+    "status",
+    "owner"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/contract-template/v0.1-draft"
+    },
+    "semantic_profile": {
+      "const": "avila.core/semantic/0.2-draft"
+    },
+    "template_id": { "$ref": "#/$defs/nonemptyString" },
+    "template_revision": { "type": "integer", "minimum": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "in_review", "approved", "retired"],
+      "description": "The closed contract-status vocabulary — a template is drafted, reviewed, approved, retired under ADR-0021 transitions."
+    },
+    "owner": { "$ref": "#/$defs/nonemptyString" },
+    "parameters": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/parameterDeclaration" },
+      "description": "Typed parameter declarations — the same `value_type` machinery capability types use; a `{\"ref\": \"<id>\"}` object in workflow or requirements resolves to a bound value at materialization."
+    },
+    "inputs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/templateInput" },
+      "description": "The input shapes an instance must fill — the fields an eligibility predicate may address."
+    },
+    "workflow": {
+      "type": "array",
+      "items": { "type": "object" },
+      "description": "Step templates as raw JSON — any object value may be `{\"ref\": \"<parameter_id>\"}`, substituted at materialization."
+    },
+    "requirements": {
+      "type": "array",
+      "items": { "type": "object" },
+      "description": "Requirement templates — parameter references permitted in `limit` and `tolerance` (and any nested position)."
+    },
+    "policy_floor": {
+      "$ref": "#/$defs/policyFloor",
+      "description": "The execution_policy fields the instance must declare at least as strict (CORE-A4803 — the tightening order is mechanical and total)."
+    },
+    "eligibility": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/eligibilityRule" },
+      "description": "Decidable eligibility rules over the instance's declared input claims — every rule must derive `eligible` (CORE-A4804)."
+    },
+    "validation_cases": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/validationCase" },
+      "description": "Parameter bindings and input references the template declares must compile into a contract (CORE-A4805) — shape evidence, not a scientific qualification."
+    },
+    "supersedes": {
+      "$ref": "#/$defs/templatePin",
+      "description": "The amendment edge — the digest pin of the template revision this one supersedes. Informational; instances pin the revision they named."
+    }
+  },
+  "$defs": {
+    "nonemptyString": { "type": "string", "minLength": 1 },
+    "exactNumber": {
+      "type": "string",
+      "pattern": "^(?:(?:0|-?[1-9][0-9]*)(?:\\.[0-9]*[1-9])?|-?[1-9][0-9]*/[1-9][0-9]*)$"
+    },
+    "versionedRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "major"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonemptyString" },
+        "major": { "type": "integer", "minimum": 1 },
+        "minor": { "type": "integer", "minimum": 0, "default": 0 }
+      }
+    },
+    "templatePin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["template_id", "template_revision", "sha256"],
+      "properties": {
+        "template_id": { "$ref": "#/$defs/nonemptyString" },
+        "template_revision": { "type": "integer", "minimum": 1 },
+        "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    },
+    "parameterDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parameter_id", "required", "value_type"],
+      "properties": {
+        "parameter_id": { "$ref": "#/$defs/nonemptyString" },
+        "required": { "type": "boolean" },
+        "value_type": { "$ref": "#/$defs/parameterType" }
+      }
+    },
+    "parameterType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["boolean", "integer", "exact_number", "text", "quantity"]
+        },
+        "min": {},
+        "max": {},
+        "allowed_values": { "type": "array" },
+        "kind": { "type": "string" }
+      }
+    },
+    "claimModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model"],
+      "properties": {
+        "model": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "interval",
+            "coverage_interval",
+            "worst_case",
+            "standard_uncertainty",
+            "samples",
+            "distribution",
+            "unquantified"
+          ]
+        },
+        "nominal": { "type": "boolean" },
+        "side": { "type": "string", "enum": ["lower", "upper"] }
+      }
+    },
+    "templateInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_id", "role", "media_type", "claim_model"],
+      "properties": {
+        "input_id": { "$ref": "#/$defs/nonemptyString" },
+        "role": { "$ref": "#/$defs/versionedRef" },
+        "media_type": { "$ref": "#/$defs/nonemptyString" },
+        "claim_model": { "$ref": "#/$defs/claimModel" }
+      }
+    },
+    "policyFloor": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The execution_policy fields a floor may declare — the same shape as the contract's execution_policy.",
+      "properties": {
+        "permitted_nondeterministic_roles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/versionedRef" }
+        },
+        "permit_nominal_basis": { "type": "boolean" },
+        "require_qualification": { "type": "boolean" },
+        "recognized_qualification_owners": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        },
+        "require_signatures": { "type": "boolean" },
+        "deny_providers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nonemptyString" }
+        },
+        "allow_providers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nonemptyString" }
+        },
+        "require_provider_independence": { "type": "boolean" },
+        "require_diverse_implementations": { "type": "boolean" },
+        "maturity_floor": {
+          "type": "string",
+          "enum": ["prototype", "development", "qualified", "production"]
+        },
+        "forbid_self_preference": { "type": "boolean" },
+        "cost_cap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value", "currency"],
+          "properties": {
+            "value": { "$ref": "#/$defs/exactNumber" },
+            "currency": { "$ref": "#/$defs/nonemptyString" }
+          }
+        }
+      }
+    },
+    "eligibilityRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule_id", "input_id", "predicate"],
+      "properties": {
+        "rule_id": { "$ref": "#/$defs/nonemptyString" },
+        "input_id": { "$ref": "#/$defs/nonemptyString" },
+        "predicate": { "$ref": "#/$defs/eligibilityPredicate" }
+      }
+    },
+    "eligibilityPredicate": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The closed eligibility grammar — every predicate is a comparison over declared fields; eligibility is decidable.",
+      "properties": {
+        "all": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/eligibilityPredicate" }
+        },
+        "any": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/eligibilityPredicate" }
+        },
+        "not": { "$ref": "#/$defs/eligibilityPredicate" },
+        "input_field_in": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["field", "values"],
+          "properties": {
+            "field": {
+              "type": "string",
+              "enum": ["media_type", "claim_model", "role"]
+            },
+            "values": { "type": "array", "minItems": 1 }
+          }
+        },
+        "attribute_in": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["attribute", "values"],
+          "properties": {
+            "attribute": { "$ref": "#/$defs/nonemptyString" },
+            "values": { "type": "array", "minItems": 1 }
+          }
+        },
+        "attribute_in_range": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["attribute"],
+          "properties": {
+            "attribute": { "$ref": "#/$defs/nonemptyString" },
+            "min": { "$ref": "#/$defs/exactNumber" },
+            "max": { "$ref": "#/$defs/exactNumber" },
+            "min_inclusive": { "type": "boolean", "default": false },
+            "max_inclusive": { "type": "boolean", "default": false }
+          }
+        }
+      }
+    },
+    "validationCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_id"],
+      "properties": {
+        "case_id": { "$ref": "#/$defs/nonemptyString" },
+        "parameters": {
+          "type": "object",
+          "description": "Parameter bindings the case exercises — each value must satisfy the declared domain."
+        },
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nonemptyString" },
+          "description": "The contract input_ids the case binds — must cover exactly the template's declared inputs."
+        },
+        "expected": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["pass", "fail", "inconclusive", "not_evaluated"]
+          },
+          "description": "The verdict statuses the instantiated case should produce — inert at compile time."
+        }
+      }
+    }
+  }
+}

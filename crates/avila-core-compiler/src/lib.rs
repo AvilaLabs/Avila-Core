@@ -24,12 +24,13 @@ pub use campaign::{
     evaluate_campaign, evaluate_campaign_with_artifacts,
 };
 pub use catalog::{DIAGNOSTIC_CATALOG, DiagnosticExplanation, explain};
+pub use compile::instantiation::InstantiationMaterial;
 pub use compile::{
     COMPILE_NOTICE, CanonicalTypedQuantity, CompilationStatus, CompileReport,
     CompiledCategoricalRequirement, CompiledContract, CompiledParameterValue,
     CompiledPresentationGate, CompiledReproducibility, CompiledRequirement, CompiledStep,
     CompilerError, DocumentIdentity, PresentationGateState, ResolvedBinding, compile_documents,
-    validate_against_schema,
+    compile_documents_with_instantiation, validate_against_schema,
 };
 pub use coverage::{
     COVERAGE_REPORT_SCHEMA_VERSION, CoverageDeclaration, CoverageEntry, CoverageReport,
@@ -48,17 +49,21 @@ pub use diagnostic::{
 };
 pub use document::{
     AuthoredBinding, BasisKind, BoundSide, COMPILE_REPORT_SCHEMA_VERSION,
-    COMPILED_CONTRACT_SCHEMA_VERSION, CONTRACT_SCHEMA_VERSION, CapabilityMaturity,
+    COMPILED_CONTRACT_SCHEMA_VERSION, CONTRACT_INSTANTIATION_SCHEMA_VERSION,
+    CONTRACT_SCHEMA_VERSION, CONTRACT_TEMPLATE_SCHEMA_VERSION, CapabilityMaturity,
     CapabilityTypeDefinition, CategoricalPredicate, CategoricalRequirementSource,
-    ClaimModelDeclaration, Comparison, CompletionBlock, ContractInput, ContractSource,
-    ContractStatus, DeterminismClass, ExactBound, ExecutionFactorDefinition, ExecutionPolicy,
-    ImmutablePolicyRef, IndependenceRequirement, InputSlotDefinition, IntegerBound, KindRecord,
-    OutputSlotDefinition, ParameterDefinition, ParameterType, PolicyCostCap, PurposeDefinition,
-    QuantityBound, QuantityValue, REGISTRY_SCHEMA_VERSION, RegistrySnapshot,
-    ReproducibilityBinding, ReproducibilityDeclaration, RequirementBasis, RequirementSource,
-    ReviewDeclaration, ReviewDisposition, ReviewIndependence, ReviewParty, ReviewPolicyBinding,
-    ReviewerRole, RoleDefinition, SeparationLevel, SourceRef, TypedQuantity, UnitRecord,
-    VersionedRef, WorkflowStep, current_profile_contract,
+    ClaimModelDeclaration, Comparison, CompletionBlock, ContractInput, ContractInstantiation,
+    ContractPin, ContractSource, ContractStatus, ContractTemplate, DeterminismClass,
+    EligibilityAttributeIn, EligibilityAttributeRange, EligibilityOutcome, EligibilityPredicate,
+    EligibilityRule, ExactBound, ExecutionFactorDefinition, ExecutionPolicy, ImmutablePolicyRef,
+    IndependenceRequirement, InputField, InputFieldPredicate, InputSlotDefinition,
+    InstantiationRef, IntegerBound, KindRecord, OutputSlotDefinition, ParameterDefinition,
+    ParameterType, PolicyCostCap, PurposeDefinition, QuantityBound, QuantityValue,
+    REGISTRY_SCHEMA_VERSION, RecordedEligibility, RegistrySnapshot, ReproducibilityBinding,
+    ReproducibilityDeclaration, RequirementBasis, RequirementSource, ReviewDeclaration,
+    ReviewDisposition, ReviewIndependence, ReviewParty, ReviewPolicyBinding, ReviewerRole,
+    RoleDefinition, SeparationLevel, SourceRef, TemplateInput, TemplatePin, TypedQuantity,
+    UnitRecord, ValidationCase, VersionedRef, WorkflowStep, current_profile_contract,
 };
 pub use qualification::{
     ClaimQualification, EnvelopeAssessment, EnvelopeState, EnvelopeTerm,

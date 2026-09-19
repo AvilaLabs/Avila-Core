@@ -4308,6 +4308,301 @@ def verify_staged_reviews(
         )
 
 
+
+INSTANTIATION_SCHEMA_VERSION = "avila.core/contract-instantiation/v0.1-draft"
+TEMPLATE_SCHEMA_VERSION = "avila.core/contract-template/v0.1-draft"
+
+
+def _canonical_document_sha256(data: bytes) -> Optional[str]:
+    try:
+        return sha256_bytes(canonicalize_json(data))
+    except Exception:
+        return None
+
+
+def _eligibility_outcome(predicate: Any, contract_input: Optional[dict]) -> str:
+    """Re-derive one ADR-0022 eligibility predicate over the contract input's
+    declared fields — exactly the compiler's closed grammar: eligible,
+    ineligible, or unknown."""
+    if not isinstance(predicate, dict) or len(predicate) != 1:
+        return "unknown"
+    kind, body = next(iter(predicate.items()))
+    if kind == "all":
+        outcomes = [_eligibility_outcome(term, contract_input) for term in (body or [])]
+        if "ineligible" in outcomes:
+            return "ineligible"
+        if "unknown" in outcomes or not outcomes:
+            return "unknown" if outcomes else "eligible"
+        return "eligible"
+    if kind == "any":
+        outcomes = [_eligibility_outcome(term, contract_input) for term in (body or [])]
+        if "eligible" in outcomes:
+            return "eligible"
+        if "unknown" in outcomes:
+            return "unknown"
+        return "ineligible"
+    if kind == "not":
+        outcome = _eligibility_outcome(body, contract_input)
+        return {"eligible": "ineligible", "ineligible": "eligible"}.get(outcome, "unknown")
+    if contract_input is None:
+        return "unknown"
+    if kind == "input_field_in":
+        field = body.get("field")
+        values = body.get("values", [])
+        if field == "media_type":
+            claimed = contract_input.get("media_type")
+        elif field == "claim_model":
+            claimed = contract_input.get("claim_model")
+        elif field == "role":
+            claimed = contract_input.get("role")
+        else:
+            return "unknown"
+        return "eligible" if claimed in values else "ineligible"
+    if kind == "attribute_in":
+        value = (contract_input.get("attributes") or {}).get(body.get("attribute"))
+        if value is None:
+            return "unknown"
+        return "eligible" if value in body.get("values", []) else "ineligible"
+    if kind == "attribute_in_range":
+        raw = (contract_input.get("attributes") or {}).get(body.get("attribute"))
+        actual = _attribute_fraction(raw)
+        if actual is None:
+            return "unknown"
+        for bound_key, inclusive_key, worst in (
+            ("min", "min_inclusive", "below"),
+            ("max", "max_inclusive", "above"),
+        ):
+            bound_text = body.get(bound_key)
+            if bound_text is None:
+                continue
+            try:
+                bound = read_authoritative_decimal(bound_text)
+            except Exception:
+                return "unknown"
+            inclusive = body.get(inclusive_key, False)
+            if worst == "below" and (actual < bound or (not inclusive and actual == bound)):
+                return "ineligible"
+            if worst == "above" and (actual > bound or (not inclusive and actual == bound)):
+                return "ineligible"
+        return "eligible"
+    return "unknown"
+
+
+def _attribute_fraction(value: Any) -> Optional[Fraction]:
+    """An attribute an exact bound can compare — a canonical string or a JSON
+    integer, exactly as `input_attribute_in_range` reads them."""
+    if isinstance(value, str):
+        try:
+            return read_authoritative_decimal(value)
+        except Exception:
+            return None
+    if isinstance(value, int) and not isinstance(value, bool):
+        return Fraction(value)
+    return None
+
+
+def verify_instantiations(
+    case_dir: Path,
+    package: dict,
+    docs_by_role: dict[str, list[dict]],
+    report: Report,
+) -> None:
+    """ADR-0022 parity: for the instantiation record the bound contract names
+    via `instantiated_from`, re-derive the binding the compiler checked —
+    record resolution, the template digest pin, parameter/ref coverage, and
+    every recorded eligibility outcome re-derived over the contract's
+    declared inputs."""
+    records = docs_by_role.get("contract_instantiation", [])
+    contract_entries = docs_by_role.get("contract", [])
+    if not records or not contract_entries:
+        return
+    contract_path = case_dir / contract_entries[0]["path"]
+    if not contract_path.is_file():
+        return
+    contract_bytes = contract_path.read_bytes()
+    try:
+        contract = json.loads(contract_bytes)
+    except json.JSONDecodeError:
+        return
+    named = contract.get("instantiated_from") or {}
+    instantiation_id = named.get("instantiation_id")
+    if not instantiation_id:
+        return
+    contract_sha256 = _canonical_document_sha256(contract_bytes)
+
+    templates_by_sha256: dict[str, dict] = {}
+    for document in docs_by_role.get("contract_template", []):
+        path = case_dir / document["path"]
+        if not path.is_file():
+            continue
+        digest = _canonical_document_sha256(path.read_bytes())
+        if digest is not None:
+            templates_by_sha256[digest] = load_json(path)
+
+    for document in records:
+        document_id = document["document_id"]
+        prefix = f"instantiation.{document_id}"
+        path = case_dir / document["path"]
+        if not path.is_file():
+            report.mismatch(prefix, f"instantiation record missing: {document['path']}")
+            continue
+        try:
+            record = load_json(path)
+        except (OSError, json.JSONDecodeError) as error:
+            report.mismatch(prefix, f"instantiation record does not parse: {error}")
+            continue
+        if record.get("instantiation_id") != instantiation_id:
+            continue  # not the record this contract names — not its business
+        if record.get("schema_version") == INSTANTIATION_SCHEMA_VERSION:
+            report.verified(f"{prefix}.schema_version", INSTANTIATION_SCHEMA_VERSION)
+        else:
+            report.mismatch(
+                f"{prefix}.schema_version",
+                f"expected {INSTANTIATION_SCHEMA_VERSION}, found {record.get('schema_version')!r}",
+            )
+            continue
+
+        pin = record.get("contract", {})
+        check = f"{prefix}.contract"
+        if (
+            pin.get("contract_id") == contract.get("contract_id")
+            and pin.get("revision") == contract.get("revision")
+            and pin.get("sha256") == contract_sha256
+        ):
+            report.verified(check, "record pins the bound contract's identity and digest")
+        else:
+            report.mismatch(
+                check,
+                "record's contract pin does not equal the bound contract's identity and digest",
+            )
+
+        template_pin = record.get("template", {})
+        check = f"{prefix}.template"
+        template = templates_by_sha256.get(template_pin.get("sha256") or "")
+        if template is None:
+            report.mismatch(
+                check,
+                f"record pins template digest {template_pin.get('sha256')!r}, which no bound contract_template document carries",
+            )
+            continue
+        if (
+            template.get("template_id") == template_pin.get("template_id")
+            and template.get("template_revision") == template_pin.get("template_revision")
+        ):
+            report.verified(check, "pinned template resolves and its identity matches")
+        else:
+            report.mismatch(check, "pinned template's declared identity does not match the pin")
+            continue
+
+        # Parameter coverage: every required parameter bound, every bound
+        # name declared, every `{"ref": ...}` in the template resolving to a
+        # bound name (CORE-A4802).
+        declared = {p["parameter_id"]: p for p in template.get("parameters", [])}
+        bound = record.get("parameters", {})
+        check = f"{prefix}.parameters"
+        problems = [
+            f"required parameter {name!r} unbound"
+            for name, spec in declared.items()
+            if spec.get("required") and name not in bound
+        ] + [
+            f"bound parameter {name!r} is not declared"
+            for name in bound
+            if name not in declared
+        ]
+        for ref in _template_refs(template):
+            if ref not in declared:
+                problems.append(f"template references undeclared parameter {ref!r}")
+            elif ref not in bound:
+                problems.append(f"template reference {ref!r} is unbound in the record")
+        if problems:
+            report.mismatch(check, "; ".join(problems))
+        else:
+            report.verified(check, "parameters cover the declared vocabulary")
+
+        # Input coverage: the filled inputs equal the declared set
+        # (CORE-A4802).
+        declared_inputs = {i["input_id"] for i in template.get("inputs", [])}
+        check = f"{prefix}.inputs"
+        if set(record.get("inputs", [])) == declared_inputs:
+            report.verified(check, "filled inputs cover the declared set")
+        else:
+            report.mismatch(
+                check,
+                f"record fills {sorted(record.get('inputs', []))}, template declares {sorted(declared_inputs)}",
+            )
+
+        # Eligibility: re-derive each rule over the contract's declared
+        # inputs (CORE-A4804 — eligible-or-refused).
+        inputs_by_id = {i["input_id"]: i for i in contract.get("inputs", [])}
+        recorded = {e["rule_id"]: e.get("outcome") for e in record.get("eligibility", [])}
+        derived = []
+        for rule in template.get("eligibility", []):
+            outcome = _eligibility_outcome(
+                rule.get("predicate"), inputs_by_id.get(rule.get("input_id"))
+            )
+            derived.append(outcome)
+            check = f"{prefix}.eligibility.{rule.get('rule_id')}"
+            if outcome != "eligible":
+                report.mismatch(check, f"rule derives {outcome!r} — eligible-or-refused")
+            elif recorded.get(rule.get("rule_id")) != outcome:
+                report.mismatch(
+                    check,
+                    f"recorded {recorded.get(rule.get('rule_id'))!r}, derived 'eligible' — the record does not match the fields",
+                )
+            else:
+                report.verified(check, outcome)
+        implied = (
+            "eligible"
+            if derived and all(o == "eligible" for o in derived)
+            else "ineligible"
+            if "ineligible" in derived
+            else "unknown"
+        ) if derived else record.get("aggregate")
+        check = f"{prefix}.aggregate"
+        if record.get("aggregate") == implied:
+            report.verified(check, implied)
+        else:
+            report.mismatch(
+                check, f"recorded {record.get('aggregate')!r}, the rules imply {implied!r}"
+            )
+
+        # A bound newer revision of the pinned template is drift
+        # information (CORE-A4806 notice), never a mismatch.
+        newer = [
+            candidate.get("template_revision")
+            for candidate in templates_by_sha256.values()
+            if candidate.get("template_id") == template_pin.get("template_id")
+            and (candidate.get("template_revision") or 0) > (template.get("template_revision") or 0)
+        ]
+        if newer:
+            report.verified(
+                f"{prefix}.template_superseded",
+                f"template {template_pin.get('template_id')!r} has bound revision {max(newer)} newer than the pinned revision — the pin is immutable",
+            )
+
+
+def _template_refs(template: dict) -> list[str]:
+    """Every `{"ref": "<name>"}` object in the template's workflow and
+    requirements — the same walk the compiler does."""
+    refs: list[str] = []
+
+    def walk(value: Any) -> None:
+        if isinstance(value, dict):
+            if len(value) == 1 and isinstance(value.get("ref"), str):
+                refs.append(value["ref"])
+                return
+            for inner in value.values():
+                walk(inner)
+        elif isinstance(value, list):
+            for inner in value:
+                walk(inner)
+
+    for collection in ("workflow", "requirements"):
+        for entry in template.get(collection, []):
+            walk(entry)
+    return refs
+
+
 # ---------------------------------------------------------------------------
 # Case-level orchestration and CLI
 # ---------------------------------------------------------------------------
@@ -4393,6 +4688,8 @@ def verify_case(
     verify_case_selections(case_dir, package, contract, registry, report)
 
     verify_staged_reviews(case_dir, package, docs_by_role, claims, campaign_report, report)
+
+    verify_instantiations(case_dir, package, docs_by_role, report)
 
     log_path = case_dir / "search" / "attempts.jsonl"
     if log_path.is_file():

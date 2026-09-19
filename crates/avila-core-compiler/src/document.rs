@@ -191,6 +191,12 @@ pub struct ContractSource {
     pub completion: Option<CompletionBlock>,
     #[serde(default)]
     pub inputs: Vec<ContractInput>,
+    /// ADR-0022: the instantiation record this contract was derived under —
+    /// immutable origin metadata, never a status. The named record (bound
+    /// as a package document) is checked against the pinned template at
+    /// compile time (CORE-A4801..A4805).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub instantiated_from: Option<InstantiationRef>,
     pub workflow: Vec<WorkflowStep>,
     #[serde(default)]
     pub requirements: Vec<RequirementSource>,
@@ -763,8 +769,251 @@ pub fn current_profile_contract(contract_id: impl Into<String>) -> ContractSourc
         assumptions: Vec::new(),
         execution_policy: ExecutionPolicy::default(),
         inputs: Vec::new(),
+        instantiated_from: None,
         workflow: Vec::new(),
         requirements: Vec::new(),
         categorical_requirements: Vec::new(),
     }
+}
+
+// ---------------------------------------------------------------------------
+// ADR-0022 — contract templates and instantiation records. A template declares
+// the reusable shape; an instantiation record pins template digest, bound
+// parameters, case inputs, and recorded eligibility; the contract names the
+// record through `instantiated_from`. Instantiation is origin metadata — the
+// engine verifies the recorded instantiation, it never instantiates.
+// ---------------------------------------------------------------------------
+
+pub const CONTRACT_TEMPLATE_SCHEMA_VERSION: &str = "avila.core/contract-template/v0.1-draft";
+pub const CONTRACT_INSTANTIATION_SCHEMA_VERSION: &str =
+    "avila.core/contract-instantiation/v0.1-draft";
+
+/// A digest pin of a template revision — `(id, revision, canonical sha256)`.
+/// The pin is immutable: a superseding revision never rewrites it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TemplatePin {
+    pub template_id: String,
+    pub template_revision: u64,
+    pub sha256: String,
+}
+
+/// A digest pin of a contract revision.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ContractPin {
+    pub contract_id: String,
+    pub revision: u64,
+    pub sha256: String,
+}
+
+/// The field a contract uses to name its instantiation record — the record's
+/// declared id. The pin direction is one-way: the *record* digest-pins the
+/// contract; the contract names the record. A digest in both directions is a
+/// cycle no document can satisfy.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InstantiationRef {
+    pub instantiation_id: String,
+}
+
+/// `avila.core/contract-template/v0.1-draft`: the reusable shape an instance
+/// pins. Workflow steps and requirements are authored as raw JSON templates —
+/// any object value may be `{"ref": "<parameter_id>"}` and is substituted at
+/// materialization, so they cannot be typed until then.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ContractTemplate {
+    pub schema_version: String,
+    pub semantic_profile: String,
+    pub template_id: String,
+    pub template_revision: u64,
+    /// The closed contract-status vocabulary — a template is drafted,
+    /// reviewed, approved, retired under ADR-0021 transitions.
+    pub status: ContractStatus,
+    pub owner: String,
+    /// Typed parameter declarations — the exact `ParameterDefinition`
+    /// machinery capability types use; no second vocabulary.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameters: Vec<ParameterDefinition>,
+    /// The declared input shapes an instance must fill — `input_id`, `role`,
+    /// `media_type`, `claim_model`. Attributes are the instance's own.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub inputs: Vec<TemplateInput>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub workflow: Vec<Value>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub requirements: Vec<Value>,
+    /// The `execution_policy` fields the instance must declare at least as
+    /// strict (CORE-A4803 — the tightening order is mechanical and total).
+    #[serde(default, skip_serializing_if = "ExecutionPolicy::is_default")]
+    pub policy_floor: ExecutionPolicy,
+    /// Decidable eligibility rules over the instance's declared input
+    /// claims — field equality and attribute membership/range, never free
+    /// text. Every rule must derive `eligible` (CORE-A4804).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub eligibility: Vec<EligibilityRule>,
+    /// Shape checks: each case's parameter bindings must materialize into a
+    /// contract that compiles (CORE-A4805). A validation case is evidence
+    /// the template's own shape compiles, not a scientific qualification.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub validation_cases: Vec<ValidationCase>,
+    /// The amendment edge — the digest of the template revision this one
+    /// supersedes. Informational: instances pin the revision they named and
+    /// are never rewritten.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supersedes: Option<TemplatePin>,
+}
+
+impl ExecutionPolicy {
+    fn is_default(&self) -> bool {
+        self == &Self::default()
+    }
+}
+
+/// One input shape a template declares — the claim fields an eligibility
+/// predicate may address (`media_type`, `claim_model`, `role`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TemplateInput {
+    pub input_id: String,
+    pub role: VersionedRef,
+    pub media_type: String,
+    pub claim_model: ClaimModelDeclaration,
+}
+
+/// One eligibility rule: a decidable predicate over the named contract
+/// input's declared claim.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EligibilityRule {
+    pub rule_id: String,
+    pub input_id: String,
+    pub predicate: EligibilityPredicate,
+}
+
+/// The closed eligibility grammar — field membership, attribute membership,
+/// an exact-number attribute range, and boolean composition. Every predicate
+/// is a comparison over declared fields; eligibility is decidable.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EligibilityPredicate {
+    All(Vec<Self>),
+    Any(Vec<Self>),
+    Not(Box<Self>),
+    InputFieldIn(InputFieldPredicate),
+    AttributeIn(EligibilityAttributeIn),
+    AttributeInRange(EligibilityAttributeRange),
+}
+
+/// Membership over a declared input claim field — `media_type`,
+/// `claim_model`, or `role`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InputFieldPredicate {
+    pub field: InputField,
+    pub values: Vec<Value>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InputField {
+    MediaType,
+    ClaimModel,
+    Role,
+}
+
+/// Set membership over an input's declared `attributes` value.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EligibilityAttributeIn {
+    pub attribute: String,
+    pub values: Vec<Value>,
+}
+
+/// An exact-number range over an input's declared `attributes` value —
+/// canonical strings or JSON integers only.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EligibilityAttributeRange {
+    pub attribute: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max: Option<String>,
+    #[serde(default)]
+    pub min_inclusive: bool,
+    #[serde(default)]
+    pub max_inclusive: bool,
+}
+
+/// One recorded eligibility outcome — what the instantiator states the rule
+/// derived. The compiler re-derives it; a recorded outcome the contract's
+/// declared fields do not imply is an eligibility failure, never trusted.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RecordedEligibility {
+    pub rule_id: String,
+    pub outcome: EligibilityOutcome,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EligibilityOutcome {
+    Eligible,
+    Ineligible,
+    Unknown,
+}
+
+/// A validation case: parameter bindings and input references that must
+/// materialize into a compiling contract (CORE-A4805). `expected` names the
+/// verdict statuses the instantiated case should produce — inert at compile
+/// time (no execution happens there).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ValidationCase {
+    pub case_id: String,
+    /// The parameter bindings the case exercises — every bound value must
+    /// sit inside the declared domain, exactly like instance parameters.
+    #[serde(default)]
+    pub parameters: BTreeMap<String, Value>,
+    /// The contract input_ids the case binds — must cover every input the
+    /// template declares.
+    #[serde(default)]
+    pub inputs: Vec<String>,
+    /// The verdict statuses the case should produce when executed — a
+    /// declared expectation, not a compile-time check.
+    #[serde(default)]
+    pub expected: Vec<VerdictStatus>,
+}
+
+/// `avila.core/contract-instantiation/v0.1-draft`: the immutable origin
+/// record — the exact template digest, the bound parameters, the filled
+/// inputs, the recorded eligibility outcomes, and the instantiated
+/// contract's identity. Carried as a package document; the contract names
+/// it through `instantiated_from`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ContractInstantiation {
+    pub schema_version: String,
+    pub semantic_profile: String,
+    pub instantiation_id: String,
+    /// The exact template pin — a later template revision does not touch
+    /// the instance (the compiler emits a `template_superseded` notice).
+    pub template: TemplatePin,
+    /// The bound value per declared parameter id.
+    #[serde(default)]
+    pub parameters: BTreeMap<String, Value>,
+    /// The contract input_ids the instance fills — must cover every input
+    /// the template declares, no more and no less.
+    #[serde(default)]
+    pub inputs: Vec<String>,
+    /// The recorded per-rule outcomes the instantiator states.
+    #[serde(default)]
+    pub eligibility: Vec<RecordedEligibility>,
+    /// The recorded aggregate — must equal the aggregate the rules imply.
+    pub aggregate: EligibilityOutcome,
+    /// The instantiated contract's identity — the compile checks the
+    /// digest is the digest of the contract being compiled.
+    pub contract: ContractPin,
 }

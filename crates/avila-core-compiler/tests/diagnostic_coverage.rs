@@ -32,6 +32,30 @@ const TEST_PINNED: &[(&str, &str)] = &[
         "CORE-T2702",
         "avila-core-compiler compile::tests — input attribute vocabulary checks (undeclared name, outside domain, missing required, metadata overlap/non-scalar)",
     ),
+    (
+        "CORE-A4801",
+        "avila-core-compiler compile::tests::instantiation — record/template resolution and digest pinning (instantiation material is a package input, not a compile fixture)",
+    ),
+    (
+        "CORE-A4802",
+        "avila-core-compiler compile::tests::instantiation — parameter binding/domain checks and input coverage",
+    ),
+    (
+        "CORE-A4803",
+        "avila-core-compiler compile::tests::instantiation — policy-floor tightening",
+    ),
+    (
+        "CORE-A4804",
+        "avila-core-compiler compile::tests::instantiation — eligibility re-derivation, eligible-or-refused",
+    ),
+    (
+        "CORE-A4805",
+        "avila-core-compiler compile::tests::instantiation — validation-case materialization/compile",
+    ),
+    (
+        "CORE-A4806",
+        "avila-core-compiler compile::tests::instantiation — template_superseded notice",
+    ),
 ];
 
 fn fixture_root() -> PathBuf {

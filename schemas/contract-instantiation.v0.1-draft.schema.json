@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://avila.dev/schemas/contract-instantiation/v0.1-draft",
+  "title": "Contract instantiation record",
+  "description": "ADR-0022: the immutable origin record a contract names through `instantiated_from` — the exact template digest, the bound parameters, the filled inputs, the recorded eligibility outcomes, and the instantiated contract's identity. Instantiation is origin metadata, never a status; the pin is immutable and a later template revision does not touch it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "semantic_profile",
+    "instantiation_id",
+    "template",
+    "aggregate",
+    "contract"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/contract-instantiation/v0.1-draft"
+    },
+    "semantic_profile": {
+      "const": "avila.core/semantic/0.2-draft"
+    },
+    "instantiation_id": { "$ref": "#/$defs/nonemptyString" },
+    "template": {
+      "$ref": "#/$defs/templatePin",
+      "description": "The exact template pin — the instance is checked against this revision, whatever newer revisions exist (CORE-A4801; a bound newer revision raises a `template_superseded` notice, CORE-A4806)."
+    },
+    "parameters": {
+      "type": "object",
+      "description": "The bound value per declared parameter id — every required parameter must be bound, every bound name declared, every value inside its domain (CORE-A4802)."
+    },
+    "inputs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonemptyString" },
+      "description": "The contract input_ids the instance fills — must cover exactly the inputs the template declares (CORE-A4802)."
+    },
+    "eligibility": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/recordedEligibility" },
+      "description": "The recorded per-rule outcomes — the compiler re-derives them and refuses on a mismatch or a non-eligible rule (CORE-A4804)."
+    },
+    "aggregate": {
+      "type": "string",
+      "enum": ["eligible", "ineligible", "unknown"],
+      "description": "The recorded aggregate — must equal the aggregate the rules imply (CORE-A4804)."
+    },
+    "contract": {
+      "$ref": "#/$defs/contractPin",
+      "description": "The instantiated contract's identity — the digest must equal the canonical digest of the contract being compiled (CORE-A4801)."
+    }
+  },
+  "$defs": {
+    "nonemptyString": { "type": "string", "minLength": 1 },
+    "templatePin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["template_id", "template_revision", "sha256"],
+      "properties": {
+        "template_id": { "$ref": "#/$defs/nonemptyString" },
+        "template_revision": { "type": "integer", "minimum": 1 },
+        "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    },
+    "contractPin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract_id", "revision", "sha256"],
+      "properties": {
+        "contract_id": { "$ref": "#/$defs/nonemptyString" },
+        "revision": { "type": "integer", "minimum": 1 },
+        "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    },
+    "recordedEligibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule_id", "outcome"],
+      "properties": {
+        "rule_id": { "$ref": "#/$defs/nonemptyString" },
+        "outcome": {
+          "type": "string",
+          "enum": ["eligible", "ineligible", "unknown"]
+        }
+      }
+    }
+  }
+}

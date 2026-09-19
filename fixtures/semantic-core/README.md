@@ -380,15 +380,15 @@ canonically.
 | `lifecycle.status.in_review.refuses-edit.fail` | amend → new draft — the ADR-0019 amendment record (`an_amendment_admits_a_new_root_across_changed_fixed_identities`) and ADR-0021 legality table (`contract_vocabulary_and_legality_table`: `in_review→draft|approved` only) make an in-place semantic move unrecordable |
 | `lifecycle.status.approved.permits-bind.pass` | status is carried in the compiled boundary; `approved` permits binding because contract status never gates execution — the ADR-0021 transition records that set it exist (`contract_vocabulary_and_legality_table`) |
 | `lifecycle.status.retired.read-only.pass` | `approved→retired` is the last legal contract move and `retired` is terminal — the legality table refuses every outgoing edge (`contract_vocabulary_and_legality_table`) |
-| `lifecycle.instantiation-is-origin.pass` | needs the ADR-0022 `contract_template` document type (proposed) |
+| `lifecycle.instantiation-is-origin.pass` | the `instantiated_from` contract field + `contract_instantiation`/`contract_template` document types exist; the compile check (`a_clean_instantiation_compiles`, `a4801_*`) verifies the recorded origin — instantiation never becomes a status |
 | `lifecycle.campaign-state-not-contract-state.pass` | pinned by `campaign_states_do_not_exist_on_a_contract` — the contract vocabulary is closed, so a campaign state cannot be named |
-| `lifecycle.template.instantiate.eligible.pass` | needs the `contract_template` document type (not yet designed) |
-| `lifecycle.template.ineligible.fail` | needs the ADR-0022 `contract_template` document type (proposed; fresh code allocation) |
-| `lifecycle.template.eligibility-unknown.fail` | needs the ADR-0022 `contract_template` document type (proposed; fresh code allocation) |
-| `lifecycle.template.default-provided_by.pass` | boundary names template digest — needs the ADR-0022 `contract_template` document type (proposed) |
-| `lifecycle.template.instance-pins-version.pass` | template amendment does not touch instance; `template_superseded` notice — needs the ADR-0022 `contract_template` document type (proposed) |
-| `lifecycle.template.validation-cases-must-compile.fail` | template not approvable — needs the ADR-0022 `contract_template` document type (proposed) |
-| `lifecycle.template.policy-only-tightens.fail` | instance loosening → `CORE-A4803` under the ADR-0022 proposal |
+| `lifecycle.template.instantiate.eligible.pass` | `a_clean_instantiation_compiles` — a template + record + contract triple that satisfies every check compiles clean |
+| `lifecycle.template.ineligible.fail` | `a4804_derived_ineligible_fails` — a rule re-derived `ineligible` over the contract's declared inputs rejects (`CORE-A4804`) |
+| `lifecycle.template.eligibility-unknown.fail` | `a4804_eligibility_unknown_fails` — an undeclared attribute derives `unknown` and refuses identically to `ineligible` (`CORE-A4804`) |
+| `lifecycle.template.default-provided_by.pass` | the record pins the template's canonical digest (`a4801_template_not_bound`, `test_clean_instantiation_verifies`) — the boundary names the template it was instantiated under |
+| `lifecycle.template.instance-pins-version.pass` | `a4806_superseded_template_is_a_notice` — a bound newer revision emits `template_superseded` (`CORE-A4806`, notice) while the instance keeps compiling |
+| `lifecycle.template.validation-cases-must-compile.fail` | `a4805_validation_case_does_not_compile` — a case that cannot materialize rejects (`CORE-A4805`); the approval-time gate is a recorded gap (the transition log cannot see document bytes) |
+| `lifecycle.template.policy-only-tightens.fail` | `a4803_instance_loosens_policy_floor` — the mechanical tightening order over every `execution_policy` field (`CORE-A4803`) |
 | `lifecycle.amend.new-version-supersedes.pass` | the ADR-0019 amendment record links roots across changed fixed identities (`an_amendment_admits_a_new_root_across_changed_fixed_identities`); the ADR-0021 `superseded` campaign transition exists — `amend` does not yet emit it automatically |
 | `lifecycle.completion.pass-only.pass` | `a_declared_pass_verdict_completes` — the contract `completion` block declares fulfilling verdicts; the campaign assesses delivery |
 | `lifecycle.completion.permitted-inconclusive.pass` | `an_inconclusive_verdict_completes_only_under_a_permitted_reason` — a listed reason completes; an unlisted one does not |

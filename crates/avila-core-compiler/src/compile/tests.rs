@@ -1649,3 +1649,378 @@ fn minor_zero_serializes_identically_to_absent() {
     let reparsed: VersionedRef = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(reparsed, reference);
 }
+
+// ---------------------------------------------------------------------------
+// ADR-0022 — contract templates and instantiation records.
+// ---------------------------------------------------------------------------
+
+mod instantiation {
+    use super::super::instantiation::InstantiationMaterial;
+    use super::super::{CompilationStatus, compile_documents_with_instantiation};
+    use super::{CompileReport, REGISTRY};
+    use crate::diagnostic::{
+        CORE_A4801, CORE_A4802, CORE_A4803, CORE_A4804, CORE_A4805, CORE_A4806,
+    };
+    use serde_json::{Value, json};
+    use std::collections::BTreeSet;
+
+    /// The template declares the R1 fixture's shape: the `case` input, the
+    /// two-step workflow, and the bounded-dose requirement — with the
+    /// requirement's limit value delegated to a declared parameter.
+    fn template() -> Value {
+        json!({
+            "schema_version": "avila.core/contract-template/v0.1-draft",
+            "semantic_profile": "avila.core/semantic/0.2-draft",
+            "template_id": "fixture.template.dose",
+            "template_revision": 1,
+            "status": "approved",
+            "owner": "fixture.template_owner",
+            "parameters": [
+                {
+                    "parameter_id": "limit_value",
+                    "required": true,
+                    "value_type": {"type": "exact_number", "min": {"value": "0", "inclusive": true}}
+                },
+                {
+                    "parameter_id": "mode",
+                    "required": false,
+                    "value_type": {"type": "text", "allowed_values": ["fast", "slow"]}
+                }
+            ],
+            "inputs": [
+                {
+                    "input_id": "case",
+                    "role": {"id": "fixture.source_document", "major": 1},
+                    "media_type": "application/vnd.fixture.source+json",
+                    "claim_model": {"model": "unquantified"}
+                }
+            ],
+            "workflow": [
+                {
+                    "step_id": "calculate",
+                    "capability_type": {"id": "fixture.calculate_dose", "major": 1}
+                },
+                {
+                    "step_id": "bound",
+                    "capability_type": {"id": "fixture.bound_dose", "major": 1}
+                }
+            ],
+            "requirements": [
+                {
+                    "requirement_id": "R-001",
+                    "statement": "The bounded specimen dose rate must not exceed the illustrative limit.",
+                    "metric": {
+                        "source": "step_output",
+                        "step_id": "bound",
+                        "output_slot": "bounded_dose_rate"
+                    },
+                    "comparison": "less_than_or_equal",
+                    "limit": {
+                        "kind": "nuclear.dose_equivalent_rate",
+                        "value": {"ref": "limit_value"},
+                        "unit": "uSv/h"
+                    },
+                    "basis": {"kind": "bounded"},
+                    "purpose": {"id": "fixture.requirement_evaluation", "major": 1}
+                }
+            ],
+            "eligibility": [
+                {
+                    "rule_id": "media_ok",
+                    "input_id": "case",
+                    "predicate": {
+                        "input_field_in": {
+                            "field": "media_type",
+                            "values": ["application/vnd.fixture.source+json"]
+                        }
+                    }
+                }
+            ],
+            "validation_cases": [
+                {
+                    "case_id": "base",
+                    "parameters": {"limit_value": "100"},
+                    "inputs": ["case"],
+                    "expected": ["pass"]
+                }
+            ]
+        })
+    }
+
+    /// The R1 fixture contract plus the `instantiated_from` naming the record.
+    fn contract() -> Value {
+        let mut contract: Value =
+            serde_json::from_slice(super::CONTRACT).expect("fixture contract");
+        contract["contract_id"] = json!("fixture.instance.dose");
+        contract["instantiated_from"] = json!({"instantiation_id": "inst.dose.1"});
+        contract
+    }
+
+    /// Canonical digest of a JSON document — the identity `read_document`
+    /// computes.
+    fn canonical_sha256(value: &Value) -> String {
+        let bytes = serde_json::to_vec(value).unwrap();
+        let canonical = avila_core_kernel::read_authoritative_json(&bytes).unwrap();
+        super::super::prefixed_sha256(serde_json::to_vec(&canonical).unwrap())
+    }
+
+    fn record(contract: &Value, template: &Value) -> Value {
+        json!({
+            "schema_version": "avila.core/contract-instantiation/v0.1-draft",
+            "semantic_profile": "avila.core/semantic/0.2-draft",
+            "instantiation_id": "inst.dose.1",
+            "template": {
+                "template_id": template["template_id"],
+                "template_revision": template["template_revision"],
+                "sha256": canonical_sha256(template)
+            },
+            "parameters": {"limit_value": "100"},
+            "inputs": ["case"],
+            "eligibility": [
+                {"rule_id": "media_ok", "outcome": "eligible"}
+            ],
+            "aggregate": "eligible",
+            "contract": {
+                "contract_id": contract["contract_id"],
+                "revision": contract["revision"],
+                "sha256": canonical_sha256(contract)
+            }
+        })
+    }
+
+    /// A contract + its record + its template, all pinned consistently.
+    fn assembled() -> (Value, Value, Value) {
+        let template = template();
+        let contract = contract();
+        let record = record(&contract, &template);
+        (contract, record, template)
+    }
+
+    fn codes(report: &CompileReport) -> BTreeSet<&str> {
+        report
+            .findings
+            .iter()
+            .map(|finding| finding.code.as_str())
+            .collect()
+    }
+
+    fn compile(contract: &Value, records: &[&[u8]], templates: &[&[u8]]) -> CompileReport {
+        compile_documents_with_instantiation(
+            &serde_json::to_vec(contract).unwrap(),
+            REGISTRY,
+            &InstantiationMaterial { records, templates },
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn a_clean_instantiation_compiles() {
+        let (contract, record, template) = assembled();
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let template_bytes = serde_json::to_vec(&template).unwrap();
+        let report = compile(&contract, &[&record_bytes], &[&template_bytes]);
+        assert_eq!(
+            report.status,
+            CompilationStatus::Compiled,
+            "findings: {:?}",
+            report
+                .findings
+                .iter()
+                .map(|f| format!("{}: {}", f.code, f.message))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn a4801_record_not_bound() {
+        let (contract, _record, _template) = assembled();
+        let report = compile(&contract, &[], &[]);
+        assert!(codes(&report).contains(&CORE_A4801));
+    }
+
+    #[test]
+    fn a4801_contract_digest_mismatch() {
+        let (contract, mut record, template) = assembled();
+        record["contract"]["sha256"] =
+            json!("sha256:0000000000000000000000000000000000000000000000000000000000000000");
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let template_bytes = serde_json::to_vec(&template).unwrap();
+        let report = compile(&contract, &[&record_bytes], &[&template_bytes]);
+        assert!(codes(&report).contains(&CORE_A4801));
+    }
+
+    #[test]
+    fn a4801_template_not_bound() {
+        let (contract, record, _template) = assembled();
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let report = compile(&contract, &[&record_bytes], &[]);
+        assert!(codes(&report).contains(&CORE_A4801));
+    }
+
+    #[test]
+    fn a4802_required_parameter_unbound() {
+        let (contract, mut record, template) = assembled();
+        record["parameters"]
+            .as_object_mut()
+            .unwrap()
+            .remove("limit_value");
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let template_bytes = serde_json::to_vec(&template).unwrap();
+        let report = compile(&contract, &[&record_bytes], &[&template_bytes]);
+        assert!(codes(&report).contains(&CORE_A4802));
+    }
+
+    #[test]
+    fn a4802_undeclared_parameter_bound() {
+        let (contract, mut record, template) = assembled();
+        record["parameters"]["extra"] = json!(1);
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let template_bytes = serde_json::to_vec(&template).unwrap();
+        let report = compile(&contract, &[&record_bytes], &[&template_bytes]);
+        assert!(codes(&report).contains(&CORE_A4802));
+    }
+
+    #[test]
+    fn a4802_parameter_outside_domain() {
+        let (contract, mut record, template) = assembled();
+        record["parameters"]["limit_value"] = json!("-5");
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let template_bytes = serde_json::to_vec(&template).unwrap();
+        let report = compile(&contract, &[&record_bytes], &[&template_bytes]);
+        assert!(codes(&report).contains(&CORE_A4802));
+    }
+
+    #[test]
+    fn a4802_unbound_ref_in_template() {
+        // Drop the `mode` binding the template references — wait: `mode` is
+        // not referenced by the template. Instead, leave `limit_value`
+        // unbound: the requirement's `{"ref": "limit_value"}` then resolves
+        // to nothing the record bound.
+        let (contract, mut record, template) = assembled();
+        record["parameters"] = json!({});
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let template_bytes = serde_json::to_vec(&template).unwrap();
+        let report = compile(&contract, &[&record_bytes], &[&template_bytes]);
+        assert!(codes(&report).contains(&CORE_A4802));
+    }
+
+    #[test]
+    fn a4803_instance_loosens_policy_floor() {
+        let (contract, mut record, mut template) = assembled();
+        template["policy_floor"] = json!({
+            "require_signatures": true,
+            "deny_providers": ["provider.bad"],
+            "maturity_floor": "qualified"
+        });
+        record["template"]["sha256"] = json!(canonical_sha256(&template));
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let template_bytes = serde_json::to_vec(&template).unwrap();
+        let report = compile(&contract, &[&record_bytes], &[&template_bytes]);
+        assert!(codes(&report).contains(&CORE_A4803));
+    }
+
+    #[test]
+    fn a4803_instance_adding_a_permissive_rule_fails() {
+        // `permit_nominal_basis` is permissive — a floor that does not
+        // permit it forbids an instance that does.
+        let (mut contract, mut record, template) = assembled();
+        contract["execution_policy"] = json!({"permit_nominal_basis": true});
+        record["contract"]["sha256"] = json!(canonical_sha256(&contract));
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let template_bytes = serde_json::to_vec(&template).unwrap();
+        let report = compile(&contract, &[&record_bytes], &[&template_bytes]);
+        assert!(codes(&report).contains(&CORE_A4803));
+    }
+
+    #[test]
+    fn a4803_instance_tightening_beyond_the_floor_passes() {
+        // The floor requires signatures; the instance also denies a provider
+        // and requires independence — stricter than the floor is lawful.
+        let (mut contract, mut record, mut template) = assembled();
+        template["policy_floor"] = json!({"require_signatures": true});
+        contract["execution_policy"] = json!({
+            "require_signatures": true,
+            "deny_providers": ["provider.bad"],
+            "require_provider_independence": true
+        });
+        record["template"]["sha256"] = json!(canonical_sha256(&template));
+        record["contract"]["sha256"] = json!(canonical_sha256(&contract));
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let template_bytes = serde_json::to_vec(&template).unwrap();
+        let report = compile(&contract, &[&record_bytes], &[&template_bytes]);
+        assert!(!codes(&report).contains(&CORE_A4803));
+        assert_eq!(report.status, CompilationStatus::Compiled);
+    }
+
+    #[test]
+    fn a4804_recorded_mismatch_fails() {
+        let (contract, mut record, template) = assembled();
+        // Record claims ineligible though the fields derive eligible — a
+        // recorded mismatch is an eligibility failure, and the aggregate
+        // also no longer matches the implied `eligible`.
+        record["eligibility"][0]["outcome"] = json!("ineligible");
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let template_bytes = serde_json::to_vec(&template).unwrap();
+        let report = compile(&contract, &[&record_bytes], &[&template_bytes]);
+        assert!(codes(&report).contains(&CORE_A4804));
+    }
+
+    #[test]
+    fn a4804_derived_ineligible_fails() {
+        let (mut contract, mut record, template) = assembled();
+        contract["inputs"][0]["media_type"] = json!("application/octet-stream");
+        record["contract"]["sha256"] = json!(canonical_sha256(&contract));
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let template_bytes = serde_json::to_vec(&template).unwrap();
+        let report = compile(&contract, &[&record_bytes], &[&template_bytes]);
+        assert!(codes(&report).contains(&CORE_A4804));
+    }
+
+    #[test]
+    fn a4804_eligibility_unknown_fails() {
+        // A rule over an absent attribute derives `unknown` — refused
+        // identically to `ineligible`.
+        let (contract, mut record, mut template) = assembled();
+        template["eligibility"][0]["predicate"] = json!({
+            "attribute_in": {"attribute": "chain_format", "values": ["canonical"]}
+        });
+        record["template"]["sha256"] = json!(canonical_sha256(&template));
+        record["aggregate"] = json!("unknown");
+        record["eligibility"][0]["outcome"] = json!("unknown");
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let template_bytes = serde_json::to_vec(&template).unwrap();
+        let report = compile(&contract, &[&record_bytes], &[&template_bytes]);
+        assert!(codes(&report).contains(&CORE_A4804));
+    }
+
+    #[test]
+    fn a4805_validation_case_does_not_compile() {
+        let (contract, mut record, mut template) = assembled();
+        // A case leaving the referenced parameter unbound cannot materialize:
+        // `{"ref": "limit_value"}` resolves to nothing the case bound.
+        template["validation_cases"][0]["parameters"] = json!({});
+        record["template"]["sha256"] = json!(canonical_sha256(&template));
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let template_bytes = serde_json::to_vec(&template).unwrap();
+        let report = compile(&contract, &[&record_bytes], &[&template_bytes]);
+        assert!(codes(&report).contains(&CORE_A4805));
+    }
+
+    #[test]
+    fn a4806_superseded_template_is_a_notice() {
+        let (contract, record, template) = assembled();
+        let mut newer = template.clone();
+        newer["template_revision"] = json!(2);
+        newer["supersedes"] = record["template"].clone();
+        let record_bytes = serde_json::to_vec(&record).unwrap();
+        let template_bytes = serde_json::to_vec(&template).unwrap();
+        let newer_bytes = serde_json::to_vec(&newer).unwrap();
+        let report = compile(
+            &contract,
+            &[&record_bytes],
+            &[&template_bytes, &newer_bytes],
+        );
+        assert!(codes(&report).contains(&CORE_A4806));
+        assert_eq!(report.status, CompilationStatus::Compiled);
+    }
+}

@@ -5,6 +5,7 @@ use super::stderr::{
 };
 use super::*;
 use crate::diagnostic::{CORE_X6501, CORE_X6502};
+use avila_core_compiler::compile_documents;
 use sha2::{Digest, Sha256};
 
 fn comparison_attempt() -> AttemptRecord {
@@ -1057,4 +1058,56 @@ fn case_004_bound_plan_blocks_where_the_plan_would_execute() {
     )
     .unwrap();
     assert!(run.bound_plan.is_none());
+}
+
+#[test]
+fn an_instantiated_contract_without_its_record_fails_closed() {
+    // ADR-0022: the runner collects every bound `contract_instantiation` /
+    // `contract_template` document into `InstantiationMaterial`; a contract
+    // naming a record the package does not bind is a compile refusal
+    // (CORE-A4801), not a runtime accident.
+    let temp =
+        std::env::temp_dir().join(format!("avila-core-instantiation-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&temp);
+    copy_dir(&case_000(), &temp);
+    let contract_path = temp.join("contract.json");
+    let mut contract: serde_json::Value =
+        serde_json::from_slice(&fs::read(&contract_path).unwrap()).unwrap();
+    contract["instantiated_from"] = serde_json::json!({"instantiation_id": "inst.unbound"});
+    let bytes = serde_json::to_vec_pretty(&contract).unwrap();
+    fs::write(&contract_path, &bytes).unwrap();
+    let manifest_path = temp.join("package.json");
+    let mut manifest: serde_json::Value =
+        serde_json::from_slice(&fs::read(&manifest_path).unwrap()).unwrap();
+    for document in manifest["documents"].as_array_mut().unwrap() {
+        if document["path"] == "contract.json" {
+            document["sha256"] =
+                serde_json::Value::String(format!("sha256:{:x}", Sha256::digest(&bytes)));
+        }
+    }
+    fs::write(
+        &manifest_path,
+        serde_json::to_vec_pretty(&manifest).unwrap(),
+    )
+    .unwrap();
+
+    let report = execute_case(&temp, &CaseRunOptions::default()).unwrap();
+    let compile = report
+        .compile
+        .as_ref()
+        .expect("a compile report accompanies the refusal");
+    assert_eq!(compile.status, CompilationStatus::Rejected);
+    assert!(
+        compile
+            .findings
+            .iter()
+            .any(|finding| finding.code == "CORE-A4801"),
+        "expected CORE-A4801 among {:?}",
+        compile
+            .findings
+            .iter()
+            .map(|f| f.code.as_str())
+            .collect::<Vec<_>>()
+    );
+    let _ = fs::remove_dir_all(&temp);
 }

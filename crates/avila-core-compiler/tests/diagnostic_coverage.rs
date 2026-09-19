@@ -24,6 +24,14 @@ const TEST_PINNED: &[(&str, &str)] = &[
         "CORE-A4402",
         "avila-core-runner execute::adversarial_tests — require_qualification with unqualified evidence",
     ),
+    (
+        "CORE-T2701",
+        "avila-core-runner case_run::qualification::tests — qualification-scope attributes checked at record load (the check is compiler-owned; only the runner sees a bound record)",
+    ),
+    (
+        "CORE-T2702",
+        "avila-core-compiler compile::tests — input attribute vocabulary checks (undeclared name, outside domain, missing required, metadata overlap/non-scalar)",
+    ),
 ];
 
 fn fixture_root() -> PathBuf {

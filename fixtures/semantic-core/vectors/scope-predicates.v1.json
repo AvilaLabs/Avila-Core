@@ -583,6 +583,231 @@
     "result": "unknown"
    },
    "note": "the value exists, but no fact from an acceptable source exists; runner signature does not elevate a provider assertion"
+  },
+  {
+   "id": "attribute-range.inside.true",
+   "input": {
+    "predicate": {
+     "input_attribute_in_range": {
+      "slot": "material",
+      "attribute": "nuclide_count",
+      "min": "1",
+      "max": "10",
+      "min_inclusive": true,
+      "max_inclusive": true
+     }
+    },
+    "context": {
+     "inputs": {
+      "material": {
+       "attributes": {
+        "nuclide_count": 5
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "true"
+   },
+   "note": "an integer-domain attribute authored as a JSON integer reads as its canonical integer"
+  },
+  {
+   "id": "attribute-range.below-min.false",
+   "input": {
+    "predicate": {
+     "input_attribute_in_range": {
+      "slot": "material",
+      "attribute": "nuclide_count",
+      "min": "1"
+     }
+    },
+    "context": {
+     "inputs": {
+      "material": {
+       "attributes": {
+        "nuclide_count": 0
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "false"
+   }
+  },
+  {
+   "id": "attribute-range.exclusive-boundary.false",
+   "input": {
+    "predicate": {
+     "input_attribute_in_range": {
+      "slot": "material",
+      "attribute": "nuclide_count",
+      "min": "5",
+      "min_inclusive": false
+     }
+    },
+    "context": {
+     "inputs": {
+      "material": {
+       "attributes": {
+        "nuclide_count": "5"
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "false"
+   },
+   "note": "equality at an exclusive bound is outside"
+  },
+  {
+   "id": "attribute-range.inclusive-boundary.true",
+   "input": {
+    "predicate": {
+     "input_attribute_in_range": {
+      "slot": "material",
+      "attribute": "nuclide_count",
+      "max": "5",
+      "max_inclusive": true
+     }
+    },
+    "context": {
+     "inputs": {
+      "material": {
+       "attributes": {
+        "nuclide_count": "5"
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "true"
+   }
+  },
+  {
+   "id": "attribute-range.rational.true",
+   "input": {
+    "predicate": {
+     "input_attribute_in_range": {
+      "slot": "material",
+      "attribute": "density",
+      "min": "1/2",
+      "max": "3/4"
+     }
+    },
+    "context": {
+     "inputs": {
+      "material": {
+       "attributes": {
+        "density": "0.6"
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "true"
+   },
+   "note": "bounds and values are canonical exact numbers \u2014 rationals compare exactly"
+  },
+  {
+   "id": "attribute-range.absent.unknown",
+   "input": {
+    "predicate": {
+     "input_attribute_in_range": {
+      "slot": "material",
+      "attribute": "nuclide_count",
+      "min": "1"
+     }
+    },
+    "context": {
+     "inputs": {
+      "material": {
+       "attributes": {}
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "unknown"
+   },
+   "note": "an absent attribute is unknown, never a negative answer"
+  },
+  {
+   "id": "attribute-range.non-canonical.unknown",
+   "input": {
+    "predicate": {
+     "input_attribute_in_range": {
+      "slot": "material",
+      "attribute": "nuclide_count",
+      "min": "1"
+     }
+    },
+    "context": {
+     "inputs": {
+      "material": {
+       "attributes": {
+        "nuclide_count": "many"
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "unknown"
+   }
+  },
+  {
+   "id": "attribute-range.float.unknown",
+   "input": {
+    "predicate": {
+     "input_attribute_in_range": {
+      "slot": "material",
+      "attribute": "nuclide_count",
+      "min": "1"
+     }
+    },
+    "context": {
+     "inputs": {
+      "material": {
+       "attributes": {
+        "nuclide_count": 2.5
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "unknown"
+   },
+   "note": "a JSON float is not an exact number \u2014 the predicate does not silently accept it"
+  },
+  {
+   "id": "attribute-range.missing-slot.unknown",
+   "input": {
+    "predicate": {
+     "input_attribute_in_range": {
+      "slot": "detector",
+      "attribute": "gain",
+      "min": "1"
+     }
+    },
+    "context": {
+     "inputs": {
+      "material": {
+       "attributes": {
+        "gain": "3"
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "result": "unknown"
+   }
   }
  ]
 }

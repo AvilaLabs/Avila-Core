@@ -42,6 +42,10 @@ pub const CORE_X6404: &str = "CORE-X6404";
 pub const CORE_X6501: &str = "CORE-X6501";
 pub const CORE_X6502: &str = "CORE-X6502";
 pub const CORE_X9001: &str = "CORE-X9001";
+/// ADR-0025: the compiler's attribute-vocabulary code, re-exported here so
+/// a qualification record's undeclared-attribute refusal can carry it at
+/// record load — the boundary where a bound record meets the contract.
+pub use avila_core_compiler::CORE_T2701;
 pub const CORE_P5101: &str = "CORE-P5101";
 pub const CORE_P5102: &str = "CORE-P5102";
 pub const CORE_P5103: &str = "CORE-P5103";
@@ -57,11 +61,11 @@ pub const CORE_P5602: &str = "CORE-P5602";
 
 pub const RUNTIME_FINDING_CODES: &[&str] = &[
     CORE_P5101, CORE_P5102, CORE_P5103, CORE_P5201, CORE_P5301, CORE_P5302, CORE_P5303, CORE_P5304,
-    CORE_P5401, CORE_P5501, CORE_P5601, CORE_P5602, CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1004,
-    CORE_X1005, CORE_X1101, CORE_X1201, CORE_X1301, CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301,
-    CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101,
-    CORE_X3201, CORE_X3301, CORE_X3401, CORE_X3404, CORE_X3405, CORE_X6401, CORE_X6402, CORE_X6403,
-    CORE_X6404, CORE_X6501, CORE_X6502, CORE_X9001,
+    CORE_P5401, CORE_P5501, CORE_P5601, CORE_P5602, CORE_T2701, CORE_X1001, CORE_X1002, CORE_X1003,
+    CORE_X1004, CORE_X1005, CORE_X1101, CORE_X1201, CORE_X1301, CORE_X2001, CORE_X2101, CORE_X2201,
+    CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001,
+    CORE_X3101, CORE_X3201, CORE_X3301, CORE_X3401, CORE_X3404, CORE_X3405, CORE_X6401, CORE_X6402,
+    CORE_X6403, CORE_X6404, CORE_X6501, CORE_X6502, CORE_X9001,
 ];
 
 /// Explanations are served by `avila-core explain` alongside compiler codes.
@@ -149,6 +153,13 @@ pub const RUNTIME_DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         rule: "SC-8.6: every candidate decided",
         meaning: "A selection record lists a candidate that carries no `decision` or no `reasons` — a considered implementation whose fate is unrecorded defeats the audit the record exists for.",
         next_action: "Record every considered candidate's decision and reasons. The owner is the policy owner.",
+    },
+    DiagnosticExplanation {
+        code: CORE_T2701,
+        title: "Attribute undeclared in predicate",
+        rule: "ADR-0025; SC-7 clause 2",
+        meaning: "A bound qualification record's `input_attribute_in` or `input_attribute_in_range` predicate names an attribute the bound slot's role does not declare. The predicate form is legal syntax, but the attribute it addresses does not exist in the role's declared vocabulary. The record is not applied.",
+        next_action: "Declare the attribute in the role's `attributes` vocabulary, or address a declared attribute. A role with no declared vocabulary cannot refuse a name — the refusal exists only where a vocabulary does. The owner is the requester.",
     },
     DiagnosticExplanation {
         code: CORE_X1001,

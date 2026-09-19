@@ -1108,7 +1108,48 @@ impl<'a> Runner<'a> {
                 ));
             }
             match adapter.applicability(&staged_bytes, &plan.invocation_sha256) {
-                Ok(context) => {
+                Ok(mut context) => {
+                    // ADR-0025: contract-declared input attributes join the
+                    // applicability context as the channel
+                    // `input_attribute_in*` predicates read — declared
+                    // values win over adapter-measured facts of the same
+                    // name, and `input_metadata` never enters.
+                    for binding in &step.bindings {
+                        let SourceRef::ContractInput { input_id } = &binding.source else {
+                            continue;
+                        };
+                        let Some(declared) = self
+                            .compiled
+                            .inputs
+                            .iter()
+                            .find(|input| &input.input_id == input_id)
+                            .map(|input| &input.attributes)
+                        else {
+                            continue;
+                        };
+                        if declared.is_empty() {
+                            continue;
+                        }
+                        let attributes = context
+                            .get_mut("inputs")
+                            .and_then(serde_json::Value::as_object_mut)
+                            .map(|inputs| {
+                                inputs
+                                    .entry(binding.input_slot.clone())
+                                    .or_insert_with(|| serde_json::json!({}))
+                            })
+                            .and_then(serde_json::Value::as_object_mut)
+                            .map(|slot| {
+                                slot.entry("attributes")
+                                    .or_insert_with(|| serde_json::json!({}))
+                            })
+                            .and_then(serde_json::Value::as_object_mut);
+                        if let Some(attributes) = attributes {
+                            for (name, value) in declared {
+                                attributes.insert(name.clone(), value.clone());
+                            }
+                        }
+                    }
                     let mut assessment = evaluate_envelope(
                         &bound.record,
                         &bound.sha256,

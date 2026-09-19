@@ -1118,6 +1118,8 @@ fn execute_case_inner(
     let mut workspace = None;
     let loaded = load_qualifications(
         &package,
+        compiled,
+        registry,
         &compiled.execution_policy.recognized_qualification_owners,
     )?;
     report.findings.extend(loaded.findings);

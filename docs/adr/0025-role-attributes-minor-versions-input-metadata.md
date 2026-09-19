@@ -57,9 +57,16 @@ parameters already use. An attribute may be `required` (default) or
 Two structural checks close the predicate gap:
 
 - `CORE-T2701` — a predicate's `input_attribute_in(_range)` names an
-  attribute the bound role does not declare. Refused at compile time,
-  before evaluation — the SC-7 form is legal syntax, but the attribute
-  it addresses does not exist.
+  attribute the bound role does not declare. Attribute-bearing
+  predicates live on qualification records — package documents, not
+  compiler inputs — so the refusal lands at record load, before any
+  envelope is evaluated: the SC-7 form is legal syntax, but the
+  attribute it addresses does not exist in the role's declared
+  vocabulary. The check resolves each named slot through the
+  exercised steps' bindings to the contract input's role, then the
+  role's `attributes` map; a role declaring no vocabulary cannot
+  refuse a name, and a record whose pair is unexercised binds no slot
+  to check.
 - `CORE-T2702` — a bound input's declared attributes violate the
   role's vocabulary: an undeclared attribute name, a value outside
   its declared domain, or a `required` attribute absent.

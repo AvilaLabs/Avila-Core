@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{CORE_S1102, KernelError, KindRegistry, Quantity};
+use crate::{CORE_S1102, ExactNumber, KernelError, KindRegistry, Quantity};
 
 const DEFAULT_MAX_DEPTH: usize = 128;
 const DEFAULT_MAX_NODES: usize = 10_000;
@@ -38,6 +38,7 @@ pub enum Predicate {
     Not(Box<Self>),
     ParamInRange(RangePredicate),
     InputAttributeIn(AttributeSetPredicate),
+    InputAttributeInRange(AttributeRangePredicate),
     EnvironmentImageIn(Vec<String>),
     Fact(FactPredicate),
 }
@@ -62,6 +63,25 @@ pub struct AttributeSetPredicate {
     pub slot: String,
     pub attribute: String,
     pub values: Vec<String>,
+}
+
+/// SC-7 clause 2: an exact-numeric range over a slot-addressed input
+/// attribute (ADR-0025). `min`/`max` are canonical decimal or rational
+/// strings — attributes carry no unit, so unlike `param_in_range` no kind
+/// scaling applies.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AttributeRangePredicate {
+    pub slot: String,
+    pub attribute: String,
+    #[serde(default)]
+    pub min: Option<String>,
+    #[serde(default)]
+    pub max: Option<String>,
+    #[serde(default)]
+    pub min_inclusive: bool,
+    #[serde(default)]
+    pub max_inclusive: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -113,7 +133,7 @@ pub struct ApplicabilityContext {
     pub facts: BTreeMap<String, FactRecord>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct InputContext {
     #[serde(default)]
@@ -236,6 +256,7 @@ impl<'a> ApplicabilityEvaluator<'a> {
             }
             Predicate::ParamInRange(range) => self.evaluate_range(range, context),
             Predicate::InputAttributeIn(set) => Ok(evaluate_attribute_set(set, context)),
+            Predicate::InputAttributeInRange(range) => evaluate_attribute_range(range, context),
             Predicate::EnvironmentImageIn(allowed) => {
                 Ok(context
                     .environment
@@ -363,6 +384,68 @@ fn evaluate_attribute_set(
     } else {
         TruthValue::False
     }
+}
+
+/// ADR-0025: an exact-numeric range over a declared input attribute. The
+/// attribute's value must be a canonical decimal or rational string; a
+/// non-numeric or absent attribute is `Unknown`, never `False` — absence
+/// and uncomparability are both "the predicate does not know", not a
+/// negative answer.
+fn evaluate_attribute_range(
+    predicate: &AttributeRangePredicate,
+    context: &ApplicabilityContext,
+) -> Result<TruthValue, KernelError> {
+    if predicate.min.is_none() && predicate.max.is_none() {
+        return Err(invalid_predicate(
+            "an attribute range requires a minimum or maximum",
+        ));
+    }
+    let bound = |value: &str, side: &str| -> Result<ExactNumber, KernelError> {
+        ExactNumber::from_canonical(value).map_err(|_| {
+            invalid_predicate(format!(
+                "attribute range {side} bound `{value}` is not a canonical number"
+            ))
+        })
+    };
+    // An exact-number attribute is authored as its canonical string; an
+    // integer-domain attribute is authored as a JSON integer, which is
+    // already canonical when stringified. A float or non-numeric value is
+    // never exact — `unknown`, not `false`.
+    let raw = context
+        .inputs
+        .get(&predicate.slot)
+        .and_then(|input| input.attributes.get(&predicate.attribute));
+    let Some(raw) = raw else {
+        return Ok(TruthValue::Unknown);
+    };
+    let canonical = match raw {
+        Value::String(text) => Some(text.clone()),
+        Value::Number(number) if number.is_i64() || number.is_u64() => Some(number.to_string()),
+        _ => None,
+    };
+    let Some(canonical) = canonical else {
+        return Ok(TruthValue::Unknown);
+    };
+    let Ok(actual) = ExactNumber::from_canonical(&canonical) else {
+        return Ok(TruthValue::Unknown);
+    };
+    if let Some(min) = &predicate.min {
+        let minimum = bound(min, "minimum")?;
+        let ordering = actual.checked_cmp(&minimum)?;
+        if ordering == Ordering::Less || (!predicate.min_inclusive && ordering == Ordering::Equal) {
+            return Ok(TruthValue::False);
+        }
+    }
+    if let Some(max) = &predicate.max {
+        let maximum = bound(max, "maximum")?;
+        let ordering = actual.checked_cmp(&maximum)?;
+        if ordering == Ordering::Greater
+            || (!predicate.max_inclusive && ordering == Ordering::Equal)
+        {
+            return Ok(TruthValue::False);
+        }
+    }
+    Ok(TruthValue::True)
 }
 
 fn compare_scalar<T: Ord>(
@@ -580,5 +663,61 @@ mod tests {
                 .unwrap(),
             TruthValue::Unknown
         );
+    }
+    #[test]
+    fn attribute_range_requires_a_bound_and_bounds_must_be_canonical() {
+        let registry = KindRegistry::default();
+        let evaluator = ApplicabilityEvaluator::new(&registry);
+        let context = ApplicabilityContext {
+            params: BTreeMap::new(),
+            inputs: BTreeMap::from([(
+                "material".to_string(),
+                InputContext {
+                    attributes: BTreeMap::from([(
+                        "nuclide_count".to_string(),
+                        Value::String("5".to_string()),
+                    )]),
+                },
+            )]),
+            environment: None,
+            facts: BTreeMap::new(),
+        };
+        // Neither bound is a shape error the evaluator refuses, not an
+        // `unknown` an envelope could misread as a fact gap.
+        let unbounded = Predicate::InputAttributeInRange(AttributeRangePredicate {
+            slot: "material".into(),
+            attribute: "nuclide_count".into(),
+            min: None,
+            max: None,
+            min_inclusive: false,
+            max_inclusive: false,
+        });
+        assert!(evaluator.evaluate(&unbounded, &context).is_err());
+        // A malformed bound is likewise a predicate error even though the
+        // attribute itself parses.
+        let bad_bound = Predicate::InputAttributeInRange(AttributeRangePredicate {
+            slot: "material".into(),
+            attribute: "nuclide_count".into(),
+            min: Some("not a number".into()),
+            max: None,
+            min_inclusive: false,
+            max_inclusive: false,
+        });
+        assert!(evaluator.evaluate(&bad_bound, &context).is_err());
+        // Bounds parse lazily after the attribute resolves — matching
+        // `param_in_range`'s convention — so an absent attribute answers
+        // `unknown` before a malformed bound is ever inspected, while the
+        // shape error (no bounds at all) still fails closed first.
+        let empty_context = ApplicabilityContext {
+            params: BTreeMap::new(),
+            inputs: BTreeMap::new(),
+            environment: None,
+            facts: BTreeMap::new(),
+        };
+        assert_eq!(
+            evaluator.evaluate(&bad_bound, &empty_context).unwrap(),
+            TruthValue::Unknown
+        );
+        assert!(evaluator.evaluate(&unbounded, &empty_context).is_err());
     }
 }

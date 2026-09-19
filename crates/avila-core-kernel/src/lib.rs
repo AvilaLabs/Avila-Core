@@ -25,9 +25,9 @@ pub use number::{
     read_authoritative_rational,
 };
 pub use predicate::{
-    ApplicabilityContext, ApplicabilityEvaluator, AttributeSetPredicate, EnvironmentContext,
-    FactOperator, FactPredicate, FactRecord, FactSource, FactValue, InputContext, Predicate,
-    RangePredicate, SourceRequirement, TruthValue,
+    ApplicabilityContext, ApplicabilityEvaluator, AttributeRangePredicate, AttributeSetPredicate,
+    EnvironmentContext, FactOperator, FactPredicate, FactRecord, FactSource, FactValue,
+    InputContext, Predicate, RangePredicate, SourceRequirement, TruthValue,
 };
 pub use unit::{CanonicalQuantity, KindDefinition, KindRegistry, Quantity, UnitDefinition};
 pub use verdict::{

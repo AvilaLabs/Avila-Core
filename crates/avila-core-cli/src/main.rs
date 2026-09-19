@@ -811,9 +811,14 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
         }
         Command::Explain { code, all } => match (code, all) {
             (None, true) => {
+                // A code owned by the compiler may also be emitted by the
+                // runner (CORE-T2701 at record load) — the compiler's
+                // entry is the canonical explanation, so first wins.
+                let mut seen = std::collections::BTreeSet::new();
                 let mut entries: Vec<_> = DIAGNOSTIC_CATALOG
                     .iter()
                     .chain(RUNTIME_DIAGNOSTIC_CATALOG)
+                    .filter(|entry| seen.insert(entry.code))
                     .collect();
                 entries.sort_by_key(|entry| entry.code);
                 println!("{}", serde_json::to_string_pretty(&entries)?);
@@ -1672,7 +1677,7 @@ mod tests {
         let report = semantic_profile_report().unwrap();
         assert_eq!(report.semantic_profile, SEMANTIC_PROFILE);
         assert_eq!(report.status, "draft");
-        assert_eq!(report.total_vectors, 123);
+        assert_eq!(report.total_vectors, 132);
         assert_eq!(report.implemented_vector_sets.len(), 4);
         assert_eq!(report.total_compiler_fixtures, 71);
         assert_eq!(report.implemented_compiler_fixture_sets.len(), 5);

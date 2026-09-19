@@ -1369,3 +1369,58 @@ schema changes — the committed `staged-review-record` schema governs.
 Remaining inside ADR-0024's boundary: no CLI path mints a record (the
 surrounding agent workflow writes it, the engine verifies); the
 `human` reviewer role remains a vocabulary extension, not a record type.
+
+## 2026-09-19 — ADR-0025 implemented (proposed status unchanged)
+
+Role attribute vocabularies, minor versions, and contract input metadata
+are live across the compiler, kernel, runner, schemas, and verifier.
+
+- `VersionedRef` gains `minor` (absent reads 0, never serializes as 0 —
+  committed digests unchanged). `satisfies`: same `id`/`major`, offered
+  minor >= required. Used by explicit AND implicit binding resolution;
+  `label()` renders `id@major` or `id@major.minor`.
+- `RoleDefinition.attributes`: name → `AttributeDeclaration { required,
+  value_type }` reusing the parameter-domain machinery; validated with
+  the same R3501 declaration checks. A minor bump adding a *required*
+  attribute is `CORE-R3501` — checked pairwise over every lower minor.
+- `ContractInput` gains `attributes` (predicate-visible) and
+  `input_metadata` (scalars only, never consulted, never in
+  `attributes`' namespace — overlap is `CORE-T2702`).
+- `CORE-T2702` at compile: undeclared attribute name, out-of-domain
+  value, missing required attribute, non-scalar/overlapping metadata.
+- Kernel `input_attribute_in_range`: exact-numeric bounds over a
+  slot-addressed attribute; strings and JSON integers only, floats and
+  booleans are `unknown` — no bounds at all is a predicate error.
+- Runner merges declared `attributes` into the applicability context
+  per slot (declared values win over adapter-measured facts);
+  `input_metadata` is never merged.
+- `CORE-T2701` at record load: a qualification record's
+  `input_attribute_in*` predicate addressing an attribute the bound
+  slot's role does not declare is refused (inadmissible, not applied).
+  Scoped to the steps exercising the record's capability pair; a role
+  with no declared vocabulary cannot refuse.
+- Verifier parity: `input_attribute_in_range` evaluation +
+  `_check_qualification_attribute_vocabularies` re-deriving the same
+  refusal (slot → contract input → role → vocabulary, minor-exact).
+- Schemas: `minor` added to every `versionedRef` def (evidence-contract,
+  registry-snapshot, capability-selection, compile-report,
+  execution-receipt, external-checker-adapter, staged-review-record);
+  `attributes`/`input_metadata` on the contract input;
+  `attributeDeclaration` + role `attributes` on the registry;
+  `input_attribute_in_range` named in the qualification scope
+  description.
+- Semantic corpus: 9 new vectors (`input_attribute_in_range` happy
+  paths, bounds, inclusivity edges, absent/malformed/integer
+  attributes) — 28 total.
+
+Coverage pins: `roles.minor-version.pass`,
+`roles.attribute-undeclared-in-predicate.fail`,
+`change.input_metadata.non-dependence.pass` move to named.
+
+Honest gaps: `input_metadata` non-consultation is by construction (the
+merge reads `attributes` only; invocation identity binds
+slot/evidence/media/sha256/bytes) — no e2e pin executes a case carrying
+metadata. `CORE-T2701` is a compiler-owned code emitted at record load
+(the compiler never sees a bound qualification record); the runtime
+catalog carries a matching entry, and `explain --all` dedupes by code
+preferring the compiler's entry.

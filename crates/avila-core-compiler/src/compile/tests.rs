@@ -3,8 +3,8 @@ use super::{CompilationStatus, CompileReport, PresentationGateState, compile_doc
 use crate::diagnostic::{
     CORE_A4404, CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3401,
     CORE_R3501, CORE_R3601, CORE_R3602, CORE_S1101, CORE_S1102, CORE_T2001, CORE_T2101, CORE_T2102,
-    CORE_T2103, CORE_T2104, CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2601, FindingClass,
-    RepairApplicability, RepairEdit,
+    CORE_T2103, CORE_T2104, CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2601, CORE_T2702,
+    FindingClass, RepairApplicability, RepairEdit,
 };
 use crate::document::{
     AuthoredBinding, BasisKind, BoundSide, CategoricalPredicate, CategoricalRequirementSource,
@@ -536,6 +536,7 @@ fn purpose_exclusions_are_nominal_and_fail_closed() {
         VersionedRef {
             id: "fixture.design_compliance".into(),
             major: 1,
+            minor: 0,
         }
     );
 
@@ -543,6 +544,7 @@ fn purpose_exclusions_are_nominal_and_fail_closed() {
     excluded.requirements[0].purpose = VersionedRef {
         id: "fixture.screening".into(),
         major: 1,
+        minor: 0,
     };
     assert!(codes(&compile_with_registry(&excluded, &purpose_registry())).contains(CORE_T2601));
 
@@ -550,6 +552,7 @@ fn purpose_exclusions_are_nominal_and_fail_closed() {
     similar_name.requirements[0].purpose = VersionedRef {
         id: "fixture.screening_research".into(),
         major: 1,
+        minor: 0,
     };
     assert_eq!(
         compile_with_registry(&similar_name, &purpose_registry()).status,
@@ -560,6 +563,7 @@ fn purpose_exclusions_are_nominal_and_fail_closed() {
     unknown.requirements[0].purpose = VersionedRef {
         id: "fixture.unknown".into(),
         major: 1,
+        minor: 0,
     };
     assert!(codes(&compile_with_registry(&unknown, &purpose_registry())).contains(CORE_T2601));
 }
@@ -585,6 +589,7 @@ fn invalid_purpose_vocabularies_and_exclusions_are_registry_findings() {
     unknown_exclusion.capability_types[0].outputs[0].excluded_purposes[0] = VersionedRef {
         id: "fixture.unknown".into(),
         major: 1,
+        minor: 0,
     };
     assert!(codes(&compile_with_registry(&source, &unknown_exclusion)).contains(CORE_R3501));
 }
@@ -620,6 +625,7 @@ fn explicit_binding_checks_nominal_role_and_media_independently() {
     role_mismatch.inputs[0].role = VersionedRef {
         id: "fixture.alternate_source_document".into(),
         major: 1,
+        minor: 0,
     };
     role_mismatch.workflow[0].bindings.push(AuthoredBinding {
         input_slot: "source".into(),
@@ -751,6 +757,7 @@ fn unconsumed_declarations_are_notices_that_never_block() {
     spare.role = VersionedRef {
         id: "fixture.alternate_source_document".into(),
         major: 1,
+        minor: 0,
     };
     unused_input.inputs.push(spare);
     let report = compile_contract(&unused_input);
@@ -1347,4 +1354,298 @@ fn rounding_cannot_be_smuggled_into_a_requirement() {
         serde_json::json!({"quantum": {"value": "0.1", "unit": "uSv/h"}, "mode": "half_up"});
     let report = compile_documents(&serde_json::to_vec(&source).unwrap(), REGISTRY).unwrap();
     assert_eq!(report.status, CompilationStatus::Rejected);
+}
+
+// ---- ADR-0025: role vocabularies, minor versions, input metadata ----
+
+fn attribute_registry() -> RegistrySnapshot {
+    let mut registry = registry();
+    registry.roles[0].attributes.insert(
+        "chain_format".into(),
+        crate::document::AttributeDeclaration {
+            required: true,
+            value_type: ParameterType::Text {
+                allowed_values: Some(vec!["canonical".into(), "extended".into()]),
+            },
+        },
+    );
+    registry.roles[0].attributes.insert(
+        "nuclide_count".into(),
+        crate::document::AttributeDeclaration {
+            required: false,
+            value_type: ParameterType::Integer {
+                min: None,
+                max: None,
+            },
+        },
+    );
+    registry
+}
+
+#[test]
+fn input_attributes_satisfy_the_role_vocabulary() {
+    let mut source = contract();
+    source.inputs[0]
+        .attributes
+        .insert("chain_format".into(), serde_json::json!("canonical"));
+    let report = compile_with_registry(&source, &attribute_registry());
+    assert_eq!(
+        report.status,
+        CompilationStatus::Compiled,
+        "{:?}",
+        report.findings
+    );
+}
+
+#[test]
+fn undeclared_input_attribute_is_rejected() {
+    let mut source = contract();
+    source.inputs[0]
+        .attributes
+        .insert("invented".into(), serde_json::json!("x"));
+    let report = compile_with_registry(&source, &attribute_registry());
+    assert_eq!(report.status, CompilationStatus::Rejected);
+    let finding = report
+        .findings
+        .iter()
+        .find(|finding| finding.code == CORE_T2702 && finding.message.contains("invented"))
+        .expect("an undeclared attribute is CORE-T2702");
+    assert!(finding.message.contains("does not declare"));
+}
+
+#[test]
+fn attribute_value_outside_the_declared_domain_is_rejected() {
+    let mut source = contract();
+    source.inputs[0]
+        .attributes
+        .insert("chain_format".into(), serde_json::json!("nonstandard"));
+    let report = compile_with_registry(&source, &attribute_registry());
+    assert_eq!(report.status, CompilationStatus::Rejected);
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_T2702 && finding.message.contains("nonstandard")),
+        "{report:#?}"
+    );
+}
+
+#[test]
+fn a_required_attribute_missing_from_the_input_is_rejected() {
+    let report = compile_with_registry(&contract(), &attribute_registry());
+    assert_eq!(report.status, CompilationStatus::Rejected);
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_T2702 && finding.message.contains("chain_format")),
+        "{report:#?}"
+    );
+}
+
+#[test]
+fn optional_attributes_may_be_absent_or_present() {
+    let mut registry = registry();
+    registry.roles[0].attributes.insert(
+        "nuclide_count".into(),
+        crate::document::AttributeDeclaration {
+            required: false,
+            value_type: ParameterType::Integer {
+                min: None,
+                max: None,
+            },
+        },
+    );
+    // Absent — compiles.
+    let report = compile_with_registry(&contract(), &registry);
+    assert_eq!(
+        report.status,
+        CompilationStatus::Compiled,
+        "{:?}",
+        report.findings
+    );
+    // Present but the wrong domain — an integer attribute given a string.
+    let mut source = contract();
+    source.inputs[0]
+        .attributes
+        .insert("nuclide_count".into(), serde_json::json!("five"));
+    let report = compile_with_registry(&source, &registry);
+    assert_eq!(report.status, CompilationStatus::Rejected);
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_T2702),
+        "{report:#?}"
+    );
+    // Present and in domain — compiles.
+    let mut source = contract();
+    source.inputs[0]
+        .attributes
+        .insert("nuclide_count".into(), serde_json::json!(5));
+    let report = compile_with_registry(&source, &registry);
+    assert_eq!(
+        report.status,
+        CompilationStatus::Compiled,
+        "{:?}",
+        report.findings
+    );
+}
+
+#[test]
+fn input_metadata_is_scalar_only_and_never_overlaps_attributes() {
+    let mut source = contract();
+    source.inputs[0]
+        .input_metadata
+        .insert("source_lab".into(), serde_json::json!("example laboratory"));
+    let report = compile_with_registry(&source, &registry());
+    assert_eq!(
+        report.status,
+        CompilationStatus::Compiled,
+        "{:?}",
+        report.findings
+    );
+
+    // A nested object is not a scalar fact.
+    let mut source = contract();
+    source.inputs[0]
+        .input_metadata
+        .insert("detail".into(), serde_json::json!({"nested": true}));
+    let report = compile_with_registry(&source, &registry());
+    assert_eq!(report.status, CompilationStatus::Rejected);
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_T2702 && finding.message.contains("detail")),
+        "{report:#?}"
+    );
+
+    // A name shared with `attributes` — the two channels stay disjoint.
+    let mut source = contract();
+    source.inputs[0]
+        .attributes
+        .insert("chain_format".into(), serde_json::json!("canonical"));
+    source.inputs[0]
+        .input_metadata
+        .insert("chain_format".into(), serde_json::json!("display only"));
+    let report = compile_with_registry(&source, &attribute_registry());
+    assert_eq!(report.status, CompilationStatus::Rejected);
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_T2702
+                && finding.message.contains("chain_format")
+                && finding.message.contains("input_metadata")),
+        "{report:#?}"
+    );
+}
+
+#[test]
+fn a_newer_minor_satisfies_an_older_role_requirement() {
+    // `fixture.source_document@1` gains a `minor: 1` revision that adds an
+    // optional attribute — a contract input declaring @1.1 feeds a slot
+    // written against @1.
+    let mut registry = registry();
+    let mut newer = registry.roles[0].clone();
+    newer.role.minor = 1;
+    newer.attributes.insert(
+        "nuclide_count".into(),
+        crate::document::AttributeDeclaration {
+            required: false,
+            value_type: ParameterType::Integer {
+                min: None,
+                max: None,
+            },
+        },
+    );
+    registry.roles.push(newer);
+    let mut source = contract();
+    source.inputs[0].role.minor = 1;
+    let report = compile_with_registry(&source, &registry);
+    assert_eq!(
+        report.status,
+        CompilationStatus::Compiled,
+        "{:?}",
+        report.findings
+    );
+}
+
+#[test]
+fn an_older_minor_cannot_satisfy_a_newer_role_requirement() {
+    // The capability's slot requires @1.1 — the contract input offering
+    // @1 lacks the 1.1 vocabulary, so it cannot satisfy the slot. An
+    // explicit binding names the incompatibility directly (CORE-T2101);
+    // implicit matching would report the slot as unsatisfied instead.
+    let mut registry = registry();
+    let mut newer = registry.roles[0].clone();
+    newer.role.minor = 1;
+    registry.roles.push(newer);
+    registry.capability_types[0].inputs[0].role.minor = 1;
+    let mut source = contract();
+    source.workflow[0].bindings.push(AuthoredBinding {
+        input_slot: "source".into(),
+        source: SourceRef::ContractInput {
+            input_id: "case".into(),
+        },
+    });
+    let report = compile_with_registry(&source, &registry);
+    assert_eq!(report.status, CompilationStatus::Rejected);
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_T2101),
+        "{report:#?}"
+    );
+}
+
+#[test]
+fn a_minor_version_cannot_add_a_required_attribute() {
+    // The minor line may grow optional vocabulary only — a required
+    // attribute added at minor 1 breaks every contract written against
+    // minor 0, so the registry itself is invalid (CORE-R3501).
+    let mut registry = registry();
+    let mut newer = registry.roles[0].clone();
+    newer.role.minor = 1;
+    newer.attributes.insert(
+        "chain_format".into(),
+        crate::document::AttributeDeclaration {
+            required: true,
+            value_type: ParameterType::Text {
+                allowed_values: None,
+            },
+        },
+    );
+    registry.roles.push(newer);
+    let report = compile_with_registry(&contract(), &registry);
+    assert_eq!(report.status, CompilationStatus::Rejected);
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == CORE_R3501 && finding.message.contains("chain_format")),
+        "{report:#?}"
+    );
+}
+
+#[test]
+fn minor_zero_serializes_identically_to_absent() {
+    // ADR-0025's compatibility promise: `minor` absent and `minor: 0` are
+    // the same document — the field must not appear in the serialized
+    // bytes or every committed digest would rewrite.
+    let reference = VersionedRef {
+        id: "role.example".into(),
+        major: 1,
+        minor: 0,
+    };
+    let bytes = serde_json::to_vec(&reference).unwrap();
+    let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert!(
+        value.get("minor").is_none(),
+        "minor == 0 must not serialize: {value}"
+    );
+    let reparsed: VersionedRef = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(reparsed, reference);
 }

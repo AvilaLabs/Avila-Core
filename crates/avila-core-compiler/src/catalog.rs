@@ -247,9 +247,9 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
     DiagnosticExplanation {
         code: "CORE-T2101",
         title: "Nominal role mismatch",
-        rule: "SC-4 and SC-6 R2",
-        meaning: "An explicitly bound source carries a role whose identity or major version differs from the destination slot's role. Roles are nominal: equal dimensions do not make quantities interchangeable.",
-        next_action: "Bind a source carrying the required role, or route through a cross-kind conversion capability owned by a method owner.",
+        rule: "SC-4 and SC-6 R2; ADR-0025",
+        meaning: "An explicitly bound source carries a role whose identity or major version differs from the destination slot's role — or whose minor version predates the minor the slot requires. Roles are nominal: equal dimensions do not make quantities interchangeable.",
+        next_action: "Bind a source carrying the required role at a compatible minor version, or route through a cross-kind conversion capability owned by a method owner.",
     },
     DiagnosticExplanation {
         code: "CORE-T2102",
@@ -320,6 +320,20 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         rule: "SC-4 and SC-6 R10",
         meaning: "A requirement names a purpose absent from the snapshot at that exact identity and major version, or the metric source's output explicitly excludes that purpose. Purpose identity is nominal: no prefix, hierarchy, or prose inference applies.",
         next_action: "Name a purpose the snapshot defines, or choose a metric source whose output does not exclude it. Absence of an exclusion is not a positive qualification claim.",
+    },
+    DiagnosticExplanation {
+        code: "CORE-T2701",
+        title: "Attribute undeclared in predicate",
+        rule: "ADR-0025; SC-7 clause 2",
+        meaning: "An `input_attribute_in` or `input_attribute_in_range` predicate names an attribute the bound slot's role does not declare. The predicate form is legal syntax, but the attribute it addresses does not exist in the role's declared vocabulary.",
+        next_action: "Declare the attribute in the role's `attributes` vocabulary, or address a declared attribute. A role with no declared vocabulary cannot refuse a name — the refusal exists only where a vocabulary does.",
+    },
+    DiagnosticExplanation {
+        code: "CORE-T2702",
+        title: "Input attribute violates the role's vocabulary",
+        rule: "ADR-0025; SC-7 clause 2",
+        meaning: "A contract input's declared `attributes` name an attribute the resolved role does not declare, carry a value outside the declared `value_type` domain, or omit a `required` attribute; or `input_metadata` carries a non-scalar value or a name already present in `attributes`.",
+        next_action: "Align the declaration with the role's vocabulary: declare every required attribute, keep values inside their domains, and keep metadata names disjoint from attribute names.",
     },
 ];
 

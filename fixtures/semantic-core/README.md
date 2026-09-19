@@ -232,9 +232,9 @@ canonically.
 | --- | --- |
 | `roles.nominal-identity.fail` | same kind, different role id → `CORE-T2101` — exercised by `types.R2.role-mismatch.fail` |
 | `roles.major-version.fail` | `role@2` offered to `role@1` slot → `CORE-T2101` — the resolution half is exercised by `defect.contract.role-major-version` (input references `role@2` absent from the registry → `CORE-R3101`); the binding-level T2101 variant needs a registry carrying both majors |
-| `roles.minor-version.pass` | `role@1` with extra optional attribute accepted — needs the ADR-0025 minor-version compatibility model (proposed) |
+| `roles.minor-version.pass` | `role@1.1` offering extra optional attribute satisfies a `role@1` slot — `a_newer_minor_satisfies_an_older_role_requirement`; the inverse refuses — `an_older_minor_cannot_satisfy_a_newer_role_requirement`; required-attribute additions on a minor line refuse — `a_minor_version_cannot_add_a_required_attribute` (ADR-0025) |
 | `roles.validator-required.fail` | role without validator → `CORE-R3501` — exercised by `defect.registry.missing-validator` |
-| `roles.attribute-undeclared-in-predicate.fail` | predicate references undeclared attribute → `CORE-T2701` under the ADR-0025 role-attribute vocabulary (proposed) |
+| `roles.attribute-undeclared-in-predicate.fail` | predicate references undeclared attribute → `CORE-T2701` at record load — `a_predicate_addressing_an_undeclared_attribute_is_refused`, `declared_attributes_pass_and_range_predicates_are_checked`, `a_role_without_a_vocabulary_cannot_refuse`; input-side vocabulary violations → `CORE-T2702` — `undeclared_input_attribute_is_rejected`, `attribute_value_outside_the_declared_domain_is_rejected`, `a_required_attribute_missing_from_the_input_is_rejected` (ADR-0025) |
 | `roles.cardinality-slot-scoped.pass` | two inputs carrying the same role (`actinv-decay-primary`/`actinv-decay-fallback` on `actinv.decay-data`) are distinct admitted records, never a global duplicate — `case_000_is_reproducible_and_technically_evaluated`; predicate addressing stays slot-scoped — `inputs_carrying_the_same_role_are_addressed_by_slot` |
 
 ### types/ (SC-5, SC-6)
@@ -456,7 +456,7 @@ canonically.
 | Fixture | Expected |
 | --- | --- |
 | `change.class.<each>.pass` | default invalidation set for every change class defined by SC-12 — classes emitted by `changes_since`; several pinned across the adversarial suite |
-| `change.input_metadata.non-dependence.pass` | attribute not consulted → no invalidation — needs the ADR-0025 `input_metadata` field (proposed); the `(step, input_slot)` edge scope reuse rules exempt is implemented |
+| `change.input_metadata.non-dependence.pass` | `input_metadata` exists and is non-consulted by construction — never enters `invocation_identity` (inputs bind slot/evidence/media/sha256/bytes only), never enters the predicate context (the runner merges `attributes` only), and `compiled_snapshot_sha256` is deliberately uncompared at reuse — pinned by `input_metadata_is_scalar_only_and_never_overlaps_attributes` (ADR-0025); the `(step, input_slot)` edge scope reuse rules exempt is implemented |
 | `change.propagation.stops-at-unrelated.pass` | upstream and sibling nodes untouched — `a_two_step_chain_reruns_only_what_a_change_reaches` and `a_plan_reports_the_impact_of_every_change_origin` |
 | `change.propagation.selected_over-never.pass` | |
 | `change.requirement.verdict-only.pass` | evidence untouched — `a_requirement_change_reuses_evidence_and_recomputes_verdicts` |

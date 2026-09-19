@@ -44,6 +44,8 @@ pub const CORE_T2401: &str = "CORE-T2401";
 pub const CORE_T2402: &str = "CORE-T2402";
 pub const CORE_T2501: &str = "CORE-T2501";
 pub const CORE_T2601: &str = "CORE-T2601";
+pub const CORE_T2701: &str = "CORE-T2701";
+pub const CORE_T2702: &str = "CORE-T2702";
 
 /// Every code a compile report can carry, including `CORE-S1103`, which the
 /// authoritative reader raises for a duplicate object key.
@@ -53,7 +55,7 @@ pub const COMPILER_FINDING_CODES: &[&str] = &[
     CORE_E7301, CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3401,
     CORE_R3501, CORE_R3601, CORE_R3602, CORE_S1101, CORE_S1102, CORE_S1103, CORE_S1301, CORE_T2001,
     CORE_T2101, CORE_T2102, CORE_T2103, CORE_T2104, CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2401,
-    CORE_T2402, CORE_T2501, CORE_T2601,
+    CORE_T2402, CORE_T2501, CORE_T2601, CORE_T2701, CORE_T2702,
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]

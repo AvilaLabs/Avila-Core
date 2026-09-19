@@ -14,6 +14,39 @@ pub const COMPILED_CONTRACT_SCHEMA_VERSION: &str = "avila.core/compiled-contract
 pub struct VersionedRef {
     pub id: String,
     pub major: u64,
+    /// ADR-0025: a backward-compatible vocabulary addition within a major
+    /// line — a minor bump adds optional attributes only. Absent reads 0
+    /// and serializes as absent, so existing identities are unchanged.
+    /// Compatibility is `id` + `major` equal with the offered `minor` at
+    /// least the required one; a required-attribute addition is a major
+    /// bump by definition (CORE-R3501).
+    #[serde(default, skip_serializing_if = "is_zero_minor")]
+    pub minor: u64,
+}
+
+fn is_zero_minor(minor: &u64) -> bool {
+    *minor == 0
+}
+
+impl VersionedRef {
+    /// `id@major` when `minor` is 0 — the historical spelling — else
+    /// `id@major.minor`.
+    #[must_use]
+    pub fn label(&self) -> String {
+        if self.minor == 0 {
+            format!("{}@{}", self.id, self.major)
+        } else {
+            format!("{}@{}.{}", self.id, self.major, self.minor)
+        }
+    }
+
+    /// ADR-0025 R2 extension: the offered reference satisfies the required
+    /// one when `id` and `major` agree and the offered `minor` is at least
+    /// the required minor — a minor bump adds optional attributes only.
+    #[must_use]
+    pub fn satisfies(&self, required: &Self) -> bool {
+        self.id == required.id && self.major == required.major && self.minor >= required.minor
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -168,13 +201,27 @@ pub struct ContractSource {
     pub categorical_requirements: Vec<CategoricalRequirementSource>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ContractInput {
     pub input_id: String,
     pub role: VersionedRef,
     pub media_type: String,
     pub claim_model: ClaimModelDeclaration,
+    /// ADR-0025: the attribute values this input declares, checked at
+    /// compile time against the resolved role's `attributes` vocabulary
+    /// (CORE-T2702) and merged into the applicability context so
+    /// `input_attribute_in*` predicates read declarations. A name shared
+    /// with `input_metadata` is refused — one name, one channel.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub attributes: BTreeMap<String, Value>,
+    /// ADR-0025: non-consulted metadata — display facts the package
+    /// carries for humans and routing. Never an evidence input, never
+    /// consulted by the runner, and never visible to `input_attribute_in`
+    /// predicates: a name usable by a predicate belongs in `attributes`.
+    /// Values are scalars only (string, number, boolean).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub input_metadata: BTreeMap<String, Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -377,8 +424,34 @@ pub struct RoleDefinition {
     /// An empty list means the role is not a closed-set categorical role.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub categorical_values: Vec<String>,
+    /// ADR-0025: the attribute vocabulary inputs of this role may declare —
+    /// name → typed domain + required flag. A predicate's
+    /// `input_attribute_in*` may only address a declared name
+    /// (CORE-T2701); a contract input's declared attributes must satisfy
+    /// this vocabulary (CORE-T2702). Adding a *required* attribute is a
+    /// major bump; a minor bump adds optional attributes only
+    /// (CORE-R3501).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub attributes: BTreeMap<String, AttributeDeclaration>,
     #[serde(default)]
     pub non_claims: Vec<String>,
+}
+
+/// ADR-0025: one declared input attribute — a typed domain plus whether a
+/// bound input must declare it. The domain reuses the capability-parameter
+/// `value_type` machinery exactly.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AttributeDeclaration {
+    /// Absent reads `true` — an attribute is required unless the role
+    /// marks it optional. A minor version may add optional attributes only.
+    #[serde(default = "attribute_required")]
+    pub required: bool,
+    pub value_type: ParameterType,
+}
+
+fn attribute_required() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

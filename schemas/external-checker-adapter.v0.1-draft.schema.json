@@ -58,7 +58,8 @@
       "required": ["id", "major"],
       "properties": {
         "id": { "$ref": "#/$defs/nonemptyString" },
-        "major": { "type": "integer", "minimum": 1 }
+        "major": { "type": "integer", "minimum": 1 },
+        "minor": { "type": "integer", "minimum": 0, "default": 0 }
       }
     },
     "relativePath": {

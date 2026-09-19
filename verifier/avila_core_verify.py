@@ -2860,6 +2860,41 @@ def _evaluate_attribute_set(pred: dict, context: dict) -> str:
     return "true" if value in pred["values"] else "false"
 
 
+def _evaluate_attribute_range(pred: dict, context: dict) -> str:
+    """ADR-0025: an exact-numeric range over a slot-addressed input
+    attribute. Mirrors `evaluate_attribute_range` in predicate.rs —
+    attributes carry no unit so no kind scaling applies, an absent or
+    non-canonical attribute is ``unknown``, and a malformed bound is a
+    predicate error."""
+    if pred.get("min") is None and pred.get("max") is None:
+        raise PredicateError("an attribute range requires a minimum or maximum")
+    raw = context.get("inputs", {}).get(pred["slot"], {}).get("attributes", {}).get(pred["attribute"])
+    # Exact-number attributes are canonical strings; integer-domain
+    # attributes are JSON integers (canonical when stringified). A float,
+    # bool, or non-numeric value is never exact — unknown, not false.
+    if isinstance(raw, bool):
+        return "unknown"
+    if isinstance(raw, int):
+        raw = str(raw)
+    if not isinstance(raw, str):
+        return "unknown"
+    try:
+        actual = read_authoritative_exact(raw)
+    except Exception:
+        return "unknown"
+    minimum_spec = pred.get("min")
+    if minimum_spec is not None:
+        minimum = read_authoritative_exact(minimum_spec)
+        if actual < minimum or (not pred.get("min_inclusive", False) and actual == minimum):
+            return "false"
+    maximum_spec = pred.get("max")
+    if maximum_spec is not None:
+        maximum = read_authoritative_exact(maximum_spec)
+        if actual > maximum or (not pred.get("max_inclusive", False) and actual == maximum):
+            return "false"
+    return "true"
+
+
 def _evaluate_fact(pred: dict, context: dict, kinds: dict, fact_kinds: dict) -> str:
     actual = context.get("facts", {}).get(pred["name"])
     if actual is None:
@@ -2933,6 +2968,8 @@ def evaluate_predicate(predicate: dict, context: dict, kinds: dict, fact_kinds: 
         return _evaluate_range(body, context, kinds, param_kinds)
     if variant == "input_attribute_in":
         return _evaluate_attribute_set(body, context)
+    if variant == "input_attribute_in_range":
+        return _evaluate_attribute_range(body, context)
     if variant == "environment_image_in":
         environment = context.get("environment")
         if environment is None:
@@ -3098,13 +3135,20 @@ def verify_case_qualification_envelopes(
     recognized_owners: Optional[dict] = None,
     as_of: Optional[str] = None,
     as_of_material_dir: Optional[Path] = None,
+    contract: Optional[dict] = None,
+    registry: Optional[dict] = None,
 ) -> None:
     qualification_docs, revoked_by = _load_qualification_material(
         case_dir, package, docs_by_role, recognized_owners
     )
 
+    _check_qualification_attribute_vocabularies(
+        qualification_docs, contract, registry, package, report
+    )
+
     if claims is None:
         return
+
     qualifying_claims = [claim for claim in claims.get("claims", []) if claim.get("qualification")]
 
     for claim in qualifying_claims:
@@ -3270,6 +3314,83 @@ def verify_case_qualification_envelopes(
         receipts_by_step,
         report,
     )
+
+
+def _collect_attribute_references(predicate, out: list) -> None:
+    """Every (slot, attribute) an `input_attribute_in*` term addresses."""
+    if not isinstance(predicate, dict):
+        return
+    for variant, body in predicate.items():
+        if variant in ("input_attribute_in", "input_attribute_in_range") and isinstance(body, dict):
+            out.append((body.get("slot"), body.get("attribute")))
+        elif variant in ("all", "any") and isinstance(body, list):
+            for item in body:
+                _collect_attribute_references(item, out)
+        elif variant == "not":
+            _collect_attribute_references(body, out)
+
+
+def _check_qualification_attribute_vocabularies(
+    qualification_docs: list,
+    contract: Optional[dict],
+    registry: Optional[dict],
+    package: dict,
+    report: Report,
+) -> None:
+    """ADR-0025 CORE-T2701 parity — the runner refuses a bound
+    qualification record whose `input_attribute_in*` scope addresses an
+    attribute the bound slot's role does not declare. The verifier
+    re-derives the refusal: slot → contract input → role → declared
+    `attributes` vocabulary, resolved through the steps that exercise the
+    record's capability pair (a record whose pair is unexercised binds no
+    slot to check). A slot bound to a step output, or a role declaring no
+    vocabulary, is uncheckable — consistent with the runner.
+    """
+    if contract is None or registry is None:
+        return
+    inputs = {i["input_id"]: i.get("role") for i in contract.get("inputs", [])}
+    roles = {
+        (
+            (r.get("role") or {}).get("id"),
+            (r.get("role") or {}).get("major"),
+            (r.get("role") or {}).get("minor", 0),
+        ): r
+        for r in registry.get("roles", [])
+    }
+    for record, _sha256 in qualification_docs:
+        capability = record.get("capability") or {}
+        exercised = {
+            e.get("step_id")
+            for e in package.get("executions", [])
+            if e.get("adapter") == record.get("adapter")
+            and e.get("capability_id") == capability.get("capability_id")
+        }
+        references = []
+        _collect_attribute_references(record.get("scope"), references)
+        for slot, attribute in references:
+            role_ref = None
+            for step in contract.get("workflow", []):
+                if step.get("step_id") not in exercised:
+                    continue
+                for binding in step.get("bindings", []):
+                    source = binding.get("source") or {}
+                    if binding.get("input_slot") == slot and source.get(
+                        "source"
+                    ) == "contract_input":
+                        role_ref = inputs.get(source.get("input_id"))
+            if role_ref is None:
+                continue
+            role = roles.get(
+                (role_ref.get("id"), role_ref.get("major"), role_ref.get("minor", 0))
+            )
+            vocabulary = (role or {}).get("attributes") or {}
+            if vocabulary and attribute not in vocabulary:
+                report.mismatch(
+                    f"qualification.{record.get('qualification_id')}.attribute-vocabulary",
+                    f"scope addresses attribute {attribute!r} on slot {slot!r}, which role "
+                    f"{role_ref.get('id')!r}@{role_ref.get('major')} does not declare — the runner "
+                    f"refuses the record (CORE-T2701)",
+                )
 
 
 def _as_of_state(
@@ -4265,6 +4386,8 @@ def verify_case(
         (contract or {}).get("execution_policy", {}).get("recognized_qualification_owners") or {},
         as_of=as_of,
         as_of_material_dir=as_of_material_dir,
+        contract=contract,
+        registry=registry,
     )
 
     verify_case_selections(case_dir, package, contract, registry, report)

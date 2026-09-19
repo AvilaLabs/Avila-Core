@@ -73,6 +73,29 @@
         "major": {
           "type": "integer",
           "minimum": 1
+        },
+        "minor": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "ADR-0025: a backward-compatible vocabulary addition within one major line — a minor bump adds optional attributes only. Absent reads 0."
+        }
+      }
+    },
+    "attributeDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "ADR-0025: one declared input attribute — a typed domain (the same `value_type` machinery capability parameters use) plus whether a bound input must declare it. Absent `required` reads true; a minor version adds optional attributes only (CORE-R3501).",
+      "required": [
+        "value_type"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean",
+          "default": true
+        },
+        "value_type": {
+          "$ref": "#/$defs/parameterType"
         }
       }
     },
@@ -201,6 +224,13 @@
           "uniqueItems": true,
           "items": {
             "$ref": "#/$defs/nonemptyString"
+          }
+        },
+        "attributes": {
+          "description": "ADR-0025: the input-attribute vocabulary — name → typed domain + required flag. `input_attribute_in*` predicates may only address declared names (CORE-T2701); a bound input's `attributes` must satisfy this vocabulary (CORE-T2702).",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/attributeDeclaration"
           }
         },
         "non_claims": {

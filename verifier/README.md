@@ -254,9 +254,9 @@ or committed example case it proves agreement against — see
   line (log-line signing needs a live `run --runner-key`), so this signs a
   synthetic line with the real, committed `examples/keys/runner.seed` and
   proves the verify/tamper/unsigned/mixed-file paths all report correctly.
-- `TestScopePredicateVectors`: all 19 vectors in `scope-predicates.v1.json`,
+- `TestScopePredicateVectors`: all 28 vectors in `scope-predicates.v1.json`,
   plus hand-written cases for the string/bool/integer fact and structural-
-  error paths those 19 vectors don't happen to reach.
+  error paths those vectors don't happen to reach.
 - `TestQualificationEnvelopeConsistency`: every qualification-carrying
   claim in CASE-001, 002, and 003 re-derives from its persisted context
   and binds to its step's receipt.

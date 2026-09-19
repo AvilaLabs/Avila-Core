@@ -8,8 +8,8 @@ use super::ir::ResolvedBinding;
 use super::registry::RegistryIndex;
 use crate::diagnostic::{
     CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_S1102, CORE_T2101, CORE_T2201,
-    CORE_T2301, CORE_T2601, CoreDiagnostic, DiagnosticRepair, FindingClass, RepairApplicability,
-    RepairEdit,
+    CORE_T2301, CORE_T2601, CORE_T2702, CoreDiagnostic, DiagnosticRepair, FindingClass,
+    RepairApplicability, RepairEdit,
 };
 use crate::document::{
     ClaimModelDeclaration, ContractSource, InputSlotDefinition, SourceRef, VersionedRef,
@@ -106,45 +106,129 @@ pub(super) fn validate_contract_registry_refs(
                     "requester",
                     contract_location(format!("/inputs/{index}/role")),
                     format!(
-                        "input references role `{}@{}` absent from the supplied registry snapshot",
-                        input.role.id, input.role.major
+                        "input references role `{}` absent from the supplied registry snapshot",
+                        input.role.label()
                     ),
                 ));
             }
-            Some(role) if !role.accepted_media_types.contains(&input.media_type) => {
-                invalid_sources.insert(SourceRef::ContractInput {
-                    input_id: input.input_id.clone(),
-                });
-                findings.push(CoreDiagnostic::new(
-                    CORE_T2301,
-                    FindingClass::Invalid,
-                    "requester",
-                    contract_location(format!("/inputs/{index}/media_type")),
-                    format!(
-                        "media type `{}` is not accepted by role `{}@{}`",
-                        input.media_type, input.role.id, input.role.major
-                    ),
-                ));
+            Some(role) => {
+                if !role.accepted_media_types.contains(&input.media_type) {
+                    invalid_sources.insert(SourceRef::ContractInput {
+                        input_id: input.input_id.clone(),
+                    });
+                    findings.push(CoreDiagnostic::new(
+                        CORE_T2301,
+                        FindingClass::Invalid,
+                        "requester",
+                        contract_location(format!("/inputs/{index}/media_type")),
+                        format!(
+                            "media type `{}` is not accepted by role `{}`",
+                            input.media_type,
+                            input.role.label()
+                        ),
+                    ));
+                }
+                if !role.permitted_claim_models.contains(&input.claim_model) {
+                    invalid_sources.insert(SourceRef::ContractInput {
+                        input_id: input.input_id.clone(),
+                    });
+                    findings.push(CoreDiagnostic::new(
+                        CORE_T2201,
+                        FindingClass::Invalid,
+                        "requester",
+                        contract_location(format!("/inputs/{index}/claim_model")),
+                        format!(
+                            "claim model is not permitted by role `{}`",
+                            input.role.label()
+                        ),
+                    ));
+                }
+                validate_input_attributes(input, role, index, registry, findings);
             }
-            Some(role) if !role.permitted_claim_models.contains(&input.claim_model) => {
-                invalid_sources.insert(SourceRef::ContractInput {
-                    input_id: input.input_id.clone(),
-                });
-                findings.push(CoreDiagnostic::new(
-                    CORE_T2201,
-                    FindingClass::Invalid,
-                    "requester",
-                    contract_location(format!("/inputs/{index}/claim_model")),
-                    format!(
-                        "claim model is not permitted by role `{}@{}`",
-                        input.role.id, input.role.major
-                    ),
-                ));
-            }
-            Some(_) => {}
         }
     }
     invalid_sources
+}
+
+/// ADR-0025 CORE-T2702: a contract input's declared `attributes` must
+/// satisfy the resolved role's vocabulary — every declared name is a
+/// declared attribute, every value sits inside its declared domain, and
+/// every `required` attribute is declared. `input_metadata` carries
+/// scalars only and never overlaps `attributes` — a name the workflow may
+/// predicate on is an attribute, not metadata.
+fn validate_input_attributes(
+    input: &crate::document::ContractInput,
+    role: &crate::document::RoleDefinition,
+    index: usize,
+    registry: &RegistryIndex<'_>,
+    findings: &mut Vec<CoreDiagnostic>,
+) {
+    let input_finding = |pointer: String, message: String, findings: &mut Vec<CoreDiagnostic>| {
+        findings.push(CoreDiagnostic::new(
+            CORE_T2702,
+            FindingClass::Invalid,
+            "requester",
+            contract_location(pointer),
+            message,
+        ));
+    };
+    for (name, value) in &input.attributes {
+        let pointer = format!("/inputs/{index}/attributes/{name}");
+        let Some(declaration) = role.attributes.get(name) else {
+            input_finding(
+                pointer,
+                format!(
+                    "input `{}` declares attribute `{name}`, which role `{}` does not declare",
+                    input.input_id,
+                    input.role.label()
+                ),
+                findings,
+            );
+            continue;
+        };
+        if let Some(reason) =
+            super::values::attribute_domain_error(&declaration.value_type, value, &registry.kinds)
+        {
+            input_finding(pointer, format!("attribute `{name}` {reason}"), findings);
+        }
+    }
+    for (name, declaration) in &role.attributes {
+        if declaration.required && !input.attributes.contains_key(name) {
+            input_finding(
+                format!("/inputs/{index}/attributes"),
+                format!(
+                    "role `{}` requires attribute `{name}`, which input `{}` does not declare",
+                    input.role.label(),
+                    input.input_id
+                ),
+                findings,
+            );
+        }
+    }
+    for (name, value) in &input.input_metadata {
+        let pointer = format!("/inputs/{index}/input_metadata/{name}");
+        if !matches!(
+            value,
+            serde_json::Value::String(_)
+                | serde_json::Value::Number(_)
+                | serde_json::Value::Bool(_)
+        ) {
+            input_finding(
+                pointer.clone(),
+                format!("input metadata `{name}` must be a string, number, or boolean"),
+                findings,
+            );
+        }
+        if input.attributes.contains_key(name) {
+            input_finding(
+                pointer,
+                format!(
+                    "`{name}` is both a declared attribute and input metadata — a name a predicate may address belongs in `attributes`, never `input_metadata`"
+                ),
+                findings,
+            );
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -290,7 +374,10 @@ pub(super) fn resolve_workflow(
                 if invalid_sources.contains(&candidate.source) {
                     continue;
                 }
-                let role_matches = candidate.role == slot.role;
+                // ADR-0025: role satisfaction is `id` + `major` agreement
+                // with the offered `minor` at least the slot's required
+                // minor — a newer producer feeds an older slot.
+                let role_matches = candidate.role.satisfies(&slot.role);
                 let media_matches = slot.accepted_media_types.contains(&candidate.media_type);
                 if !role_matches {
                     findings.push(CoreDiagnostic::new(
@@ -299,8 +386,9 @@ pub(super) fn resolve_workflow(
                         "requester",
                         contract_location(pointer.clone()),
                         format!(
-                            "source role `{}@{}` cannot satisfy nominal role `{}@{}`",
-                            candidate.role.id, candidate.role.major, slot.role.id, slot.role.major
+                            "source role `{}` cannot satisfy nominal role `{}`",
+                            candidate.role.label(),
+                            slot.role.label()
                         ),
                     ));
                 }
@@ -335,11 +423,11 @@ pub(super) fn resolve_workflow(
                         SourceRef::StepOutput { step_id, .. } if step_id == &step.step_id
                     )
                 })
-                .filter(|candidate| candidate.role == slot.role)
+                .filter(|candidate| candidate.role.satisfies(&slot.role))
                 .filter(|candidate| slot.accepted_media_types.contains(&candidate.media_type))
                 .collect();
             let blocked_by_invalid_source = candidates.iter().any(|candidate| {
-                invalid_sources.contains(&candidate.source) && candidate.role == slot.role
+                invalid_sources.contains(&candidate.source) && candidate.role.satisfies(&slot.role)
             });
             match matches.as_slice() {
                 [candidate] => {
@@ -356,8 +444,9 @@ pub(super) fn resolve_workflow(
                         "requester",
                         logical_input_location(step_index, &slot.slot_id),
                         format!(
-                            "required input slot `{}` (role `{}@{}`) has no compatible source",
-                            slot.slot_id, slot.role.id, slot.role.major
+                            "required input slot `{}` (role `{}`) has no compatible source",
+                            slot.slot_id,
+                            slot.role.label()
                         ),
                     )
                     .with_repair(feeding_repair(contract, registry, slot)),
@@ -428,7 +517,7 @@ pub(super) fn feeding_repair(
         Some(append_edit("/inputs", contract.inputs.is_empty(), input))
     });
     repair = repair.alternative(
-        format!("declare_input:{}@{}", slot.role.id, slot.role.major),
+        format!("declare_input:{}", slot.role.label()),
         input_edit.unwrap_or_default(),
     );
     for (reference, capability) in &registry.capability_types {

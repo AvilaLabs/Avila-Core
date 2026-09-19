@@ -15,7 +15,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "major"],
-      "properties": { "id": { "$ref": "#/$defs/nonemptyString" }, "major": { "type": "integer", "minimum": 0 } }
+      "properties": { "id": { "$ref": "#/$defs/nonemptyString" }, "major": { "type": "integer", "minimum": 0 }, "minor": { "type": "integer", "minimum": 0, "default": 0 } }
     },
     "adapter": { "$ref": "#/$defs/nonemptyString" },
     "capability": { "$ref": "#/$defs/capabilityIdentity" },

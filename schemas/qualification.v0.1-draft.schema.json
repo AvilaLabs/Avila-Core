@@ -22,7 +22,7 @@
       }
     },
     "statement": { "type": "string", "minLength": 1 },
-    "scope": { "type": "object", "description": "A kernel applicability predicate: all, any, not, param_in_range, input_attribute_in, environment_image_in, fact." },
+    "scope": { "type": "object", "description": "A kernel applicability predicate: all, any, not, param_in_range, input_attribute_in, input_attribute_in_range, environment_image_in, fact." },
     "covered_output_slots": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 },

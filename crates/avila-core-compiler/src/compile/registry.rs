@@ -158,6 +158,19 @@ impl<'a> RegistryIndex<'a> {
                     findings,
                 );
             }
+            // ADR-0025: each declared attribute's `value_type` is the same
+            // restricted declaration shape capability parameters use.
+            for (name, declaration) in &role.attributes {
+                validate_value_type_definition(
+                    "attribute",
+                    name,
+                    &declaration.value_type,
+                    &format!("{pointer}/attributes/{name}"),
+                    &kinds,
+                    &kind_classes,
+                    findings,
+                );
+            }
             if role.accepted_media_types.is_empty() {
                 registry_incomplete(
                     registry_location(format!("{pointer}/accepted_media_types")),
@@ -241,6 +254,32 @@ impl<'a> RegistryIndex<'a> {
                     "a closed categorical role must be non-quantitative",
                     findings,
                 );
+            }
+        }
+
+        // ADR-0025: within one (id, major) line a minor bump may add
+        // *optional* attributes only — a required attribute appearing in
+        // a higher minor is a major-bump change declared dishonestly.
+        // Compared pairwise over every lower minor, not just the previous,
+        // so a registry holding 1.0 and 1.3 still checks the gap.
+        for (reference, role) in &roles {
+            for (lower_ref, lower) in roles.range(..reference.clone()) {
+                if lower_ref.id != reference.id || lower_ref.major != reference.major {
+                    continue;
+                }
+                for (name, declaration) in &role.attributes {
+                    if declaration.required && !lower.attributes.contains_key(name) {
+                        registry_incomplete(
+                            registry_location("/roles"),
+                            format!(
+                                "role `{}` adds required attribute `{name}` absent from `{}` — a required-attribute addition is a major bump",
+                                reference.label(),
+                                lower_ref.label()
+                            ),
+                            findings,
+                        );
+                    }
+                }
             }
         }
 

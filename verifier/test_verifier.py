@@ -709,7 +709,7 @@ class TestScopePredicateVectors(unittest.TestCase):
 
     def test_vector_set_shape(self):
         self.assertEqual(self.doc["semantic_profile"], v.SEMANTIC_PROFILE)
-        self.assertEqual(len(self.doc["vectors"]), 19, "update the corpus count intentionally")
+        self.assertEqual(len(self.doc["vectors"]), 28, "update the corpus count intentionally")
 
     def test_every_scope_predicate_vector(self):
         for vec in self.doc["vectors"]:
@@ -720,7 +720,7 @@ class TestScopePredicateVectors(unittest.TestCase):
                 self.assertEqual(result, vec["expected"]["result"])
 
     def test_fact_string_bool_and_integer_comparison_paths(self):
-        # scope-predicates.v1.json's 19 vectors never reach a fact whose
+        # scope-predicates.v1.json's vectors never reach a fact whose
         # *value* is a string, bool, or integer with a matching context
         # entry present (its two "fact" vectors are quantity-valued, and
         # its two context-less "eq" vectors on a string fact stop at
@@ -853,6 +853,237 @@ class TestQualificationEnvelopeConsistency(unittest.TestCase):
         recorded_predicates = [t["predicate"] for t in screen_mass["qualification"]["terms"]]
         self.assertEqual(predicates, recorded_predicates)
         self.assertEqual(len(predicates), 5)
+
+
+# ---------------------------------------------------------------------------
+# ADR-0025 CORE-T2701 — a qualification record's `input_attribute_in*`
+# predicate may only address an attribute the bound slot's role declares.
+# The runner refuses the record at load; the verifier re-derives the same
+# refusal from contract bindings, manifest executions, and the registry
+# vocabulary.
+# ---------------------------------------------------------------------------
+
+
+class TestQualificationAttributeVocabulary(unittest.TestCase):
+    CONTRACT = {
+        "inputs": [
+            {
+                "input_id": "candidate",
+                "role": {"id": "test.candidate", "major": 1},
+            }
+        ],
+        "workflow": [
+            {
+                "step_id": "check",
+                "bindings": [
+                    {
+                        "input_slot": "candidate",
+                        "source": {"source": "contract_input", "input_id": "candidate"},
+                    }
+                ],
+            },
+            {
+                "step_id": "other-step",
+                "bindings": [
+                    {
+                        "input_slot": "candidate",
+                        "source": {"source": "contract_input", "input_id": "other-input"},
+                    }
+                ],
+            },
+        ],
+    }
+    CONTRACT["inputs"].append(
+        {"input_id": "other-input", "role": {"id": "test.other", "major": 1}}
+    )
+    REGISTRY = {
+        "roles": [
+            {
+                "role": {"id": "test.candidate", "major": 1},
+                "attributes": {
+                    "chain_format": {
+                        "required": True,
+                        "value_type": {"type": "text"},
+                    }
+                },
+            },
+            # `test.other` declares a different vocabulary — the record's
+            # capability exercises `check`, so `other-step`'s binding of
+            # the same slot name is a different channel.
+            {
+                "role": {"id": "test.other", "major": 1},
+                "attributes": {"unrelated_only": {"required": False, "value_type": {"type": "boolean"}}},
+            },
+            # A minor-versioned revision — the record names the @1.1
+            # vocabulary only when the input's role asks for it.
+            {
+                "role": {"id": "test.candidate", "major": 1, "minor": 1},
+                "attributes": {
+                    "chain_format": {"required": True, "value_type": {"type": "text"}},
+                    "nuclide_count": {"required": False, "value_type": {"type": "integer"}},
+                },
+            },
+        ]
+    }
+    PACKAGE = {
+        "executions": [
+            {
+                "step_id": "check",
+                "adapter": "test/check@1",
+                "capability_id": "test.check.impl",
+            }
+        ]
+    }
+
+    def _record(self, scope):
+        return {
+            "qualification_id": "q1",
+            "adapter": "test/check@1",
+            "capability": {
+                "capability_id": "test.check.impl",
+                "executable_sha256": "sha256:" + "0" * 64,
+            },
+            "scope": scope,
+        }
+
+    def _report(self, record, contract=None, registry=None, package=None):
+        report = v.Report("test")
+        v._check_qualification_attribute_vocabularies(
+            [(record, "sha256:" + "1" * 64)],
+            self.CONTRACT if contract is None else contract,
+            self.REGISTRY if registry is None else registry,
+            self.PACKAGE if package is None else package,
+            report,
+        )
+        return report
+
+    def test_undeclared_attribute_names_a_mismatch(self):
+        report = self._report(
+            self._record(
+                {
+                    "input_attribute_in": {
+                        "slot": "candidate",
+                        "attribute": "undeclared_name",
+                        "values": ["x"],
+                    }
+                }
+            )
+        )
+        mismatches = [c for c in report.checks if c.status == "mismatch"]
+        self.assertEqual(len(mismatches), 1)
+        self.assertIn("undeclared_name", mismatches[0].detail)
+        self.assertIn("CORE-T2701", mismatches[0].detail)
+
+    def test_declared_attribute_is_clean(self):
+        report = self._report(
+            self._record(
+                {
+                    "input_attribute_in": {
+                        "slot": "candidate",
+                        "attribute": "chain_format",
+                        "values": ["canonical"],
+                    }
+                }
+            )
+        )
+        self.assertFalse([c for c in report.checks if c.status == "mismatch"])
+
+    def test_range_form_reaches_the_same_check_through_not(self):
+        report = self._report(
+            self._record(
+                {
+                    "not": {
+                        "input_attribute_in_range": {
+                            "slot": "candidate",
+                            "attribute": "undeclared_range",
+                            "min": "0",
+                        }
+                    }
+                }
+            )
+        )
+        mismatches = [c for c in report.checks if c.status == "mismatch"]
+        self.assertEqual(len(mismatches), 1)
+        self.assertIn("undeclared_range", mismatches[0].detail)
+
+    def test_an_unexercised_capability_binds_no_slot(self):
+        # A record for a capability no execution uses (a supersession
+        # witness) has no steps — nothing to resolve, nothing to refuse.
+        record = self._record(
+            {
+                "input_attribute_in": {
+                    "slot": "candidate",
+                    "attribute": "undeclared_name",
+                    "values": ["x"],
+                }
+            }
+        )
+        record["capability"]["capability_id"] = "test.check.other-impl"
+        report = self._report(record)
+        self.assertFalse([c for c in report.checks if c.status == "mismatch"])
+
+    def test_a_role_without_a_vocabulary_cannot_refuse(self):
+        registry = {
+            "roles": [
+                {"role": {"id": "test.candidate", "major": 1}},
+            ]
+        }
+        report = self._report(
+            self._record(
+                {
+                    "input_attribute_in": {
+                        "slot": "candidate",
+                        "attribute": "anything",
+                        "values": ["x"],
+                    }
+                }
+            ),
+            registry=registry,
+        )
+        self.assertFalse([c for c in report.checks if c.status == "mismatch"])
+
+    def test_role_resolution_is_minor_exact(self):
+        # The input's role is @1 — the @1.1 revision's `nuclide_count`
+        # vocabulary is not the resolved role's vocabulary.
+        report = self._report(
+            self._record(
+                {
+                    "input_attribute_in": {
+                        "slot": "candidate",
+                        "attribute": "nuclide_count",
+                        "values": [5],
+                    }
+                }
+            )
+        )
+        mismatches = [c for c in report.checks if c.status == "mismatch"]
+        self.assertEqual(len(mismatches), 1)
+        self.assertIn("nuclide_count", mismatches[0].detail)
+        # Same record under an input declaring @1.1 resolves cleanly.
+        contract = dict(self.CONTRACT)
+        contract["inputs"] = [
+            {
+                "input_id": "candidate",
+                "role": {"id": "test.candidate", "major": 1, "minor": 1},
+            },
+            {
+                "input_id": "other-input",
+                "role": {"id": "test.other", "major": 1},
+            },
+        ]
+        report = self._report(
+            self._record(
+                {
+                    "input_attribute_in": {
+                        "slot": "candidate",
+                        "attribute": "nuclide_count",
+                        "values": [5],
+                    }
+                }
+            ),
+            contract=contract,
+        )
+        self.assertFalse([c for c in report.checks if c.status == "mismatch"])
 
 
 # ---------------------------------------------------------------------------

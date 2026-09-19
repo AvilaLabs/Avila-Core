@@ -427,6 +427,83 @@ pub(super) fn quantity_outside_domain(
     Ok(false)
 }
 
+/// ADR-0025 CORE-T2702: does an authored attribute value satisfy its
+/// declared `value_type` domain? Returns the violation reason, or `None`
+/// when the value is in domain. Same domains as capability parameters —
+/// the `value_type` machinery is shared exactly.
+pub(super) fn attribute_domain_error(
+    value_type: &ParameterType,
+    authored: &serde_json::Value,
+    kinds: &KindRegistry,
+) -> Option<String> {
+    match value_type {
+        ParameterType::Boolean => {
+            if authored.is_boolean() {
+                None
+            } else {
+                Some("must be authored as boolean".into())
+            }
+        }
+        ParameterType::Integer { min, max } => match authored.as_i64() {
+            None => Some("must be authored as integer".into()),
+            Some(value) if integer_outside_domain(value, min, max) => {
+                Some("integer value is outside its declared domain".into())
+            }
+            Some(_) => None,
+        },
+        ParameterType::ExactNumber { min, max } => {
+            let Some(text) = authored.as_str() else {
+                return Some("must be authored as an exact-number string".into());
+            };
+            match ExactNumber::from_canonical(text) {
+                Err(error) => Some(format!("is not a canonical number: {}", error.detail())),
+                Ok(value) => match exact_outside_domain(&value, min, max) {
+                    Ok(true) => Some("exact number is outside its declared domain".into()),
+                    Ok(false) => None,
+                    Err(error) => Some(format!("cannot be compared: {}", error.detail())),
+                },
+            }
+        }
+        ParameterType::Text { allowed_values } => {
+            let Some(value) = authored.as_str() else {
+                return Some("must be authored as text".into());
+            };
+            match allowed_values {
+                Some(allowed) if !allowed.iter().any(|candidate| candidate == value) => {
+                    Some(format!(
+                        "`{value}` is outside its declared choice set [{}]",
+                        allowed.join(", ")
+                    ))
+                }
+                _ => None,
+            }
+        }
+        ParameterType::Quantity { kind, min, max } => {
+            let quantity = match serde_json::from_value::<QuantityValue>(authored.clone()) {
+                Ok(quantity) => quantity,
+                Err(error) => {
+                    return Some(format!(
+                        "must be a quantity object with exact string `value` and `unit`: {error}"
+                    ));
+                }
+            };
+            match kinds.scale_quantity(kind, &quantity.value, &quantity.unit) {
+                Err(error) => Some(format!(
+                    "is not a quantity of kind `{kind}`: {}",
+                    error.detail()
+                )),
+                Ok(canonical) => {
+                    match quantity_outside_domain(&canonical.value, kind, min, max, kinds) {
+                        Ok(true) => Some("quantity is outside its declared domain".into()),
+                        Ok(false) => None,
+                        Err(error) => Some(format!("cannot be compared: {}", error.detail())),
+                    }
+                }
+            }
+        }
+    }
+}
+
 pub(super) fn parameter_type_finding(
     value_kind: &str,
     value_id: &str,

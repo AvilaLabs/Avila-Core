@@ -108,6 +108,12 @@
         "major": {
           "type": "integer",
           "minimum": 1
+        },
+        "minor": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "ADR-0025: a backward-compatible vocabulary addition within one major line — a minor bump adds optional attributes only. Absent reads 0."
         }
       }
     },
@@ -132,6 +138,24 @@
         },
         "claim_model": {
           "$ref": "#/$defs/claimModel"
+        },
+        "attributes": {
+          "type": "object",
+          "default": {},
+          "description": "ADR-0025: attribute values this input declares, checked against the resolved role's `attributes` vocabulary (CORE-T2702) and readable by `input_attribute_in*` predicates. Never shared with `input_metadata`.",
+          "additionalProperties": true
+        },
+        "input_metadata": {
+          "type": "object",
+          "default": {},
+          "description": "ADR-0025: non-consulted metadata — scalar display facts. Never an evidence input, never consulted by the runner, never visible to `input_attribute_in` predicates, and disjoint from `attributes` (CORE-T2702).",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
         }
       }
     },

@@ -2448,6 +2448,188 @@ def receipt_signature_status(
     return signature_status(document, expected_digest, trust_root, "runner")
 
 
+# ADR-0021: the closed state vocabularies and legality tables the runner's
+# transitions.rs validates — mirrored verbatim so a committed campaign log
+# re-derives the same recorded lifecycle under this verifier.
+
+CAMPAIGN_STATES = {"planned", "running", "blocked", "completed", "cancelled", "superseded", "invalidated"}
+CAMPAIGN_TRANSITIONS = {
+    ("planned", "running"), ("planned", "cancelled"),
+    ("running", "blocked"), ("running", "completed"),
+    ("running", "cancelled"), ("running", "superseded"),
+    ("blocked", "running"), ("blocked", "cancelled"),
+    ("blocked", "superseded"), ("completed", "invalidated"),
+}
+CONTRACT_STATES = {"draft", "in_review", "approved", "retired"}
+CONTRACT_TRANSITIONS = {
+    ("draft", "in_review"), ("in_review", "draft"),
+    ("in_review", "approved"), ("approved", "retired"),
+}
+STEP_STATES = {
+    "pending", "reused", "staged", "running", "collecting", "validating",
+    "admitted", "quarantined", "failed", "skipped", "cancelled",
+}
+TRANSITION_INITIAL_STATE = {"contract": "draft", "campaign": "planned", "step": "pending"}
+STATE_VOCABULARY = {"campaign": CAMPAIGN_STATES, "contract": CONTRACT_STATES, "step": STEP_STATES}
+ATTESTATION_SCHEMA_VERSION = "avila.core/attestation/v0.1-draft"
+STATE_TRANSITION_SCHEMA_VERSION = "avila.core/state-transition/v0.1-draft"
+
+
+def transition_legal(kind: str, from_state: str, to_state: str) -> bool:
+    """Mirror of transitions.rs::legal_transition: a self-move is never
+    legal; a step records only cancellation of an in-flight step, legal
+    from any non-cancelled in-vocabulary position."""
+    if from_state == to_state:
+        return False
+    if kind == "campaign":
+        return (from_state, to_state) in CAMPAIGN_TRANSITIONS
+    if kind == "contract":
+        return (from_state, to_state) in CONTRACT_TRANSITIONS
+    if kind == "step":
+        return to_state == "cancelled" and from_state in STEP_STATES
+    return False
+
+
+def transition_required_role(kind: str, from_state: str, to_state: str) -> Optional[str]:
+    """Mirror of transitions.rs::required_role (ADR-0021 clause 4)."""
+    if not transition_legal(kind, from_state, to_state):
+        return None
+    if kind == "step":
+        return "runner"
+    if kind == "campaign" and to_state == "invalidated":
+        return "policy_owner"
+    return "requester"
+
+
+def verify_log_transitions(log_path: Path, trust_root: Optional[TrustRoot], report: Report) -> None:
+    """Re-derive every transition subject's recorded state by folding the
+    log's `attestation` and `state_transition` records in append order —
+    the same fold history.rs::validate_transitions performs before
+    admitting a transition. A committed log that fails the fold is a
+    mismatch, exactly as the runner refuses it."""
+    check = f"transitions.{log_path.name}"
+    attestations: dict[str, tuple[dict, str]] = {}
+    transitions: list[tuple[int, dict, str]] = []
+    for index, raw in enumerate(log_path.read_bytes().splitlines()):
+        if not raw.strip():
+            continue
+        try:
+            row = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(row, dict):
+            continue
+        record = row.get("record")
+        if not isinstance(record, dict):
+            continue
+        line_sha = "sha256:" + hashlib.sha256(raw).hexdigest()
+        if row.get("record_kind") == "attestation" and isinstance(record.get("attestation_id"), str):
+            attestations[record["attestation_id"]] = (record, line_sha)
+        elif row.get("record_kind") == "state_transition":
+            transitions.append((index, record, line_sha))
+    if not attestations and not transitions:
+        return
+
+    problems: list[str] = []
+    transition_digests = {
+        record.get("transition_id"): line_sha for _, record, line_sha in transitions
+    }
+    for attestation_id, (record, _line_sha) in attestations.items():
+        if record.get("schema_version") != ATTESTATION_SCHEMA_VERSION:
+            problems.append(
+                f"attestation `{attestation_id}` carries schema_version "
+                f"{record.get('schema_version')!r}, not {ATTESTATION_SCHEMA_VERSION!r}"
+            )
+            continue
+        unsigned = {key: value for key, value in record.items() if key != "signature"}
+        canonical = canonicalize_json(json.dumps(unsigned).encode("utf-8"))
+        digest = hashlib.sha256(canonical).digest()
+        status = signature_status(
+            record.get("signature"), digest, trust_root, record.get("role", "")
+        )
+        if status["state"] == "unsigned":
+            problems.append(f"attestation `{attestation_id}` carries no signature")
+        elif status["state"] == "invalid":
+            problems.append(f"attestation `{attestation_id}`: {describe_signature_status(status)}")
+        subject = record.get("subject", {})
+        if subject.get("kind") == "transition":
+            cited = subject.get("identity")
+            if cited not in transition_digests:
+                problems.append(
+                    f"attestation `{attestation_id}` names transition `{cited}`, "
+                    "which this log does not record"
+                )
+            elif subject.get("sha256") != transition_digests[cited]:
+                problems.append(
+                    f"attestation `{attestation_id}` cites a digest that is not "
+                    f"transition `{cited}`'s recorded line"
+                )
+
+    derived: dict[tuple[str, str], str] = {}
+    for index, record, _line_sha in transitions:
+        tid = record.get("transition_id", f"line {index}")
+        if record.get("schema_version") != STATE_TRANSITION_SCHEMA_VERSION:
+            problems.append(
+                f"transition `{tid}` carries schema_version "
+                f"{record.get('schema_version')!r}, not {STATE_TRANSITION_SCHEMA_VERSION!r}"
+            )
+            continue
+        subject = record.get("subject", {})
+        kind, identity = subject.get("kind"), subject.get("identity")
+        from_state, to_state = record.get("from_state"), record.get("to_state")
+        if kind not in TRANSITION_INITIAL_STATE or not isinstance(identity, str):
+            problems.append(f"transition `{tid}` names an unknown subject kind {kind!r}")
+            continue
+        vocabulary = STATE_VOCABULARY[kind]
+        for field, state in (("from_state", from_state), ("to_state", to_state)):
+            if state not in vocabulary:
+                problems.append(
+                    f"transition `{tid}` names {field} `{state}`, "
+                    f"which the {kind} vocabulary does not contain"
+                )
+        expected_from = derived.get((kind, identity), TRANSITION_INITIAL_STATE[kind])
+        if from_state != expected_from:
+            problems.append(
+                f"transition `{tid}` claims {kind} `{identity}` moves from `{from_state}`, "
+                f"but the log derives `{expected_from}`"
+            )
+        elif not transition_legal(kind, from_state, to_state):
+            problems.append(
+                f"transition `{tid}` is illegal: `{from_state}` cannot move to `{to_state}`"
+            )
+        reference = record.get("actor_attestation", {})
+        attestation_id = reference.get("attestation_id")
+        if attestation_id not in attestations:
+            problems.append(
+                f"transition `{tid}` names attestation `{attestation_id}`, "
+                "which this log does not record"
+            )
+        else:
+            attestation, attestation_line_sha = attestations[attestation_id]
+            if reference.get("sha256") != attestation_line_sha:
+                problems.append(
+                    f"transition `{tid}` cites a digest that is not attestation "
+                    f"`{attestation_id}`'s recorded line"
+                )
+            required = transition_required_role(kind, str(from_state), str(to_state))
+            if required is not None and attestation.get("role") != required:
+                problems.append(
+                    f"transition `{tid}` requires a `{required}` attestation, "
+                    f"but `{attestation_id}` asserts `{attestation.get('role')}`"
+                )
+        if from_state == expected_from and to_state in vocabulary:
+            derived[(kind, identity)] = to_state
+
+    if problems:
+        report.mismatch(check, "; ".join(problems))
+    else:
+        report.verified(
+            check,
+            f"{len(transitions)} transition(s) and {len(attestations)} attestation(s) "
+            "fold to a consistent recorded state",
+        )
+
+
 def verify_log_line_signature(line: dict, trust_root: Optional[TrustRoot]) -> dict:
     """One campaign log line's own runner signature (ADR-0015 clause 6):
     the canonical form of the line with its `signature` member removed
@@ -2531,6 +2713,7 @@ def verify_case_signatures(
         log_path = case_dir / "search" / log_name
         if log_path.is_file():
             verify_log_signatures(log_path, trust_root, report)
+            verify_log_transitions(log_path, trust_root, report)
     if not any((case_dir / "search" / name).is_file() for name in ("attempts.jsonl", "campaign-log.jsonl")):
         report.not_checked("signatures.log", f"no search/attempts.jsonl or search/campaign-log.jsonl found under {case_dir}")
 

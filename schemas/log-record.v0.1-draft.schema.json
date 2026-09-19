@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.avilalabs.com/core/log-record/v0.1-draft.schema.json",
   "title": "Avila Core Log Record v0.1 draft",
-  "description": "The envelope one non-run record (ADR-0019: design revision, assessment, named reference, or contract amendment) occupies in a campaign JSONL log. The record payload is validated by the schema named by record_kind; the envelope adds the append timestamp and an optional ADR-0015 signature.",
+  "description": "The envelope one non-run record (ADR-0019: design revision, assessment, named reference, contract amendment, or ADR-0021 attestation/state-transition) occupies in a campaign JSONL log. The record payload is validated by the schema named by record_kind; the envelope adds the append timestamp and an optional ADR-0015 signature.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "recorded_at", "record_kind", "record"],
@@ -19,7 +19,9 @@
         "design_revision",
         "assessment",
         "named_reference",
-        "contract_amendment"
+        "contract_amendment",
+        "attestation",
+        "state_transition"
       ]
     },
     "record": {

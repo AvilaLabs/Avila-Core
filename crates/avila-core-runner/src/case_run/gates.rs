@@ -20,6 +20,7 @@ pub(super) fn build_presentation_gates(
     compiled: &CompiledContract,
     claims: &ClaimsDocument,
     campaign: &CampaignReport,
+    respond_by: Option<&str>,
 ) -> Result<Vec<PresentationGateReport>, Box<dyn Error>> {
     let Some(campaign_sha256) = campaign.campaign_sha256.as_ref() else {
         return Ok(Vec::new());
@@ -58,6 +59,7 @@ pub(super) fn build_presentation_gates(
             reviewer_eligibility_policy: gate.reviewer_eligibility_policy.clone(),
             independence: gate.independence.clone(),
             instructions: gate.instructions.clone(),
+            respond_by: respond_by.map(str::to_owned),
         };
         gate.request_sha256 = presentation_request_identity(&gate)?;
         stages.push(gate);
@@ -119,4 +121,39 @@ fn presentation_request_identity(gate: &PresentationGateReport) -> Result<String
     let bytes = serde_json::to_vec(&value)?;
     let canonical = avila_core_kernel::canonicalize_json(&bytes)?;
     Ok(format!("sha256:{:x}", Sha256::digest(&canonical)))
+}
+
+/// ADR-0021 X6401: scan prior run rows in the campaign log for gates whose
+/// recorded `respond_by` is earlier than `now` (lexical compare on RFC3339
+/// UTC strings). No routing-record document type exists yet (ADR-0024), so
+/// any past-deadline gate counts as unresolved by definition. Returns one
+/// entry per distinct `request_sha256`.
+pub(super) fn find_lapsed_gates(log_content: &str, now: &str) -> Vec<(String, String, String)> {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut lapsed = Vec::new();
+    for line in log_content.lines() {
+        let Ok(row) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
+        let Some(gates) = row.get("presentation_gates").and_then(|g| g.as_array()) else {
+            continue;
+        };
+        for gate in gates {
+            let (Some(req), Some(deadline)) = (
+                gate.get("request_sha256").and_then(|v| v.as_str()),
+                gate.get("respond_by").and_then(|v| v.as_str()),
+            ) else {
+                continue;
+            };
+            if deadline < now && seen.insert(req.to_string()) {
+                let step = gate
+                    .get("step_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("?")
+                    .to_string();
+                lapsed.push((step, req.to_string(), deadline.to_string()));
+            }
+        }
+    }
+    lapsed
 }

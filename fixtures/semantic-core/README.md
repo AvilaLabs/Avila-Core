@@ -376,10 +376,10 @@ canonically.
 | Fixture | Expected |
 | --- | --- |
 | `lifecycle.status.draft.permits-check.pass` | exercised by every compiled fixture — e.g. `types.R1.resolved.pass` |
-| `lifecycle.status.draft.refuses-submit.fail` | `submit` is a lifecycle transition operation — needs the ADR-0021 state-transition record (proposed); contract status is a document-owner label, not an execution gate |
-| `lifecycle.status.in_review.refuses-edit.fail` | amend → new draft — needs the ADR-0019/0021 amendment + transition records (proposed) |
-| `lifecycle.status.approved.permits-bind.pass` | status is carried in the compiled boundary; `approved` permits binding because contract status never gates execution — the ADR-0021 transition records that set it are proposed, not implemented |
-| `lifecycle.status.retired.read-only.pass` | needs the ADR-0021 state-transition record (proposed); `retired` already parses and compiles |
+| `lifecycle.status.draft.refuses-submit.fail` | the ADR-0021 transition record exists — `draft→in_review` is the only forward move from `draft`, so a direct `draft→approved` "submit" fails legality (`contract_vocabulary_and_legality_table`); contract status is a document-owner label, not an execution gate |
+| `lifecycle.status.in_review.refuses-edit.fail` | amend → new draft — the ADR-0019 amendment record (`an_amendment_admits_a_new_root_across_changed_fixed_identities`) and ADR-0021 legality table (`contract_vocabulary_and_legality_table`: `in_review→draft|approved` only) make an in-place semantic move unrecordable |
+| `lifecycle.status.approved.permits-bind.pass` | status is carried in the compiled boundary; `approved` permits binding because contract status never gates execution — the ADR-0021 transition records that set it exist (`contract_vocabulary_and_legality_table`) |
+| `lifecycle.status.retired.read-only.pass` | `approved→retired` is the last legal contract move and `retired` is terminal — the legality table refuses every outgoing edge (`contract_vocabulary_and_legality_table`) |
 | `lifecycle.instantiation-is-origin.pass` | needs the ADR-0022 `contract_template` document type (proposed) |
 | `lifecycle.campaign-state-not-contract-state.pass` | pinned by `campaign_states_do_not_exist_on_a_contract` — the contract vocabulary is closed, so a campaign state cannot be named |
 | `lifecycle.template.instantiate.eligible.pass` | needs the `contract_template` document type (not yet designed) |
@@ -389,7 +389,7 @@ canonically.
 | `lifecycle.template.instance-pins-version.pass` | template amendment does not touch instance; `template_superseded` notice — needs the ADR-0022 `contract_template` document type (proposed) |
 | `lifecycle.template.validation-cases-must-compile.fail` | template not approvable — needs the ADR-0022 `contract_template` document type (proposed) |
 | `lifecycle.template.policy-only-tightens.fail` | instance loosening → `CORE-A4803` under the ADR-0022 proposal |
-| `lifecycle.amend.new-version-supersedes.pass` | `supersedes` edge; classified change event — needs the ADR-0019 amendment record + ADR-0021 transition (proposed) |
+| `lifecycle.amend.new-version-supersedes.pass` | the ADR-0019 amendment record links roots across changed fixed identities (`an_amendment_admits_a_new_root_across_changed_fixed_identities`); the ADR-0021 `superseded` campaign transition exists — `amend` does not yet emit it automatically |
 | `lifecycle.completion.pass-only.pass` | `a_declared_pass_verdict_completes` — the contract `completion` block declares fulfilling verdicts; the campaign assesses delivery |
 | `lifecycle.completion.permitted-inconclusive.pass` | `an_inconclusive_verdict_completes_only_under_a_permitted_reason` — a listed reason completes; an unlisted one does not |
 | `lifecycle.completion.not_evaluated-never.fail` | `not_evaluated_never_completes` at assessment, `a_completion_block_cannot_declare_not_evaluated_fulfilling` (`CORE-A4701`) at declaration |
@@ -477,24 +477,24 @@ canonically.
 
 | Fixture | Expected |
 | --- | --- |
-| `campaign.transitions.<each>.pass` | planned→approved→running→completed; blocked→running; cancelled; superseded; invalidated |
-| `campaign.illegal-transition.fail` | e.g. completed→running |
-| `campaign.step-states.<each>.pass` | actor allowed to move it |
-| `campaign.step.moved-by-wrong-actor.fail` | provider cannot mark `admitted` |
-| `campaign.resume.new-run-reuses.pass` | crashed step only — `a_resumed_run_reuses_the_completed_steps_and_executes_only_the_crashed_one` (activation's committed receipt reuses; the receipt-less crashed step executes) — the campaign-state record proving it is ADR-0021 machinery |
-| `campaign.human.deadline-escalation.pass` | `CORE-X6401`, no decision produced |
-| `campaign.amend-in-flight.pass` | superseded; in-flight steps `cancelled` with receipts |
+| `campaign.transitions.<each>.pass` | the closed legality table is pinned — `campaign_vocabulary_and_legality_table` (every legal edge accepted, forward-skip/backward/self/terminal-exit refused); derived state folds in append order (`an_attestation_and_transition_derive_the_campaign_state`, `a_terminal_subject_rejects_every_move`); the committed-fixture form does not exist |
+| `campaign.illegal-transition.fail` | `CORE-X6402` — `an_illegal_transition_edge_is_refused` (`planned→completed`, self-transition), `a_hand_written_line_claiming_the_wrong_from_state_fails_closed` (a forged `from_state` fails the fold) |
+| `campaign.step-states.<each>.pass` | step states are derived from receipts and run rows, never recorded — the only recorded move is cancellation, legal from any non-cancelled position and runner-keyed (`step_vocabulary_and_legality`, `step_states_use_their_own_vocabulary`) |
+| `campaign.step.moved-by-wrong-actor.fail` | `CORE-X6403` — a transition requires the role its class names (`a_transition_under_the_wrong_role_is_refused`); `admitted` is not a recordable step state at all — evidence derives it — so no attestation can write it |
+| `campaign.resume.new-run-reuses.pass` | crashed step only — `a_resumed_run_reuses_the_completed_steps_and_executes_only_the_crashed_one` (activation's committed receipt reuses; the receipt-less crashed step executes); the campaign-state record exists (ADR-0021 `state_transition`) |
+| `campaign.human.deadline-escalation.pass` | `CORE-X6401` — a prior gate row's `respond_by` earlier than `now` emits a notice once per `request_sha256` and no decision (`a_lapsed_presentation_gate_deadline_is_found_once_per_request`); the routing record that would resolve the gate is ADR-0024 (proposed) |
+| `campaign.amend-in-flight.pass` | the record exists — `running→superseded` under a requester attestation with `step_effects` naming cancelled steps (`campaign_vocabulary_and_legality_table`, `step_states_use_their_own_vocabulary`); `amend` does not yet emit the supersession transition automatically |
 
 ### authority/ (SC-14, SC-15)
 
 | Fixture | Expected |
 | --- | --- |
-| `authority.approvals-required.fail` | `CORE-A4501` — needs the attestation machinery (proposed ADR-0021) |
+| `authority.approvals-required.fail` | `CORE-A4501` — the ADR-0021 `attestation` record and role-checked authorization exist (`a_transition_under_the_wrong_role_is_refused`); a requirement *requiring* an approval at admission is a separate gate that does not exist |
 | `authority.signature-over-canonical-bytes.pass/fail` | a signature binds the target's re-hashed canonical digest, so a signature over any other byte representation fails consistency — `a_rewritten_manifest_with_the_old_signature_is_refused`, `test_flipped_signature_byte_is_named_by_signature_verification`; the dedicated `CORE-V8201` code does not exist |
 | `authority.trust-roots-are-verifier-policy.pass` | producer trusts root, verifier does not → `not_checked`, never `verified` — `test_without_a_trust_root_no_signature_reports_verified`, `without_a_trust_root_signatures_are_reported_but_never_verified` |
 | `authority.neutrality-record-fields.pass` | `avila_provided`, `self_preference_check` mandatory — `an_avila_provided_selection_without_the_check_is_refused`, `an_avila_provided_selection_with_the_check_runs` |
-| `authority.uncredentialed-client-cannot-apply-judgment.fail` | judgment requires an authority record regardless of client type — needs the attestation machinery (proposed ADR-0021) |
-| `authority.agent-cannot-submit.fail` | `runner/submit` without authorization record — needs ADR-0021 transition/attestation records |
+| `authority.uncredentialed-client-cannot-apply-judgment.fail` | the ADR-0021 `attestation` record exists; "applying judgment" is the ADR-0024 routing record's act (proposed) |
+| `authority.agent-cannot-submit.fail` | a transition whose actor kind is `agent` can still carry a valid role signature — the role check governs, not the actor kind (`a_transition_under_the_wrong_role_is_refused`); a `runner/submit` operation does not exist |
 | `authority.key-role-not-cognition.pass` | Core enforces key/role authority and does not claim to detect whether a human used assistance — `a_reuse_rule_signed_by_a_runner_key_is_refused`, `a_signature_made_with_an_unlisted_key_is_refused`, `require_signatures_refuses_a_run_without_a_trust_root` |
 | `authority.frontend-cannot-construct-verdict.build` | no `VerdictOutput {` / `AdmissionRecord {` construction outside the kernel/compiler boundary — pinned by `authority_boundaries.rs` |
 | `ownership.OM-1..OM-7.pass/fail` | the seven SC-15 invariants are each enforced and pinned: immutability — `a_rewritten_manifest_with_the_old_signature_is_refused`, `an_edited_receipt_cannot_be_reused_and_the_rerun_drifts_from_it`; `as_of` dependence — `test_as_of_lines_emit_alongside_recorded_checks`; invalidated/quarantined never satisfies — `campaign.model-not-permitted.quarantine`, `campaign.parent-missing.not_evaluated`; cross-campaign use needs memo/reuse rule — `a_signed_reuse_rule_permits_reuse_across_its_scoped_edge`, `a_reuse_rule_without_a_trust_root_fails_closed`; cardinality — admission's per-slot claim binding (`campaign.parent-missing` cascade); weakening explicit — `permit_nominal_basis` is a declared policy flag and nominal basis cannot enter bounded evaluation (`verdict.rs`); immutable snapshots — `campaign.snapshot-mismatch.rejected`, `a_selection_describing_a_different_registry_snapshot_is_refused`. A committed one-pair-per-invariant fixture corpus does not exist |

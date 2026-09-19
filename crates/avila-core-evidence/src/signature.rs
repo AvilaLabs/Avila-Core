@@ -37,6 +37,9 @@ pub const SIGNATURE_NOTICE: &str = "A signature proves possession of a key at si
 pub enum KeyRole {
     Requester,
     Runner,
+    /// ADR-0021: the role that signs attestations carrying organizational
+    /// authority — approvals, waivers, and authorized policy replacements.
+    PolicyOwner,
 }
 
 impl fmt::Display for KeyRole {
@@ -44,6 +47,7 @@ impl fmt::Display for KeyRole {
         formatter.write_str(match self {
             Self::Requester => "requester",
             Self::Runner => "runner",
+            Self::PolicyOwner => "policy_owner",
         })
     }
 }

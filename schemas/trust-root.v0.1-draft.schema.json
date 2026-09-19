@@ -24,7 +24,7 @@
             "type": "string",
             "pattern": "^[a-f0-9]{64}$"
           },
-          "role": { "enum": ["requester", "runner"] }
+          "role": { "enum": ["requester", "runner", "policy_owner"] }
         }
       }
     }

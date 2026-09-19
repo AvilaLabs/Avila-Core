@@ -40,8 +40,8 @@ use crate::attempt::{AttemptComparison, AttemptLineageRequest, AttemptRecord, pr
 use crate::diagnostic::{
     CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1004, CORE_X1005, CORE_X1101, CORE_X1201, CORE_X1301,
     CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601,
-    CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101, CORE_X3201, CORE_X3301, CORE_X9001, RunFinding,
-    RunStage,
+    CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101, CORE_X3201, CORE_X3301, CORE_X6401, CORE_X6404,
+    CORE_X9001, RunFinding, RunStage,
 };
 use crate::execute::claims::{GeneratedClaim, canonical_identity, generate_claims};
 use crate::execute::external_checker::{EXTERNAL_CHECKER_DOCUMENT_ROLE, ExternalCheckerAdapter};
@@ -118,6 +118,11 @@ pub struct CaseRunOptions {
     pub environment: BTreeMap<String, String>,
     /// Append one JSON line describing this run to this file.
     pub log: Option<PathBuf>,
+    /// ADR-0021: a recorded deadline stamped onto each presentation gate's
+    /// request — the surrounding workflow's `respond_by`. A later run that
+    /// finds a recorded gate past its deadline emits `CORE-X6401`; the
+    /// lapse is a finding, never a decision.
+    pub gate_respond_by: Option<String>,
     /// Refuse the run before anything is compiled or executed unless the
     /// package manifest's digest equals this value: the requester's pin on
     /// the exact package a campaign is allowed to evaluate.
@@ -165,6 +170,7 @@ impl Default for CaseRunOptions {
             inputs: BTreeMap::new(),
             environment: BTreeMap::new(),
             log: None,
+            gate_respond_by: None,
             expected_manifest_sha256: None,
             attempt: None,
             hash_cache: None,
@@ -524,6 +530,11 @@ pub struct PresentationGateReport {
     pub reviewer_eligibility_policy: ImmutablePolicyRef,
     pub independence: ReviewIndependence,
     pub instructions: Vec<String>,
+    /// ADR-0021: the recorded deadline the surrounding workflow set for a
+    /// routing response — inert data the lapse check compares, never a
+    /// verdict input.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub respond_by: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -703,6 +714,54 @@ pub fn execute_case(
             collect_run_findings(&mut report);
             if options.plan_only && report.bound_plan.is_none() {
                 report.bound_plan = Some(BoundPlan::unavailable(&report));
+            }
+            // ADR-0021 clause 5: a run row against a campaign whose
+            // recorded state is terminal or blocked disagrees with the
+            // transition record — the log says the campaign ended or
+            // suspended, yet new execution evidence appeared. The run is
+            // still appended; the finding marks the disagreement.
+            if let Some(log_path) = options.log.as_deref()
+                && let Ok(content) = crate::history::read_log(log_path)
+            {
+                if let Ok(view) = crate::history::parse_log(&content, log_path) {
+                    let state = crate::transitions::derived_state(
+                        &view,
+                        crate::transitions::TransitionSubjectKind::Campaign,
+                        &report.case_id,
+                    );
+                    if matches!(
+                        state.as_str(),
+                        "blocked" | "completed" | "cancelled" | "superseded" | "invalidated"
+                    ) {
+                        report.findings.push(RunFinding::runtime(
+                            CORE_X6404,
+                            FindingClass::Notice,
+                            RunStage::CampaignEvaluation,
+                            "requester",
+                            SourceLocation::new(log_path.display().to_string(), "/transitions"),
+                            format!(
+                                "a run was appended for campaign `{}` whose recorded state is `{state}` — evidence and action disagree",
+                                report.case_id
+                            ),
+                        ));
+                    }
+                }
+                // ADR-0021 X6401: gates whose recorded respond_by already
+                // lapsed with no routing — a finding, never a decision.
+                for (step_id, request_sha256, deadline) in
+                    gates::find_lapsed_gates(&content, &rfc3339_now())
+                {
+                    report.findings.push(RunFinding::runtime(
+                        CORE_X6401,
+                        FindingClass::Notice,
+                        RunStage::CampaignEvaluation,
+                        "presentation_workflow",
+                        SourceLocation::new(log_path.display().to_string(), "/presentation_gates"),
+                        format!(
+                            "presentation gate on step `{step_id}` ({request_sha256}) passed its respond_by `{deadline}` with no routing recorded"
+                        ),
+                    ));
+                }
             }
             report.attempt_comparison = compare_attempt_to_parent(options, &report)?;
             let workspace = report
@@ -1200,7 +1259,12 @@ fn execute_case_inner(
     let campaign = evaluate_campaign(contract, registry, &generated.bytes)?;
     let campaign_rejected = campaign.status == CampaignStatus::Rejected;
     report.margins = margins(compiled, &campaign);
-    report.presentation_gates = build_presentation_gates(compiled, &claims, &campaign)?;
+    report.presentation_gates = build_presentation_gates(
+        compiled,
+        &claims,
+        &campaign,
+        options.gate_respond_by.as_deref(),
+    )?;
     if !campaign.findings.is_empty() {
         report.rendered_findings = Some(render_campaign_report(
             &campaign,

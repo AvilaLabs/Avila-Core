@@ -12,7 +12,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["role", "document_id", "sha256"],
-      "description": "What was signed: a role (`manifest`, `execution_receipt`, or a log line's own role), an identifier within that role's namespace (the case id for a manifest, the receipt's document_id for a receipt), and the exact digest the signature covers.",
+      "description": "What was signed: a role (`manifest`, `execution_receipt`, `attestation`, or a log line's own role), an identifier within that role's namespace (the case id for a manifest, the receipt's document_id for a receipt), and the exact digest the signature covers.",
       "properties": {
         "role": { "$ref": "#/$defs/nonemptyString" },
         "document_id": { "$ref": "#/$defs/nonemptyString" },

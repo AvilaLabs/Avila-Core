@@ -35,6 +35,10 @@ pub const CORE_X3301: &str = "CORE-X3301";
 pub const CORE_X3401: &str = "CORE-X3401";
 pub const CORE_X3404: &str = "CORE-X3404";
 pub const CORE_X3405: &str = "CORE-X3405";
+pub const CORE_X6401: &str = "CORE-X6401";
+pub const CORE_X6402: &str = "CORE-X6402";
+pub const CORE_X6403: &str = "CORE-X6403";
+pub const CORE_X6404: &str = "CORE-X6404";
 pub const CORE_X9001: &str = "CORE-X9001";
 pub const CORE_P5101: &str = "CORE-P5101";
 pub const CORE_P5102: &str = "CORE-P5102";
@@ -54,7 +58,8 @@ pub const RUNTIME_FINDING_CODES: &[&str] = &[
     CORE_P5401, CORE_P5501, CORE_P5601, CORE_P5602, CORE_X1001, CORE_X1002, CORE_X1003, CORE_X1004,
     CORE_X1005, CORE_X1101, CORE_X1201, CORE_X1301, CORE_X2001, CORE_X2101, CORE_X2201, CORE_X2301,
     CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001, CORE_X3101,
-    CORE_X3201, CORE_X3301, CORE_X3401, CORE_X3404, CORE_X3405, CORE_X9001,
+    CORE_X3201, CORE_X3301, CORE_X3401, CORE_X3404, CORE_X3405, CORE_X6401, CORE_X6402, CORE_X6403,
+    CORE_X6404, CORE_X9001,
 ];
 
 /// Explanations are served by `avila-core explain` alongside compiler codes.
@@ -317,6 +322,34 @@ pub const RUNTIME_DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         rule: "SC-7; execution_policy.recognized_qualification_owners",
         meaning: "A bound `qualification_revocation` document names a record whose owner is a recognized issuer, but the document carries no signature over its bound bytes that verifies under the issuer's declared key — it is unsigned, covers different bytes, or does not verify. The withdrawal is ignored and the record stands: only the issuer the contract declares may withdraw a recognized record. A revocation against an unlisted owner's record is package-asserted and applies unsigned, since it can only deny evidence.",
         next_action: "Sign the revocation with the issuer key the contract declares and rebind the signature document, or remove the document if the record was not meant to be withdrawn.",
+    },
+    DiagnosticExplanation {
+        code: CORE_X6401,
+        title: "Presentation-gate deadline lapsed",
+        rule: "ADR-0021; SC-13 presentation deadline",
+        meaning: "A presentation gate's recorded `respond_by` deadline passed with no routing recorded. The lapse is a finding, not a decision: the gate stays open, the technical verdict is unchanged, and the surrounding workflow decides what an overdue review means.",
+        next_action: "Record the routing or extend the deadline in a new record. The owner is the presentation workflow — Core produces no verdict consequence.",
+    },
+    DiagnosticExplanation {
+        code: CORE_X6402,
+        title: "Illegal state transition recorded",
+        rule: "ADR-0021 clause 3: legality table",
+        meaning: "A `state_transition` log record names a move the subject kind's closed vocabulary does not allow — a state outside the vocabulary, a self-transition, an edge missing from the table (such as `completed` back to `running`), or a `from_state` that does not equal the subject's derived state. The record is refused: the campaign log fails validation rather than accepting a move that did not happen.",
+        next_action: "Repair or remove the offending line. A legitimate move records the state the log actually derives, inside the subject kind's table. The owner is the actor who recorded it.",
+    },
+    DiagnosticExplanation {
+        code: CORE_X6403,
+        title: "Transition attestation missing or wrong role",
+        rule: "ADR-0021 clause 4: actor authorization",
+        meaning: "A `state_transition` names an attestation that does not exist in the log, cites it at the wrong digest, carries a signature that does not verify under the record's own role, or asserts a role different from the one the transition class requires — for example a `policy_owner` move signed by a `requester`. The record is refused.",
+        next_action: "Bind the transition to the exact attestation record, signed under a key listed for the role that class requires. The owner is the actor whose authority the move claims.",
+    },
+    DiagnosticExplanation {
+        code: CORE_X6404,
+        title: "Resume disagrees with recorded state",
+        rule: "ADR-0021 clause 5: resumption",
+        meaning: "A run was appended for a campaign whose recorded state is terminal or blocked — the log's transition records say the campaign ended or suspended, yet new execution evidence appeared. Evidence and action disagree: either the transition was wrong or the run should not have happened.",
+        next_action: "Reconcile the log: record the transition that legitimately reopened the campaign, or remove the run row if it was recorded against the wrong campaign. The owner is the requester.",
     },
     DiagnosticExplanation {
         code: CORE_X9001,

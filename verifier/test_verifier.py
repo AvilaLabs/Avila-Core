@@ -11,6 +11,7 @@ or committed example case it proves agreement against.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -538,6 +539,145 @@ class TestLogLineSignatureVerification(unittest.TestCase):
         v.verify_log_signatures(log_path, self.trust_root, report)
         self.assertEqual(len(report.checks), 1)
         self.assertEqual(report.checks[0].status, "mismatch")  # one invalid line dominates the single summary row
+
+
+# ---------------------------------------------------------------------------
+# ADR-0021: the transition fold — re-deriving each subject's recorded state
+# from a log's attestation/state_transition records, mirroring
+# history.rs::validate_transitions. Synthetic logs; the committed example
+# logs predate the record kinds (their absence is a no-op, not a pass).
+# ---------------------------------------------------------------------------
+
+
+class TestLogTransitionFold(unittest.TestCase):
+    def setUp(self):
+        self.trust_root = v.load_trust_root(REPO_ROOT / "examples" / "keys" / "trust-root.json")
+        self.requester_seed = (REPO_ROOT / "examples" / "keys" / "requester.seed").read_bytes()
+        self.runner_seed = (REPO_ROOT / "examples" / "keys" / "runner.seed").read_bytes()
+
+    def _attestation(self, attestation_id: str, role: str, seed: bytes, statement: str = "approves") -> dict:
+        record = {
+            "schema_version": v.ATTESTATION_SCHEMA_VERSION,
+            "attestation_id": attestation_id,
+            "subject": {"kind": "campaign", "identity": "camp-1", "sha256": "sha256:" + "0" * 64},
+            "statement": statement,
+            "detail": "test attestation",
+            "actor": {"actor_id": "op-1", "actor_kind": "person"},
+            "role": role,
+        }
+        canonical = v.canonicalize_json(json.dumps(record).encode("utf-8"))
+        digest = v.sha256_bytes(canonical)
+        record["signature"] = {
+            "schema_version": v.SIGNATURE_SCHEMA_VERSION,
+            "signed_document": {"role": "attestation", "document_id": attestation_id, "sha256": digest},
+            "key_id": v.sha256_bytes(v.ed25519_public_key_from_seed(seed)).split(":", 1)[1],
+            "algorithm": v.ALGORITHM_ED25519,
+            "signature_hex": v.ed25519_sign(seed, v.digest_from_prefixed(digest)).hex(),
+            "notice": "test fixture attestation signature",
+        }
+        return {"record_kind": "attestation", "record": record}
+
+    def _transition(self, transition_id: str, from_state: str, to_state: str, attestation_id: str, attestation_sha: str, kind: str = "campaign", identity: str = "camp-1") -> dict:
+        return {
+            "record_kind": "state_transition",
+            "record": {
+                "schema_version": v.STATE_TRANSITION_SCHEMA_VERSION,
+                "transition_id": transition_id,
+                "subject": {"kind": kind, "identity": identity},
+                "from_state": from_state,
+                "to_state": to_state,
+                "actor_attestation": {"attestation_id": attestation_id, "sha256": attestation_sha},
+                "at": "2026-09-19T00:00:00Z",
+                "rationale": "test",
+            },
+        }
+
+    def _write_log(self, *rows) -> Path:
+        tmp = Path(tempfile.mkdtemp(prefix="avila-core-verifier-transitions-"))
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        log_path = tmp / "campaign-log.jsonl"
+        raw_lines = [json.dumps(row).encode("utf-8") for row in rows]
+        log_path.write_bytes(b"\n".join(raw_lines) + b"\n")
+        return log_path, raw_lines
+
+    def _run(self, log_path) -> v.Report:
+        report = v.Report(str(log_path))
+        v.verify_log_transitions(log_path, self.trust_root, report)
+        self.assertEqual(len(report.checks), 1)
+        return report
+
+    def test_a_clean_fold_verifies(self):
+        att = self._attestation("att-001", "requester", self.requester_seed)
+        att_sha = "sha256:" + hashlib.sha256(json.dumps(att).encode("utf-8")).hexdigest()
+        tr1 = self._transition("tr-001", "planned", "running", "att-001", att_sha)
+        tr2 = self._transition("tr-002", "running", "completed", "att-001", att_sha)
+        log_path, _ = self._write_log(att, tr1, tr2)
+        report = self._run(log_path)
+        self.assertEqual(report.checks[0].status, "verified", report.checks[0].detail)
+
+    def test_a_claimed_from_state_the_log_does_not_derive_is_named(self):
+        att = self._attestation("att-001", "requester", self.requester_seed)
+        att_sha = "sha256:" + hashlib.sha256(json.dumps(att).encode("utf-8")).hexdigest()
+        forged = self._transition("tr-forged", "running", "completed", "att-001", att_sha)
+        log_path, _ = self._write_log(att, forged)
+        report = self._run(log_path)
+        self.assertEqual(report.checks[0].status, "mismatch")
+        self.assertIn("derives `planned`", report.checks[0].detail)
+
+    def test_an_illegal_edge_is_named(self):
+        att = self._attestation("att-001", "requester", self.requester_seed)
+        att_sha = "sha256:" + hashlib.sha256(json.dumps(att).encode("utf-8")).hexdigest()
+        tr = self._transition("tr-001", "planned", "completed", "att-001", att_sha)
+        log_path, _ = self._write_log(att, tr)
+        report = self._run(log_path)
+        self.assertEqual(report.checks[0].status, "mismatch")
+        self.assertIn("illegal", report.checks[0].detail)
+
+    def test_a_wrong_role_attestation_is_named(self):
+        # `completed -> invalidated` requires a policy_owner attestation; a
+        # requester attestation cannot authorize it.
+        att = self._attestation("att-001", "requester", self.requester_seed)
+        att_sha = "sha256:" + hashlib.sha256(json.dumps(att).encode("utf-8")).hexdigest()
+        tr1 = self._transition("tr-001", "planned", "running", "att-001", att_sha)
+        tr2 = self._transition("tr-002", "running", "completed", "att-001", att_sha)
+        tr3 = self._transition("tr-003", "completed", "invalidated", "att-001", att_sha)
+        log_path, _ = self._write_log(att, tr1, tr2, tr3)
+        report = self._run(log_path)
+        self.assertEqual(report.checks[0].status, "mismatch")
+        self.assertIn("`policy_owner`", report.checks[0].detail)
+
+    def test_a_transition_naming_a_missing_attestation_is_named(self):
+        tr = self._transition("tr-001", "planned", "running", "att-ghost", "sha256:" + "0" * 64)
+        log_path, _ = self._write_log(tr)
+        report = self._run(log_path)
+        self.assertEqual(report.checks[0].status, "mismatch")
+        self.assertIn("does not record", report.checks[0].detail)
+
+    def test_a_wrong_attestation_digest_is_named(self):
+        att = self._attestation("att-001", "requester", self.requester_seed)
+        tr = self._transition("tr-001", "planned", "running", "att-001", "sha256:" + "f" * 64)
+        log_path, _ = self._write_log(att, tr)
+        report = self._run(log_path)
+        self.assertEqual(report.checks[0].status, "mismatch")
+        self.assertIn("recorded line", report.checks[0].detail)
+
+    def test_a_tampered_attestation_signature_is_named(self):
+        att = self._attestation("att-001", "requester", self.requester_seed)
+        att["record"]["detail"] = "edited after signing"
+        att_sha = "sha256:" + hashlib.sha256(json.dumps(att).encode("utf-8")).hexdigest()
+        tr = self._transition("tr-001", "planned", "running", "att-001", att_sha)
+        log_path, _ = self._write_log(att, tr)
+        report = self._run(log_path)
+        self.assertEqual(report.checks[0].status, "mismatch")
+        self.assertIn("invalid", report.checks[0].detail)
+
+    def test_a_step_cancellation_folds_against_its_own_vocabulary(self):
+        att = self._attestation("att-001", "runner", self.runner_seed)
+        att_sha = "sha256:" + hashlib.sha256(json.dumps(att).encode("utf-8")).hexdigest()
+        tr = self._transition("tr-001", "pending", "cancelled", "att-001", att_sha, kind="step", identity="camp-1/transport")
+        log_path, _ = self._write_log(att, tr)
+        report = self._run(log_path)
+        self.assertEqual(report.checks[0].status, "verified", report.checks[0].detail)
 
 
 # ---------------------------------------------------------------------------

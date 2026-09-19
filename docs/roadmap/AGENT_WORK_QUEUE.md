@@ -1301,3 +1301,29 @@ the obligations report (noted in ADR-0025's boundary), the `human`
 reviewer-role extension (ADR-0024 boundary), `environments` records,
 and EXP-005 (paused). Everything else is implemented, pinned, or
 proposed.
+
+## 2026-09-19 — ADR-0021 implemented (proposed status unchanged)
+
+Implemented the state-transition/attestation machinery end to end under
+the proposed ADR-0021 (status left `proposed` — implementation does not
+self-ratify):
+
+- `transitions.rs` — `Attestation`, `StateTransitionRecord`, closed
+  campaign/contract/step vocabularies, legality tables, `required_role`,
+  `derived_state`, locked append APIs (`append_attestation`,
+  `append_transition`).
+- `history.rs` — log parsing for both record kinds, `validate_transitions`
+  fold (X6402 legality, X6403 attestation/role/signature binding),
+  transition-kind attestation subject binding.
+- `case_run.rs` + `gates.rs` — X6404 run-vs-recorded-state disagreement
+  notice, X6401 lapsed `respond_by` scan (the routing record that resolves
+  gates remains ADR-0024).
+- CLI `attest`/`transition`, `--gate-respond-by`; schemas
+  `attestation`/`state-transition` v0.1-draft; `KeyRole::PolicyOwner`.
+- Verifier parity — `verify_log_transitions` re-derives the fold
+  (vocabulary, legality, digest binding, role, internal signature
+  consistency always; trust-root role verification when supplied).
+
+Remaining inside ADR-0021's boundary: `amend` does not emit the
+supersession transition automatically (manual `transition` command
+records it); `admission.A9` still gates on ADR-0024's routing record.

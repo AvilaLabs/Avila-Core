@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.avilalabs.com/core/attestation/v0.1-draft.schema.json",
+  "title": "Avila Core Attestation v0.1 draft",
+  "description": "ADR-0021: the authority primitive SC-14 names — a key, in a role, signing a statement about an exact digest-bound subject. The record never asserts the statement is true; it asserts the attribution and the signature. Carried as an `attestation` record inside a campaign JSONL log.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "attestation_id",
+    "subject",
+    "statement",
+    "actor",
+    "role",
+    "signature"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/attestation/v0.1-draft"
+    },
+    "attestation_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "identity", "sha256"],
+      "properties": {
+        "kind": {
+          "enum": ["contract", "campaign", "transition", "manifest"],
+          "description": "Which kind of record the statement covers."
+        },
+        "identity": {
+          "$ref": "#/$defs/nonempty",
+          "description": "The subject's bound identity (contract `id@rev`, campaign id, transition id, or manifest id)."
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256",
+          "description": "The exact document digest the statement covers."
+        }
+      }
+    },
+    "statement": {
+      "enum": ["approves", "authors", "reviews", "waives", "rescinds"],
+      "description": "The closed statement vocabulary — the engine checks the word, never the prose."
+    },
+    "detail": {
+      "type": "string",
+      "description": "Inert text carrying the stated detail of the statement."
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor_id", "actor_kind"],
+      "properties": {
+        "actor_id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "actor_kind": {
+          "enum": ["person", "agent", "tool"]
+        }
+      }
+    },
+    "role": {
+      "enum": ["requester", "runner", "policy_owner"],
+      "description": "The technical role the actor asserts — must equal the role the signature's key is listed under in the trust root."
+    },
+    "signature": {
+      "type": "object",
+      "description": "The actor's ADR-0015 signature over this record's canonical bytes with this member absent."
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "nonempty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}

@@ -58,6 +58,12 @@ enum Command {
     /// lets a new lineage root continue a case under changed fixed
     /// identities (ADR-0019).
     Amend(AmendArgs),
+    /// Record an actor attestation: a key, in a role, signing a statement
+    /// about an exact digest-bound subject (ADR-0021).
+    Attest(AttestArgs),
+    /// Record a state transition: one immutable move in a subject's
+    /// recorded lifecycle, authorized by an attestation (ADR-0021).
+    Transition(TransitionArgs),
     /// Read one assessment: the run row it cites, verdicts verbatim, and
     /// the derived comparison including cross-amendment edges (ADR-0019).
     Assessment(queries::AssessmentShowArgs),
@@ -337,6 +343,96 @@ struct AmendArgs {
     trust_root: Option<PathBuf>,
 }
 
+#[derive(Debug, Args)]
+struct AttestArgs {
+    /// The new attestation's id.
+    attestation_id: String,
+    /// The campaign JSONL log the attestation is appended to.
+    #[arg(long, value_name = "FILE")]
+    log: PathBuf,
+    /// Which kind of record the statement covers.
+    #[arg(long = "subject-kind", value_name = "KIND",
+          value_parser = ["contract", "campaign", "transition", "manifest"])]
+    subject_kind: String,
+    /// The subject's bound identity (contract `id@rev`, campaign id,
+    /// transition id, or manifest id).
+    #[arg(long = "subject-identity", value_name = "ID")]
+    subject_identity: String,
+    /// The exact document digest the statement covers.
+    #[arg(long = "subject-sha256", value_name = "SHA256")]
+    subject_sha256: String,
+    /// The statement word — the closed vocabulary.
+    #[arg(long, value_name = "WORD",
+          value_parser = ["approves", "authors", "reviews", "waives", "rescinds"])]
+    statement: String,
+    /// Inert detail text stored with the statement.
+    #[arg(long, value_name = "TEXT", default_value = "")]
+    detail: String,
+    /// The actor this record attributes the statement to.
+    #[arg(long = "actor", value_name = "ID")]
+    actor_id: String,
+    /// The actor's kind.
+    #[arg(long = "actor-kind", value_name = "KIND",
+          value_parser = ["person", "agent", "tool"], default_value = "person")]
+    actor_kind: String,
+    /// The technical role the actor asserts.
+    #[arg(long, value_name = "ROLE",
+          value_parser = ["requester", "runner", "policy_owner"])]
+    role: String,
+    /// The actor's seed key (32 raw bytes) — the record is signed under
+    /// the role it asserts.
+    #[arg(long = "key", value_name = "FILE")]
+    key: PathBuf,
+    /// Sign the appended log line with this runner seed (32 raw bytes).
+    #[arg(long = "runner-key", value_name = "FILE")]
+    runner_key: Option<PathBuf>,
+    /// Verify the record's signature — and the log's signature-bearing
+    /// history — against this trust root before it is admitted.
+    #[arg(long = "trust-root", value_name = "FILE")]
+    trust_root: Option<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+struct TransitionArgs {
+    /// The new transition's id.
+    transition_id: String,
+    /// The campaign JSONL log the transition is appended to.
+    #[arg(long, value_name = "FILE")]
+    log: PathBuf,
+    /// Which kind of subject moves.
+    #[arg(long = "subject-kind", value_name = "KIND",
+          value_parser = ["contract", "campaign", "step"])]
+    subject_kind: String,
+    /// The subject's bound identity — contract `id@rev`, campaign id, or
+    /// `campaign/step` for a step.
+    #[arg(long = "subject-identity", value_name = "ID")]
+    subject_identity: String,
+    /// The state the subject moves to; `from_state` is derived under the
+    /// append lock, never supplied.
+    #[arg(long = "to", value_name = "STATE")]
+    to_state: String,
+    /// The attestation authorizing this move.
+    #[arg(long = "attestation", value_name = "ID")]
+    attestation_id: String,
+    /// The recorded instant the move happened at (RFC3339).
+    #[arg(long, value_name = "RFC3339")]
+    at: String,
+    /// Inert rationale text.
+    #[arg(long, value_name = "TEXT", default_value = "")]
+    rationale: String,
+    /// A per-step effect this transition records, as STEP_ID=EFFECT
+    /// (effect: `cancelled`). Repeatable.
+    #[arg(long = "step-effect", value_name = "STEP=EFFECT")]
+    step_effects: Vec<String>,
+    /// Sign the appended log line with this runner seed (32 raw bytes).
+    #[arg(long = "runner-key", value_name = "FILE")]
+    runner_key: Option<PathBuf>,
+    /// Verify the log's signature-bearing history against this trust root
+    /// before the transition is admitted.
+    #[arg(long = "trust-root", value_name = "FILE")]
+    trust_root: Option<PathBuf>,
+}
+
 #[derive(Debug, Subcommand)]
 enum SignCommand {
     /// Sign CASE's package manifest with a requester (or other) seed key,
@@ -484,6 +580,12 @@ struct RunArgs {
     /// signed the same way. Never printed or logged.
     #[arg(long = "runner-key", value_name = "FILE")]
     runner_key: Option<PathBuf>,
+    /// Stamp an RFC3339 `respond_by` deadline onto this run's presentation
+    /// gate requests (ADR-0021). A later run that finds a recorded gate
+    /// past its deadline reports `CORE-X6401`; the lapse is a finding,
+    /// never a verdict consequence.
+    #[arg(long = "gate-respond-by", value_name = "RFC3339")]
+    gate_respond_by: Option<String>,
     /// Emit the complete machine-readable run report instead of the concise view.
     #[arg(long)]
     json: bool,
@@ -542,6 +644,12 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
         },
         Command::Amend(args) => {
             println!("{}", serde_json::to_string_pretty(&run_amend(args)?)?);
+        }
+        Command::Attest(args) => {
+            println!("{}", serde_json::to_string_pretty(&run_attest(args)?)?);
+        }
+        Command::Transition(args) => {
+            println!("{}", serde_json::to_string_pretty(&run_transition(args)?)?);
         }
         Command::Assessment(args) => queries::assessment(args)?,
         Command::Tools { command } => queries::tools(command)?,
@@ -646,6 +754,7 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 amendment,
                 trust_root,
                 runner_key,
+                gate_respond_by,
                 json,
             } = *args;
             let attempt = attempt_request(
@@ -664,6 +773,7 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 inputs: avila_core_runner::parse_inputs(&inputs)?,
                 environment: avila_core_runner::parse_environment(&environment)?,
                 log,
+                gate_respond_by,
                 expected_manifest_sha256: expect_manifest,
                 attempt,
                 hash_cache,
@@ -1464,6 +1574,95 @@ fn run_amend(args: AmendArgs) -> Result<serde_json::Value, Box<dyn Error>> {
     }))
 }
 
+fn parse_enum<T: serde::de::DeserializeOwned>(
+    kind: &str,
+    value: &str,
+) -> Result<T, Box<dyn Error>> {
+    serde_json::from_value(serde_json::Value::String(value.to_string()))
+        .map_err(|error| format!("{kind} `{value}`: {error}").into())
+}
+
+fn run_attest(args: AttestArgs) -> Result<serde_json::Value, Box<dyn Error>> {
+    let actor_bytes =
+        fs::read(&args.key).map_err(|error| format!("key `{}`: {error}", args.key.display()))?;
+    let actor_key = signature::parse_seed_bytes(&actor_bytes)
+        .map_err(|error| format!("key `{}`: {error}", args.key.display()))?;
+    let runner_key = load_runner_seed(args.runner_key.as_ref())?;
+    let trust_root = load_trust(args.trust_root.as_ref())?;
+    let request = avila_core_runner::transitions::AttestationRequest {
+        attestation_id: args.attestation_id.clone(),
+        subject: avila_core_runner::transitions::AttestationSubject {
+            kind: parse_enum("subject kind", &args.subject_kind)?,
+            identity: args.subject_identity,
+            sha256: args.subject_sha256,
+        },
+        statement: parse_enum("statement", &args.statement)?,
+        detail: args.detail,
+        actor: avila_core_runner::transitions::ActorRef {
+            actor_id: args.actor_id,
+            actor_kind: parse_enum("actor kind", &args.actor_kind)?,
+        },
+        role: parse_enum("role", &args.role)?,
+    };
+    let (record, record_sha256) = avila_core_runner::transitions::append_attestation(
+        &args.log,
+        &request,
+        &actor_key,
+        runner_key,
+        trust_root.as_ref(),
+    )?;
+    Ok(serde_json::json!({
+        "recorded": "attestation",
+        "attestation_id": record.attestation_id,
+        "statement": record.statement,
+        "role": record.role.to_string(),
+        "record_sha256": record_sha256,
+        "log": args.log.display().to_string(),
+    }))
+}
+
+fn run_transition(args: TransitionArgs) -> Result<serde_json::Value, Box<dyn Error>> {
+    let runner_key = load_runner_seed(args.runner_key.as_ref())?;
+    let trust_root = load_trust(args.trust_root.as_ref())?;
+    let mut step_effects = Vec::new();
+    for effect in &args.step_effects {
+        let (step_id, effect) = effect
+            .split_once('=')
+            .ok_or_else(|| format!("step effect `{effect}` must be `STEP_ID=EFFECT`"))?;
+        step_effects.push(avila_core_runner::transitions::StepEffectEntry {
+            step_id: step_id.to_string(),
+            effect: parse_enum("step effect", effect)?,
+        });
+    }
+    let request = avila_core_runner::transitions::TransitionRequest {
+        transition_id: args.transition_id.clone(),
+        subject: avila_core_runner::transitions::TransitionSubject {
+            kind: parse_enum("subject kind", &args.subject_kind)?,
+            identity: args.subject_identity,
+        },
+        to_state: args.to_state,
+        attestation_id: args.attestation_id,
+        at: args.at,
+        rationale: args.rationale,
+        step_effects,
+    };
+    let (record, record_sha256) = avila_core_runner::transitions::append_transition(
+        &args.log,
+        &request,
+        runner_key,
+        trust_root.as_ref(),
+    )?;
+    Ok(serde_json::json!({
+        "recorded": "state_transition",
+        "transition_id": record.transition_id,
+        "subject": record.subject.identity,
+        "from_state": record.from_state,
+        "to_state": record.to_state,
+        "record_sha256": record_sha256,
+        "log": args.log.display().to_string(),
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1475,9 +1674,9 @@ mod tests {
         assert_eq!(report.status, "draft");
         assert_eq!(report.total_vectors, 123);
         assert_eq!(report.implemented_vector_sets.len(), 4);
-        assert_eq!(report.total_compiler_fixtures, 70);
+        assert_eq!(report.total_compiler_fixtures, 71);
         assert_eq!(report.implemented_compiler_fixture_sets.len(), 5);
-        assert_eq!(report.total_campaign_fixtures, 22);
+        assert_eq!(report.total_campaign_fixtures, 25);
         assert_eq!(report.total_supplemental_fixtures, 39);
         assert_eq!(report.implemented_supplemental_fixture_sets.len(), 2);
         assert_eq!(report.implemented_campaign_fixture_sets.len(), 1);

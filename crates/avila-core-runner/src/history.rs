@@ -22,6 +22,7 @@ use avila_core_evidence::signature::TrustRoot;
 use avila_core_kernel::canonicalize_json;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 
 use crate::attempt::{
     AttemptChange, AttemptLineageRequest, AttemptRecord, PriorAttempt, diff_candidate_states,
@@ -166,6 +167,22 @@ pub(crate) struct AmendmentEntry {
     pub(crate) line: usize,
 }
 
+/// ADR-0021: an attestation record carried in the log, in append order.
+#[derive(Debug)]
+pub(crate) struct AttestationEntry {
+    pub(crate) record: crate::transitions::Attestation,
+    pub(crate) record_sha256: String,
+    pub(crate) line: usize,
+}
+
+/// ADR-0021: a state-transition record carried in the log, in append order.
+#[derive(Debug)]
+pub(crate) struct TransitionEntry {
+    pub(crate) record: crate::transitions::StateTransition,
+    pub(crate) record_sha256: String,
+    pub(crate) line: usize,
+}
+
 /// One parsed campaign log: every lineage-bearing record kind indexed by
 /// id. Legacy rows with no `attempt` member and no recognized
 /// `record_kind` are outside the lineage model and do not appear here;
@@ -179,6 +196,11 @@ pub(crate) struct LogView {
     /// Every reference record for a name, in append order.
     pub(crate) references: BTreeMap<String, Vec<ReferenceEntry>>,
     pub(crate) amendments: BTreeMap<String, AmendmentEntry>,
+    /// ADR-0021 attestation records, by id.
+    pub(crate) attestations: BTreeMap<String, AttestationEntry>,
+    /// ADR-0021 state-transition records, in append order — order matters:
+    /// a subject's current state is the last legal transition's `to_state`.
+    pub(crate) transitions: Vec<TransitionEntry>,
     /// Run-row sha256 to parsed attempt entry, for assessment citation.
     run_rows_by_sha256: BTreeMap<String, String>,
 }
@@ -302,6 +324,32 @@ pub(crate) fn parse_log(content: &str, path: &Path) -> Result<LogView, String> {
                         path.display()
                     ));
                 }
+            }
+            Some("attestation") => {
+                let record: crate::transitions::Attestation =
+                    parse_record(&entry, line, "attestation", path)?;
+                let id = record.attestation_id.clone();
+                let prior = AttestationEntry {
+                    record,
+                    record_sha256,
+                    line,
+                };
+                if let Some(first) = view.attestations.insert(id.clone(), prior) {
+                    return Err(format!(
+                        "attestation id `{id}` occurs on both lines {} and {line} of `{}`",
+                        first.line,
+                        path.display()
+                    ));
+                }
+            }
+            Some("state_transition") => {
+                let record: crate::transitions::StateTransition =
+                    parse_record(&entry, line, "state_transition", path)?;
+                view.transitions.push(TransitionEntry {
+                    record,
+                    record_sha256,
+                    line,
+                });
             }
             Some(kind) => {
                 return Err(format!(
@@ -467,6 +515,152 @@ pub(crate) fn validate_log(view: &LogView, trust_root: Option<&TrustRoot>) -> Re
     }
     for (id, entry) in &view.amendments {
         validate_amendment(view, id, entry)?;
+    }
+    validate_transitions(view, trust_root)?;
+    Ok(())
+}
+
+/// ADR-0021: fold the attestation and transition records. An attestation
+/// must be structurally sound and — when a trust root is supplied — its
+/// signature must verify under the record's own role. A transition must be
+/// legal under its subject kind's closed table, continue the subject's
+/// derived state, and name an attestation signed under the required role.
+fn validate_transitions(view: &LogView, trust_root: Option<&TrustRoot>) -> Result<(), String> {
+    use crate::transitions::{legal_transition, required_role, state_in_vocabulary};
+
+    for (id, entry) in &view.attestations {
+        let record = &entry.record;
+        if record.schema_version != crate::transitions::ATTESTATION_SCHEMA_VERSION {
+            return Err(format!(
+                "attestation `{id}` carries schema_version `{}`, not `{}`",
+                record.schema_version,
+                crate::transitions::ATTESTATION_SCHEMA_VERSION
+            ));
+        }
+        // A `transition` subject is resolvable inside the log itself: the
+        // identity must name a recorded transition and the digest must be
+        // its exact record. Other subject kinds bind material the log does
+        // not itself carry and are verified where that material is checked.
+        if record.subject.kind == crate::transitions::AttestationSubjectKind::Transition {
+            let target = view
+                .transitions
+                .iter()
+                .find(|transition| transition.record.transition_id == record.subject.identity)
+                .ok_or_else(|| {
+                    format!(
+                        "attestation `{id}` names transition `{}`, which does not exist in this log",
+                        record.subject.identity
+                    )
+                })?;
+            if target.record_sha256 != record.subject.sha256 {
+                return Err(format!(
+                    "attestation `{id}` binds transition `{}` at a digest that is not its record",
+                    record.subject.identity
+                ));
+            }
+        }
+        // The signed target is the record's canonical bytes with the
+        // `signature` member absent — the same definition the package
+        // documents use. Internal consistency is checked unconditionally;
+        // trust-root verification runs only when a root is supplied.
+        let mut unsigned = serde_json::to_value(record)
+            .map_err(|error| format!("attestation `{id}` does not serialize: {error}"))?;
+        unsigned
+            .as_object_mut()
+            .and_then(|object| object.remove("signature"));
+        let canonical = avila_core_kernel::canonicalize_json(
+            &serde_json::to_vec(&unsigned)
+                .map_err(|error| format!("attestation `{id}` does not serialize: {error}"))?,
+        )
+        .map_err(|error| format!("attestation `{id}` does not canonicalize: {error}"))?;
+        let digest: [u8; 32] = Sha256::digest(&canonical).into();
+        avila_core_evidence::signature::check_internal_consistency(&record.signature, &digest)
+            .map_err(|error| {
+                format!(
+                    "CORE-X6403: attestation `{id}` signature is not internally consistent: {error}"
+                )
+            })?;
+        if let Some(trust_root) = trust_root {
+            avila_core_evidence::signature::verify_signature_document(
+                &record.signature,
+                trust_root,
+                record.role,
+            )
+            .map_err(|error| {
+                format!("CORE-X6403: attestation `{id}` does not verify under its role: {error}")
+            })?;
+        }
+    }
+
+    // Fold transitions in append order per subject identity.
+    let mut states: BTreeMap<String, String> = BTreeMap::new();
+    for entry in &view.transitions {
+        let record = &entry.record;
+        let id = &record.transition_id;
+        if record.schema_version != crate::transitions::STATE_TRANSITION_SCHEMA_VERSION {
+            return Err(format!(
+                "state transition `{id}` carries schema_version `{}`, not `{}`",
+                record.schema_version,
+                crate::transitions::STATE_TRANSITION_SCHEMA_VERSION
+            ));
+        }
+        let kind = record.subject.kind;
+        for state in [&record.from_state, &record.to_state] {
+            if !state_in_vocabulary(kind, state) {
+                return Err(format!(
+                    "CORE-X6402: transition `{id}` on line {} names `{state}`, which the {} vocabulary does not contain",
+                    entry.line,
+                    kind.label()
+                ));
+            }
+        }
+        let subject_key = format!("{}:{}", kind.label(), record.subject.identity);
+        let prior = states
+            .get(&subject_key)
+            .cloned()
+            .unwrap_or_else(|| crate::transitions::initial_state(kind).to_string());
+        if record.from_state != prior {
+            return Err(format!(
+                "CORE-X6402: transition `{id}` on line {} claims {} `{}` moves from `{}`, but the derived state is `{prior}`",
+                entry.line,
+                kind.label(),
+                record.subject.identity,
+                record.from_state
+            ));
+        }
+        if !legal_transition(kind, &record.from_state, &record.to_state) {
+            return Err(format!(
+                "CORE-X6402: `{id}` on line {} is an illegal {} transition: `{}` cannot move to `{}`",
+                entry.line,
+                kind.label(),
+                record.from_state,
+                record.to_state
+            ));
+        }
+        let attestation = view
+            .attestations
+            .get(&record.actor_attestation.attestation_id)
+            .ok_or_else(|| {
+                format!(
+                    "CORE-X6403: transition `{id}` names attestation `{}`, which does not exist in this log",
+                    record.actor_attestation.attestation_id
+                )
+            })?;
+        if attestation.record_sha256 != record.actor_attestation.sha256 {
+            return Err(format!(
+                "CORE-X6403: transition `{id}` cites attestation `{}` at a digest that does not match the record in this log",
+                record.actor_attestation.attestation_id
+            ));
+        }
+        let required = required_role(kind, &record.from_state, &record.to_state)
+            .expect("legality checked above");
+        if attestation.record.role != required {
+            return Err(format!(
+                "CORE-X6403: transition `{id}` requires a `{required}` attestation, but `{}` asserts `{}`",
+                record.actor_attestation.attestation_id, attestation.record.role
+            ));
+        }
+        states.insert(subject_key, record.to_state.clone());
     }
     Ok(())
 }
@@ -1016,7 +1210,7 @@ pub struct RevisionRequest {
     pub intent: Option<String>,
 }
 
-fn read_log(path: &Path) -> Result<String, Box<dyn Error>> {
+pub(crate) fn read_log(path: &Path) -> Result<String, Box<dyn Error>> {
     match fs::read_to_string(path) {
         Ok(content) => Ok(content),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
@@ -1366,6 +1560,7 @@ pub(crate) fn append_assessment(
 mod tests {
     use super::*;
     use crate::attempt::{ATTEMPT_LINEAGE_SCHEMA_VERSION, AttemptRecord};
+    use avila_core_evidence::signature::KeyRole;
     use serde_json::json;
 
     struct Scratch(PathBuf);
@@ -2119,5 +2314,437 @@ mod tests {
             error.to_string().contains("amendments link lineage roots"),
             "{error}"
         );
+    }
+
+    // ---- ADR-0021: attestations and state transitions ----
+
+    fn test_seed() -> [u8; 32] {
+        [7u8; 32]
+    }
+
+    fn attestation_request(id: &str, role: KeyRole) -> crate::transitions::AttestationRequest {
+        crate::transitions::AttestationRequest {
+            attestation_id: id.into(),
+            subject: crate::transitions::AttestationSubject {
+                kind: crate::transitions::AttestationSubjectKind::Campaign,
+                identity: "camp-1".into(),
+                sha256: digest("campaign dossier"),
+            },
+            statement: crate::transitions::AttestationStatement::Approves,
+            detail: "test attestation".into(),
+            actor: crate::transitions::ActorRef {
+                actor_id: "operator-1".into(),
+                actor_kind: crate::transitions::ActorKind::Person,
+            },
+            role,
+        }
+    }
+
+    fn transition_request(
+        id: &str,
+        kind: crate::transitions::TransitionSubjectKind,
+        identity: &str,
+        to: &str,
+        attestation_id: &str,
+    ) -> crate::transitions::TransitionRequest {
+        crate::transitions::TransitionRequest {
+            transition_id: id.into(),
+            subject: crate::transitions::TransitionSubject {
+                kind,
+                identity: identity.into(),
+            },
+            to_state: to.into(),
+            attestation_id: attestation_id.into(),
+            at: "2026-09-19T00:00:00Z".into(),
+            rationale: "test".into(),
+            step_effects: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn an_attestation_and_transition_derive_the_campaign_state() {
+        let scratch = Scratch::new("transition-happy");
+        let log = scratch.join("campaign.jsonl");
+        crate::transitions::append_attestation(
+            &log,
+            &attestation_request("att-001", KeyRole::Requester),
+            &test_seed(),
+            None,
+            None,
+        )
+        .unwrap();
+        let (record, _) = crate::transitions::append_transition(
+            &log,
+            &transition_request(
+                "tr-001",
+                crate::transitions::TransitionSubjectKind::Campaign,
+                "camp-1",
+                "running",
+                "att-001",
+            ),
+            None,
+            None,
+        )
+        .unwrap();
+        assert_eq!(record.from_state, "planned");
+        assert_eq!(record.to_state, "running");
+        let view = view_of(&log);
+        assert_eq!(view.attestations.len(), 1);
+        assert_eq!(view.transitions.len(), 1);
+        assert_eq!(
+            crate::transitions::derived_state(
+                &view,
+                crate::transitions::TransitionSubjectKind::Campaign,
+                "camp-1"
+            ),
+            "running"
+        );
+    }
+
+    #[test]
+    fn an_illegal_transition_edge_is_refused() {
+        let scratch = Scratch::new("transition-illegal");
+        let log = scratch.join("campaign.jsonl");
+        crate::transitions::append_attestation(
+            &log,
+            &attestation_request("att-001", KeyRole::Requester),
+            &test_seed(),
+            None,
+            None,
+        )
+        .unwrap();
+        // `planned` cannot move straight to `completed`.
+        let error = crate::transitions::append_transition(
+            &log,
+            &transition_request(
+                "tr-001",
+                crate::transitions::TransitionSubjectKind::Campaign,
+                "camp-1",
+                "completed",
+                "att-001",
+            ),
+            None,
+            None,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("CORE-X6402"), "{error}");
+        // Nor a self-transition once running.
+        crate::transitions::append_transition(
+            &log,
+            &transition_request(
+                "tr-001",
+                crate::transitions::TransitionSubjectKind::Campaign,
+                "camp-1",
+                "running",
+                "att-001",
+            ),
+            None,
+            None,
+        )
+        .unwrap();
+        let error = crate::transitions::append_transition(
+            &log,
+            &transition_request(
+                "tr-002",
+                crate::transitions::TransitionSubjectKind::Campaign,
+                "camp-1",
+                "running",
+                "att-001",
+            ),
+            None,
+            None,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("CORE-X6402"), "{error}");
+    }
+
+    #[test]
+    fn a_transition_without_its_attestation_is_refused() {
+        let scratch = Scratch::new("transition-no-att");
+        let log = scratch.join("campaign.jsonl");
+        let error = crate::transitions::append_transition(
+            &log,
+            &transition_request(
+                "tr-001",
+                crate::transitions::TransitionSubjectKind::Campaign,
+                "camp-1",
+                "running",
+                "att-missing",
+            ),
+            None,
+            None,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("does not exist"), "{error}");
+    }
+
+    #[test]
+    fn a_transition_under_the_wrong_role_is_refused() {
+        let scratch = Scratch::new("transition-wrong-role");
+        let log = scratch.join("campaign.jsonl");
+        // Campaign `running -> superseded` requires a requester attestation;
+        // a runner attestation does not satisfy it.
+        crate::transitions::append_attestation(
+            &log,
+            &attestation_request("att-runner", KeyRole::Runner),
+            &test_seed(),
+            None,
+            None,
+        )
+        .unwrap();
+        crate::transitions::append_attestation(
+            &log,
+            &attestation_request("att-requester", KeyRole::Requester),
+            &test_seed(),
+            None,
+            None,
+        )
+        .unwrap();
+        crate::transitions::append_transition(
+            &log,
+            &transition_request(
+                "tr-001",
+                crate::transitions::TransitionSubjectKind::Campaign,
+                "camp-1",
+                "running",
+                "att-requester",
+            ),
+            None,
+            None,
+        )
+        .unwrap();
+        let error = crate::transitions::append_transition(
+            &log,
+            &transition_request(
+                "tr-002",
+                crate::transitions::TransitionSubjectKind::Campaign,
+                "camp-1",
+                "superseded",
+                "att-runner",
+            ),
+            None,
+            None,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("CORE-X6403"), "{error}");
+    }
+
+    #[test]
+    fn a_hand_written_line_claiming_the_wrong_from_state_fails_closed() {
+        let scratch = Scratch::new("transition-bad-from");
+        let log = scratch.join("campaign.jsonl");
+        crate::transitions::append_attestation(
+            &log,
+            &attestation_request("att-001", KeyRole::Requester),
+            &test_seed(),
+            None,
+            None,
+        )
+        .unwrap();
+        let (_, att_sha) = crate::transitions::append_attestation(
+            &log,
+            &attestation_request("att-002", KeyRole::Requester),
+            &test_seed(),
+            None,
+            None,
+        )
+        .unwrap();
+        // Forge a transition whose from_state does not equal the derived
+        // `planned`: the fold must refuse it.
+        let forged = crate::transitions::StateTransition {
+            schema_version: crate::transitions::STATE_TRANSITION_SCHEMA_VERSION.into(),
+            transition_id: "tr-forged".into(),
+            subject: crate::transitions::TransitionSubject {
+                kind: crate::transitions::TransitionSubjectKind::Campaign,
+                identity: "camp-1".into(),
+            },
+            from_state: "running".into(),
+            to_state: "completed".into(),
+            actor_attestation: crate::transitions::AttestationRef {
+                attestation_id: "att-002".into(),
+                sha256: att_sha,
+            },
+            at: "2026-09-19T00:00:00Z".into(),
+            rationale: String::new(),
+            step_effects: Vec::new(),
+        };
+        let line = crate::case_run::log::record_line("state_transition", &forged, None).unwrap();
+        use std::io::Write;
+        let mut file = fs::OpenOptions::new().append(true).open(&log).unwrap();
+        writeln!(file, "{line}").unwrap();
+        drop(file);
+        let view = parse_log(&fs::read_to_string(&log).unwrap(), &log).unwrap();
+        let error = validate_log(&view, None).unwrap_err();
+        assert!(error.contains("CORE-X6402"), "{error}");
+    }
+
+    #[test]
+    fn step_states_use_their_own_vocabulary() {
+        let scratch = Scratch::new("transition-step");
+        let log = scratch.join("campaign.jsonl");
+        crate::transitions::append_attestation(
+            &log,
+            &attestation_request("att-001", KeyRole::Runner),
+            &test_seed(),
+            None,
+            None,
+        )
+        .unwrap();
+        // The only recorded step move is cancellation of an in-flight
+        // step; a step with no transitions derives `pending`.
+        let (record, _) = crate::transitions::append_transition(
+            &log,
+            &transition_request(
+                "tr-001",
+                crate::transitions::TransitionSubjectKind::Step,
+                "camp-1/transport",
+                "cancelled",
+                "att-001",
+            ),
+            None,
+            None,
+        )
+        .unwrap();
+        assert_eq!(record.from_state, "pending");
+        assert_eq!(record.to_state, "cancelled");
+        // `completed` is not a step state.
+        let error = crate::transitions::append_transition(
+            &log,
+            &transition_request(
+                "tr-002",
+                crate::transitions::TransitionSubjectKind::Step,
+                "camp-1/other",
+                "completed",
+                "att-001",
+            ),
+            None,
+            None,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("CORE-X6402"), "{error}");
+    }
+
+    #[test]
+    fn a_policy_owner_attestation_authorizes_invalidation_under_a_trust_root() {
+        let scratch = Scratch::new("transition-policy-owner");
+        let log = scratch.join("campaign.jsonl");
+        let seed = test_seed();
+        let (key_id, _) = avila_core_evidence::signature::sign_digest(&seed, &[0u8; 32]);
+        let trust_root = avila_core_evidence::signature::TrustRoot {
+            schema_version: avila_core_evidence::signature::TRUST_ROOT_SCHEMA_VERSION.into(),
+            keys: vec![
+                avila_core_evidence::signature::TrustRootEntry {
+                    key_id: key_id.clone(),
+                    public_key_hex: avila_core_evidence::signature::public_key_hex_from_seed(&seed),
+                    role: KeyRole::Requester,
+                },
+                avila_core_evidence::signature::TrustRootEntry {
+                    key_id,
+                    public_key_hex: avila_core_evidence::signature::public_key_hex_from_seed(&seed),
+                    role: KeyRole::PolicyOwner,
+                },
+            ],
+        };
+        // One key listed under two roles: the requester attestation runs the
+        // campaign, but only the policy_owner listing authorizes invalidation.
+        crate::transitions::append_attestation(
+            &log,
+            &attestation_request("att-001", KeyRole::Requester),
+            &seed,
+            None,
+            Some(&trust_root),
+        )
+        .unwrap();
+        crate::transitions::append_attestation(
+            &log,
+            &attestation_request("att-002", KeyRole::PolicyOwner),
+            &seed,
+            None,
+            Some(&trust_root),
+        )
+        .unwrap();
+        for (id, to, att) in [
+            ("tr-1", "running", "att-001"),
+            ("tr-2", "completed", "att-001"),
+            ("tr-3", "invalidated", "att-002"),
+        ] {
+            crate::transitions::append_transition(
+                &log,
+                &transition_request(
+                    id,
+                    crate::transitions::TransitionSubjectKind::Campaign,
+                    "camp-1",
+                    to,
+                    att,
+                ),
+                None,
+                Some(&trust_root),
+            )
+            .unwrap();
+        }
+        let view = view_of(&log);
+        assert_eq!(
+            crate::transitions::derived_state(
+                &view,
+                crate::transitions::TransitionSubjectKind::Campaign,
+                "camp-1"
+            ),
+            "invalidated"
+        );
+        // The same key under only the requester role could not have
+        // authorized that move: a root without the policy_owner listing
+        // makes the log fail validation.
+        let requester_only = avila_core_evidence::signature::TrustRoot {
+            schema_version: trust_root.schema_version.clone(),
+            keys: vec![trust_root.keys[0].clone()],
+        };
+        let error = validate_log(&view, Some(&requester_only)).unwrap_err();
+        assert!(error.contains("CORE-X6403"), "{error}");
+    }
+
+    #[test]
+    fn a_terminal_subject_rejects_every_move() {
+        let scratch = Scratch::new("transition-terminal");
+        let log = scratch.join("campaign.jsonl");
+        crate::transitions::append_attestation(
+            &log,
+            &attestation_request("att-001", KeyRole::Requester),
+            &test_seed(),
+            None,
+            None,
+        )
+        .unwrap();
+        for (id, to) in [("tr-1", "running"), ("tr-2", "completed")] {
+            crate::transitions::append_transition(
+                &log,
+                &transition_request(
+                    id,
+                    crate::transitions::TransitionSubjectKind::Campaign,
+                    "camp-1",
+                    to,
+                    "att-001",
+                ),
+                None,
+                None,
+            )
+            .unwrap();
+        }
+        // `completed` is terminal: nothing moves it again.
+        for to in ["running", "blocked", "superseded", "cancelled"] {
+            let error = crate::transitions::append_transition(
+                &log,
+                &transition_request(
+                    "tr-x",
+                    crate::transitions::TransitionSubjectKind::Campaign,
+                    "camp-1",
+                    to,
+                    "att-001",
+                ),
+                None,
+                None,
+            )
+            .unwrap_err();
+            assert!(error.to_string().contains("CORE-X6402"), "{error}");
+        }
     }
 }

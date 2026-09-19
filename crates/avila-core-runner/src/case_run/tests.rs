@@ -1,4 +1,4 @@
-use super::gates::build_presentation_gates;
+use super::gates::{build_presentation_gates, find_lapsed_gates};
 use super::stderr::{
     DIAGNOSTIC_STDERR_MAX_CHARS, DIAGNOSTIC_STDERR_MAX_LINES, DIAGNOSTIC_STDERR_READ_BYTES,
     DiagnosticStderrFeedback, read_diagnostic_stderr, sanitize_diagnostic_stderr,
@@ -215,7 +215,7 @@ fn case_001_materializes_an_exact_optional_practical_review_request() {
         .unwrap();
     assert_eq!(transport.verdict.status, VerdictStatus::Fail);
 
-    let stages = build_presentation_gates(compiled, &claims, &campaign).unwrap();
+    let stages = build_presentation_gates(compiled, &claims, &campaign, None).unwrap();
     let [stage] = stages.as_slice() else {
         panic!("CASE-001 must materialize exactly one staged review request");
     };
@@ -260,9 +260,13 @@ fn case_001_materializes_an_exact_optional_practical_review_request() {
     let without_transport_bytes = serde_json::to_vec(&without_transport).unwrap();
     let campaign_without_transport =
         evaluate_campaign(&contract, &registry, &without_transport_bytes).unwrap();
-    let stages =
-        build_presentation_gates(compiled, &without_transport, &campaign_without_transport)
-            .unwrap();
+    let stages = build_presentation_gates(
+        compiled,
+        &without_transport,
+        &campaign_without_transport,
+        None,
+    )
+    .unwrap();
     assert_eq!(
         stages[0].readiness,
         PresentationGateReadiness::AwaitingEvidence
@@ -273,6 +277,28 @@ fn case_001_materializes_an_exact_optional_practical_review_request() {
             step_id: "transport".into(),
             output_slot: "transport-result".into(),
         }]
+    );
+}
+
+/// ADR-0021 X6401: a gate whose recorded `respond_by` precedes the run's
+/// `now` surfaces once per `request_sha256`; a deadline still ahead, or a
+/// gate carrying no deadline, produces nothing.
+#[test]
+fn a_lapsed_presentation_gate_deadline_is_found_once_per_request() {
+    let log = concat!(
+        r#"{"record_kind":"run","presentation_gates":[{"step_id":"review","request_sha256":"sha256:aaa","respond_by":"2026-09-18T12:00:00Z"}]}"#,
+        "\n",
+        r#"{"record_kind":"run","presentation_gates":[{"step_id":"review","request_sha256":"sha256:aaa","respond_by":"2026-09-18T12:00:00Z"},{"step_id":"review2","request_sha256":"sha256:bbb","respond_by":"2026-09-20T12:00:00Z"},{"step_id":"review3","request_sha256":"sha256:ccc"}]}"#,
+        "\n"
+    );
+    let lapsed = find_lapsed_gates(log, "2026-09-19T00:00:00Z");
+    assert_eq!(
+        lapsed,
+        vec![(
+            "review".to_string(),
+            "sha256:aaa".to_string(),
+            "2026-09-18T12:00:00Z".to_string()
+        )]
     );
 }
 
@@ -484,6 +510,7 @@ fn case_000_executes_both_tools_when_available() {
         inputs: BTreeMap::new(),
         environment: BTreeMap::new(),
         log: None,
+        gate_respond_by: None,
         expected_manifest_sha256: None,
         attempt: None,
         hash_cache: None,

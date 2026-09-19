@@ -366,6 +366,7 @@ fn run_options(synthetic: &Synthetic, workspace: PathBuf) -> CaseRunOptions {
         inputs: BTreeMap::new(),
         environment: BTreeMap::new(),
         log: None,
+        gate_respond_by: None,
         expected_manifest_sha256: None,
         attempt: None,
         hash_cache: None,
@@ -588,6 +589,71 @@ fn honest_execution_generates_claims_and_replays() {
         .find(|claim| claim["claim_id"] == "aftermatter-r0-clive-route-state")
         .unwrap();
     assert_eq!(route_state["claim"]["value"], json!("unresolved"));
+}
+
+/// ADR-0021 X6404: a run row appended for a campaign whose recorded state
+/// is terminal or blocked still appends — the finding marks the
+/// disagreement between new execution evidence and the transition record.
+#[test]
+fn a_run_against_a_completed_campaign_marks_the_disagreement() {
+    let dir = TestDir::new();
+    let synthetic = blessed(&dir);
+    let log = dir.0.join("campaign-log.jsonl");
+    let seed = [9u8; 32];
+    let attestation = crate::transitions::AttestationRequest {
+        attestation_id: "att-001".into(),
+        subject: crate::transitions::AttestationSubject {
+            kind: crate::transitions::AttestationSubjectKind::Campaign,
+            identity: "CASE-STUB".into(),
+            sha256: "sha256:".to_string() + &"0".repeat(64),
+        },
+        statement: crate::transitions::AttestationStatement::Approves,
+        detail: "test".into(),
+        actor: crate::transitions::ActorRef {
+            actor_id: "operator-1".into(),
+            actor_kind: crate::transitions::ActorKind::Person,
+        },
+        role: avila_core_evidence::signature::KeyRole::Requester,
+    };
+    crate::transitions::append_attestation(&log, &attestation, &seed, None, None).unwrap();
+    for (id, to) in [("tr-1", "running"), ("tr-2", "completed")] {
+        crate::transitions::append_transition(
+            &log,
+            &crate::transitions::TransitionRequest {
+                transition_id: id.into(),
+                subject: crate::transitions::TransitionSubject {
+                    kind: crate::transitions::TransitionSubjectKind::Campaign,
+                    identity: "CASE-STUB".into(),
+                },
+                to_state: to.into(),
+                attestation_id: "att-001".into(),
+                at: "2026-09-19T00:00:00Z".into(),
+                rationale: "test".into(),
+                step_effects: Vec::new(),
+            },
+            None,
+            None,
+        )
+        .unwrap();
+    }
+
+    let mut options = run_options(&synthetic, dir.workspace());
+    options.log = Some(log);
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    // The run still evaluates and appends; the finding records that the
+    // evidence and the recorded lifecycle now disagree.
+    assert_eq!(
+        report.status,
+        CaseRunStatus::Evaluated,
+        "{}",
+        human_summary(&report)
+    );
+    let finding = report
+        .findings
+        .iter()
+        .find(|finding| finding.code == crate::diagnostic::CORE_X6404)
+        .expect("a run against a `completed` campaign must emit CORE-X6404");
+    assert!(finding.message.contains("completed"), "{}", finding.message);
 }
 
 #[test]

@@ -117,6 +117,10 @@ same checks as `selection.*` mismatches.
 | `CORE-X3401` | Reuse rule not admissible | execution planning |
 | `CORE-X3404` | Qualification record refused under recognition policy | package integrity |
 | `CORE-X3405` | Qualification revocation could not be authenticated | package integrity |
+| `CORE-X6401` | Presentation-gate response deadline lapsed | campaign evaluation |
+| `CORE-X6402` | Illegal state transition recorded | campaign evaluation |
+| `CORE-X6403` | Transition attestation missing or unauthorized | campaign evaluation |
+| `CORE-X6404` | Run disagrees with recorded campaign state | campaign evaluation |
 | `CORE-X9001` | Runner could not produce a case report | infrastructure |
 
 The full meaning and next action for each runtime code live in the embedded

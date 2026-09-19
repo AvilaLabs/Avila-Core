@@ -1047,6 +1047,7 @@ mod tests {
             inputs: BTreeMap::new(),
             environment: BTreeMap::new(),
             log: Some(temp.0.join("attempts.jsonl")),
+            gate_respond_by: None,
             expected_manifest_sha256: None,
             attempt: None,
             hash_cache: None,

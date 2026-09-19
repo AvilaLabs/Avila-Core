@@ -508,6 +508,7 @@ impl CaseSetup {
             hash_cache: (!self.hash_cache.trim().is_empty())
                 .then(|| PathBuf::from(self.hash_cache.trim())),
             log: (!self.log.trim().is_empty()).then(|| PathBuf::from(self.log.trim())),
+            gate_respond_by: None,
             trust_root: (!self.trust_root.trim().is_empty())
                 .then(|| PathBuf::from(self.trust_root.trim())),
             runner_key: (!self.runner_key.trim().is_empty())

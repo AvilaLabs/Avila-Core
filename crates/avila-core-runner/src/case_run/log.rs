@@ -152,6 +152,8 @@ pub(crate) fn append_log(
         reviewer_role: ReviewerRole,
         readiness: PresentationGateReadiness,
         request_sha256: &'a str,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        respond_by: Option<&'a str>,
     }
     let entry = LogEntry {
         schema_version: RUN_ATTEMPT_LOG_SCHEMA_VERSION,
@@ -223,6 +225,7 @@ pub(crate) fn append_log(
                 reviewer_role: gate.reviewer_role,
                 readiness: gate.readiness,
                 request_sha256: &gate.request_sha256,
+                respond_by: gate.respond_by.as_deref(),
             })
             .collect(),
         coverage: report.coverage.as_ref().map(|coverage| CoverageLog {

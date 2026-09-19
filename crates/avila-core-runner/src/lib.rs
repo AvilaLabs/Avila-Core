@@ -17,6 +17,7 @@ mod diagnostic;
 mod execute;
 mod history;
 pub mod query;
+pub mod transitions;
 
 pub use attempt::{
     ATTEMPT_COMPARISON_SCHEMA_VERSION, ATTEMPT_LINEAGE_SCHEMA_VERSION, AttemptChange,

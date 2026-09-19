@@ -24,13 +24,13 @@ pub use campaign::{
     evaluate_campaign, evaluate_campaign_with_artifacts,
 };
 pub use catalog::{DIAGNOSTIC_CATALOG, DiagnosticExplanation, explain};
-pub use compile::instantiation::InstantiationMaterial;
+pub use compile::instantiation::CompilationMaterial;
 pub use compile::{
     COMPILE_NOTICE, CanonicalTypedQuantity, CompilationStatus, CompileReport,
     CompiledCategoricalRequirement, CompiledContract, CompiledParameterValue,
     CompiledPresentationGate, CompiledReproducibility, CompiledRequirement, CompiledStep,
     CompilerError, DocumentIdentity, PresentationGateState, ResolvedBinding, compile_documents,
-    compile_documents_with_instantiation, validate_against_schema,
+    compile_documents_with_material, validate_against_schema,
 };
 pub use coverage::{
     COVERAGE_REPORT_SCHEMA_VERSION, CoverageDeclaration, CoverageEntry, CoverageReport,
@@ -40,12 +40,13 @@ pub use coverage::{
 };
 pub use diagnostic::{
     COMPILER_FINDING_CODES, CORE_A4101, CORE_A4201, CORE_A4301, CORE_A4601, CORE_A4602, CORE_A4603,
-    CORE_A4701, CORE_E7001, CORE_E7002, CORE_E7101, CORE_E7103, CORE_E7201, CORE_E7301, CORE_R3101,
-    CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301, CORE_R3401, CORE_R3501, CORE_R3601,
-    CORE_R3602, CORE_S1101, CORE_S1102, CORE_S1103, CORE_S1301, CORE_T2001, CORE_T2101, CORE_T2102,
-    CORE_T2103, CORE_T2104, CORE_T2201, CORE_T2203, CORE_T2301, CORE_T2401, CORE_T2402, CORE_T2501,
-    CORE_T2601, CORE_T2701, CORE_T2702, CoreDiagnostic, DiagnosticRepair, FindingClass,
-    RepairApplicability, RepairEdit, SourceLocation,
+    CORE_A4701, CORE_A4801, CORE_A4802, CORE_A4803, CORE_A4804, CORE_A4805, CORE_A4806, CORE_A4901,
+    CORE_A4902, CORE_A4903, CORE_A4904, CORE_A4905, CORE_E7001, CORE_E7002, CORE_E7101, CORE_E7103,
+    CORE_E7201, CORE_E7301, CORE_R3101, CORE_R3102, CORE_R3201, CORE_R3202, CORE_R3203, CORE_R3301,
+    CORE_R3401, CORE_R3501, CORE_R3601, CORE_R3602, CORE_S1101, CORE_S1102, CORE_S1103, CORE_S1301,
+    CORE_T2001, CORE_T2101, CORE_T2102, CORE_T2103, CORE_T2104, CORE_T2201, CORE_T2203, CORE_T2301,
+    CORE_T2401, CORE_T2402, CORE_T2501, CORE_T2601, CORE_T2701, CORE_T2702, CoreDiagnostic,
+    DiagnosticRepair, FindingClass, RepairApplicability, RepairEdit, SourceLocation,
 };
 pub use document::{
     AuthoredBinding, BasisKind, BoundSide, COMPILE_REPORT_SCHEMA_VERSION,
@@ -57,8 +58,9 @@ pub use document::{
     EligibilityAttributeIn, EligibilityAttributeRange, EligibilityOutcome, EligibilityPredicate,
     EligibilityRule, ExactBound, ExecutionFactorDefinition, ExecutionPolicy, ImmutablePolicyRef,
     IndependenceRequirement, InputField, InputFieldPredicate, InputSlotDefinition,
-    InstantiationRef, IntegerBound, KindRecord, OutputSlotDefinition, ParameterDefinition,
-    ParameterType, PolicyCostCap, PurposeDefinition, QuantityBound, QuantityValue,
+    InstantiationRef, IntegerBound, KindRecord, ORGANIZATION_POLICY_SCHEMA_VERSION,
+    OrganizationPolicy, OrganizationPolicyRef, OutputSlotDefinition, ParameterDefinition,
+    ParameterType, PolicyCostCap, PolicyRelation, PurposeDefinition, QuantityBound, QuantityValue,
     REGISTRY_SCHEMA_VERSION, RecordedEligibility, RegistrySnapshot, ReproducibilityBinding,
     ReproducibilityDeclaration, RequirementBasis, RequirementSource, ReviewDeclaration,
     ReviewDisposition, ReviewIndependence, ReviewParty, ReviewPolicyBinding, ReviewerRole,

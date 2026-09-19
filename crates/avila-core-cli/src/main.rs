@@ -352,15 +352,23 @@ struct AttestArgs {
     log: PathBuf,
     /// Which kind of record the statement covers.
     #[arg(long = "subject-kind", value_name = "KIND",
-          value_parser = ["contract", "campaign", "transition", "manifest"])]
+          value_parser = ["contract", "campaign", "transition", "manifest", "organization_policy"])]
     subject_kind: String,
     /// The subject's bound identity (contract `id@rev`, campaign id,
-    /// transition id, or manifest id).
+    /// transition id, manifest id, or `policy_id@rev`).
     #[arg(long = "subject-identity", value_name = "ID")]
     subject_identity: String,
     /// The exact document digest the statement covers.
     #[arg(long = "subject-sha256", value_name = "SHA256")]
     subject_sha256: String,
+    /// A second identity the statement binds (ADR-0023: for a replacement
+    /// authorization, `contract` — both `--target-*` must be given together).
+    #[arg(long = "target-kind", value_name = "KIND",
+          value_parser = ["contract", "campaign", "transition", "manifest", "organization_policy"])]
+    target_kind: Option<String>,
+    /// The target's bound identity (e.g. the authorized contract `id@rev`).
+    #[arg(long = "target-identity", value_name = "ID")]
+    target_identity: Option<String>,
     /// The statement word — the closed vocabulary.
     #[arg(long, value_name = "WORD",
           value_parser = ["approves", "authors", "reviews", "waives", "rescinds"])]
@@ -1603,6 +1611,20 @@ fn run_attest(args: AttestArgs) -> Result<serde_json::Value, Box<dyn Error>> {
         },
         statement: parse_enum("statement", &args.statement)?,
         detail: args.detail,
+        target: match (&args.target_kind, &args.target_identity) {
+            (Some(kind), Some(identity)) => {
+                Some(avila_core_runner::transitions::AttestationTarget {
+                    kind: parse_enum("target kind", kind)?,
+                    identity: identity.clone(),
+                })
+            }
+            (None, None) => None,
+            _ => {
+                return Err(
+                    "`--target-kind` and `--target-identity` must be supplied together".into(),
+                );
+            }
+        },
         actor: avila_core_runner::transitions::ActorRef {
             actor_id: args.actor_id,
             actor_kind: parse_enum("actor kind", &args.actor_kind)?,

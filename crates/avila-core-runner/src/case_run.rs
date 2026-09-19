@@ -17,9 +17,9 @@ use avila_core_compiler::{
     CompileReport, CompiledContract, CompiledStep, CoverageDeclaration, CoverageReport,
     CoverageStatus, DeclaredOmission, EnvelopeAssessment, FindingClass, ImmutablePolicyRef,
     PresentationGateState, RegistrySnapshot, ReviewDisposition, ReviewIndependence, ReviewerRole,
-    SourceLocation, SourceRef, assess_coverage, compile_documents_with_instantiation,
-    evaluate_campaign, evaluate_envelope, parse_requirement_set, registry_kinds,
-    render_campaign_report, render_compile_report,
+    SourceLocation, SourceRef, assess_coverage, compile_documents_with_material, evaluate_campaign,
+    evaluate_envelope, parse_requirement_set, registry_kinds, render_campaign_report,
+    render_compile_report,
 };
 use avila_core_evidence::signature::{self, TrustRoot};
 use avila_core_evidence::{
@@ -73,6 +73,7 @@ use compare::write_attempt_comparison;
 pub(crate) use compare::{compare_attempt_results, compare_verdict_sets};
 use compare::{compare_attempt_to_parent, margins};
 mod gates;
+mod policy;
 mod routing;
 use gates::build_presentation_gates;
 mod replay;
@@ -979,29 +980,30 @@ fn execute_case_inner(
     let committed_claims_bytes = required_document(&package, "claims")?;
     let committed_claims: Value = serde_json::from_slice(committed_claims_bytes)?;
 
-    // ADR-0022: instantiation material — every bound `contract_instantiation`
-    // record and `contract_template` document. The contract's own
-    // `instantiated_from` pin selects what it is checked against.
-    let instantiation_records: Vec<&[u8]> = package
-        .manifest
-        .documents
-        .iter()
-        .filter(|document| document.role == "contract_instantiation")
-        .filter_map(|document| package.document_by_id(&document.document_id))
-        .collect();
-    let instantiation_templates: Vec<&[u8]> = package
-        .manifest
-        .documents
-        .iter()
-        .filter(|document| document.role == "contract_template")
-        .filter_map(|document| package.document_by_id(&document.document_id))
-        .collect();
-    let instantiation_material = avila_core_compiler::InstantiationMaterial {
+    // Bound material — every package document of each pin-resolvable role.
+    // The contract's own `instantiated_from` (ADR-0022) and
+    // `organization_policy`/`replacement_attestation` (ADR-0023) pins
+    // select what they are checked against.
+    let bound_documents = |role: &str| -> Vec<&[u8]> {
+        package
+            .manifest
+            .documents
+            .iter()
+            .filter(|document| document.role == role)
+            .filter_map(|document| package.document_by_id(&document.document_id))
+            .collect()
+    };
+    let instantiation_records = bound_documents("contract_instantiation");
+    let instantiation_templates = bound_documents("contract_template");
+    let organization_policies = bound_documents("organization_policy");
+    let attestations = bound_documents("attestation");
+    let bound_material = avila_core_compiler::CompilationMaterial {
         records: &instantiation_records,
         templates: &instantiation_templates,
+        organization_policies: &organization_policies,
+        attestations: &attestations,
     };
-    let compile =
-        compile_documents_with_instantiation(contract, registry, &instantiation_material)?;
+    let compile = compile_documents_with_material(contract, registry, &bound_material)?;
     if compile.status == CompilationStatus::Rejected {
         report.rendered_findings = Some(render_compile_report(
             &compile,
@@ -1041,6 +1043,18 @@ fn execute_case_inner(
             SourceLocation::new("contract", "/execution_policy/require_signatures"),
             report.notice.clone(),
         ));
+        report.compile = Some(compile.clone());
+        return Ok(report);
+    }
+
+    // ADR-0023: a contract pinning an organization floor requires the
+    // floor's signature — and any `replaces` attestation's — to verify
+    // under a `policy_owner` key. The compiler proved the merge; the
+    // trust root lives here.
+    let org_policy_findings = policy::check_org_policy_signatures(contract, &package, trust_root);
+    if !org_policy_findings.is_empty() {
+        report.notice = "an organization policy or replacement attestation cannot authenticate under a `policy_owner` key; the run is refused".into();
+        report.findings.extend(org_policy_findings);
         report.compile = Some(compile.clone());
         return Ok(report);
     }

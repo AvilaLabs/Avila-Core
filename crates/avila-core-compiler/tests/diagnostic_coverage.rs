@@ -56,6 +56,26 @@ const TEST_PINNED: &[(&str, &str)] = &[
         "CORE-A4806",
         "avila-core-compiler compile::tests::instantiation — template_superseded notice",
     ),
+    (
+        "CORE-A4901",
+        "avila-core-compiler compile::tests::org_policy — tightens order per field",
+    ),
+    (
+        "CORE-A4902",
+        "avila-core-compiler compile::tests::org_policy — pin resolution, relation shape, exact-shape",
+    ),
+    (
+        "CORE-A4903",
+        "avila-core-compiler compile::tests::org_policy — replacement attestation binding (signature is the runner's half)",
+    ),
+    (
+        "CORE-A4904",
+        "avila-core-compiler compile::tests::org_policy + avila-core-runner case_run::tests — unsigned/malformed floor; signature checks need a trust root",
+    ),
+    (
+        "CORE-A4905",
+        "avila-core-compiler compile::tests::org_policy — policy_superseded notice",
+    ),
 ];
 
 fn fixture_root() -> PathBuf {

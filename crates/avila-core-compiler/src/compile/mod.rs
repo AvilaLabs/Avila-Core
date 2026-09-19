@@ -1,7 +1,7 @@
 //! Deterministic contract compilation, pass by pass.
 //!
 //! `compile_documents` is the entry point for ordinary contracts;
-//! `compile_documents_with_instantiation` additionally carries the bound
+//! `compile_documents_with_material` additionally carries the bound
 //! instantiation material an `instantiated_from` contract is checked
 //! against (ADR-0022). Each pass lives in its own module, reports
 //! independent findings, and never repairs a source document.
@@ -10,6 +10,7 @@ pub(crate) mod findings;
 pub(crate) mod instantiation;
 mod ir;
 mod notices;
+pub(crate) mod org_policy;
 pub(crate) mod registry;
 mod reproducibility;
 mod requirements;
@@ -57,6 +58,25 @@ pub use ir::{
     CompilerError, DocumentIdentity, PresentationGateState, ResolvedBinding,
 };
 
+/// Package-bound material a compile may consult beyond contract +
+/// registry, as raw bytes: ADR-0022 instantiation records and templates,
+/// ADR-0023 organization policies, and the bound `attestation` documents
+/// a `replaces` relation names. The contract's own pins select what it is
+/// checked against — material it does not name is ignored.
+#[derive(Debug, Default)]
+pub struct CompilationMaterial<'a> {
+    /// Every bound `contract_instantiation` document.
+    pub records: &'a [&'a [u8]],
+    /// Every bound `contract_template` document.
+    pub templates: &'a [&'a [u8]],
+    /// Every bound `organization_policy` document (ADR-0023).
+    pub organization_policies: &'a [&'a [u8]],
+    /// Every bound `attestation` document — the pool a `replaces`
+    /// relation's `replacement_attestation` digest resolves against
+    /// (structural checks only; signatures are the runner's boundary).
+    pub attestations: &'a [&'a [u8]],
+}
+
 const COMPILER_ID: &str = concat!("avila.core/compiler-rust@", env!("CARGO_PKG_VERSION"));
 
 const MAX_WORKFLOW_STEPS: usize = 2_048;
@@ -69,21 +89,21 @@ pub fn compile_documents(
     contract_bytes: &[u8],
     registry_bytes: &[u8],
 ) -> Result<CompileReport, CompilerError> {
-    compile_documents_with_instantiation(
+    compile_documents_with_material(
         contract_bytes,
         registry_bytes,
-        &instantiation::InstantiationMaterial::default(),
+        &instantiation::CompilationMaterial::default(),
     )
 }
 
-/// Compile a contract that may name an ADR-0022 `instantiated_from` record.
-/// `material` carries every package-bound `contract_instantiation` record and
-/// `contract_template` document; the contract's own `instantiated_from` pin
-/// selects the record it is checked against.
-pub fn compile_documents_with_instantiation(
+/// Compile a contract that may name package-bound material — an ADR-0022
+/// `instantiated_from` record, or an ADR-0023 `organization_policy` floor.
+/// `material` carries every bound document of each kind; the contract's
+/// own pins select what it is checked against.
+pub fn compile_documents_with_material(
     contract_bytes: &[u8],
     registry_bytes: &[u8],
-    material: &instantiation::InstantiationMaterial<'_>,
+    material: &instantiation::CompilationMaterial<'_>,
 ) -> Result<CompileReport, CompilerError> {
     let mut findings = Vec::new();
     let mut source_identities = Vec::new();
@@ -189,6 +209,11 @@ pub fn compile_documents_with_instantiation(
         );
     }
 
+    // ADR-0023: the pinned `organization_policy` floor merges against the
+    // contract's `execution_policy`; the merged result is what the
+    // compiled snapshot enforces.
+    let merged_policy = org_policy::check_org_policy(&contract, material, &mut findings);
+
     if !findings.iter().any(CoreDiagnostic::blocks_compilation) {
         report_unconsumed_declarations(
             &contract,
@@ -232,6 +257,7 @@ pub fn compile_documents_with_instantiation(
         workflow,
         requirements,
         categorical_requirements,
+        merged_policy.as_ref().unwrap_or(&contract.execution_policy),
     )?;
 
     Ok(CompileReport {
@@ -344,6 +370,7 @@ fn create_compiled_contract(
     workflow: Vec<CompiledStep>,
     requirements: Vec<CompiledRequirement>,
     categorical_requirements: Vec<CompiledCategoricalRequirement>,
+    execution_policy: &ExecutionPolicy,
 ) -> Result<CompiledContract, CompilerError> {
     #[derive(Serialize)]
     struct IdentityBody<'a> {
@@ -380,7 +407,7 @@ fn create_compiled_contract(
         registry_id: &registry.registry_id,
         registry_revision: registry.revision,
         registry_sha256: &registry_sha256,
-        execution_policy: &contract.execution_policy,
+        execution_policy,
         completion: contract.completion.as_ref(),
         inputs: &inputs,
         workflow: &workflow,
@@ -405,7 +432,7 @@ fn create_compiled_contract(
         registry_id: registry.registry_id.clone(),
         registry_revision: registry.revision,
         registry_sha256,
-        execution_policy: contract.execution_policy.clone(),
+        execution_policy: execution_policy.clone(),
         completion: contract.completion.clone(),
         inputs,
         workflow,

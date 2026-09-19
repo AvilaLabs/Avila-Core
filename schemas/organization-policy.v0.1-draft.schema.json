@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://avila.dev/schemas/organization-policy/v0.1-draft",
+  "title": "Organization policy",
+  "description": "ADR-0023: the organizational floor a contract's execution_policy derives from. `rules` reuses the execution_policy field vocabulary; a contract pins this document by digest and declares `tightens`, `exact`, or `replaces` against it (CORE-A4901..A4904).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "semantic_profile",
+    "policy_id",
+    "policy_revision",
+    "owner"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "avila.core/organization-policy/v0.1-draft"
+    },
+    "semantic_profile": {
+      "const": "avila.core/semantic/0.2-draft"
+    },
+    "policy_id": {
+      "$ref": "#/$defs/nonemptyString"
+    },
+    "policy_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "owner": {
+      "$ref": "#/$defs/nonemptyString",
+      "description": "The policy owner identity — the signature must verify under a key the trust root lists as `policy_owner`."
+    },
+    "rules": {
+      "$ref": "#/$defs/policyRules",
+      "description": "The least-strict rule set the organization accepts, in the execution_policy field vocabulary. Naming fields (organization_policy, relation, replacement_attestation) are meaningless in a floor and rejected (CORE-A4904)."
+    },
+    "supersedes": {
+      "$ref": "#/$defs/policyPin",
+      "description": "The digest pin of the policy revision this one supersedes. Informational; contracts pin the revision they named (CORE-A4905 reports drift)."
+    },
+    "signature": {
+      "type": "object",
+      "description": "The policy owner's ADR-0015 signature document over this record's canonical bytes with this member absent. Absent means unsigned — CORE-A4904."
+    }
+  },
+  "$defs": {
+    "nonemptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "exactNumber": {
+      "type": "string",
+      "description": "An exact decimal or rational in canonical form."
+    },
+    "versionedRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "major"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "major": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "minor": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        }
+      }
+    },
+    "policyPin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy_id", "policy_revision", "sha256"],
+      "properties": {
+        "policy_id": {
+          "$ref": "#/$defs/nonemptyString"
+        },
+        "policy_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      }
+    },
+    "policyRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The execution_policy rule fields — the same vocabulary the contract declares.",
+      "properties": {
+        "permitted_nondeterministic_roles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/versionedRef"
+          }
+        },
+        "permit_nominal_basis": {
+          "type": "boolean"
+        },
+        "require_qualification": {
+          "type": "boolean"
+        },
+        "recognized_qualification_owners": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "require_signatures": {
+          "type": "boolean"
+        },
+        "deny_providers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonemptyString"
+          }
+        },
+        "allow_providers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonemptyString"
+          }
+        },
+        "require_provider_independence": {
+          "type": "boolean"
+        },
+        "require_diverse_implementations": {
+          "type": "boolean"
+        },
+        "maturity_floor": {
+          "type": "string",
+          "enum": ["prototype", "development", "qualified", "production"]
+        },
+        "forbid_self_preference": {
+          "type": "boolean"
+        },
+        "cost_cap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value", "currency"],
+          "properties": {
+            "value": {
+              "$ref": "#/$defs/exactNumber"
+            },
+            "currency": {
+              "$ref": "#/$defs/nonemptyString"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -45,7 +45,7 @@ pub const CORE_X9001: &str = "CORE-X9001";
 /// ADR-0025: the compiler's attribute-vocabulary code, re-exported here so
 /// a qualification record's undeclared-attribute refusal can carry it at
 /// record load — the boundary where a bound record meets the contract.
-pub use avila_core_compiler::CORE_T2701;
+pub use avila_core_compiler::{CORE_A4903, CORE_A4904, CORE_T2701};
 pub const CORE_P5101: &str = "CORE-P5101";
 pub const CORE_P5102: &str = "CORE-P5102";
 pub const CORE_P5103: &str = "CORE-P5103";
@@ -60,16 +60,30 @@ pub const CORE_P5601: &str = "CORE-P5601";
 pub const CORE_P5602: &str = "CORE-P5602";
 
 pub const RUNTIME_FINDING_CODES: &[&str] = &[
-    CORE_P5101, CORE_P5102, CORE_P5103, CORE_P5201, CORE_P5301, CORE_P5302, CORE_P5303, CORE_P5304,
-    CORE_P5401, CORE_P5501, CORE_P5601, CORE_P5602, CORE_T2701, CORE_X1001, CORE_X1002, CORE_X1003,
-    CORE_X1004, CORE_X1005, CORE_X1101, CORE_X1201, CORE_X1301, CORE_X2001, CORE_X2101, CORE_X2201,
-    CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701, CORE_X2801, CORE_X3001,
-    CORE_X3101, CORE_X3201, CORE_X3301, CORE_X3401, CORE_X3404, CORE_X3405, CORE_X6401, CORE_X6402,
-    CORE_X6403, CORE_X6404, CORE_X6501, CORE_X6502, CORE_X9001,
+    CORE_A4903, CORE_A4904, CORE_P5101, CORE_P5102, CORE_P5103, CORE_P5201, CORE_P5301, CORE_P5302,
+    CORE_P5303, CORE_P5304, CORE_P5401, CORE_P5501, CORE_P5601, CORE_P5602, CORE_T2701, CORE_X1001,
+    CORE_X1002, CORE_X1003, CORE_X1004, CORE_X1005, CORE_X1101, CORE_X1201, CORE_X1301, CORE_X2001,
+    CORE_X2101, CORE_X2201, CORE_X2301, CORE_X2401, CORE_X2402, CORE_X2501, CORE_X2601, CORE_X2701,
+    CORE_X2801, CORE_X3001, CORE_X3101, CORE_X3201, CORE_X3301, CORE_X3401, CORE_X3404, CORE_X3405,
+    CORE_X6401, CORE_X6402, CORE_X6403, CORE_X6404, CORE_X6501, CORE_X6502, CORE_X9001,
 ];
 
 /// Explanations are served by `avila-core explain` alongside compiler codes.
 pub const RUNTIME_DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
+    DiagnosticExplanation {
+        code: CORE_A4903,
+        title: "Replacement attestation fails",
+        rule: "ADR-0023: `replaces` requires authorization",
+        meaning: "The contract's `execution_policy.relation` is `replaces`, but no bound attestation carries the `replacement_attestation` digest, or the named attestation fails its binding: it must be an `approves` statement by an actor in the `policy_owner` role, covering this exact organization policy (subject identity and digest) and this exact contract `id@revision` (target), signed under a `policy_owner` trust-root key. The compiler checks the binding fields; the signature is verified at run time.",
+        next_action: "Have a policy owner record an `approves` attestation with `subject: organization_policy:<id>@<rev>` at the policy's canonical digest and `target: contract:<id>@<rev>`, then pin its canonical digest in `replacement_attestation`. Without it, `replaces` is refused — a requester cannot authorize superseding an organization floor.",
+    },
+    DiagnosticExplanation {
+        code: CORE_A4904,
+        title: "Organization policy cannot authenticate",
+        rule: "ADR-0023 clause 6: the floor must be signed",
+        meaning: "The contract pins an `organization_policy` document that is malformed, unsigned, or whose signature cannot verify: the signature must be internally consistent over the document's canonical bytes with `signature` absent, and its key must be listed under the `policy_owner` role in the supplied trust root. A floor without a verifiable signature cannot strengthen or weaken the merged policy — the run refuses rather than guess.",
+        next_action: "Sign the organization policy with a key the trust root lists as `policy_owner`, run with `--trust-root` so verification is possible, or drop the `organization_policy` pin (relation `none` is the pre-ADR-0023 status quo).",
+    },
     DiagnosticExplanation {
         code: CORE_P5101,
         title: "No eligible capability candidate",

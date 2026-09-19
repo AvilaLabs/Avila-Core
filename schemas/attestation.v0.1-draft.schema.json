@@ -27,7 +27,7 @@
       "required": ["kind", "identity", "sha256"],
       "properties": {
         "kind": {
-          "enum": ["contract", "campaign", "transition", "manifest"],
+          "enum": ["contract", "campaign", "transition", "manifest", "organization_policy"],
           "description": "Which kind of record the statement covers."
         },
         "identity": {
@@ -47,6 +47,20 @@
     "detail": {
       "type": "string",
       "description": "Inert text carrying the stated detail of the statement."
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "identity"],
+      "properties": {
+        "kind": {
+          "enum": ["contract", "campaign", "transition", "manifest", "organization_policy"]
+        },
+        "identity": {
+          "$ref": "#/$defs/nonempty"
+        }
+      },
+      "description": "ADR-0023: a second identity the statement binds — for a `replaces` authorization, `contract` + the authorized `id@revision`. Named, never digest-pinned (the contract side pins this record; a digest in both directions is a cycle)."
     },
     "actor": {
       "type": "object",

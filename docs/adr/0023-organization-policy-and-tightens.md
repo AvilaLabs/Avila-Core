@@ -42,11 +42,15 @@ document. Fields:
   `semantic_profile`, `owner`.
 - `rules`: the same field vocabulary `execution_policy` already
   defines — `deny_providers`, `allow_providers`,
-  `require_provider_independence`, `require_diverse_implementations`,
-  `maturity_floor`, `forbid_self_preference`, `cost_cap`,
-  `require_signatures`, `permit_nominal_basis`,
-  `require_qualification` — no second rule language. The org document
-  declares the *floor*: the least strict rule the organization accepts.
+  `permitted_nondeterministic_roles`, `require_provider_independence`,
+  `require_diverse_implementations`, `maturity_floor`,
+  `forbid_self_preference`, `cost_cap`, `require_signatures`,
+  `permit_nominal_basis`, `require_qualification`,
+  `recognized_qualification_owners` — no second rule language. The org
+  document declares the *floor*: the least strict rule the organization
+  accepts. The merge-naming fields (`organization_policy`, `relation`,
+  `replacement_attestation`) are meaningless inside `rules` and are
+  rejected there.
 - `signature`: the policy owner's signature document, verified under
   the supplied trust root — an org floor signed by a requester key is
   as meaningless as a requester-signed runner receipt.
@@ -69,10 +73,16 @@ The contract names the floor it derives from:
 - `exact` — the contract adopts the org floor verbatim (its other
   rule fields must then be absent — there is nothing to merge).
 - `replaces` — the contract supersedes the org floor; requires a
-  `replacement_attestation` naming an ADR-0021 attestation in which a
-  `policy_owner` key authorized this exact contract identity to
-  replace this exact policy identity. Without it, `replaces` is
-  refused.
+  `replacement_attestation` pinning the canonical digest of a bound
+  ADR-0021 `attestation` package document in which a `policy_owner`
+  key authorized this exact contract identity to replace this exact
+  policy identity. The attestation names the policy by `subject`
+  (new kind `organization_policy`: identity and digest) and the
+  contract by `target` (new optional field: `id@revision` — named,
+  not digest-pinned, because the contract pins the attestation; a
+  digest in both directions is a cycle). The compiler checks the
+  binding fields; the runner verifies the signature against the
+  supplied trust root. Without it, `replaces` is refused.
 - `none` — the contract names no org policy (the ADR-0020 status quo).
 
 ### 2. The `tightens` order, per field, total and mechanical
@@ -91,6 +101,8 @@ For each field `f`, `tightens(contract.f, org.f)` holds iff:
 | `require_signatures` | `org off ⇒ contract anything`; `org on ⇒ contract on` |
 | `permit_nominal_basis` | `org on ⇒ contract on`; `org off ⇒ contract anything` — *permitting* a weakening is itself the strictness; forbidding it tightens |
 | `require_qualification` | `org off ⇒ contract anything`; `org on ⇒ contract on` |
+| `permitted_nondeterministic_roles` | `contract ⊆ org` (a smaller grant tightens) |
+| `recognized_qualification_owners` | `contract ⊆ org` (recognizing fewer issuers tightens) |
 
 A field the org leaves undeclared is its least-strict value; a field
 the contract leaves undeclared inherits the floor (it equals it — the
@@ -112,8 +124,10 @@ attestation. That is SC-8.2's escape hatch, not a judgment call.
 - `CORE-A4903` — `relation: replaces` with no attestation, or the
   attestation names a different policy, contract, or role.
 - `CORE-A4904` — the `organization_policy` document is malformed,
-  unsigned, or signed by a key the trust root does not list as
-  `policy_owner`.
+  carries merge-naming fields inside `rules`, is unsigned, or is
+  signed by a key the trust root does not list as `policy_owner`.
+- `CORE-A4905` — notice only: the package binds a newer revision of
+  the pinned policy; drift information, never invalidation.
 
 The merged `execution_policy` is what the runner enforces — ADR-0020's
 selection checks read the merged result unchanged, so an org floor
@@ -121,11 +135,15 @@ strengthens every contract that names it without new runner code.
 
 ### 4. Verifier parity
 
-`verify_case_selections` re-derives the merge: loads the
-`organization_policy` document, checks the pinned identity, replays
-`tightens` field-by-field, and reports `policy.merge` verified or
-mismatch per field. A `replaces` relation's attestation is re-checked
-under the supplied trust root.
+`verify_org_policies` re-derives the merge: resolves the pinned
+`organization_policy` document among bound package documents, checks
+the pinned identity, replays `tightens` field-by-field, checks the
+`exact`/`replaces`/`none` contract shapes, and reports
+`organization_policy.*` verified or mismatch per check. The floor's
+signature and a `replaces` relation's attestation (binding fields and
+signature) are re-checked under the supplied trust root; without one
+they report `not_checked`, matching the verifier's "not forged, not
+checked" posture.
 
 ## Boundary
 

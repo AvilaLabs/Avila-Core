@@ -4604,6 +4604,347 @@ def _template_refs(template: dict) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# ADR-0023: organization-policy floors and the `tightens` merge order
+# ---------------------------------------------------------------------------
+
+
+def _org_policy_signing_digest(document: dict) -> Optional[bytes]:
+    """The digest an org-policy/attestation signature covers: the record's
+    canonical bytes with `signature` absent — the attestation convention."""
+    unsigned = {key: value for key, value in document.items() if key != "signature"}
+    try:
+        canonical = canonicalize_json(json.dumps(unsigned).encode("utf-8"))
+    except Exception:
+        return None
+    return hashlib.sha256(canonical).digest()
+
+
+def _merge_tightens(contract: dict, floor: dict) -> dict:
+    """The ADR-0023 merge itself: every field resolves to the contract's
+    declared value, else the floor's — mechanical, post-check."""
+    bools = (
+        "permit_nominal_basis",
+        "require_qualification",
+        "require_signatures",
+        "require_provider_independence",
+        "require_diverse_implementations",
+        "forbid_self_preference",
+    )
+    sets = ("deny_providers", "allow_providers", "permitted_nondeterministic_roles")
+    options = ("maturity_floor", "cost_cap")
+    merged: dict = {}
+    for field in bools:
+        if contract.get(field) or floor.get(field):
+            merged[field] = True
+    for field in sets:
+        value = contract.get(field) if contract.get(field) else floor.get(field)
+        if value:
+            merged[field] = list(value)
+    owners = contract.get("recognized_qualification_owners") or floor.get(
+        "recognized_qualification_owners"
+    )
+    if owners:
+        merged["recognized_qualification_owners"] = dict(owners)
+    for field in options:
+        if contract.get(field) is not None:
+            merged[field] = contract[field]
+        elif floor.get(field) is not None:
+            merged[field] = floor[field]
+    return merged
+
+
+def _tightens_loosenings(contract: dict, floor: dict) -> list[str]:
+    """Every declared contract field that loosens the floor — the same
+    order the compiler's check_tightens applies (CORE-A4901)."""
+    loosenings: list[str] = []
+    contract_deny = contract.get("deny_providers") or []
+    floor_deny = floor.get("deny_providers") or []
+    if contract_deny and not set(floor_deny) <= set(contract_deny):
+        loosenings.append(
+            f"deny_providers {contract_deny} misses floor members {sorted(set(floor_deny) - set(contract_deny))}"
+        )
+    contract_allow = contract.get("allow_providers") or []
+    floor_allow = floor.get("allow_providers") or []
+    if contract_allow and floor_allow and not set(contract_allow) <= set(floor_allow):
+        loosenings.append(
+            f"allow_providers {contract_allow} exceeds the floor's {floor_allow}"
+        )
+    floor_roles = {
+        f"{r.get('id')}@{r.get('major')}.{r.get('minor', 0)}"
+        for r in floor.get("permitted_nondeterministic_roles") or []
+    }
+    for role in contract.get("permitted_nondeterministic_roles") or []:
+        label = f"{role.get('id')}@{role.get('major')}.{role.get('minor', 0)}"
+        if label not in floor_roles:
+            loosenings.append(
+                f"permitted_nondeterministic_roles grants {label} outside the floor"
+            )
+    for owner in contract.get("recognized_qualification_owners") or {}:
+        if owner not in (floor.get("recognized_qualification_owners") or {}):
+            loosenings.append(
+                f"recognized_qualification_owners recognizes {owner!r} outside the floor"
+            )
+    if contract.get("permit_nominal_basis") and not floor.get("permit_nominal_basis"):
+        loosenings.append("permit_nominal_basis enabled where the floor forbids it")
+    contract_maturity = contract.get("maturity_floor")
+    floor_maturity = floor.get("maturity_floor")
+    if (
+        contract_maturity is not None
+        and floor_maturity is not None
+        and _MATURITY_ORDER.index(contract_maturity) < _MATURITY_ORDER.index(floor_maturity)
+    ):
+        loosenings.append(
+            f"maturity_floor {contract_maturity!r} ranks below the floor's {floor_maturity!r}"
+        )
+    contract_cap = contract.get("cost_cap")
+    floor_cap = floor.get("cost_cap")
+    if contract_cap is not None and floor_cap is not None:
+        try:
+            contract_value = read_authoritative_exact(contract_cap.get("value", ""))
+            floor_value = read_authoritative_exact(floor_cap.get("value", ""))
+            exceeds = (
+                contract_cap.get("currency") != floor_cap.get("currency")
+                or contract_value > floor_value
+            )
+        except Exception:
+            exceeds = True
+        if exceeds:
+            loosenings.append(
+                f"cost_cap {contract_cap.get('value')} {contract_cap.get('currency')} exceeds the floor's {floor_cap.get('value')} {floor_cap.get('currency')}"
+            )
+    return loosenings
+
+
+def verify_org_policies(
+    case_dir: Path,
+    package: dict,
+    docs_by_role: dict[str, list[dict]],
+    trust_root: Optional[TrustRoot],
+    report: Report,
+) -> None:
+    """ADR-0023 parity: re-derive the organization-floor merge the compiler
+    performed — pin resolution, relation semantics, the per-field
+    `tightens` order, the `replaces` attestation binding — and verify the
+    floor's `policy_owner` signature the runner authenticates (reported
+    ``not_checked`` without a trust root, mirroring the rest of the
+    signature section)."""
+    contract_entries = docs_by_role.get("contract", [])
+    if not contract_entries:
+        return
+    contract_path = case_dir / contract_entries[0]["path"]
+    if not contract_path.is_file():
+        return
+    try:
+        contract = json.loads(contract_path.read_bytes())
+    except (OSError, json.JSONDecodeError):
+        return
+    execution_policy = contract.get("execution_policy") or {}
+    pin = execution_policy.get("organization_policy")
+    relation = execution_policy.get("relation")
+    prefix = "organization_policy"
+
+    policies_by_sha256: dict[str, dict] = {}
+    for document in docs_by_role.get("organization_policy", []):
+        path = case_dir / document["path"]
+        if not path.is_file():
+            continue
+        digest = _canonical_document_sha256(path.read_bytes())
+        if digest is not None:
+            policies_by_sha256[digest] = load_json(path)
+
+    if pin is None:
+        if relation not in (None, "none"):
+            report.mismatch(
+                f"{prefix}.relation",
+                f"relation {relation!r} is declared but no `organization_policy` pins a floor",
+            )
+        if execution_policy.get("replacement_attestation") is not None:
+            report.mismatch(
+                f"{prefix}.replacement_attestation",
+                "an attestation pin is declared without a `replaces` relation",
+            )
+        return
+
+    # --- pin resolution (CORE-A4902). ---
+    check = f"{prefix}.pin"
+    policy = policies_by_sha256.get(pin.get("sha256") or "")
+    if policy is None:
+        report.mismatch(
+            check,
+            f"the contract pins digest {pin.get('sha256')!r}, which no bound organization_policy document carries",
+        )
+        return
+    if (
+        policy.get("policy_id") == pin.get("policy_id")
+        and policy.get("policy_revision") == pin.get("policy_revision")
+    ):
+        report.verified(check, "pinned floor resolves and its identity matches")
+    else:
+        report.mismatch(
+            check,
+            "the pinned document's policy_id/policy_revision do not match the pin",
+        )
+        return
+
+    if relation is None or relation == "none":
+        report.mismatch(
+            f"{prefix}.relation",
+            f"a floor is pinned but `relation` is {relation!r} — the pin and relation contradict",
+        )
+        return
+
+    # --- the floor's signature (CORE-A4904). ---
+    check = f"{prefix}.signature"
+    signature = policy.get("signature")
+    digest = _org_policy_signing_digest(policy)
+    if signature is None:
+        report.mismatch(check, "the floor carries no `signature` — an unsigned floor cannot stand")
+    elif digest is None:
+        report.mismatch(check, "the floor does not canonicalize — its signature cannot be evaluated")
+    else:
+        status = signature_status(signature, digest, trust_root, "policy_owner")
+        if status["state"] == "verified":
+            report.verified(check, f"verified, signed by {status['signed_by']} (policy_owner)")
+        elif status["state"] == "not_checked":
+            report.not_checked(check, "signature consistent; no --trust-root supplied")
+        else:
+            report.mismatch(check, describe_signature_status(status))
+
+    rules = policy.get("rules") or {}
+    if any(
+        rules.get(field) is not None
+        for field in ("organization_policy", "relation", "replacement_attestation")
+    ):
+        report.mismatch(
+            f"{prefix}.rules",
+            "the floor's `rules` carries merge-naming fields — a floor declares rules only",
+        )
+
+    contract_rules = {
+        key: value
+        for key, value in execution_policy.items()
+        if key not in ("organization_policy", "relation", "replacement_attestation")
+    }
+    if relation == "tightens":
+        loosenings = _tightens_loosenings(contract_rules, rules)
+        check = f"{prefix}.tightens"
+        if loosenings:
+            report.mismatch(check, "; ".join(loosenings))
+        else:
+            report.verified(
+                check,
+                f"every declared field is at least as strict; merged policy: {_merge_tightens(contract_rules, rules)}",
+            )
+    elif relation == "exact":
+        check = f"{prefix}.exact"
+        if contract_rules:
+            report.mismatch(
+                check,
+                f"`exact` adopts the floor verbatim but the contract declares {sorted(contract_rules)}",
+            )
+        else:
+            report.verified(check, "no contract rule fields — the floor stands verbatim")
+    elif relation == "replaces":
+        _verify_replacement_attestation(
+            case_dir, docs_by_role, contract, pin, policy, trust_root, report
+        )
+    else:
+        report.mismatch(
+            f"{prefix}.relation", f"relation {relation!r} is outside the closed vocabulary"
+        )
+
+    # A bound newer revision of the pinned policy is drift information
+    # (CORE-A4905 notice), never a mismatch.
+    newer = [
+        candidate.get("policy_revision")
+        for candidate in policies_by_sha256.values()
+        if candidate.get("policy_id") == policy.get("policy_id")
+        and (candidate.get("policy_revision") or 0) > (policy.get("policy_revision") or 0)
+    ]
+    if newer:
+        report.verified(
+            f"{prefix}.superseded",
+            f"policy {policy.get('policy_id')!r} has bound revision {max(newer)} newer than the pinned revision — the pin is immutable",
+        )
+
+
+def _verify_replacement_attestation(
+    case_dir: Path,
+    docs_by_role: dict[str, list[dict]],
+    contract: dict,
+    pin: dict,
+    policy: dict,
+    trust_root: Optional[TrustRoot],
+    report: Report,
+) -> None:
+    """The `replaces` attestation binding (CORE-A4903): the named digest
+    must resolve to a bound attestation in which a `policy_owner` approved
+    this contract identity replacing this policy — plus its signature."""
+    prefix = "organization_policy.replacement_attestation"
+    pinned = (contract.get("execution_policy") or {}).get("replacement_attestation")
+    if not pinned:
+        report.mismatch(
+            prefix,
+            "`replaces` supersedes the floor but names no `replacement_attestation`",
+        )
+        return
+    expected_policy = f"{pin.get('policy_id')}@{pin.get('policy_revision')}"
+    expected_contract = f"{contract.get('contract_id')}@{contract.get('revision')}"
+    attestation = None
+    for document in docs_by_role.get("attestation", []):
+        path = case_dir / document["path"]
+        if not path.is_file():
+            continue
+        if _canonical_document_sha256(path.read_bytes()) == pinned:
+            attestation = load_json(path)
+            break
+    if attestation is None:
+        report.mismatch(
+            prefix,
+            f"the pinned attestation digest {pinned!r} resolves to no bound attestation",
+        )
+        return
+    problems: list[str] = []
+    subject = attestation.get("subject") or {}
+    if (
+        subject.get("kind") != "organization_policy"
+        or subject.get("identity") != expected_policy
+        or subject.get("sha256") != pin.get("sha256")
+    ):
+        problems.append(
+            f"subject is {subject.get('kind')}:{subject.get('identity')}, not organization_policy:{expected_policy}"
+        )
+    target = attestation.get("target")
+    if not isinstance(target, dict) or (
+        target.get("kind") != "contract" or target.get("identity") != expected_contract
+    ):
+        problems.append(
+            f"target is {target}, not contract:{expected_contract}"
+        )
+    if attestation.get("statement") != "approves":
+        problems.append(f"statement is {attestation.get('statement')!r}, not 'approves'")
+    if attestation.get("role") != "policy_owner":
+        problems.append(f"role is {attestation.get('role')!r}, not 'policy_owner'")
+    if problems:
+        report.mismatch(prefix, "; ".join(problems))
+        return
+    report.verified(prefix, "the attestation binds this policy and contract under policy_owner")
+    signature = attestation.get("signature")
+    digest = _org_policy_signing_digest(attestation)
+    check = f"{prefix}.signature"
+    if signature is None or digest is None:
+        report.mismatch(check, "the attestation is unsigned")
+    else:
+        status = signature_status(signature, digest, trust_root, "policy_owner")
+        if status["state"] == "verified":
+            report.verified(check, f"verified, signed by {status['signed_by']} (policy_owner)")
+        elif status["state"] == "not_checked":
+            report.not_checked(check, "signature consistent; no --trust-root supplied")
+        else:
+            report.mismatch(check, describe_signature_status(status))
+
+
+# ---------------------------------------------------------------------------
 # Case-level orchestration and CLI
 # ---------------------------------------------------------------------------
 
@@ -4690,6 +5031,8 @@ def verify_case(
     verify_staged_reviews(case_dir, package, docs_by_role, claims, campaign_report, report)
 
     verify_instantiations(case_dir, package, docs_by_role, report)
+
+    verify_org_policies(case_dir, package, docs_by_role, trust_root, report)
 
     log_path = case_dir / "search" / "attempts.jsonl"
     if log_path.is_file():

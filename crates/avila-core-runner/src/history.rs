@@ -2332,6 +2332,7 @@ mod tests {
             },
             statement: crate::transitions::AttestationStatement::Approves,
             detail: "test attestation".into(),
+            target: None,
             actor: crate::transitions::ActorRef {
                 actor_id: "operator-1".into(),
                 actor_kind: crate::transitions::ActorKind::Person,

@@ -63,6 +63,20 @@ pub enum AttestationSubjectKind {
     Campaign,
     Transition,
     Manifest,
+    /// ADR-0023: an `organization_policy` document — the subject of a
+    /// replacement authorization.
+    OrganizationPolicy,
+}
+
+/// The second identity an attestation binds — named, not digest-pinned,
+/// because the contract side pins the attestation (a digest in both
+/// directions is a cycle). ADR-0023's `replaces` attestation carries
+/// `target: {kind: contract, identity: "id@rev"}`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AttestationTarget {
+    pub kind: AttestationSubjectKind,
+    pub identity: String,
 }
 
 /// The actor attribution: who produced the record, as stated.
@@ -87,6 +101,11 @@ pub struct Attestation {
     /// Inert text carrying the stated detail of the statement.
     #[serde(default)]
     pub detail: String,
+    /// ADR-0023: the second identity the statement binds — for a
+    /// replacement authorization, the contract `id@rev` it authorizes.
+    /// Named, never digest-pinned (the contract pins this record).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<AttestationTarget>,
     pub actor: ActorRef,
     /// The technical role the actor asserts — must equal the role the
     /// signature's key is listed under in the trust root.
@@ -336,6 +355,9 @@ pub struct AttestationRequest {
     pub subject: AttestationSubject,
     pub statement: AttestationStatement,
     pub detail: String,
+    /// ADR-0023: the second identity the statement binds — required for
+    /// replacement authorizations, absent elsewhere.
+    pub target: Option<AttestationTarget>,
     pub actor: ActorRef,
     pub role: KeyRole,
 }
@@ -398,6 +420,7 @@ pub fn append_attestation(
         subject: request.subject.clone(),
         statement: request.statement,
         detail: request.detail.clone(),
+        target: request.target.clone(),
         actor: request.actor.clone(),
         role: request.role,
         signature: avila_core_evidence::signature::SignatureDocument {

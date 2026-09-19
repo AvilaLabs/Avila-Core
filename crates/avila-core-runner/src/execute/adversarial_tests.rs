@@ -609,6 +609,7 @@ fn a_run_against_a_completed_campaign_marks_the_disagreement() {
         },
         statement: crate::transitions::AttestationStatement::Approves,
         detail: "test".into(),
+        target: None,
         actor: crate::transitions::ActorRef {
             actor_id: "operator-1".into(),
             actor_kind: crate::transitions::ActorKind::Person,

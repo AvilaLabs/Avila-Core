@@ -21,15 +21,7 @@ use crate::document::{
     EligibilityPredicate, InputField, RecordedEligibility,
 };
 
-/// The instantiation material a compile can see: every package-bound
-/// `contract_instantiation` record and `contract_template` document, as raw
-/// bytes. A contract naming `instantiated_from` resolves its record by
-/// canonical digest; anything the contract does not name is not checked.
-#[derive(Debug, Default)]
-pub struct InstantiationMaterial<'a> {
-    pub records: &'a [&'a [u8]],
-    pub templates: &'a [&'a [u8]],
-}
+pub use super::CompilationMaterial;
 
 /// The document name findings on an instantiation record or template carry —
 /// these are package documents, not compile inputs, so they are attributed
@@ -55,14 +47,14 @@ fn template_schema() -> &'static Value {
 /// Canonical digest of a document's bytes — the same canonicalization every
 /// document identity uses. Bytes that are not authoritative JSON have no
 /// canonical digest and can never match a pin.
-fn canonical_sha256(bytes: &[u8]) -> Option<String> {
+pub(super) fn canonical_sha256(bytes: &[u8]) -> Option<String> {
     let value = avila_core_kernel::read_authoritative_json(bytes).ok()?;
     serde_json::to_vec(&value)
         .ok()
         .map(|canonical| prefixed_sha256(&canonical))
 }
 
-fn finding(
+pub(super) fn finding(
     code: &str,
     document: &str,
     pointer: String,
@@ -83,7 +75,7 @@ pub(super) fn check_instantiation(
     contract_sha256: &str,
     registry_bytes: &[u8],
     kinds: &KindRegistry,
-    material: &InstantiationMaterial<'_>,
+    material: &CompilationMaterial<'_>,
     findings: &mut Vec<CoreDiagnostic>,
 ) {
     let Some(from) = &contract.instantiated_from else {
@@ -147,7 +139,7 @@ pub(super) fn check_instantiation(
 /// cannot be shown.
 fn resolve_record(
     from: &crate::document::InstantiationRef,
-    material: &InstantiationMaterial<'_>,
+    material: &CompilationMaterial<'_>,
     findings: &mut Vec<CoreDiagnostic>,
 ) -> Option<ContractInstantiation> {
     let matched: Vec<&[u8]> = material
@@ -224,7 +216,7 @@ fn resolve_record(
 /// declared identity matches the pin.
 fn resolve_template<'a>(
     record: &ContractInstantiation,
-    material: &InstantiationMaterial<'a>,
+    material: &CompilationMaterial<'a>,
     findings: &mut Vec<CoreDiagnostic>,
 ) -> Option<ContractTemplate> {
     let pin = &record.template;
@@ -298,7 +290,7 @@ fn resolve_template<'a>(
 fn report_superseded(
     record: &ContractInstantiation,
     template: &ContractTemplate,
-    material: &InstantiationMaterial<'_>,
+    material: &CompilationMaterial<'_>,
     findings: &mut Vec<CoreDiagnostic>,
 ) {
     let newer = material

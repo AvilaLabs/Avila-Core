@@ -131,6 +131,23 @@ agreement against); in short:
    refuses at bind/plan time (`CORE-P5101`–`P5602`) the verifier reports
    as `selection.*` mismatches — the same truth, checked without trusting
    the runner.
+9.6. **Organization policy floors** (ADR-0023, SC-8) — a contract's
+   `execution_policy` may pin a bound `organization_policy` document and
+   name a `relation`. `verify_org_policies` re-derives the merge the
+   compiler performed: the pin resolves to exactly one bound policy by
+   canonical digest with matching `policy_id`/`policy_revision`; under
+   `tightens` every declared contract field is re-checked against the
+   floor's per-field order (deny superset, allow subset, grant lists
+   inside the floor's, maturity ranking, cost-cap currency and ceiling,
+   restrictive booleans, the inverted permissive `permit_nominal_basis`);
+   `exact` tolerates no declared fields; `replaces` re-checks the pinned
+   `attestation`'s binding — `policy_owner` `approves` over the policy
+   (`organization_policy` subject) and contract (`target`) identities —
+   and both documents' signatures under the supplied trust root's
+   `policy_owner` keys (`not_checked` without one). A bound newer policy
+   revision reports drift, never a mismatch. What the compiler refuses
+   (`CORE-A4901`–`A4905`) the verifier reports as `organization_policy.*`
+   mismatches.
 10. **Requirement-set coverage** (S-024) — a case package may bind one
     `requirement_set` document and declare in its manifest which contract
     requirements cover each set entry and, for the rest, a reason and an

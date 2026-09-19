@@ -1063,7 +1063,7 @@ fn case_004_bound_plan_blocks_where_the_plan_would_execute() {
 #[test]
 fn an_instantiated_contract_without_its_record_fails_closed() {
     // ADR-0022: the runner collects every bound `contract_instantiation` /
-    // `contract_template` document into `InstantiationMaterial`; a contract
+    // `contract_template` document into `CompilationMaterial`; a contract
     // naming a record the package does not bind is a compile refusal
     // (CORE-A4801), not a runtime accident.
     let temp =
@@ -1108,6 +1108,181 @@ fn an_instantiated_contract_without_its_record_fails_closed() {
             .iter()
             .map(|f| f.code.as_str())
             .collect::<Vec<_>>()
+    );
+    let _ = fs::remove_dir_all(&temp);
+}
+
+/// ADR-0023: a bound organization-policy doc + a contract pinning it,
+/// inside a real `VerifiedCasePackage`. Returns the package, the contract
+/// bytes, and the signing seed.
+fn org_policy_fixture(
+    name: &str,
+    contract_policy: serde_json::Value,
+    unsigned: bool,
+) -> (
+    PathBuf,
+    avila_core_evidence::VerifiedCasePackage,
+    Vec<u8>,
+    [u8; 32],
+) {
+    let temp = std::env::temp_dir().join(format!(
+        "avila-core-org-policy-{name}-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&temp);
+    fs::create_dir_all(&temp).unwrap();
+
+    let seed = [0x42u8; 32];
+    // The policy doc, unsigned form first — the signature covers the
+    // canonical bytes with `signature` absent.
+    let mut policy = serde_json::json!({
+        "schema_version": "avila.core/organization-policy/v0.1-draft",
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "policy_id": "fixture.org.baseline",
+        "policy_revision": 1,
+        "owner": "fixture.policy_owner",
+        "rules": {
+            "deny_providers": ["provider.a"],
+            "maturity_floor": "development"
+        }
+    });
+    if !unsigned {
+        let unsigned_bytes =
+            avila_core_kernel::canonicalize_json(&serde_json::to_vec(&policy).unwrap()).unwrap();
+        let unsigned_sha256 = format!("sha256:{:x}", Sha256::digest(&unsigned_bytes));
+        let digest: [u8; 32] = Sha256::digest(&unsigned_bytes).into();
+        policy["signature"] =
+            serde_json::to_value(avila_core_evidence::signature::build_signature_document(
+                &seed,
+                "organization_policy",
+                "fixture.org.baseline",
+                &unsigned_sha256,
+                &digest,
+            ))
+            .unwrap();
+    }
+    let policy_bytes = serde_json::to_vec_pretty(&policy).unwrap();
+    fs::write(temp.join("policy.json"), &policy_bytes).unwrap();
+
+    // The contract pins the policy's canonical digest (full document).
+    let policy_canonical =
+        avila_core_kernel::canonicalize_json(&serde_json::to_vec(&policy).unwrap()).unwrap();
+    let policy_sha256 = format!("sha256:{:x}", Sha256::digest(&policy_canonical));
+    let mut contract: serde_json::Value =
+        serde_json::from_slice(&fs::read(case_000().join("contract.json")).unwrap()).unwrap();
+    let mut execution_policy = contract_policy;
+    execution_policy["organization_policy"] = serde_json::json!({
+        "policy_id": "fixture.org.baseline",
+        "policy_revision": 1,
+        "sha256": policy_sha256
+    });
+    contract["execution_policy"] = execution_policy;
+    let contract_bytes = serde_json::to_vec_pretty(&contract).unwrap();
+    fs::write(temp.join("contract.json"), &contract_bytes).unwrap();
+
+    // The manifest must bind one contract, one registry, and one claims —
+    // copy the case's own for the two the check does not read.
+    for role in ["registry", "claims"] {
+        let bytes = fs::read(case_000().join(format!("{role}.json"))).unwrap();
+        fs::write(temp.join(format!("{role}.json")), &bytes).unwrap();
+    }
+    let bound = |name: &str| -> serde_json::Value {
+        let bytes = fs::read(temp.join(format!("{name}.json"))).unwrap();
+        serde_json::json!({
+            "document_id": name,
+            "role": if name == "policy" { "organization_policy" } else { name },
+            "path": format!("{name}.json"),
+            "sha256": format!("sha256:{:x}", Sha256::digest(&bytes))
+        })
+    };
+    let manifest = serde_json::json!({
+        "schema_version": "avila.core/case-package/v0.1-draft",
+        "case_id": "CASE-ORG-POLICY",
+        "title": "org policy fixture",
+        "documents": [
+            bound("contract"),
+            bound("registry"),
+            bound("claims"),
+            bound("policy")
+        ],
+        "artifacts": [],
+        "capabilities": [],
+        "executions": [],
+        "free_inputs": [],
+        "limitations": []
+    });
+    let package = avila_core_evidence::verify_case_package(
+        &serde_json::to_vec(&manifest).unwrap(),
+        &temp,
+        &std::collections::BTreeMap::new(),
+        None,
+    )
+    .unwrap();
+    (temp, package, contract_bytes, seed)
+}
+
+fn policy_owner_root(seed: &[u8; 32]) -> avila_core_evidence::signature::TrustRoot {
+    let (key_id, _) = avila_core_evidence::signature::sign_digest(seed, &[0u8; 32]);
+    avila_core_evidence::signature::TrustRoot {
+        schema_version: avila_core_evidence::signature::TRUST_ROOT_SCHEMA_VERSION.into(),
+        keys: vec![avila_core_evidence::signature::TrustRootEntry {
+            key_id,
+            public_key_hex: avila_core_evidence::signature::public_key_hex_from_seed(seed),
+            role: avila_core_evidence::signature::KeyRole::PolicyOwner,
+        }],
+    }
+}
+
+#[test]
+fn a_signed_floor_verifies_under_a_policy_owner_key() {
+    let (temp, package, contract, seed) = org_policy_fixture(
+        "verified",
+        serde_json::json!({"relation": "tightens"}),
+        false,
+    );
+    let root = policy_owner_root(&seed);
+    let findings =
+        crate::case_run::policy::check_org_policy_signatures(&contract, &package, Some(&root));
+    assert!(findings.is_empty(), "unexpected findings: {findings:?}");
+    let _ = fs::remove_dir_all(&temp);
+}
+
+#[test]
+fn a_floor_signed_under_the_wrong_role_refuses() {
+    let (temp, package, contract, seed) = org_policy_fixture(
+        "wrong-role",
+        serde_json::json!({"relation": "tightens"}),
+        false,
+    );
+    let (key_id, _) = avila_core_evidence::signature::sign_digest(&seed, &[0u8; 32]);
+    let root = avila_core_evidence::signature::TrustRoot {
+        schema_version: avila_core_evidence::signature::TRUST_ROOT_SCHEMA_VERSION.into(),
+        keys: vec![avila_core_evidence::signature::TrustRootEntry {
+            key_id,
+            public_key_hex: avila_core_evidence::signature::public_key_hex_from_seed(&seed),
+            role: avila_core_evidence::signature::KeyRole::Requester,
+        }],
+    };
+    let findings =
+        crate::case_run::policy::check_org_policy_signatures(&contract, &package, Some(&root));
+    assert!(
+        findings.iter().any(|finding| finding.code == "CORE-A4904"),
+        "expected CORE-A4904 among {findings:?}"
+    );
+    let _ = fs::remove_dir_all(&temp);
+}
+
+#[test]
+fn a_floor_without_a_trust_root_refuses() {
+    let (temp, package, contract, _seed) = org_policy_fixture(
+        "no-root",
+        serde_json::json!({"relation": "tightens"}),
+        false,
+    );
+    let findings = crate::case_run::policy::check_org_policy_signatures(&contract, &package, None);
+    assert!(
+        findings.iter().any(|finding| finding.code == "CORE-A4904"),
+        "expected CORE-A4904 among {findings:?}"
     );
     let _ = fs::remove_dir_all(&temp);
 }

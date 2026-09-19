@@ -1655,8 +1655,8 @@ fn minor_zero_serializes_identically_to_absent() {
 // ---------------------------------------------------------------------------
 
 mod instantiation {
-    use super::super::instantiation::InstantiationMaterial;
-    use super::super::{CompilationStatus, compile_documents_with_instantiation};
+    use super::super::instantiation::CompilationMaterial;
+    use super::super::{CompilationStatus, compile_documents_with_material};
     use super::{CompileReport, REGISTRY};
     use crate::diagnostic::{
         CORE_A4801, CORE_A4802, CORE_A4803, CORE_A4804, CORE_A4805, CORE_A4806,
@@ -1805,10 +1805,14 @@ mod instantiation {
     }
 
     fn compile(contract: &Value, records: &[&[u8]], templates: &[&[u8]]) -> CompileReport {
-        compile_documents_with_instantiation(
+        compile_documents_with_material(
             &serde_json::to_vec(contract).unwrap(),
             REGISTRY,
-            &InstantiationMaterial { records, templates },
+            &CompilationMaterial {
+                records,
+                templates,
+                ..Default::default()
+            },
         )
         .unwrap()
     }
@@ -2022,5 +2026,337 @@ mod instantiation {
         );
         assert!(codes(&report).contains(&CORE_A4806));
         assert_eq!(report.status, CompilationStatus::Compiled);
+    }
+}
+
+mod org_policy {
+    use super::super::instantiation::CompilationMaterial;
+    use super::super::{CompilationStatus, compile_documents_with_material};
+    use super::{CONTRACT, CompileReport, REGISTRY};
+    use crate::diagnostic::{CORE_A4901, CORE_A4902, CORE_A4903, CORE_A4904, CORE_A4905};
+    use crate::document::ExecutionPolicy;
+    use serde_json::{Value, json};
+    use std::collections::BTreeSet;
+
+    /// A signed organization floor over the R1 fixture's vocabulary.
+    fn policy() -> Value {
+        json!({
+            "schema_version": "avila.core/organization-policy/v0.1-draft",
+            "semantic_profile": "avila.core/semantic/0.2-draft",
+            "policy_id": "fixture.org.baseline",
+            "policy_revision": 1,
+            "owner": "fixture.policy_owner",
+            "rules": {
+                "require_signatures": true,
+                "deny_providers": ["provider.a"],
+                "allow_providers": ["provider.a", "provider.c"],
+                "maturity_floor": "qualified"
+            },
+            "signature": {"schema_version": "fixture.signature", "key_id": "k1"}
+        })
+    }
+
+    /// Canonical digest of a JSON document — the identity `read_document`
+    /// computes.
+    fn canonical_sha256(value: &Value) -> String {
+        let bytes = serde_json::to_vec(value).unwrap();
+        let canonical = avila_core_kernel::read_authoritative_json(&bytes).unwrap();
+        super::super::prefixed_sha256(serde_json::to_vec(&canonical).unwrap())
+    }
+
+    fn policy_pin(policy: &Value) -> Value {
+        json!({
+            "policy_id": policy["policy_id"],
+            "policy_revision": policy["policy_revision"],
+            "sha256": canonical_sha256(policy)
+        })
+    }
+
+    /// The R1 fixture contract with `execution_policy` set to `rules` plus
+    /// the org-policy merge fields.
+    fn contract(policy: &Value, relation: &str, rules: Value) -> Value {
+        let mut contract: Value = serde_json::from_slice(CONTRACT).expect("fixture contract");
+        contract["execution_policy"] = rules;
+        contract["execution_policy"]["organization_policy"] = policy_pin(policy);
+        contract["execution_policy"]["relation"] = json!(relation);
+        contract
+    }
+
+    fn attestation(policy: &Value, contract: &Value) -> Value {
+        json!({
+            "schema_version": "avila.core/attestation/v0.1-draft",
+            "attestation_id": "att.replace.1",
+            "subject": {
+                "kind": "organization_policy",
+                "identity": format!("{}@{}", policy["policy_id"].as_str().unwrap(), policy["policy_revision"].as_u64().unwrap()),
+                "sha256": canonical_sha256(policy)
+            },
+            "statement": "approves",
+            "detail": "authorized replacement of the organization floor",
+            "target": {
+                "kind": "contract",
+                "identity": format!("{}@{}", contract["contract_id"].as_str().unwrap(), contract["revision"].as_u64().unwrap())
+            },
+            "actor": {"actor_id": "fixture.policy_owner", "actor_kind": "person"},
+            "role": "policy_owner",
+            "signature": {"schema_version": "fixture.signature", "key_id": "k1"}
+        })
+    }
+
+    fn codes(report: &CompileReport) -> BTreeSet<&str> {
+        report
+            .findings
+            .iter()
+            .map(|finding| finding.code.as_str())
+            .collect()
+    }
+
+    fn compile(contract: &Value, policies: &[&[u8]], attestations: &[&[u8]]) -> CompileReport {
+        compile_documents_with_material(
+            &serde_json::to_vec(contract).unwrap(),
+            REGISTRY,
+            &CompilationMaterial {
+                organization_policies: policies,
+                attestations,
+                ..Default::default()
+            },
+        )
+        .unwrap()
+    }
+
+    fn merged_policy(report: &CompileReport) -> ExecutionPolicy {
+        report
+            .compiled
+            .as_ref()
+            .expect("compiles")
+            .execution_policy
+            .clone()
+    }
+
+    #[test]
+    fn a_clean_tightens_merges_the_floor() {
+        // Floor: require_signatures + deny[a] + maturity qualified.
+        // Contract declares deny[a,b] + maturity production — both tighten.
+        let policy = policy();
+        let contract = contract(
+            &policy,
+            "tightens",
+            json!({"deny_providers": ["provider.a", "provider.b"], "maturity_floor": "production"}),
+        );
+        let policy_bytes = serde_json::to_vec(&policy).unwrap();
+        let report = compile(&contract, &[&policy_bytes], &[]);
+        assert_eq!(
+            report.status,
+            CompilationStatus::Compiled,
+            "findings: {:?}",
+            report
+                .findings
+                .iter()
+                .map(|f| format!("{}: {}", f.code, f.message))
+                .collect::<Vec<_>>()
+        );
+        let merged = merged_policy(&report);
+        // Contract-declared fields win; undeclared fields inherit the floor.
+        assert_eq!(merged.deny_providers, vec!["provider.a", "provider.b"]);
+        assert_eq!(
+            merged.maturity_floor,
+            Some(crate::document::CapabilityMaturity::Production)
+        );
+        assert!(merged.require_signatures, "inherited from the floor");
+        // The merged policy carries no naming fields.
+        assert!(merged.organization_policy.is_none());
+        assert!(merged.relation.is_none());
+    }
+
+    #[test]
+    fn a4901_contract_loosening_a_declared_field_fails() {
+        let cases: Vec<(Value, &str)> = vec![
+            // deny-list missing a floor member
+            (json!({"deny_providers": ["provider.b"]}), "deny"),
+            // allow-list wider than the floor's
+            (
+                json!({
+                    "deny_providers": ["provider.a"],
+                    "allow_providers": ["provider.a", "provider.b"]
+                }),
+                "allow",
+            ),
+            // maturity below the floor
+            (json!({"maturity_floor": "prototype"}), "maturity"),
+            // permissive flag the floor forbids
+            (json!({"permit_nominal_basis": true}), "nominal"),
+            // grant list outside the floor's
+            (
+                json!({"permitted_nondeterministic_roles": [{"id": "role.x", "major": 1}]}),
+                "grants",
+            ),
+        ];
+        for (rules, name) in cases {
+            let policy = policy();
+            let contract = contract(&policy, "tightens", rules);
+            let policy_bytes = serde_json::to_vec(&policy).unwrap();
+            let report = compile(&contract, &[&policy_bytes], &[]);
+            assert!(
+                codes(&report).contains(&CORE_A4901),
+                "{name} should loosen: {:?}",
+                report
+                    .findings
+                    .iter()
+                    .map(|f| format!("{}: {}", f.code, f.message))
+                    .collect::<Vec<_>>()
+            );
+        }
+    }
+
+    #[test]
+    fn a4902_unresolvable_pin_fails() {
+        let policy = policy();
+        let mut contract = contract(&policy, "tightens", json!({}));
+        contract["execution_policy"]["organization_policy"]["sha256"] =
+            json!("sha256:0000000000000000000000000000000000000000000000000000000000000000");
+        let policy_bytes = serde_json::to_vec(&policy).unwrap();
+        let report = compile(&contract, &[&policy_bytes], &[]);
+        assert!(codes(&report).contains(&CORE_A4902));
+    }
+
+    #[test]
+    fn a4902_pin_without_relation_fails() {
+        let policy = policy();
+        let mut contract = contract(&policy, "tightens", json!({}));
+        contract["execution_policy"]
+            .as_object_mut()
+            .unwrap()
+            .remove("relation");
+        let policy_bytes = serde_json::to_vec(&policy).unwrap();
+        let report = compile(&contract, &[&policy_bytes], &[]);
+        assert!(codes(&report).contains(&CORE_A4902));
+    }
+
+    #[test]
+    fn a4902_exact_with_declared_fields_fails() {
+        let policy = policy();
+        let contract = contract(&policy, "exact", json!({"deny_providers": ["provider.a"]}));
+        let policy_bytes = serde_json::to_vec(&policy).unwrap();
+        let report = compile(&contract, &[&policy_bytes], &[]);
+        assert!(codes(&report).contains(&CORE_A4902));
+    }
+
+    #[test]
+    fn a_clean_exact_adopts_the_floor() {
+        let policy = policy();
+        let contract = contract(&policy, "exact", json!({}));
+        let policy_bytes = serde_json::to_vec(&policy).unwrap();
+        let report = compile(&contract, &[&policy_bytes], &[]);
+        assert_eq!(report.status, CompilationStatus::Compiled);
+        let merged = merged_policy(&report);
+        assert!(merged.require_signatures);
+        assert_eq!(merged.deny_providers, vec!["provider.a"]);
+        assert_eq!(
+            merged.maturity_floor,
+            Some(crate::document::CapabilityMaturity::Qualified)
+        );
+    }
+
+    #[test]
+    fn a4903_replaces_without_attestation_fails() {
+        let policy = policy();
+        let contract = contract(&policy, "replaces", json!({}));
+        let policy_bytes = serde_json::to_vec(&policy).unwrap();
+        let report = compile(&contract, &[&policy_bytes], &[]);
+        assert!(codes(&report).contains(&CORE_A4903));
+    }
+
+    #[test]
+    fn a4903_attestation_for_the_wrong_contract_fails() {
+        let policy = policy();
+        let mut contract = contract(&policy, "replaces", json!({}));
+        let mut attestation = attestation(&policy, &contract);
+        attestation["target"]["identity"] = json!("other.contract@1");
+        contract["execution_policy"]["replacement_attestation"] =
+            json!(canonical_sha256(&attestation));
+        let policy_bytes = serde_json::to_vec(&policy).unwrap();
+        let attestation_bytes = serde_json::to_vec(&attestation).unwrap();
+        let report = compile(&contract, &[&policy_bytes], &[&attestation_bytes]);
+        assert!(codes(&report).contains(&CORE_A4903));
+    }
+
+    #[test]
+    fn a4903_attestation_in_the_wrong_role_fails() {
+        let policy = policy();
+        let mut contract = contract(&policy, "replaces", json!({}));
+        let mut attestation = attestation(&policy, &contract);
+        attestation["role"] = json!("requester");
+        contract["execution_policy"]["replacement_attestation"] =
+            json!(canonical_sha256(&attestation));
+        let policy_bytes = serde_json::to_vec(&policy).unwrap();
+        let attestation_bytes = serde_json::to_vec(&attestation).unwrap();
+        let report = compile(&contract, &[&policy_bytes], &[&attestation_bytes]);
+        assert!(codes(&report).contains(&CORE_A4903));
+    }
+
+    #[test]
+    fn a_clean_replaces_supersedes_the_floor() {
+        let policy = policy();
+        let mut contract = contract(&policy, "replaces", json!({"deny_providers": []}));
+        let attestation = attestation(&policy, &contract);
+        contract["execution_policy"]["replacement_attestation"] =
+            json!(canonical_sha256(&attestation));
+        let policy_bytes = serde_json::to_vec(&policy).unwrap();
+        let attestation_bytes = serde_json::to_vec(&attestation).unwrap();
+        let report = compile(&contract, &[&policy_bytes], &[&attestation_bytes]);
+        assert_eq!(
+            report.status,
+            CompilationStatus::Compiled,
+            "findings: {:?}",
+            report
+                .findings
+                .iter()
+                .map(|f| format!("{}: {}", f.code, f.message))
+                .collect::<Vec<_>>()
+        );
+        let merged = merged_policy(&report);
+        // The contract's own fields stand — the floor is superseded.
+        assert!(!merged.require_signatures);
+        assert!(merged.maturity_floor.is_none());
+        assert!(merged.deny_providers.is_empty());
+    }
+
+    #[test]
+    fn a4904_unsigned_policy_fails() {
+        let mut policy = policy();
+        policy.as_object_mut().unwrap().remove("signature");
+        let contract = contract(&policy, "tightens", json!({}));
+        let policy_bytes = serde_json::to_vec(&policy).unwrap();
+        let report = compile(&contract, &[&policy_bytes], &[]);
+        assert!(codes(&report).contains(&CORE_A4904));
+    }
+
+    #[test]
+    fn a4905_newer_bound_revision_is_a_notice() {
+        let policy = policy();
+        let mut newer = policy.clone();
+        newer["policy_revision"] = json!(2);
+        let contract = contract(&policy, "tightens", json!({}));
+        let policy_bytes = serde_json::to_vec(&policy).unwrap();
+        let newer_bytes = serde_json::to_vec(&newer).unwrap();
+        let report = compile(&contract, &[&policy_bytes, &newer_bytes], &[]);
+        assert!(codes(&report).contains(&CORE_A4905));
+        assert_eq!(report.status, CompilationStatus::Compiled);
+    }
+
+    #[test]
+    fn no_pin_no_relation_is_the_status_quo() {
+        let mut contract: Value = serde_json::from_slice(CONTRACT).expect("fixture contract");
+        contract["execution_policy"] = json!({"relation": "none"});
+        let report = compile(&contract, &[], &[]);
+        assert_eq!(report.status, CompilationStatus::Compiled);
+    }
+
+    #[test]
+    fn a4902_relation_without_a_pin_fails() {
+        let mut contract: Value = serde_json::from_slice(CONTRACT).expect("fixture contract");
+        contract["execution_policy"] = json!({"relation": "tightens"});
+        let report = compile(&contract, &[], &[]);
+        assert!(codes(&report).contains(&CORE_A4902));
     }
 }

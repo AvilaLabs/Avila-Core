@@ -2524,6 +2524,203 @@ class TestSnapshotLoweringMutations(unittest.TestCase):
         )
 
 
+class TestOrgPolicyVerification(unittest.TestCase):
+    """ADR-0023 verifier parity: the pinned floor resolves and
+    authenticates under `policy_owner`, the `tightens` merge order is
+    re-derived per field, and the `replaces` attestation binds the exact
+    policy and contract identities."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="avila-core-verifier-orgpolicy-")
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.case_dir = Path(self.tmp)
+        self.seed = b"\x42" * 32
+        self.key_id = v.sha256_bytes(v.ed25519_public_key_from_seed(self.seed)).split(":", 1)[1]
+        self.public_key_hex = v.ed25519_public_key_from_seed(self.seed).hex()
+        self.trust_root = v.TrustRoot(keys={(self.key_id, "policy_owner"): self.public_key_hex})
+
+    def _digest(self, obj) -> str:
+        return v.sha256_bytes(v.canonicalize_json(json.dumps(obj).encode()))
+
+    def _write(self, name: str, obj) -> None:
+        (self.case_dir / name).write_text(json.dumps(obj))
+
+    def _sign(self, record: dict, signed_role: str, document_id: str) -> dict:
+        """Attach a real Ed25519 signature over the record's canonical
+        bytes with `signature` absent — the attestation convention."""
+        digest = v.sha256_bytes(v.canonicalize_json(json.dumps(record).encode("utf-8")))
+        record["signature"] = {
+            "schema_version": v.SIGNATURE_SCHEMA_VERSION,
+            "signed_document": {"role": signed_role, "document_id": document_id, "sha256": digest},
+            "key_id": self.key_id,
+            "algorithm": v.ALGORITHM_ED25519,
+            "signature_hex": v.ed25519_sign(self.seed, v.digest_from_prefixed(digest)).hex(),
+            "notice": "test fixture signature",
+        }
+        return record
+
+    def _policy(self, revision: int = 1, sign: bool = True) -> dict:
+        policy = {
+            "schema_version": "avila.core/organization-policy/v0.1-draft",
+            "semantic_profile": "avila.core/semantic/0.2-draft",
+            "policy_id": "fixture.org.baseline",
+            "policy_revision": revision,
+            "owner": "fixture.policy_owner",
+            "rules": {
+                "require_signatures": True,
+                "deny_providers": ["provider.a"],
+                "maturity_floor": "qualified",
+            },
+        }
+        if sign:
+            self._sign(policy, "organization_policy", policy["policy_id"])
+        return policy
+
+    def _contract(self, policy: dict, relation: str, rules: dict) -> dict:
+        return {
+            "contract_id": "fixture.contract",
+            "revision": 1,
+            "execution_policy": {
+                **rules,
+                "organization_policy": {
+                    "policy_id": policy["policy_id"],
+                    "policy_revision": policy["policy_revision"],
+                    "sha256": self._digest(policy),
+                },
+                "relation": relation,
+            },
+        }
+
+    def _attestation(self, policy: dict, contract: dict) -> dict:
+        record = {
+            "schema_version": v.ATTESTATION_SCHEMA_VERSION,
+            "attestation_id": "att.replace.1",
+            "subject": {
+                "kind": "organization_policy",
+                "identity": f"{policy['policy_id']}@{policy['policy_revision']}",
+                "sha256": self._digest(policy),
+            },
+            "statement": "approves",
+            "detail": "authorized replacement",
+            "target": {
+                "kind": "contract",
+                "identity": f"{contract['contract_id']}@{contract['revision']}",
+            },
+            "actor": {"actor_id": "fixture.policy_owner", "actor_kind": "person"},
+            "role": "policy_owner",
+        }
+        return self._sign(record, "attestation", record["attestation_id"])
+
+    def _verify(self, docs_by_role, trust_root=None) -> dict[str, object]:
+        report = v.Report(str(self.case_dir))
+        v.verify_org_policies(self.case_dir, {}, docs_by_role, trust_root, report)
+        return {c.check: c for c in report.checks}
+
+    def _build(self, contract, policy, attestation=None) -> dict:
+        self._write("contract.json", contract)
+        self._write("policy.json", policy)
+        docs_by_role = {
+            "contract": [{"document_id": "contract", "path": "contract.json"}],
+            "organization_policy": [{"document_id": "policy", "path": "policy.json"}],
+        }
+        if attestation is not None:
+            self._write("attestation.json", attestation)
+            docs_by_role["attestation"] = [
+                {"document_id": "att", "path": "attestation.json"}
+            ]
+        return docs_by_role
+
+    def test_clean_tightens_verifies(self):
+        policy = self._policy()
+        contract = self._contract(
+            policy,
+            "tightens",
+            {"deny_providers": ["provider.a", "provider.b"], "maturity_floor": "production"},
+        )
+        checks = self._verify(self._build(contract, policy), self.trust_root)
+        self.assertEqual(checks["organization_policy.pin"].status, "verified")
+        self.assertEqual(checks["organization_policy.signature"].status, "verified")
+        self.assertEqual(checks["organization_policy.tightens"].status, "verified")
+
+    def test_a_loosening_mismatches(self):
+        policy = self._policy()
+        contract = self._contract(policy, "tightens", {"deny_providers": ["provider.b"]})
+        checks = self._verify(self._build(contract, policy), self.trust_root)
+        self.assertEqual(checks["organization_policy.tightens"].status, "mismatch")
+
+    def test_unresolvable_pin_mismatches(self):
+        policy = self._policy()
+        contract = self._contract(policy, "tightens", {})
+        contract["execution_policy"]["organization_policy"]["sha256"] = "sha256:" + "0" * 64
+        checks = self._verify(self._build(contract, policy), self.trust_root)
+        self.assertEqual(checks["organization_policy.pin"].status, "mismatch")
+
+    def test_exact_with_declared_fields_mismatches(self):
+        policy = self._policy()
+        contract = self._contract(policy, "exact", {"deny_providers": ["provider.a"]})
+        checks = self._verify(self._build(contract, policy), self.trust_root)
+        self.assertEqual(checks["organization_policy.exact"].status, "mismatch")
+
+    def test_unsigned_floor_mismatches(self):
+        policy = self._policy(sign=False)
+        contract = self._contract(policy, "tightens", {})
+        checks = self._verify(self._build(contract, policy), self.trust_root)
+        self.assertEqual(checks["organization_policy.signature"].status, "mismatch")
+
+    def test_wrong_role_signature_mismatches(self):
+        policy = self._policy()
+        contract = self._contract(policy, "tightens", {})
+        wrong_role_root = v.TrustRoot(keys={(self.key_id, "requester"): self.public_key_hex})
+        checks = self._verify(self._build(contract, policy), wrong_role_root)
+        self.assertEqual(checks["organization_policy.signature"].status, "mismatch")
+        self.assertIn("policy_owner", checks["organization_policy.signature"].detail)
+
+    def test_replaces_with_a_bound_attestation_verifies(self):
+        policy = self._policy()
+        contract = self._contract(policy, "replaces", {"deny_providers": []})
+        attestation = self._attestation(policy, contract)
+        contract["execution_policy"]["replacement_attestation"] = self._digest(attestation)
+        checks = self._verify(self._build(contract, policy, attestation), self.trust_root)
+        self.assertEqual(
+            checks["organization_policy.replacement_attestation"].status, "verified"
+        )
+        self.assertEqual(
+            checks["organization_policy.replacement_attestation.signature"].status, "verified"
+        )
+
+    def test_replaces_targeting_another_contract_mismatches(self):
+        policy = self._policy()
+        contract = self._contract(policy, "replaces", {})
+        attestation = self._attestation(policy, contract)
+        attestation["target"]["identity"] = "other.contract@9"
+        # Re-sign so the attestation itself is internally consistent.
+        attestation.pop("signature")
+        self._sign(attestation, "attestation", attestation["attestation_id"])
+        contract["execution_policy"]["replacement_attestation"] = self._digest(attestation)
+        checks = self._verify(self._build(contract, policy, attestation), self.trust_root)
+        self.assertEqual(
+            checks["organization_policy.replacement_attestation"].status, "mismatch"
+        )
+
+    def test_a_newer_bound_revision_reports_drift(self):
+        policy = self._policy()
+        newer = self._policy(revision=2)
+        contract = self._contract(policy, "tightens", {})
+        docs_by_role = self._build(contract, policy)
+        self._write("policy2.json", newer)
+        docs_by_role["organization_policy"].append(
+            {"document_id": "policy2", "path": "policy2.json"}
+        )
+        checks = self._verify(docs_by_role, self.trust_root)
+        self.assertEqual(checks["organization_policy.superseded"].status, "verified")
+
+    def test_signature_not_checked_without_a_trust_root(self):
+        policy = self._policy()
+        contract = self._contract(policy, "tightens", {})
+        checks = self._verify(self._build(contract, policy), None)
+        self.assertEqual(checks["organization_policy.signature"].status, "not_checked")
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -2703,3 +2900,5 @@ class TestInstantiationVerification(unittest.TestCase):
         self.assertEqual(
             by_check["instantiation.inst.template_superseded"].status, "verified"
         )
+
+

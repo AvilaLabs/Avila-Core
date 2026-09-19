@@ -282,6 +282,26 @@
             "value": { "$ref": "#/$defs/exactNumber" },
             "currency": { "$ref": "#/$defs/nonemptyString" }
           }
+        },
+        "organization_policy": {
+          "description": "ADR-0023: the digest pin naming the bound `organization_policy` document this contract derives its floor from — a naming field, never a rule; the merged result carries none of the three ADR-0023 fields.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["policy_id", "policy_revision", "sha256"],
+          "properties": {
+            "policy_id": { "$ref": "#/$defs/nonemptyString" },
+            "policy_revision": { "type": "integer", "minimum": 1 },
+            "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+          }
+        },
+        "relation": {
+          "description": "ADR-0023: how the declared rule fields merge against the pinned floor — `tightens` (each declared field at least as strict, undeclared fields inherit), `exact` (the floor verbatim; every other field undeclared), `replaces` (superseded under `replacement_attestation`), `none` (legal only with `organization_policy` absent).",
+          "enum": ["tightens", "exact", "replaces", "none"]
+        },
+        "replacement_attestation": {
+          "description": "ADR-0023: the canonical digest of the `policy_owner` `approves` attestation authorizing `relation: replaces` — its subject names this policy identity and digest; its target names this contract `id@revision`.",
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
         }
       }
     },

@@ -146,7 +146,90 @@ pub struct ExecutionPolicy {
     /// confirmation (`CORE-P5401`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_cap: Option<PolicyCostCap>,
+    /// ADR-0023: the organization policy document this contract derives
+    /// its floor from — a digest pin, resolved against the bound
+    /// `organization_policy` documents at compile time. Naming fields,
+    /// never a rule: the merged result carries none of them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub organization_policy: Option<OrganizationPolicyRef>,
+    /// ADR-0023: how the declared fields relate to the pinned floor —
+    /// `tightens` (each declared field at least as strict, undeclared
+    /// fields inherit), `exact` (the floor verbatim; every other field
+    /// undeclared), `replaces` (the floor superseded under a
+    /// `replacement_attestation`), or `none` (no pinned floor — legal
+    /// only with `organization_policy` absent). Absent with a pin is a
+    /// merge failure (`CORE-A4902`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub relation: Option<PolicyRelation>,
+    /// ADR-0023: the digest of the attestation authorizing `replaces` —
+    /// a `policy_owner` statement covering the pinned policy and this
+    /// contract's identity. Checked against bound `attestation`
+    /// documents; required iff `relation` is `replaces` (`CORE-A4903`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub replacement_attestation: Option<String>,
 }
+
+/// ADR-0023: how a contract's `execution_policy` relates to the
+/// organization floor it pins.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PolicyRelation {
+    /// Each declared field is at least as strict as the floor;
+    /// undeclared fields inherit the floor value.
+    Tightens,
+    /// The floor verbatim — every other rule field must be undeclared.
+    Exact,
+    /// The contract supersedes the floor outright; requires a
+    /// `policy_owner` attestation (`replacement_attestation`).
+    Replaces,
+    /// No organization floor — legal only with `organization_policy`
+    /// absent.
+    None,
+}
+
+/// ADR-0023: the contract-side pin naming the organization policy it
+/// derives from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OrganizationPolicyRef {
+    pub policy_id: String,
+    pub policy_revision: u64,
+    /// The canonical digest of the pinned `organization_policy`
+    /// document.
+    pub sha256: String,
+}
+
+/// `avila.core/organization-policy/v0.1-draft`: the organizational floor
+/// a contract's `execution_policy` derives from (ADR-0023). `rules`
+/// reuses the `execution_policy` field vocabulary — no second rule
+/// language — but naming fields (`organization_policy`, `relation`,
+/// `replacement_attestation`) are meaningless in a floor and rejected.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OrganizationPolicy {
+    pub schema_version: String,
+    pub semantic_profile: String,
+    pub policy_id: String,
+    pub policy_revision: u64,
+    pub owner: String,
+    /// The least-strict rule set the organization accepts, in the same
+    /// field vocabulary `execution_policy` defines.
+    #[serde(default)]
+    pub rules: ExecutionPolicy,
+    /// A later revision of the same `policy_id` this document replaces —
+    /// informational; a bound newer revision surfaces the
+    /// `policy_superseded` notice rather than invalidating this pin.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supersedes: Option<OrganizationPolicyRef>,
+    /// The policy owner's ADR-0015 signature document over this record's
+    /// canonical bytes with this member absent — opaque to the compiler;
+    /// the runner decodes and verifies it under a `policy_owner` trust-root
+    /// key (`CORE-A4904`). Absent means unsigned.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signature: Option<serde_json::Value>,
+}
+
+pub const ORGANIZATION_POLICY_SCHEMA_VERSION: &str = "avila.core/organization-policy/v0.1-draft";
 
 /// A provider's declared implementation maturity — a policy fact per
 /// ADR-0020 clause 2, ordered for `maturity_floor` comparisons.

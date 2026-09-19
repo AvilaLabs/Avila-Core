@@ -347,7 +347,7 @@ canonically.
 | Fixture | Expected |
 | --- | --- |
 | `policy.lattice.contract-weaker.fail` | `CORE-A4201` — exercised by `types.R6.nominal-basis-unpermitted.fail` |
-| `policy.lattice.contract-tighter.pass` | the `organization_policy` document and `tightens` merge order are proposed in ADR-0023 (the ADR-0020 deferral) |
+| `policy.lattice.contract-tighter.pass` | `CORE-A4901..A4905` — the `organization_policy` document and `tightens` merge order are implemented (ADR-0023): `a_clean_tightens_merges_the_floor`, `a4901_contract_loosening_a_declared_field_fails`, `a_clean_exact_adopts_the_floor`, `a_clean_replaces_supersedes_the_floor`, `a4905_newer_bound_revision_is_a_notice`; runner signature checks `a_signed_floor_verifies_under_a_policy_owner_key`, `a_floor_signed_under_the_wrong_role_refuses`, `a_floor_without_a_trust_root_refuses`; verifier `TestOrgPolicyVerification` |
 | `policy.rule.maturity_floor.pass/fail` | `CORE-P5303` — `a_undeclared_maturity_fails_a_declared_floor`, `a_declared_maturity_meeting_the_floor_runs`; verifier `test_undeclared_maturity_fails_the_floor`, `test_declared_maturity_meeting_the_floor_verifies` |
 | `policy.rule.require_qualification.fail` | `CORE-A4601` — exercised by `campaign.require-qualification.unqualified.not_evaluated` |
 | `policy.rule.deny_providers.fail`, `allow_capabilities.pass` | `CORE-P5301` — `a_denied_provider_is_refused_before_any_execution`, `a_selection_outside_the_allow_list_is_refused`, `a_recorded_selection_matching_the_bound_capability_runs` |

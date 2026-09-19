@@ -1469,3 +1469,60 @@ informational — it is not resolved against a bound prior revision;
 signatures on both documents are package-bound `signature` docs under
 the standard trust-root machinery, not embedded fields (ADR amended);
 ADR-0022 stays `proposed`.
+
+## ADR-0023 — organization policy and the `tightens` merge order (implemented)
+
+`organization_policy` package document, the contract-side pin/relation
+fields, and the mechanical merge — last of the ADR-0021..0025 cluster.
+
+- `OrganizationPolicy` (`avila.core/organization-policy/v0.1-draft`):
+  identity, revision, owner, `rules` carrying the full `execution_policy`
+  vocabulary (no second rule language; merge-naming fields inside `rules`
+  are refused), informational `supersedes`, and an embedded `signature`
+  the compiler treats opaquely.
+- `ExecutionPolicy` gains `organization_policy` (digest pin +
+  id/revision), `relation` (`tightens`/`exact`/`replaces`/`none`), and
+  `replacement_attestation` (digest pin to a bound `attestation`).
+- `CompilationMaterial` (renamed from `InstantiationMaterial`) carries
+  `records`, `templates`, `organization_policies`, `attestations`;
+  `compile_documents_with_material` is the single entry point.
+- `tightens` is checked field by field (`CORE-A4901`): deny-list
+  superset, allow-list subset, grant lists inside the floor's,
+  maturity ranking, cost-cap currency+ceiling, restrictive booleans —
+  and the permissive `permit_nominal_basis` inverted. Undeclared
+  fields inherit the floor; the merged `ExecutionPolicy` is what the
+  compiled snapshot carries and digests.
+- `exact` adopts the floor verbatim (`CORE-A4902` on any declared
+  field); `none` is legal only without a pin; pin/relation
+  contradictions are `CORE-A4902`.
+- `replaces` requires `replacement_attestation` (`CORE-A4903`): a bound
+  `approves` attestation in the `policy_owner` role whose `subject`
+  (new kind `organization_policy`) names the policy identity and
+  digest, and whose `target` (new optional attestation field) names
+  the contract `id@revision` — named, not digest-pinned, because the
+  contract pins the attestation (a digest in both directions is a
+  cycle). The compiler checks binding fields; the runner verifies the
+  signature.
+- `CORE-A4904`: malformed/unsigned floor at compile; at run time the
+  floor's and attestation's signatures must verify under a
+  `policy_owner` trust-root key or the run refuses — including when no
+  `--trust-root` is supplied (an unverifiable floor cannot stand).
+- `CORE-A4905` notice: a newer bound revision of the pinned policy is
+  drift information, never invalidation.
+- Runner material collection binds every `organization_policy` and
+  `attestation` package document; verifier parity via
+  `verify_org_policies` (pin, signature, per-field order, replaces
+  binding + signature, superseded drift). `avila-core attest` accepts
+  `--subject-kind organization_policy` and `--target-*`.
+- Schemas: `organization-policy.v0.1-draft`, contract `execution_policy`
+  fields, attestation `organization_policy` subject + `target`.
+
+Coverage pins: `policy.lattice.contract-tighter.pass` moves to named.
+
+Honest gaps: `replaces` produces a merged policy equal to the
+contract's own fields — the org floor's fields are wholly superseded
+(there is no "replace only these fields" partial merge; that was the
+ADRs letter); the CLI `attest` path mints a replacement attestation but
+there is no command authoring the policy document itself; an attestation
+with a `target` but no replaces-relation pin is ignored, matching the
+unreferenced-material posture; ADR-0023 stays `proposed`.

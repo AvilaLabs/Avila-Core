@@ -178,3 +178,42 @@ template changes nothing the instance recorded — the
   `lifecycle.template.validation-cases-must-compile`,
   `lifecycle.template.policy-only-tightens`, and the
   `lifecycle.amend.*` rows through the amendment edge.
+
+## Implementation review (for ratification)
+
+Delivered in commit `23875e5`. `contract_template` and
+`contract_instantiation` are package-bound document families with
+draft schemas; the contract names its record through
+`instantiated_from` (`instantiation_id`, never a digest — the record
+digest-pins the contract, so a digest in both directions is a cycle
+no document can satisfy; the draft was amended). Parameters reuse
+`ParameterDefinition` domains; `{"ref": "<param>"}` substitution
+materializes the workflow/requirements templates; `policy_floor`
+applies the mechanical tighten-only order (permissive flags inverted);
+eligibility is a closed grammar under strong Kleene truth —
+eligible-or-refused, and a recorded outcome the fields do not imply
+fails as `CORE-A4804`. `CORE-A4801` binding integrity, `A4802`
+parameters/coverage, `A4803` floor order, `A4805` validation cases,
+`A4806` the superseded notice. Compiler 16 tests, one runner e2e, 7
+verifier-parity tests.
+
+Divergences from the proposal text, both recorded in the draft:
+
+- The approval-time gate the draft sketched cannot live in the
+  transition log — a transition names a subject identity and never
+  sees document bytes. `CORE-A4805` is enforced at instance compile:
+  a broken template yields refusing instances. That is the honest
+  boundary, not a weakened check.
+- Template/record signatures are package-bound `signature` documents
+  under the standard trust-root machinery, not embedded fields.
+
+Ratification questions:
+
+- Accept the compile-time enforcement point for validation cases, or
+  should approval require a bound template-check record (new
+  machinery)?
+- Accept `instantiated_from` naming the record by id only (no
+  contract-side digest — the pin cycle makes one unsatisfiable)?
+- `supersedes` is informational only — not resolved against a bound
+  prior revision. Acceptable, or should a bound older revision
+  downgrade the notice to a finding?

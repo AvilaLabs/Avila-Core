@@ -184,3 +184,32 @@ Amendments that name no live campaign only supersede the contract.
   `campaign.illegal-transition`, `campaign.step.moved-by-wrong-actor`,
   `campaign.resume.new-run-reuses`, `campaign.human.deadline-escalation`,
   `campaign.amend-in-flight`, and the `authority.*` family.
+
+## Implementation review (for ratification)
+
+Delivered in commit `ea975e8`. The attestation record binds a
+key+role to a digest-bound subject; the `state_transition` record
+moves contract/campaign/step subjects under a closed legality table;
+step states are derived from receipts, never recorded. `KeyRole`
+gained `policy_owner`. `CORE-X6401` (deadline lapse), `X6402`
+(illegal transition), `X6403` (wrong-role actor), and `X6404`
+(resume/reuse disagreement) are emitted at the runner's record-load
+boundary; campaign JSONL logs carry transitions and attestations with
+optional per-line signatures verified under the supplied trust root.
+`avila-core attest`/`transition` mint both record kinds.
+
+Divergences from the proposal text: none structural — the model,
+vocabularies, and legality table match the draft. `Attestation`
+gained an optional `target` field under ADR-0023 (a second identity a
+statement binds), schema-amended there.
+
+Ratification questions:
+
+- Is the deliberately small legality table the right scope — are
+  timeouts/retries/multi-actor approvals correctly left to client
+  workflows appending transitions rather than to the engine?
+- Is `policy_owner` acceptable as a trust-root role (ADR-0023 floors
+  verify under it)?
+- Is the amend-in-flight semantics right — a superseding campaign
+  amendment cancels in-flight steps while their committed receipts
+  remain valid evidence?

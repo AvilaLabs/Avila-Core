@@ -168,3 +168,45 @@ checked" posture.
 - ADR-0006 SC-8.1/8.2; completes the ADR-0020 deferral.
 - Fixture rows: `policy.lattice.contract-weaker` (the merged-policy
   refusal half), `policy.lattice.contract-tighter`.
+
+## Implementation review (for ratification)
+
+Delivered in commit `df43ca1`. The `organization_policy` document
+carries `rules` in the full `execution_policy` vocabulary; the
+contract pins it by digest and declares `tightens`, `exact`,
+`replaces`, or `none`. `tightens` is proven field by field —
+deny-list superset, allow-list subset, grant lists inside the
+floor's, maturity ranking, cost-cap currency and ceiling, restrictive
+booleans, and the inverted permissive `permit_nominal_basis` —
+undeclared fields inherit, and the merged `ExecutionPolicy` is what
+the compiled snapshot carries and digests. `replaces` requires a
+bound `policy_owner` `approves` attestation: its `subject` (new kind
+`organization_policy`) names the policy identity and digest; its
+`target` (new optional attestation field) names the contract
+`id@revision` — named, not digest-pinned, because the contract pins
+the attestation (a digest both ways is a cycle). The compiler checks
+binding fields; the runner verifies both signatures under a
+`policy_owner` trust-root key, and a pinned floor with no supplied
+trust root cannot authenticate — the run refuses. `CORE-A4901`–`A4905`
+name the failures and the superseded notice. Compiler 14 tests, 3
+runner signature tests, 10 verifier-parity tests.
+
+Divergences from the proposal text, all recorded in the draft:
+
+- The rules list gained `permitted_nondeterministic_roles` and
+  `recognized_qualification_owners` (the full vocabulary, not the
+  draft's subset), and merge-naming fields inside `rules` are refused.
+- `verify_case_selections` was not extended — a new
+  `verify_org_policies` reports `organization_policy.*` results.
+- `CORE-A4905` was added for the superseded notice the boundary
+  section already described.
+
+Ratification questions:
+
+- `replaces` supersedes the floor wholesale — the merged policy is
+  the contract's own fields, no partial-field merge. Accept, or is a
+  scoped replacement needed?
+- Accept the no-trust-root refusal posture — a pinned floor cannot
+  silently mean nothing?
+- Accept the attestation `target` extension (a named second identity)
+  as the authorization binding?

@@ -128,3 +128,41 @@ does not resolve the deadline.
 - Fixture rows: `admission.A9`,
   `admission.presentation.cannot-edit-artifact`, and the record half of
   `admission.non-artifact-records`.
+
+## Implementation review (for ratification)
+
+Delivered in commit `008a4cf`. The committed `staged_review_record`
+family already IS the routing record — its `decision_role.id` is
+literally `core.presentation.routing-record` and case-001 ships a
+committed instance — so the draft was amended to bind that family
+rather than fork a parallel `routing_record` schema.
+`case_run/routing.rs` checks the A9 bindings over package-bound
+records: `request_sha256` self-consistency and materialized-gate
+equality, `reviewer_eligibility_policy` equality, `allowed_dispositions`
+membership, `record_sha256` self-consistency. `CORE-X6501` (semantic
+mismatch) and `X6502` (structural failure) quarantine the record at
+notice severity — the artifact, admission, and verdict stay
+byte-identical (A9's own invariant). `respond_by` and `routing` are
+excluded from `request_sha256`; a recorded answer resolves a pending
+gate deadline while a quarantined one does not.
+
+Divergences from the proposal text:
+
+- The new `routing_record` document type the draft proposed was not
+  created — the existing staged-review family was bound instead (§1–2
+  amended).
+- A record answering a declared-but-unmaterialized gate (a rejected
+  campaign produces none) is skipped without a finding — "not forged,
+  not checked," matching the verifier's posture.
+- No CLI path mints a record; the surrounding agent workflow writes
+  it and the engine verifies.
+
+Ratification questions:
+
+- Accept binding the existing `staged_review_record` family as the
+  routing record rather than introducing a dedicated schema?
+- Case-001's committed record now quarantines against today's
+  materialization — it bound an older dossier. Accept that as honest
+  history (the record is stale, not the check wrong)?
+- Accept notice-severity quarantine (record fails, artifact survives)
+  as the sole failure mode?

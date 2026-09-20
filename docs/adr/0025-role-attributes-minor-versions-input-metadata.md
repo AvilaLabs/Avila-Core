@@ -142,3 +142,42 @@ Semantics, matching SC-12.2's fail-closed default:
   fail-closed invalidation default `input_metadata` sits outside).
 - Fixture rows: `roles.attribute-undeclared-in-predicate`,
   `roles.minor-version`, `change.input_metadata.non-dependence`.
+
+## Implementation review (for ratification)
+
+Delivered in commit `2939c9a`. `VersionedRef.minor` (absent reads 0,
+`minor: 0` never serializes — committed digests stay byte-identical,
+pinned by a determinism test); `satisfies()` requires same id/major
+and offered minor ≥ required, wired into explicit and implicit
+binding. `RoleDefinition.attributes` reuses `ParameterDefinition`
+value domains; a minor bump adding a required attribute is `R3501`,
+checked pairwise across every lower minor. `ContractInput.attributes`
+is validated against the resolved role's vocabulary (`T2702`);
+`input_metadata` is scalars-only and disjoint from `attributes`
+(`T2702` on overlap). The kernel gained `input_attribute_in_range`
+with exact comparisons over canonical strings and JSON integers;
+the runner merges declared attributes into `context.inputs` per
+binding. `input_metadata` never enters invocation identity — by
+construction.
+
+Divergences from the proposal text:
+
+- The draft says `CORE-T2701` fires "at compile time." Qualification
+  records are package documents the compiler never sees — the check
+  is compiler-owned but emitted at the runner's record-load boundary,
+  scoped to the steps exercising the record's capability pair
+  (wording amended). `explain --all` dedupes by code, preferring the
+  compiler's entry.
+- The implicit-binding path was upgraded from exact equality to
+  `satisfies()` for consistency with explicit bindings.
+
+Ratification questions:
+
+- Accept a compiler-owned code emitted at the runner boundary
+  (records exist only in packages), or should T2701 move to a
+  runtime-code family?
+- Accept `input_metadata` non-consultation as a construction
+  guarantee (no e2e case executes a metadata-carrying input yet), or
+  gate ratification on one?
+- Accept "optional attributes only" as the conventional minor-bump
+  rule for this registry?

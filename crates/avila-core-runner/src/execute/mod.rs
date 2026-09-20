@@ -9,6 +9,7 @@ pub mod activation;
 #[cfg(test)]
 mod adversarial_tests;
 pub mod aftermatter;
+pub mod blanket;
 pub mod claims;
 pub mod external_checker;
 pub mod shielding;
@@ -76,6 +77,7 @@ pub enum Adapter {
     ShieldingTransport,
     ShieldingActivation,
     ShieldingTransportCoupled,
+    BlanketTransport,
     ThermalScreen,
     ThermalSpreaderFe,
     ExternalChecker {
@@ -93,6 +95,7 @@ impl Adapter {
             shielding::TRANSPORT_ADAPTER_ID => Some(Self::ShieldingTransport),
             activation::ADAPTER_ID => Some(Self::ShieldingActivation),
             shielding_coupled::TRANSPORT_ADAPTER_ID => Some(Self::ShieldingTransportCoupled),
+            blanket::ADAPTER_ID => Some(Self::BlanketTransport),
             thermal::SCREEN_ADAPTER_ID => Some(Self::ThermalScreen),
             thermal::FE_ADAPTER_ID => Some(Self::ThermalSpreaderFe),
             _ => None,
@@ -107,6 +110,7 @@ impl Adapter {
             Self::ShieldingTransport => shielding::TRANSPORT_ADAPTER_ID,
             Self::ShieldingActivation => activation::ADAPTER_ID,
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_ADAPTER_ID,
+            Self::BlanketTransport => blanket::ADAPTER_ID,
             Self::ThermalScreen => thermal::SCREEN_ADAPTER_ID,
             Self::ThermalSpreaderFe => thermal::FE_ADAPTER_ID,
             Self::ExternalChecker { adapter, .. } => &adapter.adapter_id,
@@ -139,6 +143,10 @@ impl Adapter {
                 id: shielding_coupled::TRANSPORT_TYPE_ID.into(),
                 major: 1,
             },
+            Self::BlanketTransport => CapabilityTypeRef {
+                id: blanket::TYPE_ID.into(),
+                major: 1,
+            },
             Self::ThermalScreen => CapabilityTypeRef {
                 id: thermal::SCREEN_TYPE_ID.into(),
                 major: 1,
@@ -161,6 +169,7 @@ impl Adapter {
             Self::ShieldingTransportCoupled => {
                 shielding_coupled::TRANSPORT_INPUT_SLOTS.contains(&input_slot)
             }
+            Self::BlanketTransport => blanket::INPUT_SLOTS.contains(&input_slot),
             Self::ThermalScreen => thermal::SCREEN_INPUT_SLOTS.contains(&input_slot),
             Self::ThermalSpreaderFe => thermal::FE_INPUT_SLOTS.contains(&input_slot),
             Self::ExternalChecker { adapter, .. } => {
@@ -177,6 +186,7 @@ impl Adapter {
             Self::ShieldingTransport => shielding::TRANSPORT_OUTPUTS,
             Self::ShieldingActivation => activation::OUTPUTS,
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_OUTPUTS,
+            Self::BlanketTransport => blanket::OUTPUTS,
             Self::ThermalScreen => thermal::SCREEN_OUTPUTS,
             Self::ThermalSpreaderFe => thermal::FE_OUTPUTS,
             Self::ExternalChecker { adapter, .. } => return adapter.output_specs(),
@@ -199,6 +209,7 @@ impl Adapter {
             Self::ShieldingTransport => shielding::TRANSPORT_OUTPUT_SLOTS.to_vec(),
             Self::ShieldingActivation => activation::OUTPUT_SLOTS.to_vec(),
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_OUTPUT_SLOTS.to_vec(),
+            Self::BlanketTransport => blanket::OUTPUT_SLOTS.to_vec(),
             Self::ThermalScreen => thermal::SCREEN_OUTPUT_SLOTS.to_vec(),
             Self::ThermalSpreaderFe => thermal::FE_OUTPUT_SLOTS.to_vec(),
             Self::ExternalChecker { adapter, .. } => adapter.output_slots(),
@@ -232,6 +243,7 @@ impl Adapter {
             Self::ShieldingTransport => shielding::TRANSPORT_TIMEOUT,
             Self::ShieldingActivation => activation::TIMEOUT,
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_TIMEOUT,
+            Self::BlanketTransport => blanket::TIMEOUT,
             Self::ThermalScreen => thermal::SCREEN_TIMEOUT,
             Self::ThermalSpreaderFe => thermal::FE_TIMEOUT,
             Self::ExternalChecker { adapter, .. } => adapter.timeout(),
@@ -251,6 +263,7 @@ impl Adapter {
             | Self::ThermalSpreaderFe => &[],
             Self::ShieldingTransport => shielding::TRANSPORT_ENVIRONMENT_KEYS,
             Self::ShieldingTransportCoupled => shielding_coupled::TRANSPORT_ENVIRONMENT_KEYS,
+            Self::BlanketTransport => blanket::ENVIRONMENT_KEYS,
             Self::ExternalChecker { .. } => &[],
         }
     }
@@ -267,6 +280,7 @@ impl Adapter {
             Self::ShieldingTransport => shielding::transport_environment(),
             Self::ShieldingActivation => activation::environment(),
             Self::ShieldingTransportCoupled => shielding_coupled::transport_environment(),
+            Self::BlanketTransport => blanket::environment(),
             Self::ExternalChecker { .. } => BTreeMap::new(),
         }
     }
@@ -320,6 +334,9 @@ impl Adapter {
                 &mut inputs,
             )?;
         }
+        if matches!(self, Self::BlanketTransport) {
+            blanket::facts(staged, invocation_sha256, &mut facts, &mut inputs)?;
+        }
         if matches!(self, Self::ThermalScreen | Self::ThermalSpreaderFe) {
             thermal::thermal_facts_for(
                 staged,
@@ -347,6 +364,7 @@ impl Adapter {
             Self::ShieldingTransportCoupled => {
                 shielding_coupled::transport_arguments(staged, context)
             }
+            Self::BlanketTransport => blanket::arguments(staged, context),
             Self::ThermalScreen => thermal::screen_arguments(staged, context),
             Self::ThermalSpreaderFe => thermal::fe_arguments(staged, context),
             Self::ExternalChecker { adapter, .. } => adapter.arguments(staged),
@@ -367,6 +385,7 @@ impl Adapter {
             Self::ShieldingTransportCoupled => {
                 shielding_coupled::transport_claims(outputs, context)
             }
+            Self::BlanketTransport => blanket::extract_claims(outputs, context),
             Self::ThermalScreen => thermal::screen_claims(outputs, context),
             Self::ThermalSpreaderFe => thermal::fe_claims(outputs, context),
             Self::ExternalChecker { adapter, .. } => adapter.extract_claims(outputs, context),

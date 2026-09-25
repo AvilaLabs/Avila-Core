@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/language-program/v0.1-draft",
   "profile": "avila.core/language/0.1-draft",
-  "id": "invalid-shared-source-independence",
+  "id": "invalid-independence-unknown",
   "library": {
     "name": "measurement-scaling",
     "revision": 1,
@@ -58,8 +58,8 @@
         "source": {
           "kind": "assertion",
           "party": "lab-9",
-          "edge": "calibration-cert-55",
-          "statement": "detector B reading; calibrated under the same certificate 55"
+          "edge": "calibration-cert-61",
+          "statement": "detector B reading; calibrated under certificate 61"
         }
       }
     },

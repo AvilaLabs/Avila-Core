@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/language-program/v0.1-draft",
   "profile": "avila.core/language/0.1-draft",
-  "id": "clearance-inconclusive",
+  "id": "invalid-product-kind",
   "library": {
     "name": "thermal-expansion",
     "revision": 1,
@@ -28,22 +28,7 @@
         }
       }
     },
-    "materials": {
-      "al-6061-t6": {
-        "applicability": {
-          "temperature": {
-            "unit": "K",
-            "lower": "223",
-            "upper": "423"
-          }
-        },
-        "source": {
-          "kind": "assertion",
-          "party": "material-cert-m44",
-          "edge": "material-cert-m44"
-        }
-      }
-    }
+    "materials": {}
   },
   "inputs": [
     {
@@ -69,28 +54,6 @@
       }
     },
     {
-      "id": "coefficient",
-      "type": {
-        "quantity_kind": "thermal_expansion_coefficient",
-        "claim": "exact",
-        "material": "al-6061-t6"
-      },
-      "binding": {
-        "state": "bound",
-        "value": {
-          "kind": "exact",
-          "value": "1/10000",
-          "unit": "1/K"
-        },
-        "source": {
-          "kind": "assertion",
-          "party": "material-cert-m44",
-          "edge": "material-cert-m44",
-          "statement": "linear expansion coefficient over the applicability domain"
-        }
-      }
-    },
-    {
       "id": "temperature_change",
       "type": {
         "quantity_kind": "temperature",
@@ -112,58 +75,23 @@
           "statement": "soak temperature-change range"
         }
       }
-    },
-    {
-      "id": "initial_clearance",
-      "type": {
-        "quantity_kind": "length",
-        "claim": "exact",
-        "geometry": "bracket@2"
-      },
-      "binding": {
-        "state": "bound",
-        "value": {
-          "kind": "exact",
-          "value": "1/2",
-          "unit": "mm"
-        },
-        "source": {
-          "kind": "assertion",
-          "party": "drawing-d1187@2",
-          "edge": "drawing-d1187@2",
-          "statement": "as-built clearance dimension"
-        }
-      }
     }
   ],
   "assumptions": [],
   "premises": [],
   "body": [
     {
-      "bind": "displacement",
-      "apply": "linear-expansion",
-      "arguments": {
-        "length": {
-          "ref": "length"
-        },
-        "coefficient": {
-          "ref": "coefficient"
-        },
-        "temperature_change": {
-          "ref": "temperature_change"
-        }
-      }
-    },
-    {
-      "bind": "remaining_clearance",
-      "apply": "clearance-difference",
-      "arguments": {
-        "initial_clearance": {
-          "ref": "initial_clearance"
-        },
-        "displacement": {
-          "ref": "displacement"
-        }
+      "bind": "bogus",
+      "infer": {
+        "rule": "interval.mul",
+        "arguments": [
+          {
+            "ref": "length"
+          },
+          {
+            "ref": "temperature_change"
+          }
+        ]
       }
     }
   ],
@@ -171,13 +99,13 @@
     {
       "id": "EL-R1",
       "subject": {
-        "ref": "remaining_clearance"
+        "ref": "bogus"
       },
       "comparison": "ge",
       "quantity_kind": "length",
       "limit": {
         "kind": "exact",
-        "value": "7/20",
+        "value": "1/4",
         "unit": "mm"
       },
       "scope": "steady-state"

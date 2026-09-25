@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/language-program/v0.1-draft",
   "profile": "avila.core/language/0.1-draft",
-  "id": "clearance-not-evaluated",
+  "id": "positive-assumption-discharge",
   "library": {
     "name": "thermal-expansion",
     "revision": 1,
@@ -98,9 +98,19 @@
         "scenario": "thermal-soak-steady"
       },
       "binding": {
-        "state": "unavailable",
-        "party": "scenario-spec-9",
-        "reason": "the soak temperature-change range has not been measured for this configuration"
+        "state": "bound",
+        "value": {
+          "kind": "enclosure",
+          "lower": "10",
+          "upper": "20",
+          "unit": "K"
+        },
+        "source": {
+          "kind": "assertion",
+          "party": "scenario-spec-9",
+          "edge": "scenario-spec-9",
+          "statement": "soak temperature-change range"
+        }
       }
     },
     {
@@ -127,7 +137,43 @@
     }
   ],
   "assumptions": [],
-  "premises": [],
+  "premises": [
+    {
+      "id": "p-uniform",
+      "proposition": "uniform-temperature-change",
+      "at": {
+        "geometry": "bracket@2",
+        "scenario": "thermal-soak-steady"
+      },
+      "established_by": {
+        "kind": "assertion",
+        "party": "thermal-design-review-4",
+        "edge": "thermal-design-review-4"
+      },
+      "assumptions": []
+    },
+    {
+      "id": "p-model",
+      "proposition": "linear-expansion-model",
+      "at": {
+        "material": "al-6061-t6",
+        "scenario": "thermal-soak-steady"
+      },
+      "established_by": {
+        "kind": "assertion",
+        "party": "material-cert-m44",
+        "edge": "material-cert-m44"
+      },
+      "assumptions": [
+        {
+          "proposition": "fixture-symmetric",
+          "at": {
+            "geometry": "bracket@2"
+          }
+        }
+      ]
+    }
+  ],
   "body": [
     {
       "bind": "displacement",

@@ -148,10 +148,27 @@ charter's first experiment must map to a rule and an observable example.
 sequencing change and names the experimental profile
 `avila.core/language/0.1-draft`. The normative specification is
 [docs/architecture/ENGINEERING_LANGUAGE.md](../architecture/ENGINEERING_LANGUAGE.md);
-fifteen authored programs and two method libraries live in
+twenty-four authored programs and two method libraries live in
 `examples/language/` with `expectations.json` pinning the specified result
 of each. No checker exists; the examples' expected outcomes are derived by
-hand from the specification.
+hand from the specification. Specification **r2** incorporated the
+[EL-01 specification review](reviews/2026-09-25-engineering-language-spec-review.md)
+— kind-directed multiplication via declared `kind_products`, scenario
+identity separated from scope acceptance, witness-based assumption
+discharge with cyclic refusal, `independent` vs `provenance_disjoint`,
+relation-map semantics, semantic vs document identity, and the lifecycle
+context. Specification **r3** incorporates the
+[r2 follow-up review](reviews/2026-09-25-engineering-language-r2-review.md)
+— schema-directed identity projection (positional operands are
+identity-bearing, map keys are never stripped as annotations, admission
+precedes hashing), `clearance-difference`/`clearance-heuristic` carry
+`material` through their outputs, shared provenance refutes only
+`provenance_disjoint` (never `independent`), nominal operands make
+arithmetic rules inapplicable rather than propagating, and lifecycle
+material combines all applicable entries with all refusal reasons
+preserved. The [r3 closure review](reviews/2026-09-25-engineering-language-r3-closure.md)
+closes the six remaining specification findings. EL-01 is ready for EL-02's
+finite shared analysis and obligation generation implementation.
 
 ## EL-02 — Implement shared analysis and obligation generation
 

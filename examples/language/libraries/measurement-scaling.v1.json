@@ -9,9 +9,27 @@
     "dose_rate": {"canonical_unit": "mSv/h"},
     "dimensionless_factor": {"canonical_unit": "1"}
   },
+  "kind_products": [
+    {
+      "lhs_kind": "dimensionless_factor",
+      "rhs_kind": "dose_rate",
+      "result_kind": "dose_rate",
+      "result_unit": "mSv/h"
+    }
+  ],
   "propositions": {
-    "calibration-current": "the calibration factor is within its validity interval",
-    "uniform-field": "the field is uniform over the measurement region"
+    "calibration-current": {
+      "params": [],
+      "gloss": "the calibration factor is within its validity interval"
+    },
+    "uniform-field": {
+      "params": ["scenario"],
+      "gloss": "the field is uniform over the measurement region"
+    },
+    "separate-instrumentation": {
+      "params": [],
+      "gloss": "the two detectors are physically separate instruments with no shared readout"
+    }
   },
   "methods": [
     {
@@ -35,14 +53,19 @@
         {
           "kind": "independence",
           "over": ["reading_a", "reading_b"],
-          "name": "the two readings draw on independent sources"
+          "label": "the two readings' measurement errors are statistically independent"
+        },
+        {
+          "kind": "provenance_disjoint",
+          "over": ["reading_a", "reading_b"],
+          "label": "admission policy: the readings must not share a recorded source edge"
         }
       ],
       "ensures": [
         {
           "kind": "relation",
           "expression": "output = calibration * (reading_a + reading_b)",
-          "check": "interval.mul_add_composition"
+          "check": "interval_arithmetic"
         }
       ],
       "assumes": ["calibration-current", "uniform-field"],
@@ -71,7 +94,7 @@
         {
           "kind": "relation",
           "expression": "output = calibration * reading",
-          "check": "interval.mul"
+          "check": "interval_arithmetic"
         }
       ],
       "assumes": ["calibration-current"],

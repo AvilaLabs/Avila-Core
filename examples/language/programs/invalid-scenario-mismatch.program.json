@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/language-program/v0.1-draft",
   "profile": "avila.core/language/0.1-draft",
-  "id": "invalid-shared-source-independence",
+  "id": "invalid-scenario-mismatch",
   "library": {
     "name": "measurement-scaling",
     "revision": 1,
@@ -11,6 +11,9 @@
     "geometries": {},
     "scenarios": {
       "field-survey-1": {
+        "scope": "steady-state"
+      },
+      "field-survey-2": {
         "scope": "steady-state"
       }
     },
@@ -36,7 +39,7 @@
           "kind": "assertion",
           "party": "lab-9",
           "edge": "calibration-cert-55",
-          "statement": "detector A reading; calibrated under certificate 55"
+          "statement": "detector A reading"
         }
       }
     },
@@ -45,7 +48,7 @@
       "type": {
         "quantity_kind": "dose_rate",
         "claim": "enclosure",
-        "scenario": "field-survey-1"
+        "scenario": "field-survey-2"
       },
       "binding": {
         "state": "bound",
@@ -58,8 +61,8 @@
         "source": {
           "kind": "assertion",
           "party": "lab-9",
-          "edge": "calibration-cert-55",
-          "statement": "detector B reading; calibrated under the same certificate 55"
+          "edge": "calibration-cert-61",
+          "statement": "detector B reading"
         }
       }
     },

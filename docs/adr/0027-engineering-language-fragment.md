@@ -11,6 +11,14 @@
   [docs/architecture/ENGINEERING_LANGUAGE.md](../architecture/ENGINEERING_LANGUAGE.md)
 - Example programs: `examples/language/` (authored before the checker;
   the specification, not an implementation, determines their results)
+- Revision: specification r3 incorporates the
+  [EL-01 specification review](../roadmap/reviews/2026-09-25-engineering-language-spec-review.md)
+  and the
+  [r2 follow-up review](../roadmap/reviews/2026-09-25-engineering-language-r2-review.md)
+  — kind-directed multiplication, scenario identity vs scope,
+  witness-based assumption discharge, the independence/provenance split,
+  explicit relation-map semantics, schema-directed identity projection,
+  and lifecycle scope combination. The decision stands unchanged.
 
 ## Context
 
@@ -50,10 +58,10 @@ and bounded search.
 
 2. **The language is specified before it is implemented.** The linked
    specification fixes the term forms, the related-type parameters
-   (geometry revision, scenario scope, material/applicability identity,
-   quantity kind, claim model), the three-state proposition model
-   (established evidence / declared assumption / unresolved obligation,
-   with contradicted premises blocking their use), the primitive inference
+   (geometry revision, scenario identity, material/applicability identity,
+   quantity kind, claim model), the proposition states
+   (established / assumed / open / refuted / contradicted — each blocking
+   or conditioning uses as specified), the primitive inference
    rules and their premises, the static-versus-runtime obligation split,
    the trust model for imported assertions and checked certificates, the
    canonical identity and context binding, the finite limits, and the

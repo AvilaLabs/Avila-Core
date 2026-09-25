@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/language-program/v0.1-draft",
   "profile": "avila.core/language/0.1-draft",
-  "id": "clearance-not-evaluated",
+  "id": "invalid-relation-absent",
   "library": {
     "name": "thermal-expansion",
     "revision": 1,
@@ -47,63 +47,6 @@
   },
   "inputs": [
     {
-      "id": "length",
-      "type": {
-        "quantity_kind": "length",
-        "claim": "exact",
-        "geometry": "bracket@2"
-      },
-      "binding": {
-        "state": "bound",
-        "value": {
-          "kind": "exact",
-          "value": "100",
-          "unit": "mm"
-        },
-        "source": {
-          "kind": "assertion",
-          "party": "drawing-d1187@2",
-          "edge": "drawing-d1187@2",
-          "statement": "overall length dimension"
-        }
-      }
-    },
-    {
-      "id": "coefficient",
-      "type": {
-        "quantity_kind": "thermal_expansion_coefficient",
-        "claim": "exact",
-        "material": "al-6061-t6"
-      },
-      "binding": {
-        "state": "bound",
-        "value": {
-          "kind": "exact",
-          "value": "1/10000",
-          "unit": "1/K"
-        },
-        "source": {
-          "kind": "assertion",
-          "party": "material-cert-m44",
-          "edge": "material-cert-m44",
-          "statement": "linear expansion coefficient over the applicability domain"
-        }
-      }
-    },
-    {
-      "id": "temperature_change",
-      "type": {
-        "quantity_kind": "temperature",
-        "claim": "enclosure",
-        "scenario": "thermal-soak-steady"
-      },
-      "binding": {
-        "state": "unavailable",
-        "party": "scenario-spec-9",
-        "reason": "the soak temperature-change range has not been measured for this configuration"
-      }
-    },
-    {
       "id": "initial_clearance",
       "type": {
         "quantity_kind": "length",
@@ -131,16 +74,24 @@
   "body": [
     {
       "bind": "displacement",
-      "apply": "linear-expansion",
-      "arguments": {
-        "length": {
-          "ref": "length"
+      "import": {
+        "type": {
+          "quantity_kind": "length",
+          "claim": "enclosure",
+          "geometry": "bracket@2"
         },
-        "coefficient": {
-          "ref": "coefficient"
+        "value": {
+          "kind": "enclosure",
+          "lower": "1/10",
+          "upper": "1/5",
+          "unit": "mm"
         },
-        "temperature_change": {
-          "ref": "temperature_change"
+        "assumptions": [],
+        "source": {
+          "kind": "assertion",
+          "party": "external-analysis-house-7",
+          "edge": "analysis-report-88",
+          "statement": "imported displacement estimate \u2014 no scenario recorded"
         }
       }
     },

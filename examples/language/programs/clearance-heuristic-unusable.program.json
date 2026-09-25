@@ -5,92 +5,181 @@
   "library": {
     "name": "thermal-expansion",
     "revision": 1,
-    "sha256": "sha256:78db3e13acbcea388c5cb4afb1eebf5cd841d183e8a76a6852360bef23cf4e36"
+    "semantic_sha256": "sha256:dc5f2165e51c09d99e751a714acb400dae77d708e6b42241d3eef6916ec45d0b"
   },
   "entities": {
     "geometries": {
       "bracket@2": {
-        "source": {"kind": "assertion", "party": "cad-plm", "edge": "bracket-rev2-model"}
+        "source": {
+          "kind": "assertion",
+          "party": "cad-plm",
+          "edge": "bracket-rev2-model"
+        }
       }
     },
     "scenarios": {
       "thermal-soak-steady": {
         "scope": "steady-state",
-        "operating_domain": {"quantity_kind": "temperature", "unit": "K", "lower": "253", "upper": "313"}
+        "operating_domain": {
+          "quantity_kind": "temperature",
+          "unit": "K",
+          "lower": "253",
+          "upper": "313"
+        }
       }
     },
     "materials": {
       "al-6061-t6": {
-        "applicability": {"temperature": {"unit": "K", "lower": "223", "upper": "423"}},
-        "source": {"kind": "assertion", "party": "material-cert-m44", "edge": "material-cert-m44"}
+        "applicability": {
+          "temperature": {
+            "unit": "K",
+            "lower": "223",
+            "upper": "423"
+          }
+        },
+        "source": {
+          "kind": "assertion",
+          "party": "material-cert-m44",
+          "edge": "material-cert-m44"
+        }
       }
     }
   },
   "inputs": [
     {
       "id": "length",
-      "type": {"quantity_kind": "length", "claim": "exact", "geometry": "bracket@2"},
+      "type": {
+        "quantity_kind": "length",
+        "claim": "exact",
+        "geometry": "bracket@2"
+      },
       "binding": {
         "state": "bound",
-        "value": {"kind": "exact", "value": "100", "unit": "mm"},
-        "source": {"kind": "assertion", "party": "drawing-d1187@2", "edge": "drawing-d1187@2", "statement": "overall length dimension"}
+        "value": {
+          "kind": "exact",
+          "value": "100",
+          "unit": "mm"
+        },
+        "source": {
+          "kind": "assertion",
+          "party": "drawing-d1187@2",
+          "edge": "drawing-d1187@2",
+          "statement": "overall length dimension"
+        }
       }
     },
     {
       "id": "coefficient",
-      "type": {"quantity_kind": "thermal_expansion_coefficient", "claim": "exact", "material": "al-6061-t6"},
+      "type": {
+        "quantity_kind": "thermal_expansion_coefficient",
+        "claim": "exact",
+        "material": "al-6061-t6"
+      },
       "binding": {
         "state": "bound",
-        "value": {"kind": "exact", "value": "1/10000", "unit": "1/K"},
-        "source": {"kind": "assertion", "party": "material-cert-m44", "edge": "material-cert-m44", "statement": "linear expansion coefficient over the applicability domain"}
+        "value": {
+          "kind": "exact",
+          "value": "1/10000",
+          "unit": "1/K"
+        },
+        "source": {
+          "kind": "assertion",
+          "party": "material-cert-m44",
+          "edge": "material-cert-m44",
+          "statement": "linear expansion coefficient over the applicability domain"
+        }
       }
     },
     {
       "id": "temperature_change",
-      "type": {"quantity_kind": "temperature", "claim": "enclosure", "scenario": "thermal-soak-steady"},
+      "type": {
+        "quantity_kind": "temperature",
+        "claim": "enclosure",
+        "scenario": "thermal-soak-steady"
+      },
       "binding": {
         "state": "bound",
-        "value": {"kind": "enclosure", "lower": "10", "upper": "20", "unit": "K"},
-        "source": {"kind": "assertion", "party": "scenario-spec-9", "edge": "scenario-spec-9", "statement": "soak temperature-change range"}
+        "value": {
+          "kind": "enclosure",
+          "lower": "10",
+          "upper": "20",
+          "unit": "K"
+        },
+        "source": {
+          "kind": "assertion",
+          "party": "scenario-spec-9",
+          "edge": "scenario-spec-9",
+          "statement": "soak temperature-change range"
+        }
       }
     },
     {
       "id": "initial_clearance",
-      "type": {"quantity_kind": "length", "claim": "exact", "geometry": "bracket@2"},
+      "type": {
+        "quantity_kind": "length",
+        "claim": "exact",
+        "geometry": "bracket@2"
+      },
       "binding": {
         "state": "bound",
-        "value": {"kind": "exact", "value": "1/2", "unit": "mm"},
-        "source": {"kind": "assertion", "party": "drawing-d1187@2", "edge": "drawing-d1187@2", "statement": "as-built clearance dimension"}
+        "value": {
+          "kind": "exact",
+          "value": "1/2",
+          "unit": "mm"
+        },
+        "source": {
+          "kind": "assertion",
+          "party": "drawing-d1187@2",
+          "edge": "drawing-d1187@2",
+          "statement": "as-built clearance dimension"
+        }
       }
     }
   ],
   "assumptions": [],
+  "premises": [],
   "body": [
     {
       "bind": "displacement",
       "apply": "linear-expansion",
       "arguments": {
-        "length": {"ref": "length"},
-        "coefficient": {"ref": "coefficient"},
-        "temperature_change": {"ref": "temperature_change"}
+        "length": {
+          "ref": "length"
+        },
+        "coefficient": {
+          "ref": "coefficient"
+        },
+        "temperature_change": {
+          "ref": "temperature_change"
+        }
       }
     },
     {
       "bind": "remaining_clearance",
       "apply": "clearance-heuristic",
       "arguments": {
-        "initial_clearance": {"ref": "initial_clearance"},
-        "displacement": {"ref": "displacement"}
+        "initial_clearance": {
+          "ref": "initial_clearance"
+        },
+        "displacement": {
+          "ref": "displacement"
+        }
       }
     }
   ],
   "requirements": [
     {
       "id": "EL-R1",
-      "subject": {"ref": "remaining_clearance"},
+      "subject": {
+        "ref": "remaining_clearance"
+      },
       "comparison": "ge",
       "quantity_kind": "length",
-      "limit": {"kind": "exact", "value": "1/4", "unit": "mm"},
+      "limit": {
+        "kind": "exact",
+        "value": "1/4",
+        "unit": "mm"
+      },
       "scope": "steady-state"
     }
   ]

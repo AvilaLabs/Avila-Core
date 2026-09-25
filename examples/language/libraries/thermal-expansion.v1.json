@@ -1,0 +1,158 @@
+{
+  "schema_version": "avila.core/method-library/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "library": {
+    "name": "thermal-expansion",
+    "revision": 1
+  },
+  "quantity_kinds": {
+    "length": {"canonical_unit": "mm"},
+    "temperature": {"canonical_unit": "K"},
+    "thermal_expansion_coefficient": {"canonical_unit": "1/K"}
+  },
+  "propositions": {
+    "uniform-temperature-change": "the whole body experiences one temperature change",
+    "linear-expansion-model": "displacement is coefficient*length*ΔT over the declared domain",
+    "fixture-symmetric": "the fixture holds the part symmetrically",
+    "calibration-current": "the calibration factor is within its validity interval"
+  },
+  "methods": [
+    {
+      "id": "linear-expansion",
+      "variables": {"g": "geometry", "s": "scenario", "m": "material"},
+      "inputs": {
+        "length": {
+          "quantity_kind": "length", "claim": "enclosure", "geometry": "g"
+        },
+        "coefficient": {
+          "quantity_kind": "thermal_expansion_coefficient", "claim": "enclosure", "material": "m"
+        },
+        "temperature_change": {
+          "quantity_kind": "temperature", "claim": "enclosure", "scenario": "s"
+        }
+      },
+      "output": {
+        "quantity_kind": "length", "claim": "enclosure",
+        "geometry": "g", "scenario": "s", "material": "m"
+      },
+      "requires": [
+        {
+          "kind": "domain_containment",
+          "domain": "scenario.operating_domain",
+          "within": "material.applicability",
+          "name": "operating domain within material applicability"
+        }
+      ],
+      "ensures": [
+        {
+          "kind": "relation",
+          "expression": "output = coefficient * length * temperature_change",
+          "check": "interval.mul_composition"
+        }
+      ],
+      "assumes": ["uniform-temperature-change", "linear-expansion-model"],
+      "effects": ["process_spawn", "write_output"],
+      "implementation": {
+        "kind": "external",
+        "executable": "synthetic/linear-expansion@1",
+        "produces": {"quantity_kind": "length", "unit": "mm"}
+      }
+    },
+    {
+      "id": "linear-expansion-via-table",
+      "variables": {"g": "geometry", "s": "scenario", "m": "material"},
+      "inputs": {
+        "length": {
+          "quantity_kind": "length", "claim": "enclosure", "geometry": "g"
+        },
+        "coefficient": {
+          "quantity_kind": "thermal_expansion_coefficient", "claim": "enclosure", "material": "m"
+        },
+        "temperature_change": {
+          "quantity_kind": "temperature", "claim": "enclosure", "scenario": "s"
+        }
+      },
+      "output": {
+        "quantity_kind": "length", "claim": "enclosure",
+        "geometry": "g", "scenario": "s", "material": "m"
+      },
+      "requires": [
+        {
+          "kind": "domain_containment",
+          "domain": "scenario.operating_domain",
+          "within": "material.applicability",
+          "name": "operating domain within material applicability"
+        }
+      ],
+      "ensures": [
+        {
+          "kind": "relation",
+          "expression": "output = coefficient * length * temperature_change",
+          "check": "interval.mul_composition"
+        }
+      ],
+      "assumes": ["uniform-temperature-change", "tabulated-expansion-model"],
+      "effects": ["process_spawn", "write_output"],
+      "implementation": {
+        "kind": "external",
+        "executable": "synthetic/linear-expansion-table@1",
+        "produces": {"quantity_kind": "length", "unit": "mm"}
+      }
+    },
+    {
+      "id": "clearance-difference",
+      "variables": {"g": "geometry", "s": "scenario"},
+      "inputs": {
+        "initial_clearance": {
+          "quantity_kind": "length", "claim": "enclosure", "geometry": "g"
+        },
+        "displacement": {
+          "quantity_kind": "length", "claim": "enclosure", "geometry": "g", "scenario": "s"
+        }
+      },
+      "output": {
+        "quantity_kind": "length", "claim": "enclosure",
+        "geometry": "g", "scenario": "s"
+      },
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "relation",
+          "expression": "output = initial_clearance - displacement",
+          "check": "interval.sub"
+        }
+      ],
+      "assumes": [],
+      "effects": [],
+      "implementation": {
+        "kind": "primitive",
+        "body": "interval.sub(initial_clearance, displacement)"
+      }
+    },
+    {
+      "id": "clearance-heuristic",
+      "variables": {"g": "geometry", "s": "scenario"},
+      "inputs": {
+        "initial_clearance": {
+          "quantity_kind": "length", "claim": "enclosure", "geometry": "g"
+        },
+        "displacement": {
+          "quantity_kind": "length", "claim": "enclosure", "geometry": "g", "scenario": "s"
+        }
+      },
+      "output": {
+        "quantity_kind": "length", "claim": "nominal",
+        "geometry": "g", "scenario": "s"
+      },
+      "requires": [],
+      "ensures": [],
+      "assumes": [],
+      "effects": ["process_spawn", "write_output"],
+      "implementation": {
+        "kind": "external",
+        "executable": "synthetic/clearance-heuristic@1",
+        "produces": {"quantity_kind": "length", "unit": "mm"}
+      }
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "schema_version": "avila.core/method-library/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "library": {
+    "name": "measurement-scaling",
+    "revision": 1
+  },
+  "quantity_kinds": {
+    "dose_rate": {"canonical_unit": "mSv/h"},
+    "dimensionless_factor": {"canonical_unit": "1"}
+  },
+  "propositions": {
+    "calibration-current": "the calibration factor is within its validity interval",
+    "uniform-field": "the field is uniform over the measurement region"
+  },
+  "methods": [
+    {
+      "id": "scaled-sum",
+      "variables": {"s": "scenario"},
+      "inputs": {
+        "reading_a": {
+          "quantity_kind": "dose_rate", "claim": "enclosure", "scenario": "s"
+        },
+        "reading_b": {
+          "quantity_kind": "dose_rate", "claim": "enclosure", "scenario": "s"
+        },
+        "calibration": {
+          "quantity_kind": "dimensionless_factor", "claim": "exact"
+        }
+      },
+      "output": {
+        "quantity_kind": "dose_rate", "claim": "enclosure", "scenario": "s"
+      },
+      "requires": [
+        {
+          "kind": "independence",
+          "over": ["reading_a", "reading_b"],
+          "name": "the two readings draw on independent sources"
+        }
+      ],
+      "ensures": [
+        {
+          "kind": "relation",
+          "expression": "output = calibration * (reading_a + reading_b)",
+          "check": "interval.mul_add_composition"
+        }
+      ],
+      "assumes": ["calibration-current", "uniform-field"],
+      "effects": [],
+      "implementation": {
+        "kind": "primitive",
+        "body": "interval.mul(calibration, interval.add(reading_a, reading_b))"
+      }
+    },
+    {
+      "id": "single-reading",
+      "variables": {"s": "scenario"},
+      "inputs": {
+        "reading": {
+          "quantity_kind": "dose_rate", "claim": "enclosure", "scenario": "s"
+        },
+        "calibration": {
+          "quantity_kind": "dimensionless_factor", "claim": "exact"
+        }
+      },
+      "output": {
+        "quantity_kind": "dose_rate", "claim": "enclosure", "scenario": "s"
+      },
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "relation",
+          "expression": "output = calibration * reading",
+          "check": "interval.mul"
+        }
+      ],
+      "assumes": ["calibration-current"],
+      "effects": [],
+      "implementation": {
+        "kind": "primitive",
+        "body": "interval.mul(calibration, reading)"
+      }
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "schema_version": "avila.core/language-program/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "id": "invalid-shared-source-independence",
+  "library": {
+    "name": "measurement-scaling",
+    "revision": 1,
+    "sha256": "sha256:f066d3a3a3449fa9afcdc7b74602bb3c1841a4f45c727af8af8c6a77fc2f7ee8"
+  },
+  "entities": {
+    "geometries": {},
+    "scenarios": {
+      "field-survey-1": {
+        "scope": "steady-state"
+      }
+    },
+    "materials": {}
+  },
+  "inputs": [
+    {
+      "id": "reading_a",
+      "type": {"quantity_kind": "dose_rate", "claim": "enclosure", "scenario": "field-survey-1"},
+      "binding": {
+        "state": "bound",
+        "value": {"kind": "enclosure", "lower": "9/10", "upper": "11/10", "unit": "mSv/h"},
+        "source": {"kind": "assertion", "party": "lab-9", "edge": "calibration-cert-55", "statement": "detector A reading; calibrated under certificate 55"}
+      }
+    },
+    {
+      "id": "reading_b",
+      "type": {"quantity_kind": "dose_rate", "claim": "enclosure", "scenario": "field-survey-1"},
+      "binding": {
+        "state": "bound",
+        "value": {"kind": "enclosure", "lower": "4/5", "upper": "1", "unit": "mSv/h"},
+        "source": {"kind": "assertion", "party": "lab-9", "edge": "calibration-cert-55", "statement": "detector B reading; calibrated under the same certificate 55"}
+      }
+    },
+    {
+      "id": "calibration",
+      "type": {"quantity_kind": "dimensionless_factor", "claim": "exact"},
+      "binding": {
+        "state": "bound",
+        "value": {"kind": "exact", "value": "11/10", "unit": "1"},
+        "source": {"kind": "assertion", "party": "lab-9", "edge": "calibration-cert-55", "statement": "applied calibration factor"}
+      }
+    }
+  ],
+  "assumptions": [],
+  "body": [
+    {
+      "bind": "combined_rate",
+      "apply": "scaled-sum",
+      "arguments": {
+        "reading_a": {"ref": "reading_a"},
+        "reading_b": {"ref": "reading_b"},
+        "calibration": {"ref": "calibration"}
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "id": "EL-R2",
+      "subject": {"ref": "combined_rate"},
+      "comparison": "le",
+      "quantity_kind": "dose_rate",
+      "limit": {"kind": "exact", "value": "5/2", "unit": "mSv/h"},
+      "scope": "steady-state"
+    }
+  ]
+}

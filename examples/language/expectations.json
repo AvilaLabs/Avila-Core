@@ -1,0 +1,160 @@
+{
+  "schema_version": "avila.core/language-expectations/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "note": "Specified results for the example programs, derived from docs/architecture/ENGINEERING_LANGUAGE.md by hand — not from an implementation. A checker either reproduces these or the disagreement is reported. Runtime rows describe what execute/evaluate must do once the observation boundary exists; they are expectations, not a fifth state.",
+  "libraries": {
+    "thermal-expansion": {
+      "document": "libraries/thermal-expansion.v1.json",
+      "sha256": "sha256:78db3e13acbcea388c5cb4afb1eebf5cd841d183e8a76a6852360bef23cf4e36",
+      "declared_arithmetic": {
+        "displacement": "enclosure [1/10, 1/5] mm",
+        "remaining_clearance": "enclosure [3/10, 2/5] mm",
+        "residual_assumptions_on_remaining_clearance": ["uniform-temperature-change", "linear-expansion-model"]
+      }
+    },
+    "measurement-scaling": {
+      "document": "libraries/measurement-scaling.v1.json",
+      "sha256": "sha256:f066d3a3a3449fa9afcdc7b74602bb3c1841a4f45c727af8af8c6a77fc2f7ee8"
+    }
+  },
+  "programs": {
+    "clearance-pass.program.json": {
+      "analysis": "clean",
+      "plan": "ready",
+      "runtime_obligations": [
+        "displacement: postcondition output = coefficient*length*temperature_change discharged by interval.mul_composition over observed values, bound to the invocation's input/output digests and receipt"
+      ],
+      "expected_on_execution": {
+        "observed_displacement": "enclosure [1/10, 1/5] mm",
+        "verdicts": {"EL-R1": {"status": "pass", "rule": "bounded.ge", "detail": "enclosure [3/10, 2/5] mm satisfies >= 1/4 mm: 3/10 >= 1/4"}}
+      }
+    },
+    "clearance-inconclusive.program.json": {
+      "analysis": "clean",
+      "plan": "ready",
+      "runtime_obligations": ["same as clearance-pass"],
+      "expected_on_execution": {
+        "verdicts": {"EL-R1": {"status": "inconclusive", "rule": "bounded.ge", "detail": "enclosure [3/10, 2/5] straddles limit 7/20"}}
+      }
+    },
+    "clearance-fail.program.json": {
+      "analysis": "clean",
+      "plan": "ready",
+      "runtime_obligations": ["same as clearance-pass"],
+      "expected_on_execution": {
+        "verdicts": {"EL-R1": {"status": "fail", "rule": "bounded.ge", "detail": "upper bound 2/5 < limit 9/20"}}
+      }
+    },
+    "clearance-not-evaluated.program.json": {
+      "analysis": "clean",
+      "plan": "ready",
+      "runtime_obligations": ["same as clearance-pass"],
+      "expected_on_execution": {
+        "verdicts": {"EL-R1": {"status": "not_evaluated", "rule": "not_evaluated.missing_evidence", "detail": "input temperature_change declared unavailable; displacement has no established value"}}
+      }
+    },
+    "clearance-heuristic-unusable.program.json": {
+      "analysis": "clean",
+      "plan": "ready",
+      "runtime_obligations": [
+        "displacement: same as clearance-pass",
+        "remaining_clearance: output observed, but clearance-heuristic declares no postcondition — nothing to replay"
+      ],
+      "expected_on_execution": {
+        "verdicts": {"EL-R1": {"status": "not_evaluated", "rule": "not_evaluated.unestablished", "detail": "remaining_clearance is a nominal assertion of an unchecked method output; the requirement needs an established enclosure"}}
+      }
+    },
+    "invalid-geometry-mismatch.program.json": {
+      "analysis": "findings",
+      "plan": "refused",
+      "findings": [
+        {"kind": "type_mismatch", "at": "body[1].arguments.initial_clearance", "detail": "geometry mismatch: initial_clearance is about bracket@1 but clearance-difference is applied at geometry bracket@2 (from displacement)"}
+      ],
+      "verdicts": "none — blocking finding, no evaluation"
+    },
+    "invalid-scope-mismatch.program.json": {
+      "analysis": "findings",
+      "plan": "refused",
+      "findings": [
+        {"kind": "coverage", "at": "requirements[EL-R1]", "detail": "subject scope steady-state cannot serve a transient requirement; coverage obligation is named and unmet"}
+      ],
+      "verdicts": "none — unmet coverage obligation blocks planning"
+    },
+    "invalid-conflicting-assumptions.program.json": {
+      "analysis": "findings",
+      "plan": "refused",
+      "findings": [
+        {"kind": "contradiction", "at": "assumptions[a-uniform, a-gradient]", "detail": "uniform-temperature-change both asserted and denied; every dependent use is blocked"}
+      ],
+      "verdicts": "none — contradicted premises block; never vacuous success"
+    },
+    "invalid-nominal-enclosure.program.json": {
+      "analysis": "findings",
+      "plan": "refused",
+      "findings": [
+        {"kind": "type_mismatch", "at": "body[0].arguments.temperature_change", "detail": "claim nominal does not satisfy slot claim enclosure; no nominal→enclosure rule exists"}
+      ],
+      "verdicts": "none — blocking finding"
+    },
+    "invalid-applicability-domain.program.json": {
+      "analysis": "findings",
+      "plan": "refused",
+      "findings": [
+        {"kind": "precondition_refuted", "at": "body[0] linear-expansion", "detail": "scenario operating domain [253,473] K is not contained in material applicability [223,423] K"}
+      ],
+      "verdicts": "none — required precondition provably fails"
+    },
+    "invalid-import-missing-assumptions.program.json": {
+      "analysis": "findings",
+      "plan": "refused",
+      "findings": [
+        {"kind": "malformed_import", "at": "body[0]", "detail": "import declares no assumptions field; residual assumptions must be stated explicitly ([] asserts unconditional, absence is not a declaration)"}
+      ],
+      "verdicts": "none — malformed term"
+    },
+    "invalid-shared-source-independence.program.json": {
+      "analysis": "findings",
+      "plan": "refused",
+      "findings": [
+        {"kind": "obligation_unmet", "at": "body[0] scaled-sum", "detail": "independence(reading_a, reading_b) unmet: both readings carry source edge calibration-cert-55; distinct identities do not establish disjoint provenance"}
+      ],
+      "verdicts": "none — the premise stays named and unmet; no rule closes it"
+    },
+    "unfinished-missing-input.program.json": {
+      "analysis": "findings",
+      "plan": "refused",
+      "findings": [
+        {"kind": "hole", "at": "inputs[coefficient]", "detail": "input declared but never bound; the author has not supplied a value or an unavailable declaration"}
+      ],
+      "verdicts": "none — authoring hole; the program is inspectable but not plannable"
+    },
+    "unfinished-goal-hole.program.json": {
+      "analysis": "findings",
+      "plan": "refused",
+      "findings": [
+        {"kind": "hole", "at": "body[0]", "detail": "explicit hole of type qty length ⊳ enclosure over (bracket@2, thermal-soak-steady); the requirement depends on it"}
+      ],
+      "verdicts": "none — open hole blocks planning"
+    },
+    "unfinished-ambiguous-methods.program.json": {
+      "analysis": "findings",
+      "plan": "refused",
+      "findings": [
+        {"kind": "ambiguity", "at": "body[0]", "candidates": ["linear-expansion", "linear-expansion-via-table"], "detail": "both methods satisfy the goal's type; they differ in assumptions (linear-expansion-model vs tabulated-expansion-model), so the choice is semantic and requires an authored apply"}
+      ],
+      "verdicts": "none — the goal stays open until authored"
+    }
+  },
+  "runtime_adversarial_rows": {
+    "note": "The remaining adversarial-matrix rows are execution/replay properties, exercised once EL-03/EL-04 exist; specified here so implementation cannot launder them into program semantics",
+    "transplanted_receipt": "a receipt or output digest bound to a different invocation fails §7.O1 at digest comparison; the obligation stays open → not_evaluated",
+    "forged_certificate_recomputed_hashes": "a certificate whose postcondition does not hold under the named primitive fails §7.O2; recomputing outer digests does not help (ADR-0026 context equality)",
+    "process_failure_or_absent_output": "no observation → §7.O1 produces nothing → runtime obligation unmet → not_evaluated",
+    "budget_exhaustion": "any §11 bound exceeded is an explicit bounded refusal, distinct from unsupported and from success",
+    "presentation_only_change": "record text, notices, and ordering changes produce identical derivations; a semantic identity unchanged is a no-op",
+    "method_library_narrowed_expired_or_withdrawn": "a library revision is a new canonical identity; programs pin its sha256, so a superseding library never silently rewrites an existing derivation — reconsidering a use means a new evaluation under the new library identity, and the original derivation remains intact under its own context",
+    "requirement_limit_changed": "the limit is a premise of the requirement rule; changing 1/4 to 7/20 or 9/20 re-derives the verdict while every method-application premise is preserved (the three clearance programs pin this)",
+    "input_geometry_method_or_material_changed": "dependency edges (§8.3) identify every affected application; derivation diff explains the change semantically rather than as a hash delta",
+    "imported_derivation_dropped_assumption": "replay compares the import's declared assumption set against the source record's propagated assumptions (§9); a dropped assumption is a mismatch on the import premise"
+  }
+}

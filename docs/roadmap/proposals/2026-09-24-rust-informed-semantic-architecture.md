@@ -1,5 +1,10 @@
 # Rust-informed semantic architecture for Avila Core
 
+The owner's 25 September follow-up is developed in the
+[engineering language charter](2026-09-25-engineering-language-charter.md) and
+[EL handoff](../ENGINEERING_LANGUAGE_HANDOFF.md). They define the next language
+experiment; this document retains the earlier research and architecture rationale.
+
 Date: 24 September 2026. Status: proposal for discussion. Repository inspection
 baseline: `0ee55d08be7000b93dbf8da56d6e7f5b3830f22f`. Rust sources were consulted
 on the same date. Proposed names and judgments below describe a target design;

@@ -1,5 +1,11 @@
 # SWE-2 handoff: enforce the Rust-informed semantic architecture
 
+For the owner's subsequent language-design direction, continue with the
+[engineering language charter](proposals/2026-09-25-engineering-language-charter.md)
+and [EL implementation handoff](ENGINEERING_LANGUAGE_HANDOFF.md). This document
+remains the record of RA-01–RA-06; its completion does not establish the language
+charter's larger guarantees.
+
 Prepared 24 September 2026 at repository baseline
 `0ee55d08be7000b93dbf8da56d6e7f5b3830f22f`.
 Status: RA-01 through RA-06 implemented; per-item status and evidence below.

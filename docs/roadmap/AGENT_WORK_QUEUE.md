@@ -1,5 +1,10 @@
 # Agent work queue: make design history usable
 
+For the owner's 25 September 2026 engineering-language direction, use the
+[language charter](proposals/2026-09-25-engineering-language-charter.md) and
+[SWE-2 language handoff](ENGINEERING_LANGUAGE_HANDOFF.md). That next work order
+specifies a complete language experiment and its dependency-ordered milestones.
+
 For the 24 September 2026 Rust-informed semantic architecture task, use the
 separate [SWE-2 handoff](RUST_ARCHITECTURE_HANDOFF.md) and its RA-01–RA-06 scope.
 The entries below retain the design-history queue and its implementation

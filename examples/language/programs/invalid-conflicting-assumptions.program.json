@@ -1,0 +1,110 @@
+{
+  "schema_version": "avila.core/language-program/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "id": "invalid-conflicting-assumptions",
+  "library": {
+    "name": "thermal-expansion",
+    "revision": 1,
+    "sha256": "sha256:78db3e13acbcea388c5cb4afb1eebf5cd841d183e8a76a6852360bef23cf4e36"
+  },
+  "entities": {
+    "geometries": {
+      "bracket@2": {
+        "source": {"kind": "assertion", "party": "cad-plm", "edge": "bracket-rev2-model"}
+      }
+    },
+    "scenarios": {
+      "thermal-soak-steady": {
+        "scope": "steady-state",
+        "operating_domain": {"quantity_kind": "temperature", "unit": "K", "lower": "253", "upper": "313"}
+      }
+    },
+    "materials": {
+      "al-6061-t6": {
+        "applicability": {"temperature": {"unit": "K", "lower": "223", "upper": "423"}},
+        "source": {"kind": "assertion", "party": "material-cert-m44", "edge": "material-cert-m44"}
+      }
+    }
+  },
+  "inputs": [
+    {
+      "id": "length",
+      "type": {"quantity_kind": "length", "claim": "exact", "geometry": "bracket@2"},
+      "binding": {
+        "state": "bound",
+        "value": {"kind": "exact", "value": "100", "unit": "mm"},
+        "source": {"kind": "assertion", "party": "drawing-d1187@2", "edge": "drawing-d1187@2", "statement": "overall length dimension"}
+      }
+    },
+    {
+      "id": "coefficient",
+      "type": {"quantity_kind": "thermal_expansion_coefficient", "claim": "exact", "material": "al-6061-t6"},
+      "binding": {
+        "state": "bound",
+        "value": {"kind": "exact", "value": "1/10000", "unit": "1/K"},
+        "source": {"kind": "assertion", "party": "material-cert-m44", "edge": "material-cert-m44", "statement": "linear expansion coefficient over the applicability domain"}
+      }
+    },
+    {
+      "id": "temperature_change",
+      "type": {"quantity_kind": "temperature", "claim": "enclosure", "scenario": "thermal-soak-steady"},
+      "binding": {
+        "state": "bound",
+        "value": {"kind": "enclosure", "lower": "10", "upper": "20", "unit": "K"},
+        "source": {"kind": "assertion", "party": "scenario-spec-9", "edge": "scenario-spec-9", "statement": "soak temperature-change range"}
+      }
+    },
+    {
+      "id": "initial_clearance",
+      "type": {"quantity_kind": "length", "claim": "exact", "geometry": "bracket@2"},
+      "binding": {
+        "state": "bound",
+        "value": {"kind": "exact", "value": "1/2", "unit": "mm"},
+        "source": {"kind": "assertion", "party": "drawing-d1187@2", "edge": "drawing-d1187@2", "statement": "as-built clearance dimension"}
+      }
+    }
+  ],
+  "assumptions": [
+    {
+      "id": "a-uniform",
+      "asserts": "uniform-temperature-change",
+      "scope": "thermal-soak-steady",
+      "source": {"kind": "declared", "party": "author", "note": "the soak heats the part uniformly"}
+    },
+    {
+      "id": "a-gradient",
+      "denies": "uniform-temperature-change",
+      "scope": "thermal-soak-steady",
+      "source": {"kind": "declared", "party": "author", "note": "the fixture creates a measurable gradient"}
+    }
+  ],
+  "body": [
+    {
+      "bind": "displacement",
+      "apply": "linear-expansion",
+      "arguments": {
+        "length": {"ref": "length"},
+        "coefficient": {"ref": "coefficient"},
+        "temperature_change": {"ref": "temperature_change"}
+      }
+    },
+    {
+      "bind": "remaining_clearance",
+      "apply": "clearance-difference",
+      "arguments": {
+        "initial_clearance": {"ref": "initial_clearance"},
+        "displacement": {"ref": "displacement"}
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "id": "EL-R1",
+      "subject": {"ref": "remaining_clearance"},
+      "comparison": "ge",
+      "quantity_kind": "length",
+      "limit": {"kind": "exact", "value": "1/4", "unit": "mm"},
+      "scope": "steady-state"
+    }
+  ]
+}

@@ -19,12 +19,21 @@ assessments, and accepted baselines. They do not change the stage exit gates.
 
 ## Near-term implementation handoff
 
+The 25 September [engineering language charter](proposals/2026-09-25-engineering-language-charter.md)
+and [SWE-2 language handoff](ENGINEERING_LANGUAGE_HANDOFF.md) propose the next
+architectural experiment: related engineering types, propagated assumptions,
+method-generated obligations, and execution under one semantic model. The
+experiment exercises the full structure on synthetic examples under a separate
+profile. This is the next design work order; it does not claim implementation,
+production migration, or advancement of a product stage.
+
 The [Rust-informed architecture proposal](proposals/2026-09-24-rust-informed-semantic-architecture.md)
 and [SWE-2 implementation handoff](RUST_ARCHITECTURE_HANDOFF.md) define a bounded
 semantic implementation slice: protected checked values, explicit context and
 admission premises, replayable derivations, and change-impact explanations.
 The handoff distinguishes that work from the larger infrastructure subject to
-S-034. Its implementation has not been claimed complete.
+S-034. Its implementation and review follow-up are recorded at `aa733af` and
+`b1587ad`; the language handoff starts by independently checking that baseline.
 
 The [agent work queue](AGENT_WORK_QUEUE.md) gives a finite, dependency-ordered
 path from existing attempt lineage to a real design-history workbench. It

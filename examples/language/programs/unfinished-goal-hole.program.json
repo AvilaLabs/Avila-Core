@@ -1,0 +1,65 @@
+{
+  "schema_version": "avila.core/language-program/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "id": "unfinished-goal-hole",
+  "library": {
+    "name": "thermal-expansion",
+    "revision": 1,
+    "sha256": "sha256:78db3e13acbcea388c5cb4afb1eebf5cd841d183e8a76a6852360bef23cf4e36"
+  },
+  "entities": {
+    "geometries": {
+      "bracket@2": {
+        "source": {"kind": "assertion", "party": "cad-plm", "edge": "bracket-rev2-model"}
+      }
+    },
+    "scenarios": {
+      "thermal-soak-steady": {
+        "scope": "steady-state",
+        "operating_domain": {"quantity_kind": "temperature", "unit": "K", "lower": "253", "upper": "313"}
+      }
+    },
+    "materials": {
+      "al-6061-t6": {
+        "applicability": {"temperature": {"unit": "K", "lower": "223", "upper": "423"}},
+        "source": {"kind": "assertion", "party": "material-cert-m44", "edge": "material-cert-m44"}
+      }
+    }
+  },
+  "inputs": [
+    {
+      "id": "initial_clearance",
+      "type": {"quantity_kind": "length", "claim": "exact", "geometry": "bracket@2"},
+      "binding": {
+        "state": "bound",
+        "value": {"kind": "exact", "value": "1/2", "unit": "mm"},
+        "source": {"kind": "assertion", "party": "drawing-d1187@2", "edge": "drawing-d1187@2", "statement": "as-built clearance dimension"}
+      }
+    }
+  ],
+  "assumptions": [],
+  "body": [
+    {
+      "bind": "displacement",
+      "hole": {"quantity_kind": "length", "claim": "enclosure", "geometry": "bracket@2", "scenario": "thermal-soak-steady"}
+    },
+    {
+      "bind": "remaining_clearance",
+      "apply": "clearance-difference",
+      "arguments": {
+        "initial_clearance": {"ref": "initial_clearance"},
+        "displacement": {"ref": "displacement"}
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "id": "EL-R1",
+      "subject": {"ref": "remaining_clearance"},
+      "comparison": "ge",
+      "quantity_kind": "length",
+      "limit": {"kind": "exact", "value": "1/4", "unit": "mm"},
+      "scope": "steady-state"
+    }
+  ]
+}

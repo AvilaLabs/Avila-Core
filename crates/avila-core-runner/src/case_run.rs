@@ -1390,11 +1390,33 @@ fn execute_case_inner(
         &generated.bytes,
         ArtifactObservations::none(),
     )?;
-    if let (Some(workspace), Some(derivation)) = (workspace.as_deref(), evaluation.derivation())
-        && let Ok(mut bytes) = serde_json::to_vec_pretty(derivation)
-    {
-        bytes.push(b'\n');
-        let _ = fs::write(workspace.join("derivation.json"), bytes);
+    // The derivation binds the observations this run actually performed —
+    // fresh output artifacts, the package artifacts the claims attest, and
+    // every receipt document checked. The digest-only report stays the
+    // replay-compared artifact; the observed evaluation's report and
+    // derivation land beside it so the stronger chain is replayable.
+    let observations = collect_run_observations(
+        &package,
+        &claims,
+        workspace.as_deref(),
+        report.execution.as_ref(),
+        &options.source_roots,
+    );
+    let observed_evaluation =
+        evaluate_campaign_in_context(contract, registry, &generated.bytes, observations)?;
+    if let Some(workspace) = workspace.as_deref() {
+        if let Some(derivation) = observed_evaluation.derivation()
+            && let Ok(mut bytes) = serde_json::to_vec_pretty(derivation)
+        {
+            bytes.push(b'\n');
+            let _ = fs::write(workspace.join("derivation.json"), bytes);
+        }
+        // The observed report is what the derivation's campaign identity
+        // names — emitted so a verifier can resolve it.
+        if let Ok(mut bytes) = serde_json::to_vec_pretty(observed_evaluation.report()) {
+            bytes.push(b'\n');
+            let _ = fs::write(workspace.join("campaign-report-observed.json"), bytes);
+        }
     }
     let campaign = evaluation.into_report();
     let campaign_rejected = campaign.status == CampaignStatus::Rejected;
@@ -1448,6 +1470,69 @@ fn execute_case_inner(
         report.status = CaseRunStatus::Evaluated;
     }
     Ok(report)
+}
+
+/// The artifact and receipt observations this run actually performed —
+/// every digest in the set was computed from bytes read at or re-read
+/// after the run's own byte-checks:
+///
+/// - fresh output files under the run workspace (the step's `outputs`),
+/// - fresh receipts the runner wrote and verified (`<step>/receipt.json`),
+/// - package artifact files under the supplied source roots that the
+///   generated claims attest (fresh outputs, committed outputs, and
+///   input attestations share the same `sha256` vocabulary), and
+/// - every committed receipt document the package carries — each was
+///   byte-checked at the package boundary.
+///
+/// Digests that could not be re-checked (no workspace kept, no root
+/// supplied) are simply absent — the admission applications then report
+/// `not_checked` rather than `checked`, never a silent success.
+fn collect_run_observations(
+    package: &VerifiedCasePackage,
+    claims: &ClaimsDocument,
+    workspace: Option<&Path>,
+    execution: Option<&ExecutionReport>,
+    source_roots: &BTreeMap<String, PathBuf>,
+) -> ArtifactObservations {
+    let mut observations = ArtifactObservations::none();
+    if let (Some(workspace), Some(execution)) = (workspace, execution) {
+        for step in &execution.steps {
+            for output in &step.outputs {
+                let _ = observations
+                    .check_file(&workspace.join(&step.step_id).join(&output.workspace_path));
+            }
+            if let Some(receipt) = &step.receipt {
+                let _ = observations.check_receipt_file(&workspace.join(&receipt.workspace_path));
+            }
+        }
+    }
+    let attested: BTreeSet<&str> = claims
+        .inputs
+        .iter()
+        .map(|input| input.artifact.sha256.as_str())
+        .chain(
+            claims
+                .claims
+                .iter()
+                .map(|claim| claim.artifact.sha256.as_str()),
+        )
+        .collect();
+    for artifact in &package.manifest().artifacts {
+        if !attested.contains(artifact.sha256.as_str()) {
+            continue;
+        }
+        if let Some(root) = source_roots.get(&artifact.source_root) {
+            let _ = observations.check_file(&root.join(&artifact.path));
+        }
+    }
+    for document in &package.manifest().documents {
+        if document.role == "execution_receipt"
+            && let Some(bytes) = package.document_by_id(&document.document_id)
+        {
+            let _ = observations.check_receipt(bytes);
+        }
+    }
+    observations
 }
 
 /// Build the single feedback stream consumed by people and iterating agents.

@@ -5092,6 +5092,7 @@ def cmd_verify_derivation(args: argparse.Namespace) -> int:
         args.artifact,
         Path(args.campaign_report) if args.campaign_report else None,
         report,
+        args.receipt,
     )
     _emit(report, args)
     return report.exit_code()
@@ -5202,6 +5203,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p_deriv.add_argument(
         "--artifact", action="append", metavar="FILE", default=[],
         help="An artifact file whose bytes were supplied to the recorded evaluation; repeatable",
+    )
+    p_deriv.add_argument(
+        "--receipt", action="append", metavar="FILE", default=[],
+        help="A receipt file whose bytes the recorded evaluation checked; repeatable",
     )
     p_deriv.add_argument(
         "--campaign-report", metavar="FILE",
@@ -5680,15 +5685,21 @@ def _replay_verdict_applications(
                     unqualified.append(cid)
                 continue
             if applies:
+                # Lifecycle refusal and envelope quarantine are independent
+                # gates — a record both revoked and expired reports both.
+                lifecycle_refused = False
                 if recognized_owners and qualification.get("owner") not in recognized_owners:
                     refused["not_recognized"].append(cid)
+                    lifecycle_refused = True
                 elif qualification.get("revoked_by"):
                     refused["revoked"].append(cid)
+                    lifecycle_refused = True
                 elif qualification.get("superseded_by"):
                     refused["superseded"].append(cid)
-                elif qualification.get("state") != "inside":
+                    lifecycle_refused = True
+                if qualification.get("state") != "inside":
                     quarantined.append(cid)
-                else:
+                elif not lifecycle_refused:
                     gated[cid] = "inside"
         for cid in quarantined:
             q = claims_by_id[cid]["qualification"]
@@ -5959,6 +5970,7 @@ def verify_derivation_document(
     artifact_paths: list,
     campaign_report_path: Optional[Path],
     report: Report,
+    receipt_paths: Optional[list] = None,
 ) -> None:
     """Replay one recorded verdict derivation. Every check lands on the
     report: identities recomputed, each rule application re-derived, and
@@ -6034,6 +6046,31 @@ def verify_derivation_document(
     else:
         report.mismatch("derivation.context.claims_sha256",
                         f"recorded {context.get('claims_sha256')!r} but claims.json hashes to {claims_sha256}")
+    # The claims must name the snapshot this context binds — claims
+    # produced for a different compilation can never honestly stand
+    # under it, whatever their file digest.
+    if claims.get("compiled_snapshot_sha256") == context.get("compiled_snapshot_sha256"):
+        report.verified("derivation.context.claims_snapshot",
+                        context.get("compiled_snapshot_sha256", ""))
+    else:
+        report.mismatch(
+            "derivation.context.claims_snapshot",
+            f"claims name {claims.get('compiled_snapshot_sha256')!r} but the "
+            f"context binds {context.get('compiled_snapshot_sha256')!r}")
+    # The evaluator metadata must name this verifier — a record produced
+    # by different inference rules is unsupported material, not an
+    # independently verified derivation.
+    if (derivation.get("evaluator") == CAMPAIGN_EVALUATOR_ID
+            and context.get("evaluator") == CAMPAIGN_EVALUATOR_ID
+            and context.get("semantic_profile") == SEMANTIC_PROFILE):
+        report.verified("derivation.context.evaluator",
+                        f"{CAMPAIGN_EVALUATOR_ID} under {SEMANTIC_PROFILE}")
+    else:
+        report.not_checked(
+            "derivation.context.evaluator",
+            f"the record names evaluator {derivation.get('evaluator')!r}/"
+            f"{context.get('evaluator')!r} under {context.get('semantic_profile')!r}; "
+            f"this verifier supports {CAMPAIGN_EVALUATOR_ID} under {SEMANTIC_PROFILE}")
     if (context.get("registry_id") == registry.get("registry_id")
             and context.get("registry_revision") == registry.get("revision")):
         report.verified("derivation.context.registry_id",
@@ -6102,6 +6139,30 @@ def verify_derivation_document(
     else:
         report.verified("derivation.context.artifact_observations", "digest-only evaluation")
 
+    supplied_receipts: Optional[set] = None
+    if receipt_paths:
+        supplied_receipts = set()
+        for path in receipt_paths:
+            try:
+                supplied_receipts.add(_sha256_prefixed(Path(path).read_bytes()))
+            except OSError as error:
+                report.not_checked("derivation.context.receipts",
+                                   f"receipt {path} unreadable: {error}")
+                return
+    recorded_receipts = context.get("receipts", [])
+    if supplied_receipts is not None:
+        if sorted(supplied_receipts) == sorted(recorded_receipts):
+            report.verified("derivation.context.receipts",
+                            f"{len(recorded_receipts)} checked")
+        else:
+            report.mismatch("derivation.context.receipts",
+                            f"recorded {sorted(recorded_receipts)} but the supplied receipts hash to {sorted(supplied_receipts)}")
+    elif recorded_receipts:
+        report.not_checked("derivation.context.receipts",
+                           "the record binds receipt identities but no --receipt bytes were supplied to re-check")
+    else:
+        report.verified("derivation.context.receipts", "no receipts bound")
+
     # Application replay. The observation set used for `artifact_observation`
     # premises is the bound record's own list — the context identity ties
     # the record to it; --artifact additionally proves the digests real.
@@ -6131,7 +6192,8 @@ def verify_derivation_document(
          _premise("claims", context.get("claims_sha256", ""), "bound"),
          _premise("execution_policy", "compiled", "bound")]
         + [_premise("qualification", q, "bound") for q in qualifications]
-        + [_premise("artifact_observation", o, "checked") for o in recorded_observations],
+        + [_premise("artifact_observation", o, "checked") for o in recorded_observations]
+        + [_premise("receipt", r, "checked") for r in recorded_receipts],
     )]
     try:
         admission_apps, states = _replay_admissions(
@@ -6193,11 +6255,88 @@ def verify_derivation_document(
             else:
                 report.mismatch("derivation.campaign",
                                 f"recorded {derivation.get('campaign_sha256')!r} but the report body hashes to {recomputed}")
+            # The report must be the evaluation the replay derived — an
+            # honestly-recomputed hash only proves the bytes are self-
+            # consistent, not that they carry the replayed conclusions.
+            # Compare verdicts, admission states, and boundary identities.
+            problems: list[str] = []
+            replayed_by_subject = {a["subject"]: a for a in replayed}
+            verdict_rules = {
+                "context.bind", "admission.input", "admission.claim",
+                "qualification.envelope", "qualification.required",
+            }
+            verdict_apps = {a["subject"]: a for a in replayed
+                            if a["rule"] not in verdict_rules}
+            verdicts = campaign.get("verdicts", [])
+            if len(verdicts) != len(verdict_apps):
+                problems.append(
+                    f"the report carries {len(verdicts)} verdicts but the replay "
+                    f"produced {len(verdict_apps)}")
+            for verdict in verdicts:
+                rid = verdict.get("requirement_id")
+                app = verdict_apps.get(rid)
+                if app is None:
+                    problems.append(f"verdict {rid!r} has no replayed application")
+                    continue
+                if verdict.get("verdict", {}).get("status") != app["conclusion"]:
+                    problems.append(
+                        f"{rid}: status {verdict.get('verdict', {}).get('status')!r} "
+                        f"but the replayed conclusion is {app['conclusion']!r}")
+                if verdict.get("verdict", {}).get("rule") != app["rule"]:
+                    problems.append(
+                        f"{rid}: rule {verdict.get('verdict', {}).get('rule')!r} "
+                        f"but the replay applied {app['rule']!r}")
+                boundary = verdict.get("boundary", {})
+                if (boundary.get("compiled_snapshot_sha256") != context.get("compiled_snapshot_sha256")
+                        or boundary.get("claims_sha256") != context.get("claims_sha256")
+                        or boundary.get("evaluator") != CAMPAIGN_EVALUATOR_ID
+                        or boundary.get("semantic_profile") != SEMANTIC_PROFILE):
+                    problems.append(
+                        f"{rid}: the boundary fields disagree with the bound context")
+            admission_apps = {a["subject"]: a for a in replayed
+                              if a["rule"] in ("admission.input", "admission.claim")}
+            admissions = campaign.get("admissions", [])
+            if len(admissions) != len(admission_apps):
+                problems.append(
+                    f"the report carries {len(admissions)} admissions but the replay "
+                    f"produced {len(admission_apps)}")
+            for admission in admissions:
+                subject = admission.get("evidence_id")
+                app = admission_apps.get(subject)
+                if app is None:
+                    problems.append(f"admission {subject!r} has no replayed application")
+                    continue
+                if admission.get("state") != app["conclusion"]:
+                    problems.append(
+                        f"{subject}: state {admission.get('state')!r} "
+                        f"but the replayed conclusion is {app['conclusion']!r}")
+                artifact = admission.get("artifact")
+                if artifact is not None:
+                    expected = ("verified" if artifact.get("sha256") in set(recorded_observations)
+                                else "not_checked")
+                    if artifact.get("check") != expected:
+                        problems.append(
+                            f"{subject}: artifact check {artifact.get('check')!r} "
+                            f"but the bound observations make it {expected!r}")
+            if not problems:
+                report.verified("derivation.campaign.content",
+                                "the report carries the replayed conclusions")
+            else:
+                report.mismatch("derivation.campaign.content",
+                                "; ".join(problems[:4]))
         except (OSError, json.JSONDecodeError) as error:
             report.not_checked("derivation.campaign", f"campaign report unreadable: {error}")
     elif derivation.get("campaign_sha256"):
         report.not_checked("derivation.campaign",
                            "the record carries a campaign identity but no --campaign-report was supplied")
+    elif any(a["rule"] not in ("context.bind", "admission.input", "admission.claim",
+                              "qualification.envelope", "qualification.required")
+             for a in replayed):
+        # The replayed evaluation reached verdicts — an honest record of it
+        # carries the report's identity. Its absence is reported, not
+        # silently accepted.
+        report.not_checked("derivation.campaign",
+                           "the replayed evaluation produced verdicts but the record omits the campaign identity")
 
 
 def explain_derivation_changes(before: dict, after: dict) -> dict:

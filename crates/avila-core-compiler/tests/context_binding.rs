@@ -108,6 +108,166 @@ fn admissions_minted_under_another_context_are_refused() {
 }
 
 #[test]
+fn binding_refuses_claims_produced_for_a_different_compilation() {
+    // The reviewer's reproduction: claims naming a foreign
+    // compiled_snapshot_sha256 reached `bind → admit → derive_verdicts`
+    // when the check lived only in the convenience wrapper. The bind
+    // boundary itself must refuse — no public path can mint verdicts
+    // from a mixed context.
+    let (contract, registry, _) = case_docs();
+    let compiled = compiled(&contract, &registry);
+    let zeroed = mutated_claims(|document| {
+        document["compiled_snapshot_sha256"] =
+            json!("sha256:0000000000000000000000000000000000000000000000000000000000000000");
+    });
+
+    match EvaluationContext::bind(&compiled, &registry, &zeroed, ArtifactObservations::none()) {
+        Err(ContextError::SnapshotMismatch {
+            expected,
+            found,
+            claims_sha256,
+        }) => {
+            assert_eq!(expected, compiled.snapshot_sha256());
+            assert_eq!(
+                found,
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+            );
+            assert!(
+                claims_sha256.starts_with("sha256:"),
+                "the refusal still names what was supplied"
+            );
+        }
+        Ok(_) => panic!("wrong-snapshot claims must never bind a context"),
+        Err(other) => panic!("expected SnapshotMismatch, got {other:?}"),
+    }
+
+    // The convenience path reports the same refusal, as CORE-E7001.
+    let evaluation =
+        evaluate_campaign_in_context(&contract, &registry, &zeroed, ArtifactObservations::none())
+            .unwrap();
+    assert!(
+        evaluation.derivation().is_none(),
+        "a bind refusal has no bound context to derive under"
+    );
+    let report = evaluation.report();
+    assert_eq!(
+        serde_json::to_value(report.status).unwrap(),
+        json!("rejected")
+    );
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == "CORE-E7001"),
+        "the refusal is the documented CORE-E7001 finding"
+    );
+
+    // Positive counterpart: honest claims still bind and derive.
+    let (_, _, claims) = case_docs();
+    EvaluationContext::bind(&compiled, &registry, &claims, ArtifactObservations::none())
+        .expect("honest claims bind");
+}
+
+#[test]
+fn verify_derivation_rejects_a_forged_context_block() {
+    let (contract, registry, claims) = case_docs();
+    let evaluation =
+        evaluate_campaign_in_context(&contract, &registry, &claims, ArtifactObservations::none())
+            .unwrap();
+    let bytes = serde_json::to_vec(evaluation.derivation().unwrap()).unwrap();
+
+    // Forge: change the identities inside the embedded context body and
+    // honestly recompute the outer digest. The old verifier compared
+    // context_sha256 alone — the embedded body never hashed to it.
+    let mut forged: VerdictDerivation = serde_json::from_slice(&bytes).unwrap();
+    forged.context.registry_id = "forged-registry".into();
+    forged.context.compiled_snapshot_sha256 =
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000".into();
+    forged.derivation_sha256 = forged.recompute_identity().map(Some).unwrap();
+    let forged_bytes = serde_json::to_vec(&forged).unwrap();
+
+    let verification = verify_derivation(
+        &contract,
+        &registry,
+        &claims,
+        ArtifactObservations::none(),
+        &forged_bytes,
+    )
+    .unwrap();
+    assert!(
+        !verification.is_verified(),
+        "a forged context body must not verify"
+    );
+    assert!(
+        verification.checks.iter().any(|check| {
+            check.subject == "context_record"
+                && check.state == avila_core_compiler::DerivationCheckState::Mismatch
+        }),
+        "the embedded context no longer hashes to context_sha256"
+    );
+    assert!(
+        verification.checks.iter().any(|check| {
+            check.subject == "bound_material"
+                && check.state == avila_core_compiler::DerivationCheckState::Mismatch
+        }),
+        "the embedded record differs from what the supplied material binds"
+    );
+}
+
+#[test]
+fn verify_derivation_rejects_a_forged_evaluator_and_an_omitted_campaign() {
+    let (contract, registry, claims) = case_docs();
+    let evaluation =
+        evaluate_campaign_in_context(&contract, &registry, &claims, ArtifactObservations::none())
+            .unwrap();
+    let bytes = serde_json::to_vec(evaluation.derivation().unwrap()).unwrap();
+
+    // An evaluator this verifier does not implement is unsupported
+    // material — `not_checked`, never `verified`.
+    let mut forged: VerdictDerivation = serde_json::from_slice(&bytes).unwrap();
+    forged.evaluator = "avila.core/unknown-evaluator@9.9.9".into();
+    forged.derivation_sha256 = forged.recompute_identity().map(Some).unwrap();
+    let verification = verify_derivation(
+        &contract,
+        &registry,
+        &claims,
+        ArtifactObservations::none(),
+        &serde_json::to_vec(&forged).unwrap(),
+    )
+    .unwrap();
+    assert!(!verification.is_verified());
+    assert!(
+        verification.checks.iter().any(|check| {
+            check.subject == "evaluator"
+                && check.state == avila_core_compiler::DerivationCheckState::NotChecked
+        }),
+        "an unknown evaluator is unsupported material"
+    );
+
+    // Omitting the campaign identity does not erase the report the replay
+    // produces — the omission itself is reported.
+    let mut forged: VerdictDerivation = serde_json::from_slice(&bytes).unwrap();
+    forged.campaign_sha256 = None;
+    forged.derivation_sha256 = forged.recompute_identity().map(Some).unwrap();
+    let verification = verify_derivation(
+        &contract,
+        &registry,
+        &claims,
+        ArtifactObservations::none(),
+        &serde_json::to_vec(&forged).unwrap(),
+    )
+    .unwrap();
+    assert!(!verification.is_verified());
+    assert!(
+        verification.checks.iter().any(|check| {
+            check.check == "campaign"
+                && check.state == avila_core_compiler::DerivationCheckState::NotChecked
+        }),
+        "a dropped campaign identity must not read as verified"
+    );
+}
+
+#[test]
 fn a_supplied_artifact_digest_is_witnessed_not_asserted() {
     let (contract, registry, claims) = case_docs();
 

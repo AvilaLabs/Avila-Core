@@ -220,6 +220,10 @@ enum DerivationCommand {
         /// observations the recorded evaluation performed. Repeatable.
         #[arg(long)]
         artifact: Vec<PathBuf>,
+        /// Supply a receipt file to be re-hashed, matching the receipt
+        /// identities the recorded evaluation bound. Repeatable.
+        #[arg(long)]
+        receipt: Vec<PathBuf>,
     },
 }
 
@@ -824,6 +828,7 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 registry,
                 claims,
                 artifact,
+                receipt,
             } => {
                 let derivation_bytes = fs::read(&derivation)
                     .map_err(|error| format!("cannot read `{}`: {error}", derivation.display()))?;
@@ -836,6 +841,12 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                         format!("cannot read artifact `{}`: {error}", path.display())
                     })?;
                     observations.check_bytes(&bytes);
+                }
+                for path in &receipt {
+                    let bytes = fs::read(path).map_err(|error| {
+                        format!("cannot read receipt `{}`: {error}", path.display())
+                    })?;
+                    observations.check_receipt(&bytes);
                 }
                 let verification = avila_core_compiler::verify_derivation(
                     &contract,

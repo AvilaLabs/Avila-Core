@@ -320,6 +320,27 @@ pub fn evaluate_campaign_in_context(
                 None,
             )));
         }
+        Err(ContextError::SnapshotMismatch {
+            expected: _,
+            found,
+            claims_sha256,
+        }) => {
+            findings.push(CoreDiagnostic::new(
+                CORE_E7001,
+                FindingClass::Inadmissible,
+                "executor",
+                SourceLocation::new("claims", "/compiled_snapshot_sha256"),
+                format!(
+                    "claims were produced for `{found}`, but these documents compile to `{}`",
+                    compiled.snapshot_sha256()
+                ),
+            ));
+            return Ok(CampaignEvaluation::refused(rejected(
+                findings,
+                Some(compiled.snapshot_sha256().to_string()),
+                Some(claims_sha256),
+            )));
+        }
     };
     let claims_sha256 = context.record().claims_sha256.clone();
 
@@ -349,35 +370,6 @@ pub fn evaluate_campaign_in_context(
             refusals,
         ));
     }
-    if context.claims().compiled_snapshot_sha256 != compiled.snapshot_sha256() {
-        findings.push(CoreDiagnostic::new(
-            CORE_E7001,
-            FindingClass::Inadmissible,
-            "executor",
-            SourceLocation::new("claims", "/compiled_snapshot_sha256"),
-            format!(
-                "claims were produced for `{}`, but these documents compile to `{}`",
-                context.claims().compiled_snapshot_sha256,
-                compiled.snapshot_sha256()
-            ),
-        ));
-        let refusals = vec![bind_refusal(
-            &context,
-            "compiled_snapshot",
-            "mismatch",
-            CORE_E7001,
-        )];
-        return Ok(refused_evaluation(
-            rejected(
-                findings,
-                Some(compiled.snapshot_sha256().to_string()),
-                Some(claims_sha256),
-            ),
-            context,
-            refusals,
-        ));
-    }
-
     let (admissions, mut admission_findings) = context.admit();
     findings.append(&mut admission_findings);
     let verdicts = match context.derive_verdicts(&admissions) {
@@ -534,6 +526,13 @@ fn bound_application(context: &EvaluationContext) -> RuleApplication {
         application.premises.push(RulePremise {
             kind: "artifact_observation".into(),
             id: observed.clone(),
+            state: "checked".into(),
+        });
+    }
+    for receipt in &record.receipts {
+        application.premises.push(RulePremise {
+            kind: "receipt".into(),
+            id: receipt.clone(),
             state: "checked".into(),
         });
     }

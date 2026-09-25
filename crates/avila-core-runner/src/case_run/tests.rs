@@ -5,7 +5,9 @@ use super::stderr::{
 };
 use super::*;
 use crate::diagnostic::{CORE_X6501, CORE_X6502};
-use avila_core_compiler::{compile_documents, evaluate_campaign};
+use avila_core_compiler::{
+    ArtifactCheckState, compile_documents, evaluate_campaign, evaluate_campaign_in_context,
+};
 use sha2::{Digest, Sha256};
 
 fn comparison_attempt() -> AttemptRecord {
@@ -655,6 +657,76 @@ fn case_000_runs_without_external_roots_and_names_every_gap() {
     assert!(summary.contains("source root(s) actinv-data, actinv-release, aftermatter"));
 }
 
+#[test]
+fn run_observations_bind_checked_artifacts_and_receipts() {
+    // The reviewer's reproduction: the derivation previously evaluated
+    // with `ArtifactObservations::none()` — no artifact bytes, no receipt
+    // premises. The run's own byte-checks must feed the bound context.
+    let manifest_bytes = fs::read(case_001().join("package.json")).unwrap();
+    let package = verify_case_package(&manifest_bytes, &case_001(), &shielding_root(), None)
+        .unwrap()
+        .into_package()
+        .expect("the case-001 package verifies");
+    let claims_bytes = fs::read(case_001().join("claims.json")).unwrap();
+    let claims: ClaimsDocument = serde_json::from_slice(&claims_bytes).unwrap();
+
+    // No workspace (nothing executed here) — but the committed receipt
+    // documents and the attested artifacts under the supplied root were
+    // byte-checked, so both enter the observation set.
+    let observations = collect_run_observations(&package, &claims, None, None, &shielding_root());
+    assert!(
+        observations.observed().count() > 0,
+        "attested artifacts under the supplied root are checked"
+    );
+    assert_eq!(
+        observations.receipts().count(),
+        2,
+        "both committed execution receipts are byte-checked"
+    );
+
+    let evaluation = evaluate_campaign_in_context(
+        &fs::read(case_001().join("contract.json")).unwrap(),
+        &fs::read(case_001().join("registry.json")).unwrap(),
+        &claims_bytes,
+        observations,
+    )
+    .unwrap();
+    let derivation = evaluation.derivation().expect("observed derivation");
+    let context = &derivation.context;
+    assert!(
+        !context.artifact_observations.is_empty() && !context.receipts.is_empty(),
+        "the bound context carries both observation kinds"
+    );
+    let bind = derivation
+        .applications
+        .iter()
+        .find(|application| application.rule == "context.bind")
+        .unwrap();
+    assert!(
+        bind.premises
+            .iter()
+            .any(|premise| premise.kind == "receipt" && premise.state == "checked"),
+        "receipt premises are recorded as checked"
+    );
+    assert!(
+        bind.premises
+            .iter()
+            .any(|premise| premise.kind == "artifact_observation" && premise.state == "checked"),
+        "artifact observations are recorded as checked"
+    );
+    // Every attested artifact whose bytes were present reports verified.
+    let report = evaluation.report();
+    assert!(
+        report.admissions.iter().any(|record| {
+            record
+                .artifact
+                .as_ref()
+                .is_some_and(|artifact| artifact.check == ArtifactCheckState::Verified)
+        }),
+        "checked artifacts are witnessed, not asserted"
+    );
+}
+
 /// Executes CASE-000 for real when the bound executables and artifact
 /// roots are available locally. Set `AVILA_CORE_CASE_000_AFTERMATTER`
 /// (the Aftermatter executable), `AVILA_CORE_CASE_000_PYTHON3` (the
@@ -727,6 +799,49 @@ fn case_000_executes_both_tools_when_available() {
     assert!(report.replay.as_ref().unwrap().matches);
     assert!(summary.contains("[EXECUTED] activation via python3"));
     assert!(summary.contains("[EXECUTED] classification via aftermatter-cli"));
+
+    // The workspace derivation binds what this run checked: fresh output
+    // artifacts, fresh and committed receipts — not `ArtifactObservations::none()`.
+    let derivation: serde_json::Value =
+        serde_json::from_slice(&fs::read(workspace.join("derivation.json")).unwrap()).unwrap();
+    let context = &derivation["context"];
+    assert!(
+        !context["artifact_observations"]
+            .as_array()
+            .unwrap()
+            .is_empty(),
+        "fresh outputs and attested package artifacts are bound"
+    );
+    assert!(
+        context["receipts"].as_array().unwrap().len() >= 2,
+        "the run's receipt documents are bound as checked premises"
+    );
+    let bind = derivation["applications"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|application| application["rule"] == "context.bind")
+        .unwrap();
+    let kinds: Vec<&str> = bind["premises"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|premise| premise["kind"].as_str().unwrap())
+        .collect();
+    assert!(kinds.contains(&"artifact_observation") && kinds.contains(&"receipt"));
+    // The observed report sits beside the digest-only one; its admissions
+    // witness the checked material.
+    let observed_report: serde_json::Value =
+        serde_json::from_slice(&fs::read(workspace.join("campaign-report-observed.json")).unwrap())
+            .unwrap();
+    assert!(
+        observed_report["admissions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|record| record["artifact"]["check"] == "verified"),
+        "checked artifacts read as verified in the observed report"
+    );
     let _ = fs::remove_dir_all(&workspace);
 
     // The same request again: both receipts match, nothing runs.

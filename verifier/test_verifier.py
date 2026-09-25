@@ -3037,6 +3037,138 @@ class TestDerivationReplay(unittest.TestCase):
         self.assertTrue(any("qualification.envelope" in r for r in rules))
         self.assertTrue(any("not_evaluated.qualification_expired" in r for r in rules))
 
+    def test_claims_from_another_compilation_cannot_stand(self):
+        # The reproduction the reviewer ran: claims naming a foreign
+        # compiled_snapshot_sha256, with every derivation hash honestly
+        # recomputed, still reached `verified`. The claims↔snapshot binding
+        # must hold at the context boundary, not only the file digests.
+        with tempfile.TemporaryDirectory() as tmp:
+            claims = load(CASE_000 / "claims.json")
+            claims["compiled_snapshot_sha256"] = "sha256:" + "0" * 64
+            claims_path = Path(tmp) / "claims.json"
+            claims_path.write_text(json.dumps(claims))
+            forged = load(DERIVATIONS / "case-000.derivation.json")
+            forged["context"]["claims_sha256"] = v.sha256_bytes(
+                v.canonicalize_value(claims))
+            forged["context_sha256"] = v.sha256_bytes(
+                v.canonicalize_value(forged["context"]))
+            body = {k: val for k, val in forged.items() if k != "derivation_sha256"}
+            forged["derivation_sha256"] = v.sha256_bytes(v.canonicalize_value(body))
+            forged_path = Path(tmp) / "forged.json"
+            forged_path.write_text(json.dumps(forged))
+            report = v.Report("wrong-snapshot")
+            v.verify_derivation_document(
+                forged_path, CASE_000 / "contract.json", CASE_000 / "registry.json",
+                claims_path, [], None, report)
+        check = next(c for c in report.checks
+                     if c.check == "derivation.context.claims_snapshot")
+        self.assertEqual(check.status, "mismatch")
+        self.assertTrue(any(c.status == "mismatch" for c in report.checks))
+
+    def test_forged_context_body_is_rejected(self):
+        # Change identities inside the embedded context and honestly
+        # recompute context_sha256 + derivation_sha256 — the record is
+        # self-consistent, but the bound fields disagree with the supplied
+        # material.
+        with tempfile.TemporaryDirectory() as tmp:
+            forged = load(DERIVATIONS / "case-000.derivation.json")
+            forged["context"]["registry_id"] = "forged-registry"
+            forged["context"]["compiled_snapshot_sha256"] = "sha256:" + "0" * 64
+            forged["context_sha256"] = v.sha256_bytes(
+                v.canonicalize_value(forged["context"]))
+            body = {k: val for k, val in forged.items() if k != "derivation_sha256"}
+            forged["derivation_sha256"] = v.sha256_bytes(v.canonicalize_value(body))
+            forged_path = Path(tmp) / "forged.json"
+            forged_path.write_text(json.dumps(forged))
+            report = _run_derivation_verify(forged_path)
+        mismatching = {c.check for c in report.checks if c.status == "mismatch"}
+        self.assertIn("derivation.context.claims_snapshot", mismatching)
+        self.assertIn("derivation.context.registry_id", mismatching)
+        self.assertIn("derivation.context.compiled_snapshot", mismatching)
+
+    def test_forged_evaluator_is_unsupported_material(self):
+        # An evaluator this verifier does not implement cannot produce an
+        # independently verified derivation — `not_checked`, never
+        # `verified`, even with honestly recomputed hashes.
+        with tempfile.TemporaryDirectory() as tmp:
+            forged = load(DERIVATIONS / "case-000.derivation.json")
+            forged["evaluator"] = "unknown-evaluator-v999"
+            forged["context"]["evaluator"] = "unknown-evaluator-v999"
+            forged["context_sha256"] = v.sha256_bytes(
+                v.canonicalize_value(forged["context"]))
+            body = {k: val for k, val in forged.items() if k != "derivation_sha256"}
+            forged["derivation_sha256"] = v.sha256_bytes(v.canonicalize_value(body))
+            forged_path = Path(tmp) / "forged.json"
+            forged_path.write_text(json.dumps(forged))
+            report = _run_derivation_verify(forged_path)
+        check = next(c for c in report.checks
+                     if c.check == "derivation.context.evaluator")
+        self.assertEqual(check.status, "not_checked")
+        self.assertTrue(any(c.status != "verified" for c in report.checks))
+
+    def test_campaign_report_must_carry_the_replayed_conclusions(self):
+        # Flip a verdict to fail and honestly recompute the campaign hash —
+        # the report must carry the replayed conclusions, not merely a
+        # self-consistent digest.
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign = load(DERIVATIONS / "case-000.campaign-report.json")
+            campaign["verdicts"][0]["verdict"]["status"] = "fail"
+            body = {k: val for k, val in campaign.items()
+                    if k not in ("campaign_sha256", "notice")}
+            body.setdefault("findings", [])
+            campaign["campaign_sha256"] = v.sha256_bytes(v.canonicalize_value(body))
+            campaign_path = Path(tmp) / "campaign.json"
+            campaign_path.write_text(json.dumps(campaign))
+            derivation = load(DERIVATIONS / "case-000.derivation.json")
+            derivation["campaign_sha256"] = campaign["campaign_sha256"]
+            body = {k: val for k, val in derivation.items() if k != "derivation_sha256"}
+            derivation["derivation_sha256"] = v.sha256_bytes(v.canonicalize_value(body))
+            deriv_path = Path(tmp) / "derivation.json"
+            deriv_path.write_text(json.dumps(derivation))
+            report = _run_derivation_verify(deriv_path, campaign_path=campaign_path)
+        check = next(c for c in report.checks
+                     if c.check == "derivation.campaign.content")
+        self.assertEqual(check.status, "mismatch")
+        self.assertIn("status 'fail' but the replayed conclusion is 'pass'",
+                      check.detail)
+
+    def test_omitted_campaign_identity_is_reported(self):
+        # Removing campaign_sha256 from a derivation whose replay produced
+        # verdicts does not silently pass — the omission is reported.
+        with tempfile.TemporaryDirectory() as tmp:
+            derivation = load(DERIVATIONS / "case-000.derivation.json")
+            derivation.pop("campaign_sha256")
+            body = {k: val for k, val in derivation.items() if k != "derivation_sha256"}
+            derivation["derivation_sha256"] = v.sha256_bytes(v.canonicalize_value(body))
+            deriv_path = Path(tmp) / "derivation.json"
+            deriv_path.write_text(json.dumps(derivation))
+            report = _run_derivation_verify(deriv_path)
+        check = next(c for c in report.checks if c.check == "derivation.campaign")
+        self.assertEqual(check.status, "not_checked")
+
+    def test_combined_expired_and_revoked_qualification_verifies(self):
+        # A qualification both expired and revoked is honestly recorded
+        # with both reasons — lifecycle refusal and envelope quarantine are
+        # independent gates. The replay must accept the record whole.
+        report = v.Report("mixed-qualification")
+        v.verify_derivation_document(
+            DERIVATIONS / "case-000-mixed-qualification.derivation.json",
+            CASE_000 / "contract.json",
+            CASE_000 / "registry.json",
+            DERIVATIONS / "case-000-mixed-qualification.claims.json",
+            [],
+            DERIVATIONS / "case-000-mixed-qualification.campaign-report.json",
+            report,
+        )
+        non_verified = [c for c in report.checks if c.status != "verified"]
+        self.assertEqual(non_verified, [])
+        derivation = load(DERIVATIONS / "case-000-mixed-qualification.derivation.json")
+        app = next(
+            a for a in derivation["applications"]
+            if a["rule"] == "not_evaluated.qualification_revoked")
+        self.assertIn("CORE-A4603", app["reasons"])   # revoked
+        self.assertIn("CORE-A4602", app["reasons"])   # expired — both kept
+
     def test_derivation_diff_names_changed_uses(self):
         before = load(DERIVATIONS / "case-000.derivation.json")
         stale = load(DERIVATIONS / "case-000-stale-qualification.derivation.json")

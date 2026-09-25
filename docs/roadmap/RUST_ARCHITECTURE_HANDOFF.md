@@ -205,16 +205,26 @@ diagnostics or explicit refusal. Existing missing-data outcomes remain honest.
 
 *Status — implemented.* `EvaluationContext::bind` moves the checked contract
 in, refuses a registry whose bytes hash differently than the contract's
-recorded `registry_sha256` (`ContextError::RegistryMismatch`), hashes the
-claims bytes, and records every qualification identity riding the claims —
-no ambient clock; the only time facts are the instants already on the
-qualification records. `ArtifactObservations` records a digest only through
-`check_bytes`, which hashes the supplied bytes itself; an empty set is the
-digest-only evaluation and emits no `artifact` field, preserving committed
-report bytes. `derive_verdicts` refuses admissions minted under a different
-`context_sha256` (`CORE-E7401`). The digest-set parameter of
-`evaluate_campaign_with_artifacts` is gone; `evaluate_campaign` delegates
-to `evaluate_campaign_in_context` with `ArtifactObservations::none()`.
+recorded `registry_sha256` (`ContextError::RegistryMismatch`), refuses claims
+naming a different `compiled_snapshot_sha256` (`ContextError::SnapshotMismatch`
+— the claims↔compilation binding lives at the bind boundary, so no public
+path can mint verdicts from a mixed context; the shared wrapper surfaces it
+as `CORE-E7001`), hashes the claims bytes, and records every qualification
+identity riding the claims — no ambient clock; the only time facts are the
+instants already on the qualification records. `ArtifactObservations` records
+a digest only through `check_bytes`/`check_file` (artifacts) and
+`check_receipt`/`check_receipt_file` (receipts) — each hashes supplied bytes
+itself; an empty set is the digest-only evaluation and emits no `artifact`
+field, preserving committed report bytes. `derive_verdicts` refuses
+admissions minted under a different `context_sha256` (`CORE-E7401`). The
+runner feeds it what the run actually checked — fresh workspace outputs and
+receipts, attested package artifacts under the supplied roots, and every
+committed receipt document — via `collect_run_observations`, and writes the
+resulting `derivation.json` + `campaign-report-observed.json` into the
+workspace; the digest-only `campaign-report.json` stays the replay-compared
+artifact. The digest-set parameter of `evaluate_campaign_with_artifacts` is
+gone; `evaluate_campaign` delegates to `evaluate_campaign_in_context` with
+`ArtifactObservations::none()`.
 
 **RA-04 — Carry explicit rule applications through admission and verdict.**
 
@@ -303,15 +313,24 @@ receipt reuse across a fixed-question boundary the current lineage rejects;
 use separately authored revisions for that comparison.
 
 *Status — implemented.* `avila-core derivation verify` replays the derivation
-inside the compiler: it rebuilds the context from the recorded material,
-re-runs admission and verdict under it, and compares every recorded
-application premise-for-premise — plus `derivation_sha256`,
-`context_sha256`, and `campaign_sha256`. The Python verifier's
-`verify-derivation` subcommand is the independent replay: stdlib-only, it
-recomputes document identities, the context identity, artifact observations
-from `--artifact` bytes, and every application via the ported lowering and
-verdict rules; a forged conclusion fails even with an honestly recomputed
-outer digest (pinned by test). Bound material the caller does not supply is
+inside the compiler: it re-hashes the embedded context body against
+`context_sha256`, validates the evaluator/profile/schema the record names,
+compares the embedded context field-for-field with the context freshly bound
+from the supplied documents, re-runs admission and verdict under it, and
+compares every recorded application premise-for-premise — plus
+`derivation_sha256`, `context_sha256`, and `campaign_sha256` (an omitted
+campaign identity on a verdict-producing record is `not_checked`, not
+silently skipped). The Python verifier's `verify-derivation` subcommand is
+the independent replay: stdlib-only, it recomputes document identities, the
+context identity, artifact observations and receipt identities from
+`--artifact`/`--receipt` bytes, the claims↔snapshot binding, evaluator and
+profile metadata, and every application via the ported lowering and verdict
+rules; a forged conclusion fails even with an honestly recomputed outer
+digest, and a campaign report must carry the replayed verdicts, admission
+states, artifact checks, and boundary fields — `--campaign-report` compares
+content, not just hash. Lifecycle refusal and envelope quarantine replay as
+independent gates: an expired-and-revoked qualification verifies with both
+reasons recorded. Bound material the caller does not supply is
 `not_checked`, never `verified`. `explain_derivation_changes` (compiler) and
 `derivation-diff` (verifier, a matching port) name the premise kinds behind
 each changed use; equal verdicts under different premises stay distinct —
@@ -380,16 +399,31 @@ they have been run.
 `crates/avila-core-compiler/tests/context_binding.rs` pins fabricated
 digest sets (a `check_bytes` digest for bytes no artifact attests reports
 `not_checked`, never `verified`), mixed contexts (registry mismatch at
-bind, `CORE-E7401` across two live contexts), tampered claims and expired
-qualification replaying to `not_evaluated`, `MAX_RULE_APPLICATIONS`
-exhaustion as `CORE-E7501`, and the positive counterparts; `compile_fail`
-doctests pin `CompiledContract`, `CanonicalTypedQuantity`,
-`Compilation::contract`, `CheckedAdmissions`, and `VerifiedCasePackage`
-against downstream fabrication. Python-side tests pin the honest replays,
-the forged-conclusion-with-recomputed-digest refusal, the mixed-context
-mismatch, and the `not_checked` behavior for missing artifact bytes and a
-missing campaign report. New codes `CORE-E7401` and `CORE-E7501` are
-catalogued in `docs/architecture/DIAGNOSTICS.md` with emitting tests.
+bind, `CORE-E7401` across two live contexts), claims naming a different
+`compiled_snapshot_sha256` refused at `bind` before any admission runs,
+a forged embedded context body and a forged evaluator rejected with the
+outer digests honestly recomputed, an omitted `campaign_sha256` reported
+`not_checked`, tampered claims and expired qualification replaying to
+`not_evaluated`, `MAX_RULE_APPLICATIONS` exhaustion as `CORE-E7501`, and
+the positive counterparts; `compile_fail` doctests pin `CompiledContract`,
+`CanonicalTypedQuantity`, `Compilation::contract`, `CheckedAdmissions`,
+and `VerifiedCasePackage` against downstream fabrication. The runner's
+`run_observations_bind_checked_artifacts_and_receipts` pins the
+execution-to-verdict chain: package artifacts under the supplied root and
+committed receipt documents enter the observation set, and the resulting
+derivation carries `artifact_observation`/`receipt` premises with state
+`checked`; the (env-gated) full-execution test asserts the workspace
+`derivation.json` binds fresh outputs and receipts. Python-side tests pin
+the honest replays, the forged-conclusion-with-recomputed-digest refusal,
+the forged context body and evaluator, the wrong-snapshot claims binding,
+a campaign report whose verdict contradicts the replayed conclusion
+(`derivation.campaign.content` mismatch), the omitted-campaign-identity
+`not_checked`, the mixed-context mismatch, the combined
+expired-and-revoked qualification replay (`derivations/case-000-mixed-
+qualification.*` committed fixtures), and the `not_checked` behavior for
+missing artifact bytes and a missing campaign report. New codes
+`CORE-E7401` and `CORE-E7501` are catalogued in
+`docs/architecture/DIAGNOSTICS.md` with emitting tests.
 
 Validation commands run from the repository root on this worktree:
 
@@ -397,24 +431,26 @@ Validation commands run from the repository root on this worktree:
 - `cargo clippy --workspace --all-targets -- -D warnings` — clean.
 - `cargo test --workspace --all-targets --locked --no-fail-fast` — all
   suites pass (compiler 100 lib + fixture/diagnostic/context tests, runner
-  223 lib tests, evidence 41, kernel 22, CLI, app; no failures).
+  224 lib tests, evidence 41, kernel 22, CLI, app; no failures).
 - `cargo test --workspace --doc --locked` — 7 doctests pass, including the
   five `compile_fail` boundary tests.
 - `cargo build --locked -p avila-core-app -p avila-core-cli` — clean.
-- `python3 -m unittest test_verifier` — all checks pass except
+- `python3 -m unittest test_verifier` — 139 of 140 pass; the only failure is
   `test_every_committed_case_snapshot_recomputes` for the untracked
   work-in-progress directory `examples/cases/case-010-matmul-rank/`, which
   this task was directed not to modify; its pinned snapshot predates or
   diverges from the committed lowering and the failure is unrelated to
   this slice (reported separately as pre-existing worktree state).
 
-Named remaining limitations: the runner evaluates campaigns with
-`ArtifactObservations::none()` — committed replay compares report bytes
-verbatim, so feeding real observations into `run` is a separate versioned
-decision; the verifier replays the rule vocabulary the slice uses and
-reports anything outside it `not_checked`; the derivation does not attest
-receipts, signatures, or executable identity, which keep their own
-boundaries. See ADR-0026 §Limitations.
+Named remaining limitations: the replay-compared campaign report remains
+the digest-only evaluation — the run additionally emits
+`derivation.json` + `campaign-report-observed.json` bound to the bytes it
+checked, and promoting the observed report to the committed comparison is
+a separate versioned decision; the verifier replays the rule vocabulary
+the slice uses and reports anything outside it `not_checked`; `receipt`
+premises name which receipt bytes were re-hashed without re-verifying a
+receipt's own signature or semantics, which keep their own boundaries. See
+ADR-0026 §Limitations.
 
 **Follow-on implementation increments have specific entry conditions.**
 

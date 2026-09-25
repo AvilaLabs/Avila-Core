@@ -14,11 +14,12 @@
 
 use serde::Serialize;
 
-use super::context::ArtifactObservations;
+use super::context::{ArtifactObservations, CONTEXT_SCHEMA_VERSION};
 use super::derivation::{DERIVATION_SCHEMA_VERSION, VerdictDerivation};
-use super::{CampaignStatus, evaluate_campaign_in_context};
+use super::{CampaignStatus, EVALUATOR_ID, evaluate_campaign_in_context};
 use crate::CompilerError;
-use avila_core_kernel::SEMANTIC_PROFILE;
+use crate::compile::prefixed_sha256;
+use avila_core_kernel::{SEMANTIC_PROFILE, canonicalize_json};
 
 /// The state one replayed check reached.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -128,6 +129,70 @@ pub fn verify_derivation(
         }),
     }
 
+    // The embedded context record must itself hash to `context_sha256` —
+    // an attacker who edits bound identities inside `context` and
+    // recomputes only the outer digest fails here.
+    match serde_json::to_vec(&recorded.context)
+        .map_err(|error| error.to_string())
+        .and_then(|bytes| canonicalize_json(&bytes).map_err(|error| error.to_string()))
+    {
+        Ok(canonical) => {
+            let embedded = prefixed_sha256(&canonical);
+            checks.push(DerivationCheck {
+                check: "context".into(),
+                subject: "context_record".into(),
+                state: if embedded == recorded.context_sha256 {
+                    DerivationCheckState::Verified
+                } else {
+                    DerivationCheckState::Mismatch
+                },
+                detail: if embedded == recorded.context_sha256 {
+                    String::new()
+                } else {
+                    format!(
+                        "the embedded context hashes to `{embedded}`, not the recorded `{}`",
+                        recorded.context_sha256
+                    )
+                },
+            });
+        }
+        Err(error) => checks.push(DerivationCheck {
+            check: "context".into(),
+            subject: "context_record".into(),
+            state: DerivationCheckState::NotChecked,
+            detail: format!("the embedded context could not be canonicalized: {error}"),
+        }),
+    }
+
+    // The evaluator metadata must name this verifier — a record produced
+    // by different inference rules is unsupported material, not an
+    // independently verified derivation.
+    if recorded.evaluator == EVALUATOR_ID
+        && recorded.context.evaluator == EVALUATOR_ID
+        && recorded.context.semantic_profile == SEMANTIC_PROFILE
+        && recorded.context.schema_version == CONTEXT_SCHEMA_VERSION
+    {
+        checks.push(DerivationCheck {
+            check: "context".into(),
+            subject: "evaluator".into(),
+            state: DerivationCheckState::Verified,
+            detail: format!("{EVALUATOR_ID} under {SEMANTIC_PROFILE}"),
+        });
+    } else {
+        checks.push(DerivationCheck {
+            check: "context".into(),
+            subject: "evaluator".into(),
+            state: DerivationCheckState::NotChecked,
+            detail: format!(
+                "the record names evaluator `{recorded_evaluator}`/`{context_evaluator}` under `{profile}`/`{schema}`; this verifier supports `{EVALUATOR_ID}` under `{SEMANTIC_PROFILE}`/`{CONTEXT_SCHEMA_VERSION}`",
+                recorded_evaluator = recorded.evaluator,
+                context_evaluator = recorded.context.evaluator,
+                profile = recorded.context.semantic_profile,
+                schema = recorded.context.schema_version,
+            ),
+        });
+    }
+
     let evaluation =
         evaluate_campaign_in_context(contract_bytes, registry_bytes, claims_bytes, observations)?;
     let Some(fresh) = evaluation.derivation() else {
@@ -161,6 +226,24 @@ pub fn verify_derivation(
                 "the supplied material binds context `{}`, not the recorded `{}`",
                 fresh.context_sha256, recorded.context_sha256
             )
+        },
+    });
+
+    // The embedded record must equal what the supplied material binds —
+    // field-for-field, not merely a colliding hash.
+    checks.push(DerivationCheck {
+        check: "context".into(),
+        subject: "bound_material".into(),
+        state: if fresh.context == recorded.context {
+            DerivationCheckState::Verified
+        } else {
+            DerivationCheckState::Mismatch
+        },
+        detail: if fresh.context == recorded.context {
+            String::new()
+        } else {
+            "the embedded context record differs from the material the supplied documents bind"
+                .into()
         },
     });
 
@@ -205,11 +288,8 @@ pub fn verify_derivation(
         });
     }
 
-    if let (Some(recorded_identity), Some(fresh_identity)) = (
-        &recorded.campaign_sha256,
-        &evaluation.report().campaign_sha256,
-    ) {
-        checks.push(DerivationCheck {
+    match (&recorded.campaign_sha256, &evaluation.report().campaign_sha256) {
+        (Some(recorded_identity), Some(fresh_identity)) => checks.push(DerivationCheck {
             check: "campaign".into(),
             subject: "campaign_sha256".into(),
             state: if recorded_identity == fresh_identity {
@@ -224,7 +304,28 @@ pub fn verify_derivation(
                     "the fresh report is `{fresh_identity}`, not the recorded `{recorded_identity}`"
                 )
             },
-        });
+        }),
+        // A record that omits the campaign identity it claims to derive
+        // is never silently verified — the omission is reported.
+        (None, Some(_)) => checks.push(DerivationCheck {
+            check: "campaign".into(),
+            subject: "campaign_sha256".into(),
+            state: DerivationCheckState::NotChecked,
+            detail:
+                "the record omits the campaign identity although the replayed evaluation produced one"
+                    .into(),
+        }),
+        (Some(recorded_identity), None) => checks.push(DerivationCheck {
+            check: "campaign".into(),
+            subject: "campaign_sha256".into(),
+            state: DerivationCheckState::Mismatch,
+            detail: format!(
+                "the record names campaign `{recorded_identity}` but the replayed evaluation produced none"
+            ),
+        }),
+        // Refused evaluations legitimately bind no report — nothing to
+        // compare on either side.
+        (None, None) => {}
     }
 
     Ok(finish(checks))

@@ -32,22 +32,26 @@ use crate::document::{ExecutionPolicy, RegistrySnapshot};
 /// The schema the context record declares inside a derivation.
 pub const CONTEXT_SCHEMA_VERSION: &str = "avila.core/evaluation-context/v0.1-draft";
 
-/// Artifact bytes actually supplied and re-hashed for this evaluation.
+/// Artifact and receipt bytes actually supplied and re-hashed for this
+/// evaluation.
 ///
-/// The only way a digest enters this set is `check_bytes`/`check_file`,
-/// which hash the supplied bytes and record what they computed. A caller
-/// cannot assert a digest it did not produce — a bare string is not a
-/// byte-check witness.
+/// The only way a digest enters either set is `check_bytes`/`check_file`
+/// (artifacts) and `check_receipt`/`check_receipt_file` (receipts), which
+/// hash the supplied bytes and record what they computed. A caller cannot
+/// assert a digest it did not produce — a bare string is not a byte-check
+/// witness.
 ///
-/// An empty set is a digest-only evaluation: no `artifact` check field is
-/// emitted and the records are unchanged from the historical form.
+/// An empty artifact set is a digest-only evaluation: no `artifact` check
+/// field is emitted and the records are unchanged from the historical
+/// form. An empty receipt set binds no receipt identities.
 #[derive(Debug, Clone, Default)]
 pub struct ArtifactObservations {
     observed: BTreeSet<String>,
+    receipts: BTreeSet<String>,
 }
 
 impl ArtifactObservations {
-    /// No supplied artifacts — the digest-only evaluation.
+    /// No supplied artifacts or receipts — the digest-only evaluation.
     pub fn none() -> Self {
         Self::default()
     }
@@ -67,18 +71,43 @@ impl ArtifactObservations {
         Ok(self.check_bytes(&bytes))
     }
 
+    /// Hash the supplied receipt bytes and record the digest they
+    /// produced. Returns the recorded `sha256:…` identity.
+    pub fn check_receipt(&mut self, bytes: &[u8]) -> String {
+        let digest = prefixed_sha256(bytes);
+        self.receipts.insert(digest.clone());
+        digest
+    }
+
+    /// Read `path` and check its bytes as a receipt. An unreadable file
+    /// records nothing and reports the I/O error.
+    pub fn check_receipt_file(&mut self, path: &Path) -> std::io::Result<String> {
+        let bytes = std::fs::read(path)?;
+        Ok(self.check_receipt(&bytes))
+    }
+
     /// Whether a supplied artifact hashed to exactly this identity.
     pub fn contains(&self, digest: &str) -> bool {
         self.observed.contains(digest)
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.observed.is_empty()
+    /// Whether a supplied receipt hashed to exactly this identity.
+    pub fn contains_receipt(&self, digest: &str) -> bool {
+        self.receipts.contains(digest)
     }
 
-    /// The digests this set observed, sorted.
+    pub fn is_empty(&self) -> bool {
+        self.observed.is_empty() && self.receipts.is_empty()
+    }
+
+    /// The artifact digests this set observed, sorted.
     pub fn observed(&self) -> impl Iterator<Item = &String> {
         self.observed.iter()
+    }
+
+    /// The receipt digests this set observed, sorted.
+    pub fn receipts(&self) -> impl Iterator<Item = &String> {
+        self.receipts.iter()
     }
 }
 
@@ -102,6 +131,10 @@ pub struct ContextRecord {
     pub qualifications: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub artifact_observations: Vec<String>,
+    /// Digests of the receipt documents byte-checked under this context.
+    /// Absent when the evaluation checked none (digest-only callers).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub receipts: Vec<String>,
 }
 
 /// Why `bind` refused to create a context. Each failure is a bounded,
@@ -116,6 +149,14 @@ pub enum ContextError {
     /// The claims bytes could not be read authoritatively; the compile
     /// findings explain why.
     ClaimsUnreadable { findings: Vec<CoreDiagnostic> },
+    /// The claims document is readable but was produced for a different
+    /// compiled snapshot — binding it would mint a context claiming
+    /// provenance the claims do not have.
+    SnapshotMismatch {
+        expected: String,
+        found: String,
+        claims_sha256: String,
+    },
 }
 
 /// Why an authoritative use refused.
@@ -179,6 +220,13 @@ impl EvaluationContext {
             .find(|identity| identity.document == "claims")
             .map(|identity| identity.sha256.clone())
             .expect("a parsed claims document has an identity");
+        if claims.compiled_snapshot_sha256 != compiled.snapshot_sha256() {
+            return Err(ContextError::SnapshotMismatch {
+                expected: compiled.snapshot_sha256().to_string(),
+                found: claims.compiled_snapshot_sha256.clone(),
+                claims_sha256,
+            });
+        }
 
         let mut qualifications: BTreeSet<String> = BTreeSet::new();
         for claim in &claims.claims {
@@ -202,6 +250,7 @@ impl EvaluationContext {
             execution_policy: compiled.execution_policy().clone(),
             qualifications: qualifications.into_iter().collect(),
             artifact_observations: observations.observed().cloned().collect(),
+            receipts: observations.receipts().cloned().collect(),
         };
         let bytes = serde_json::to_vec(&record).expect("context record serializes");
         let context_sha256 =

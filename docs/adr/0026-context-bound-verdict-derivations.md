@@ -163,7 +163,11 @@ requires:
 - the registry bytes, which must hash to the contract's recorded
   `registry_sha256` (`ContextError::RegistryMismatch` otherwise — this is
   the mixed-context refusal at bind time);
-- the claims bytes, parsed authoritatively and hashed (`claims_sha256`);
+- the claims bytes, parsed authoritatively and hashed (`claims_sha256`),
+  which must name this compiled snapshot
+  (`ContextError::SnapshotMismatch` otherwise — claims produced for a
+  different compilation can never stand under this context; the shared
+  wrapper reports it as `CORE-E7001`);
 - `ArtifactObservations`, the byte-check witnesses for this evaluation.
 
 The context record is:
@@ -177,9 +181,14 @@ The context record is:
   "registry_id": "…", "registry_revision": 1, "registry_sha256": "sha256:…",
   "claims_sha256": "sha256:…",
   "execution_policy": { …compiled policy… },
-  "qualifications": ["<qualification_id>@<revision>:<sha256>", …]
+  "qualifications": ["<qualification_id>@<revision>:<sha256>", …],
+  "artifact_observations": ["sha256:…", …],
+  "receipts": ["sha256:…", …]
 }
 ```
+
+`artifact_observations` and `receipts` are present only when non-empty —
+a digest-only context serializes byte-identically to before this slice.
 
 `context_sha256` is the canonical SHA-256 of that record. `qualifications`
 lists the sorted identities of every `ClaimQualification` attached to the
@@ -192,13 +201,18 @@ the `ArtifactObservations` set, and every `admission.*` application records
 the check outcome for its artifact.
 
 `ArtifactObservations` replaces the `BTreeSet<String>` parameter of
-`evaluate_campaign_with_artifacts`. Its only constructor of a verified
-digest is `check_bytes(&mut self, bytes) -> String`, which hashes the bytes
-and records the digest it computed. An artifact attested in the claims but
-never observed hashes to `not_checked`; a digest the supplied bytes did not
-produce cannot be recorded at all. An empty set is the digest-only
-evaluation — semantically unchanged: no `artifact` field is emitted, exactly
-as today.
+`evaluate_campaign_with_artifacts`. Its only constructors of a verified
+digest are `check_bytes`/`check_file` for artifact bytes and
+`check_receipt`/`check_receipt_file` for receipt bytes — each hashes the
+bytes and records the digest it computed, into `observed` and `receipts`
+respectively. An artifact attested in the claims but never observed hashes
+to `not_checked`; a digest the supplied bytes did not produce cannot be
+recorded at all. An empty set is the digest-only evaluation —
+semantically unchanged: no `artifact` field is emitted, exactly as today.
+Receipt identities enter the context record as `receipts` and the
+`context.bind` application as `receipt` premises with state `checked`;
+they name which receipt documents the evaluation bound, and replaying
+with `--receipt` bytes re-proves them.
 
 Context equality is by `context_sha256`, never by pointer or lifetime. Two
 contexts may be simultaneously live; `derive_verdicts` refuses
@@ -248,8 +262,9 @@ kinds name the check class, never free text: `contract_input`,
 `input_attestation`, `artifact_identity`, `artifact_observation`,
 `media_type`, `slot_cardinality`, `parent_admission`, `claim_model`,
 `claim_shape`, `unit_scaling`, `partial_result`, `workflow_step`,
-`output_slot`, `qualification`, `execution_policy`, `requirement`,
-`evidence`, `canonical_value`, `evaluation_context`, `report`.
+`output_slot`, `qualification`, `qualification_lifecycle`,
+`execution_policy`, `requirement`, `evidence`, `canonical_value`,
+`evaluation_context`, `receipt`, `report`.
 
 Record size is bounded: `MAX_RULE_APPLICATIONS` caps the applications one
 evaluation may emit; exceeding it is a bounded refusal — the campaign
@@ -276,32 +291,46 @@ carrying the `CampaignReport`, the `EvaluationContext`, and the
 with `ArtifactObservations::none()`; `evaluate_campaign_with_artifacts` is
 replaced by the in-context operation (its digest-set parameter is exactly
 the unforgeable-witness problem). The CLI gains `evaluate --derivation FILE`
-to write the artifact and `derivation diff BEFORE AFTER` to explain changed
-uses; the runner evaluates in context and writes `derivation.json` into the
-run workspace beside `campaign-report.json`. Unsupported schema versions are
-a mismatch, never a silent read.
+to write the artifact, `derivation diff BEFORE AFTER` to explain changed
+uses, and `derivation verify` (`--artifact`/`--receipt` repeatable) to
+replay it; the runner evaluates in context and writes `derivation.json`
+into the run workspace beside `campaign-report.json`. Unsupported schema
+versions are a mismatch, never a silent read.
 
-The runner evaluates with `ArtifactObservations::none()`: the campaign
-report it writes stays byte-identical to the committed replay comparison
-(`replay_expected` is full-document equality), and the package-integrity
-boundary already records which artifact bytes the run hashed. Supplying
-real observations changes the emitted `artifact` check fields and the
-`campaign_sha256`; enabling that inside `run` is a separate versioned
-decision about the replay comparison, not part of this slice.
+The runner performs two evaluations. The digest-only one produces the
+`campaign-report.json` the committed replay compares (`replay_expected`
+is full-document equality — those bytes stay pinned). The observed one
+binds what the run actually byte-checked: fresh output files and fresh
+receipts under the workspace, attested package artifacts resolvable under
+the supplied source roots, and every committed receipt document the
+package carries. That evaluation emits `derivation.json` and
+`campaign-report-observed.json` into the workspace — the execution-
+attributable chain — while the committed replay artifact keeps its
+historical bytes. Digests the run could not re-check are simply absent
+from the set: the admission applications then read `not_checked`, never
+`checked` without evidence. Making the observed evaluation the replayed
+report itself is a separate versioned decision, not part of this slice.
 
 ### 5. Independent replay and changed-use explanation
 
-The Python verifier gains a `verify-derivation` subcommand, a stdlib-only
-replay: it recomputes the context identity from the embedded record,
-re-checks every bound digest against the supplied documents, replays each
-supported rule application from the bound contract/registry/claims (the
-same rules `verify_case_verdicts` re-derives), and compares conclusions
-and premise states — a tampered conclusion is rejected even when the outer
-`derivation_sha256` is honestly recomputed, because the replayed inference
-does not produce it. `--artifact` supplies the byte-check witnesses whose
-digests the context binds; `--campaign-report` recomputes the recorded
-`campaign_sha256` against the emitted report. Material the record binds
-but the caller did not supply is `not_checked`, never `verified`.
+`verify_derivation` (Rust) and the Python verifier's `verify-derivation`
+subcommand replay a derivation identically: recompute the embedded context
+body's hash against `context_sha256`; re-check every bound digest against
+the supplied contract, registry, and claims; confirm the claims name this
+compiled snapshot; confirm the evaluator and profile names match this
+implementation; compare the embedded context field-for-field with what the
+supplied material binds; then replay each supported rule application and
+compare conclusions and premise states — a tampered conclusion is rejected
+even when every outer digest is honestly recomputed, because the replayed
+inference does not produce it. `--artifact`/`--receipt` supply the
+byte-check witnesses whose digests the context binds; `--campaign-report`
+recomputes the recorded `campaign_sha256` and then requires the report's
+verdicts, admission states, artifact checks, and boundary fields to equal
+the replayed conclusions — a report that hashes cleanly but contradicts the
+derivation mismatches. A derivation that omits `campaign_sha256` while its
+replay produced verdicts is `not_checked`. Material the record binds but
+the caller did not supply, or evaluator metadata this verifier does not
+implement, is `not_checked`, never `verified`.
 
 `explain_derivation_changes(before, after)` in the compiler and the
 verifier's matching check answer "which uses changed" from the two
@@ -333,10 +362,14 @@ same bound edges.
 
 ## Limitations
 
-- The derivation records the checks this profile actually performs; it does
-  not make claims about receipts, signatures, or executable identity that
-  the campaign evaluator never established. Those premises remain at their
-  own boundaries (evidence crate, runner).
+- The derivation records the checks this profile actually performs; the
+  `receipt` premises name which receipt document bytes were re-hashed —
+  they do not re-verify the receipt's own signature or semantics, which
+  remain at the evidence and runner boundaries.
+- The run workspace carries the observed chain (`derivation.json` +
+  `campaign-report-observed.json`); the replay-compared report remains the
+  digest-only evaluation. Promoting the observed report to the committed
+  comparison is a separate versioned change.
 - `explain_derivation_changes` compares two derivations; it does not decide
   whether a new execution is required — that stays with the runner's plan.
 - The verifier replays the rules the slice uses; an application naming a

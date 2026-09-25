@@ -308,10 +308,11 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                 let _ = writeln!(
                     out,
                     "   [COMPILED] {} revision {}",
-                    compiled.contract_id, compiled.contract_revision
+                    compiled.contract_id(),
+                    compiled.contract_revision()
                 );
-                for (index, step) in compiled.workflow.iter().enumerate() {
-                    let connector = if index + 1 == compiled.workflow.len() {
+                for (index, step) in compiled.workflow().iter().enumerate() {
+                    let connector = if index + 1 == compiled.workflow().len() {
                         "└─"
                     } else {
                         "├─"
@@ -325,8 +326,8 @@ pub fn human_summary(report: &CaseRunReport) -> String {
                 let _ = writeln!(
                     out,
                     "   {} requirement(s); snapshot {}",
-                    compiled.requirements.len() + compiled.categorical_requirements.len(),
-                    compiled.snapshot_sha256
+                    compiled.requirements().len() + compiled.categorical_requirements().len(),
+                    compiled.snapshot_sha256()
                 );
                 if let Some(coverage) = &report.coverage {
                     write_coverage_summary(&mut out, coverage);

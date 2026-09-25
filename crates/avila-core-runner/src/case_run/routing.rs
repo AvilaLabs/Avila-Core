@@ -78,7 +78,7 @@ pub(super) fn check_routing_records(
 ) -> Vec<RunFinding> {
     let mut findings = Vec::new();
     for document in package
-        .manifest
+        .manifest()
         .documents
         .iter()
         .filter(|document| document.role == "staged_review_record")
@@ -133,7 +133,7 @@ pub(super) fn check_routing_records(
         // A record answering a gate the contract never declares is a
         // forged claim about a nonexistent review — quarantine it.
         let declared = compiled
-            .workflow
+            .workflow()
             .iter()
             .any(|step| step.step_id == step_id && step.presentation_gate.is_some());
         if !declared {

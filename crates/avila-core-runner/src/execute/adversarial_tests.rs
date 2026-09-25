@@ -899,8 +899,8 @@ fn a_revision_bound_run_names_its_revision_and_appends_an_assessment() {
         .compiled
         .as_ref()
         .unwrap()
-        .snapshot_sha256
-        .clone();
+        .snapshot_sha256()
+        .to_string();
     crate::create_revision(
         &log,
         &crate::RevisionRequest {
@@ -1010,8 +1010,8 @@ fn a_run_naming_an_unknown_or_mismatched_revision_is_refused() {
                 .compiled
                 .as_ref()
                 .unwrap()
-                .snapshot_sha256
-                .clone(),
+                .snapshot_sha256()
+                .to_string(),
             created_by: "designer".into(),
             intent: None,
         },

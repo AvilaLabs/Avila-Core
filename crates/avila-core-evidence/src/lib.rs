@@ -29,7 +29,8 @@ pub use package::{
     ExecutionInputStaging, ExecutionOutputBinding, HashCacheContext, IntegrityCheckState,
     PACKAGE_INTEGRITY_REPORT_SCHEMA_VERSION, PackageArtifact, PackageCapability, PackageCoverage,
     PackageDocument, PackageError, PackageExecution, PackageIntegrityReport,
-    PackageIntegrityStatus, PackageOmission, VerifiedCasePackage, verify_case_package,
+    PackageIntegrityStatus, PackageOmission, PackageVerification, SuppliedFreeInput,
+    VerifiedCasePackage, verify_case_package,
 };
 pub use receipt::{
     CapabilityIdentity, CapabilityTypeRef, EXECUTION_RECEIPT_SCHEMA_VERSION, ExecutionReceipt,

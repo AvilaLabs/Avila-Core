@@ -2902,3 +2902,162 @@ class TestInstantiationVerification(unittest.TestCase):
         )
 
 
+
+
+# ---------------------------------------------------------------------------
+# ADR-0026: verdict-derivation replay — fixtures/semantic-core/derivations
+#
+# The committed derivations were produced by `avila-core evaluate
+# --derivation` over case-000's committed contract/registry/claims —
+# case-000.derivation.json is the digest-only record;
+# case-000-observed.derivation.json binds one --artifact observation whose
+# digest matches no attestation (the premises record `not_checked`, the
+# honest outcome of supplying unrelated bytes).
+# ---------------------------------------------------------------------------
+
+DERIVATIONS = FIXTURES / "derivations"
+CASE_000 = EXAMPLES / "case-000-actinv-aftermatter"
+
+
+def _run_derivation_verify(derivation_path: Path, artifact_paths=None, campaign_path=None):
+    report = v.Report(str(derivation_path))
+    v.verify_derivation_document(
+        derivation_path,
+        CASE_000 / "contract.json",
+        CASE_000 / "registry.json",
+        CASE_000 / "claims.json",
+        artifact_paths or [],
+        campaign_path,
+        report,
+    )
+    return report
+
+
+class TestDerivationReplay(unittest.TestCase):
+    def test_honest_digest_only_derivation_verifies_end_to_end(self):
+        report = _run_derivation_verify(
+            DERIVATIONS / "case-000.derivation.json",
+            campaign_path=DERIVATIONS / "case-000.campaign-report.json",
+        )
+        mismatches = [c for c in report.checks if c.status == "mismatch"]
+        self.assertEqual(mismatches, [])
+        # Every recorded application was replayed and matched — none skipped.
+        applications = [c for c in report.checks if c.check.startswith("derivation.application")]
+        self.assertTrue(applications)
+        self.assertTrue(all(c.status == "verified" for c in applications))
+
+    def test_observed_derivation_verifies_with_supplied_artifact(self):
+        report = _run_derivation_verify(
+            DERIVATIONS / "case-000-observed.derivation.json",
+            artifact_paths=[DERIVATIONS / "case-000-observed.artifact.bin"],
+            campaign_path=DERIVATIONS / "case-000-observed.campaign-report.json",
+        )
+        mismatches = [c for c in report.checks if c.status == "mismatch"]
+        self.assertEqual(mismatches, [])
+        # The bound observation is named in the context check.
+        obs = next(c for c in report.checks if c.check == "derivation.context.artifact_observations")
+        self.assertEqual(obs.status, "verified")
+
+    def test_forged_conclusion_fails_even_with_recomputed_digest(self):
+        # Recomputing the outer derivation_sha256 after editing a conclusion
+        # must not rescue the forgery: the replay re-runs the inference.
+        with tempfile.TemporaryDirectory() as tmp:
+            forged = dict(load(DERIVATIONS / "case-000.derivation.json"))
+            target = next(
+                a for a in forged["applications"] if a["rule"] == "bounded.lt.within"
+            )
+            self.assertEqual(target["conclusion"], "pass")
+            target["conclusion"] = "fail"
+            body = {k: val for k, val in forged.items() if k != "derivation_sha256"}
+            forged["derivation_sha256"] = v.sha256_bytes(
+                v.canonicalize_value(body)
+            )
+            forged_path = Path(tmp) / "forged.json"
+            forged_path.write_text(json.dumps(forged, indent=2) + "\n")
+            report = _run_derivation_verify(forged_path)
+        statuses = {c.status for c in report.checks}
+        self.assertIn("mismatch", statuses)
+        forged_check = next(
+            c for c in report.checks
+            if c.check.startswith("derivation.application") and "conclusion" in c.detail
+        )
+        self.assertEqual(forged_check.status, "mismatch")
+        # The honestly-recomputed outer digest still verifies — the replay
+        # is what caught the forgery, not the file hash.
+        identity = next(c for c in report.checks if c.check == "derivation.identity")
+        self.assertEqual(identity.status, "verified")
+
+    def test_mixed_context_registry_is_a_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            other = load(CASE_000 / "registry.json")
+            other["registry_id"] = "case-000.actinv-aftermatter.registry-tampered"
+            other_path = Path(tmp) / "registry.json"
+            other_path.write_text(json.dumps(other, indent=2) + "\n")
+            report = v.Report("mixed-context")
+            v.verify_derivation_document(
+                DERIVATIONS / "case-000.derivation.json",
+                CASE_000 / "contract.json",
+                other_path,
+                CASE_000 / "claims.json",
+                [],
+                None,
+                report,
+            )
+        registry_check = next(
+            c for c in report.checks if c.check == "derivation.context.registry_sha256"
+        )
+        self.assertEqual(registry_check.status, "mismatch")
+
+    def test_observation_binding_without_artifact_bytes_is_not_checked(self):
+        report = _run_derivation_verify(DERIVATIONS / "case-000-observed.derivation.json")
+        obs = next(c for c in report.checks if c.check == "derivation.context.artifact_observations")
+        self.assertEqual(obs.status, "not_checked")
+        # But nothing else failed: the replay is complete and consistent.
+        self.assertEqual([c for c in report.checks if c.status == "mismatch"], [])
+
+    def test_stale_qualification_verdict_replays(self):
+        # A claim carrying an expired qualification must replay to
+        # not_evaluated.qualification_expired — the recorded application is
+        # checked against the ported gate, not copied from the record.
+        # The fixture is case-000's claims with an expired envelope on the
+        # claim CASE-000-R1 consumes.
+        report = v.Report("stale")
+        v.verify_derivation_document(
+            DERIVATIONS / "case-000-stale-qualification.derivation.json",
+            CASE_000 / "contract.json",
+            CASE_000 / "registry.json",
+            DERIVATIONS / "case-000-stale-qualification.claims.json",
+            [],
+            None,
+            report,
+        )
+        mismatches = [c for c in report.checks if c.status == "mismatch"]
+        self.assertEqual(mismatches, [])
+        rules = {c.check for c in report.checks}
+        self.assertTrue(any("qualification.envelope" in r for r in rules))
+        self.assertTrue(any("not_evaluated.qualification_expired" in r for r in rules))
+
+    def test_derivation_diff_names_changed_uses(self):
+        before = load(DERIVATIONS / "case-000.derivation.json")
+        stale = load(DERIVATIONS / "case-000-stale-qualification.derivation.json")
+        diff = v.explain_derivation_changes(before, stale)
+        self.assertFalse(diff["same_context"])
+        uses = {(u["rule"], u["subject"]): u for u in diff["uses"]}
+        # The qualification withdrawal changed the R-001 verdict use; the
+        # envelope application is new under the later context.
+        verdict_change = uses.get(("not_evaluated.qualification_expired", "CASE-000-R1"))
+        self.assertIsNotNone(verdict_change)
+        self.assertEqual(verdict_change["change"], "added")
+        envelope = uses.get(("qualification.envelope", "aftermatter-r0-table-1-class-a-fraction"))
+        self.assertIsNotNone(envelope)
+
+    def test_derivation_diff_equal_verdicts_distinct_premises(self):
+        # Equal conclusions under different premises remain distinct — a
+        # premise-level difference is reported even when nothing flipped.
+        before = load(DERIVATIONS / "case-000.derivation.json")
+        observed = load(DERIVATIONS / "case-000-observed.derivation.json")
+        diff = v.explain_derivation_changes(before, observed)
+        uses = {(u["rule"], u["subject"]): u for u in diff["uses"]}
+        verdict_change = uses.get(("bounded.lt.within", "CASE-000-R1"))
+        self.assertEqual(verdict_change["change"], "premises_changed")
+        self.assertIn("evaluation_context", verdict_change["changed_premise_kinds"])

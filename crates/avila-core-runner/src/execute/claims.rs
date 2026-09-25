@@ -84,8 +84,8 @@ pub fn generate_claims(
         })
         .collect();
 
-    let mut inputs = Vec::with_capacity(compiled.inputs.len());
-    for input in &compiled.inputs {
+    let mut inputs = Vec::with_capacity(compiled.inputs().len());
+    for input in compiled.inputs() {
         let evidence_id = format!("input:{}", input.input_id);
         if let Some(artifact) = artifact_by_evidence.get(evidence_id.as_str()) {
             inputs.push(json!({
@@ -108,7 +108,7 @@ pub fn generate_claims(
         .flatten()
         .collect();
     let workflow_steps: BTreeSet<&str> = compiled
-        .workflow
+        .workflow()
         .iter()
         .map(|step| step.step_id.as_str())
         .collect();
@@ -118,7 +118,7 @@ pub fn generate_claims(
     let mut reused_count = 0;
     let mut recorded_count = 0;
     let mut invalidated_count = 0;
-    for step in &compiled.workflow {
+    for step in compiled.workflow() {
         if executed_steps.contains(step.step_id.as_str()) {
             for claim in executed
                 .iter()
@@ -174,7 +174,7 @@ pub fn generate_claims(
     let value = json!({
         "schema_version": CLAIMS_SCHEMA_VERSION,
         "semantic_profile": SEMANTIC_PROFILE,
-        "compiled_snapshot_sha256": compiled.snapshot_sha256,
+        "compiled_snapshot_sha256": compiled.snapshot_sha256(),
         "inputs": inputs,
         "claims": claims,
     });

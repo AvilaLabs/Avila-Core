@@ -530,11 +530,11 @@ pub(super) fn lower_requirement_quantity(
         .kinds
         .scale_quantity(metric_kind, &quantity.value, &quantity.unit)
     {
-        Ok(canonical) => Some(CanonicalTypedQuantity {
-            kind: metric_kind.into(),
-            value: canonical.value.canonical_rational(),
-            unit: canonical.canonical_unit,
-        }),
+        Ok(canonical) => Some(CanonicalTypedQuantity::new(
+            metric_kind.into(),
+            canonical.value,
+            canonical.canonical_unit,
+        )),
         Err(error) => {
             let code = match error.code() {
                 avila_core_kernel::CORE_T2001 => CORE_T2001,
@@ -575,7 +575,8 @@ pub(super) fn tolerance_is_nonnegative(
         contract_location(format!("/requirements/{index}/tolerance/value")),
         format!(
             "tolerance cannot be negative; canonical value is `{}` {}",
-            canonical.value, canonical.unit
+            canonical.value(),
+            canonical.unit()
         ),
         "requester",
         findings,

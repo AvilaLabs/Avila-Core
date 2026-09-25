@@ -925,12 +925,13 @@ mod tests {
             &fs::read(case.join("registry.json")).unwrap(),
         )
         .unwrap()
+        .into_report()
         .compiled
         .unwrap();
         let claims = json!({
             "schema_version":"avila.core/evidence-claims/v0.2-draft",
             "semantic_profile":"avila.core/semantic/0.2-draft",
-            "compiled_snapshot_sha256":compiled.snapshot_sha256,
+            "compiled_snapshot_sha256":compiled.snapshot_sha256(),
             "inputs":[{
                 "input_id":"candidate",
                 "artifact":{"sha256":result_sha,"media_type":"application/json"}

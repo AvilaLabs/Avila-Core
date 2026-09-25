@@ -1,5 +1,10 @@
 # Agent work queue: make design history usable
 
+For the 24 September 2026 Rust-informed semantic architecture task, use the
+separate [SWE-2 handoff](RUST_ARCHITECTURE_HANDOFF.md) and its RA-01–RA-06 scope.
+The entries below retain the design-history queue and its implementation
+history; they are not the work order for that task.
+
 Recorded: 2026-09-15. Status: a bounded implementation handoff derived from the
 existing Stage 0 mechanisms and the owner's preference for design revisions.
 This does not advance a product gate, resume a paused experiment, or authorize

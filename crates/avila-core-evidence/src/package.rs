@@ -201,17 +201,106 @@ pub struct PackageIntegrityReport {
     pub notice: String,
 }
 
-/// A checked manifest plus the exact package-document bytes that were checked.
-/// External artifact bytes are deliberately not retained in memory after their
-/// digests have been computed.
+/// A checked manifest plus the exact package-document bytes that were
+/// checked. External artifact bytes are deliberately not retained in memory
+/// after their digests have been computed.
+///
+/// Construction is sealed: only `verify_case_package` mints one, and only
+/// `supply_free_input` may mutate it — the association between manifest,
+/// checked bytes, and integrity observations cannot be edited from outside
+/// (ADR-0026).
+///
+/// ```compile_fail
+/// // A verified package cannot be fabricated downstream:
+/// let package = avila_core_evidence::VerifiedCasePackage::default();
+/// ```
 #[derive(Debug)]
 pub struct VerifiedCasePackage {
-    pub manifest: CasePackageManifest,
-    pub integrity: PackageIntegrityReport,
+    manifest: CasePackageManifest,
+    integrity: PackageIntegrityReport,
     document_bytes: BTreeMap<String, Vec<u8>>,
 }
 
+/// What one verified byte stands for when a caller supplies a free input
+/// (S-036): the input it occupies, the evidence identity it receives, and
+/// the digest the bytes were measured to.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SuppliedFreeInput {
+    pub input_id: String,
+    pub evidence_id: String,
+    pub path: String,
+    pub sha256: String,
+}
+
+/// The closed outcome of package verification. Only `Verified` and
+/// `PartiallyVerified` mint a `VerifiedCasePackage`; a `Refused` outcome
+/// yields the integrity report and no package, so failed bytes cannot be
+/// passed off as checked material downstream (ADR-0026).
+#[derive(Debug)]
+pub enum PackageVerification {
+    /// Integrity `complete`: every document and every requested artifact
+    /// under a supplied root verified.
+    Verified(VerifiedCasePackage),
+    /// Integrity `partial`: every supplied check verified, but at least one
+    /// artifact's source root was not supplied, so it stands `not_checked`.
+    /// The package bytes are trustworthy; the absent observation is
+    /// explicit in the integrity report.
+    PartiallyVerified(VerifiedCasePackage),
+    /// Integrity `failed`: a document, or an artifact under a supplied
+    /// root, did not match. No package is minted.
+    Refused(PackageIntegrityReport),
+}
+
+impl PackageVerification {
+    /// The package, when one was minted.
+    pub fn package(&self) -> Option<&VerifiedCasePackage> {
+        match self {
+            Self::Verified(package) | Self::PartiallyVerified(package) => Some(package),
+            Self::Refused(_) => None,
+        }
+    }
+
+    /// Consume the outcome into the package, when one was minted.
+    pub fn into_package(self) -> Option<VerifiedCasePackage> {
+        match self {
+            Self::Verified(package) | Self::PartiallyVerified(package) => Some(package),
+            Self::Refused(_) => None,
+        }
+    }
+
+    /// The integrity report on any outcome.
+    pub fn integrity_report(&self) -> &PackageIntegrityReport {
+        match self {
+            Self::Verified(package) | Self::PartiallyVerified(package) => package.integrity(),
+            Self::Refused(report) => report,
+        }
+    }
+}
+
 impl VerifiedCasePackage {
+    pub(crate) fn new(
+        manifest: CasePackageManifest,
+        integrity: PackageIntegrityReport,
+        document_bytes: BTreeMap<String, Vec<u8>>,
+    ) -> Self {
+        Self {
+            manifest,
+            integrity,
+            document_bytes,
+        }
+    }
+
+    /// The checked manifest.
+    pub fn manifest(&self) -> &CasePackageManifest {
+        &self.manifest
+    }
+
+    /// The integrity observations recorded for this package.
+    pub fn integrity(&self) -> &PackageIntegrityReport {
+        &self.integrity
+    }
+
     pub fn document_by_id(&self, document_id: &str) -> Option<&[u8]> {
         self.document_bytes.get(document_id).map(Vec::as_slice)
     }
@@ -223,6 +312,94 @@ impl VerifiedCasePackage {
             .iter()
             .find(|document| document.role == role)?;
         self.document_by_id(&document.document_id)
+    }
+
+    /// Hash `path` and let it stand for `input_id` in this package: the
+    /// manifest's artifact and the integrity record for that evidence id
+    /// are replaced by the supplied bytes' measured identity (S-036). Only
+    /// a manifest-declared free input, bound to exactly one evidence id,
+    /// can be supplied; a multi-evidence artifact cannot be partially
+    /// replaced. This is the only mutation a verified package accepts.
+    pub fn supply_free_input(
+        &mut self,
+        input_id: &str,
+        path: &Path,
+    ) -> Result<SuppliedFreeInput, PackageError> {
+        if !self
+            .manifest
+            .free_inputs
+            .iter()
+            .any(|free| free == input_id)
+        {
+            return Err(PackageError::InvalidManifest(format!(
+                "input `{input_id}` is not a free input of this package; free inputs: [{}]",
+                self.manifest.free_inputs.join(", ")
+            )));
+        }
+        let canonical = path.canonicalize().map_err(|source| PackageError::Io {
+            path: path.display().to_string(),
+            source,
+        })?;
+        let (sha256, _) = crate::sha256_file(&canonical).map_err(|source| PackageError::Io {
+            path: canonical.display().to_string(),
+            source,
+        })?;
+        let evidence_id = format!("input:{input_id}");
+        let display = canonical.display().to_string();
+        match self
+            .manifest
+            .artifacts
+            .iter_mut()
+            .find(|artifact| artifact.evidence_ids.contains(&evidence_id))
+        {
+            Some(artifact) if artifact.evidence_ids.len() > 1 => {
+                return Err(PackageError::InvalidManifest(format!(
+                    "input `{input_id}` is bound by artifact `{}` together with other evidence; it cannot be supplied separately",
+                    artifact.artifact_id
+                )));
+            }
+            Some(artifact) => {
+                artifact.source_root = "supplied".into();
+                artifact.path = display.clone();
+                artifact.sha256 = sha256.clone();
+            }
+            None => self.manifest.artifacts.push(PackageArtifact {
+                artifact_id: evidence_id.clone(),
+                evidence_ids: vec![evidence_id.clone()],
+                source_root: "supplied".into(),
+                path: display.clone(),
+                sha256: sha256.clone(),
+            }),
+        }
+        match self
+            .integrity
+            .artifacts
+            .iter_mut()
+            .find(|check| check.evidence_ids.contains(&evidence_id))
+        {
+            Some(check) => {
+                check.source_root = "supplied".into();
+                check.path = display.clone();
+                check.expected_sha256 = sha256.clone();
+                check.actual_sha256 = Some(sha256.clone());
+                check.state = IntegrityCheckState::Verified;
+            }
+            None => self.integrity.artifacts.push(ArtifactCheck {
+                artifact_id: evidence_id.clone(),
+                evidence_ids: vec![evidence_id.clone()],
+                source_root: "supplied".into(),
+                path: display.clone(),
+                expected_sha256: sha256.clone(),
+                actual_sha256: Some(sha256.clone()),
+                state: IntegrityCheckState::Verified,
+            }),
+        }
+        Ok(SuppliedFreeInput {
+            input_id: input_id.into(),
+            evidence_id,
+            path: display,
+            sha256,
+        })
     }
 }
 
@@ -258,12 +435,16 @@ pub struct HashCacheContext<'a> {
 /// `--source-root`; package documents and any artifact that resolves inside
 /// `package_root` itself are always re-hashed from bytes. See
 /// `crate::hash_cache` for exactly what a cache hit trusts.
+///
+/// The result is a `PackageVerification`: `Verified` or `PartiallyVerified`
+/// mint a `VerifiedCasePackage`; `Refused` yields only the integrity
+/// report, so a failed package cannot be consumed as checked bytes.
 pub fn verify_case_package(
     manifest_bytes: &[u8],
     package_root: &Path,
     source_roots: &BTreeMap<String, PathBuf>,
     mut hash_cache: Option<HashCacheContext<'_>>,
-) -> Result<VerifiedCasePackage, PackageError> {
+) -> Result<PackageVerification, PackageError> {
     let manifest: CasePackageManifest = serde_json::from_slice(manifest_bytes)?;
     validate_manifest(&manifest)?;
 
@@ -441,10 +622,14 @@ pub fn verify_case_package(
         limitations: manifest.limitations.clone(),
         notice: INTEGRITY_NOTICE.into(),
     };
-    Ok(VerifiedCasePackage {
-        manifest,
-        integrity,
-        document_bytes,
+    Ok(match status {
+        PackageIntegrityStatus::Failed => PackageVerification::Refused(integrity),
+        PackageIntegrityStatus::Partial => PackageVerification::PartiallyVerified(
+            VerifiedCasePackage::new(manifest, integrity, document_bytes),
+        ),
+        PackageIntegrityStatus::Complete => PackageVerification::Verified(
+            VerifiedCasePackage::new(manifest, integrity, document_bytes),
+        ),
     })
 }
 
@@ -929,25 +1114,34 @@ mod tests {
         let manifest = fixture(&root.0);
 
         let partial = verify_case_package(&manifest, &root.0, &BTreeMap::new(), None).unwrap();
-        assert_eq!(partial.integrity.status, PackageIntegrityStatus::Partial);
         assert_eq!(
-            partial.integrity.artifacts[0].state,
+            partial.integrity_report().status,
+            PackageIntegrityStatus::Partial
+        );
+        assert_eq!(
+            partial.integrity_report().artifacts[0].state,
             IntegrityCheckState::NotChecked
         );
 
         let sources = BTreeMap::from([("source".into(), root.0.join("source"))]);
         let complete = verify_case_package(&manifest, &root.0, &sources, None).unwrap();
-        assert_eq!(complete.integrity.status, PackageIntegrityStatus::Complete);
         assert_eq!(
-            complete.integrity.artifacts[0].state,
+            complete.integrity_report().status,
+            PackageIntegrityStatus::Complete
+        );
+        assert_eq!(
+            complete.integrity_report().artifacts[0].state,
             IntegrityCheckState::Verified
         );
 
         fs::write(root.0.join("source/artifact.bin"), b"different").unwrap();
         let failed = verify_case_package(&manifest, &root.0, &sources, None).unwrap();
-        assert_eq!(failed.integrity.status, PackageIntegrityStatus::Failed);
         assert_eq!(
-            failed.integrity.artifacts[0].state,
+            failed.integrity_report().status,
+            PackageIntegrityStatus::Failed
+        );
+        assert_eq!(
+            failed.integrity_report().artifacts[0].state,
             IntegrityCheckState::Mismatch
         );
     }
@@ -970,12 +1164,21 @@ mod tests {
         let second_sources = BTreeMap::from([("source".into(), second.0.join("source"))]);
         let one = verify_case_package(&manifest, &first.0, &first_sources, None).unwrap();
         let two = verify_case_package(&manifest, &second.0, &second_sources, None).unwrap();
-        assert_eq!(one.integrity.status, PackageIntegrityStatus::Complete);
-        assert_eq!(two.integrity.status, PackageIntegrityStatus::Complete);
-        assert_eq!(one.integrity.manifest_sha256, two.integrity.manifest_sha256);
         assert_eq!(
-            one.integrity.artifacts[0].state,
-            two.integrity.artifacts[0].state
+            one.integrity_report().status,
+            PackageIntegrityStatus::Complete
+        );
+        assert_eq!(
+            two.integrity_report().status,
+            PackageIntegrityStatus::Complete
+        );
+        assert_eq!(
+            one.integrity_report().manifest_sha256,
+            two.integrity_report().manifest_sha256
+        );
+        assert_eq!(
+            one.integrity_report().artifacts[0].state,
+            two.integrity_report().artifacts[0].state
         );
     }
 
@@ -1034,8 +1237,11 @@ mod tests {
             .evidence_ids
             .push("step-result".into());
         let bytes = serde_json::to_vec(&manifest).unwrap();
-        let package = verify_case_package(&bytes, &root.0, &BTreeMap::new(), None).unwrap();
-        assert_eq!(package.manifest.executions.len(), 1);
+        let package = verify_case_package(&bytes, &root.0, &BTreeMap::new(), None)
+            .unwrap()
+            .into_package()
+            .expect("a valid manifest mints a package");
+        assert_eq!(package.manifest().executions.len(), 1);
 
         manifest.documents.push(PackageDocument {
             document_id: "receipt".into(),
@@ -1122,7 +1328,7 @@ mod tests {
         let cold =
             verify_case_package(&manifest, &root.0, &roots, Some(context(&mut cache))).unwrap();
         assert_eq!(
-            cold.integrity.artifacts[0].state,
+            cold.integrity_report().artifacts[0].state,
             IntegrityCheckState::Verified,
             "a cold cache must not fabricate a hit"
         );
@@ -1135,12 +1341,13 @@ mod tests {
         let warm =
             verify_case_package(&manifest, &root.0, &roots, Some(context(&mut cache))).unwrap();
         assert_eq!(
-            warm.integrity.artifacts[0].state,
+            warm.integrity_report().artifacts[0].state,
             IntegrityCheckState::VerifiedCached,
             "a warm hit must be reported as the distinct cached state, never plain verified"
         );
         assert_eq!(
-            warm.integrity.artifacts[0].actual_sha256, cold.integrity.artifacts[0].actual_sha256,
+            warm.integrity_report().artifacts[0].actual_sha256,
+            cold.integrity_report().artifacts[0].actual_sha256,
             "the cached digest must be the one the cold run actually measured"
         );
     }
@@ -1169,7 +1376,7 @@ mod tests {
         let rehashed =
             verify_case_package(&bytes, &root.0, &roots, Some(context(&mut cache))).unwrap();
         assert_eq!(
-            rehashed.integrity.artifacts[0].state,
+            rehashed.integrity_report().artifacts[0].state,
             IntegrityCheckState::Verified,
             "a changed size must miss the cache and re-hash from bytes"
         );
@@ -1198,7 +1405,7 @@ mod tests {
         let rewritten =
             verify_case_package(&manifest, &root.0, &roots, Some(context(&mut cache))).unwrap();
         assert_eq!(
-            rewritten.integrity.artifacts[0].state,
+            rewritten.integrity_report().artifacts[0].state,
             IntegrityCheckState::Verified,
             "a changed mtime must miss the cache even though the bytes are unchanged"
         );
@@ -1249,7 +1456,7 @@ mod tests {
         let accepted =
             verify_case_package(&bytes, &root.0, &roots, Some(context(&mut cache))).unwrap();
         assert_eq!(
-            accepted.integrity.artifacts[0].state,
+            accepted.integrity_report().artifacts[0].state,
             IntegrityCheckState::VerifiedCached,
             "documented limitation: a stamp match is accepted from cache without reading bytes"
         );
@@ -1259,7 +1466,7 @@ mod tests {
         let bytes = serde_json::to_vec(&manifest).unwrap();
         let honest = verify_case_package(&bytes, &root.0, &roots, None).unwrap();
         assert_eq!(
-            honest.integrity.artifacts[0].state,
+            honest.integrity_report().artifacts[0].state,
             IntegrityCheckState::Mismatch,
             "hashing from bytes must still catch what the cache could not"
         );
@@ -1289,11 +1496,14 @@ mod tests {
         let result =
             verify_case_package(&bytes, &root.0, &roots, Some(context(&mut cache))).unwrap();
         assert_eq!(
-            result.integrity.artifacts[0].state,
+            result.integrity_report().artifacts[0].state,
             IntegrityCheckState::Mismatch,
             "a cache hit must still be compared to the manifest's bound identity"
         );
-        assert_eq!(result.integrity.status, PackageIntegrityStatus::Failed);
+        assert_eq!(
+            result.integrity_report().status,
+            PackageIntegrityStatus::Failed
+        );
     }
 
     #[test]
@@ -1327,7 +1537,7 @@ mod tests {
         let result =
             verify_case_package(&manifest, &root.0, &roots, Some(context(&mut cache))).unwrap();
         assert_eq!(
-            result.integrity.artifacts[0].state,
+            result.integrity_report().artifacts[0].state,
             IntegrityCheckState::Verified,
             "a stale stamp is a miss, hashed fresh, never a panic"
         );
@@ -1360,7 +1570,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            package.integrity.documents[0].state,
+            package.integrity_report().documents[0].state,
             IntegrityCheckState::Verified
         );
     }
@@ -1392,7 +1602,7 @@ mod tests {
         let package =
             verify_case_package(&manifest, &root.0, &sources, Some(context(&mut cache))).unwrap();
         assert_eq!(
-            package.integrity.artifacts[0].state,
+            package.integrity_report().artifacts[0].state,
             IntegrityCheckState::Verified,
             "an in-package artifact must be rehashed, ignoring any cache entry"
         );

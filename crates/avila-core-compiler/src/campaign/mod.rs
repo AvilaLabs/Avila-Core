@@ -10,28 +10,52 @@
 //! are outside technical evidence admission and cannot alter a verdict.
 
 mod admission;
+mod context;
+mod derivation;
 mod document;
 mod verdicts;
-
-use std::collections::{BTreeMap, BTreeSet};
+mod verify;
 
 use avila_core_kernel::{SEMANTIC_PROFILE, VerdictOutput, VerdictStatus, canonicalize_json};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
-use crate::compile::registry::RegistryIndex;
-use crate::compile::schema::SchemaDocument;
-use crate::compile::source::read_document;
-use crate::compile::{CompilerError, DocumentIdentity, compile_documents};
-use crate::diagnostic::{CORE_E7001, CORE_S1102, CoreDiagnostic, FindingClass, SourceLocation};
-use crate::document::{CompletionBlock, RegistrySnapshot, SourceRef};
+use crate::compile::{Compilation, CompilerError, compile_documents};
+use crate::diagnostic::{
+    CORE_E7001, CORE_E7401, CORE_E7402, CORE_E7501, CORE_S1102, CoreDiagnostic, FindingClass,
+    SourceLocation,
+};
+use crate::document::{CompletionBlock, SourceRef};
 
+pub use context::{
+    ArtifactObservations, CONTEXT_SCHEMA_VERSION, CheckedAdmissions, ContextError, ContextRecord,
+    DerivedVerdicts, EvaluationContext, EvaluationError,
+};
+pub use derivation::{
+    ChangedUse, DERIVATION_SCHEMA_VERSION, DerivationDiff, MAX_RULE_APPLICATIONS, RuleApplication,
+    RulePremise, VerdictDerivation, explain_derivation_changes,
+};
 pub use document::{
     ArtifactIdentity, CAMPAIGN_REPORT_SCHEMA_VERSION, CLAIMS_SCHEMA_VERSION, ClaimValue,
     ClaimsDocument, InputAttestation, OutputClaim, ProducerIdentity,
 };
+pub use verify::{
+    DerivationCheck, DerivationCheckState, DerivationVerification, verify_derivation,
+};
 
+/// The notice a digest-only evaluation reports: no artifact bytes were
+/// supplied, so none were checked.
 pub const CAMPAIGN_NOTICE: &str = "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval.";
+
+/// The notice when at least one artifact observation was supplied and
+/// checked: the byte-check claim must be accurate, so the wording differs
+/// from the digest-only `CAMPAIGN_NOTICE`.
+pub const CAMPAIGN_NOTICE_OBSERVED: &str = "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes are checked only when supplied as observations; execution receipts, package identities, signatures, and fresh qualification assessment are outside this evaluator. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval.";
+
+/// Why a derivation or report was produced without the checks it names —
+/// the notice attached to a derivation artifact.
+pub const DERIVATION_NOTICE: &str = "A verdict derivation records the rule applications one evaluation performed under its bound context: which premises were checked, their states, and the conclusion each rule reached. Replaying the derivation re-runs the checks; it never trusts this file's conclusions.";
+
 const EVALUATOR_ID: &str = concat!("avila.core/kernel-rust@", env!("CARGO_PKG_VERSION"));
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -166,63 +190,141 @@ pub struct VerdictBoundary {
     pub claims_sha256: String,
 }
 
+/// The outcome of an in-context campaign evaluation: the report, the bound
+/// context, and the verdict derivation. `context`/`derivation` are absent
+/// only when no context could be bound (the registry or claims bytes never
+/// reached a bound state, or compilation itself rejected).
+#[derive(Debug)]
+pub struct CampaignEvaluation {
+    report: CampaignReport,
+    context: Option<EvaluationContext>,
+    derivation: Option<VerdictDerivation>,
+}
+
+impl CampaignEvaluation {
+    pub fn report(&self) -> &CampaignReport {
+        &self.report
+    }
+
+    /// The bound context, when one was established.
+    pub fn context(&self) -> Option<&EvaluationContext> {
+        self.context.as_ref()
+    }
+
+    /// The derivation record, when a context existed to record under.
+    pub fn derivation(&self) -> Option<&VerdictDerivation> {
+        self.derivation.as_ref()
+    }
+
+    /// Consume the outcome into its campaign report.
+    pub fn into_report(self) -> CampaignReport {
+        self.report
+    }
+
+    /// A rejected report with no bound context.
+    fn refused(report: CampaignReport) -> Self {
+        Self {
+            report,
+            context: None,
+            derivation: None,
+        }
+    }
+}
+
 /// Compiles the contract, admits the claims against the compiled snapshot,
-/// and derives one verdict per requirement.
+/// and derives one verdict per requirement. This is the digest-only path:
+/// it runs the full in-context evaluation with no supplied artifact
+/// observations and returns the report.
 pub fn evaluate_campaign(
     contract_bytes: &[u8],
     registry_bytes: &[u8],
     claims_bytes: &[u8],
 ) -> Result<CampaignReport, CompilerError> {
-    evaluate_campaign_with_artifacts(
+    evaluate_campaign_in_context(
         contract_bytes,
         registry_bytes,
         claims_bytes,
-        &BTreeSet::new(),
+        ArtifactObservations::none(),
     )
+    .map(CampaignEvaluation::into_report)
 }
 
-/// `evaluate_campaign` plus byte-level evidence: `artifact_digests` is the
-/// set of digests the caller actually re-hashed from supplied files. Every
-/// attested artifact then carries an explicit check — `verified` when its
-/// declared identity was produced, `not_checked` when it was not. An empty
-/// set is a digest-only evaluation and the records are unchanged.
-pub fn evaluate_campaign_with_artifacts(
+/// The context-bound evaluation (ADR-0026): compiles the contract, binds
+/// registry, claims, policy, qualification material, and the supplied
+/// artifact observations into one `EvaluationContext`, admits under it,
+/// derives verdicts under it, and returns the report with the replayable
+/// derivation. `observations` records only digests the caller actually
+/// re-hashed via `ArtifactObservations::check_*`.
+pub fn evaluate_campaign_in_context(
     contract_bytes: &[u8],
     registry_bytes: &[u8],
     claims_bytes: &[u8],
-    artifact_digests: &BTreeSet<String>,
-) -> Result<CampaignReport, CompilerError> {
-    let compile = compile_documents(contract_bytes, registry_bytes)?;
-    let Some(compiled) = compile.compiled else {
-        return Ok(rejected(compile.findings, None, None));
+    observations: ArtifactObservations,
+) -> Result<CampaignEvaluation, CompilerError> {
+    let compilation = compile_documents(contract_bytes, registry_bytes)?;
+    let Compilation::Compiled(checked) = compilation else {
+        return Ok(CampaignEvaluation::refused(rejected(
+            compilation.into_report().findings,
+            None,
+            None,
+        )));
     };
-    let mut findings = compile.findings;
-    let registry: RegistrySnapshot = serde_json::from_slice(registry_bytes)
-        .map_err(|error| CompilerError::Serialization(error.to_string()))?;
-    let mut registry_findings = Vec::new();
-    let registry = RegistryIndex::build(&registry, &mut registry_findings);
-    debug_assert!(
-        registry_findings.is_empty(),
-        "a compiled contract has a valid registry"
-    );
+    let compiled = checked.contract().clone();
+    let mut findings = checked.report().findings.clone();
 
-    let mut identities: Vec<DocumentIdentity> = Vec::new();
-    let Some(claims) = read_document::<ClaimsDocument>(
-        "claims",
-        SchemaDocument::Claims,
+    let context = match EvaluationContext::bind(
+        &compiled,
+        registry_bytes,
         claims_bytes,
-        &mut identities,
-        &mut findings,
-    ) else {
-        return Ok(rejected(findings, Some(compiled.snapshot_sha256), None));
+        observations,
+    ) {
+        Ok(context) => context,
+        Err(ContextError::ClaimsUnreadable {
+            findings: claims_findings,
+        }) => {
+            let mut findings = findings;
+            findings.extend(claims_findings);
+            return Ok(CampaignEvaluation::refused(rejected(
+                findings,
+                Some(compiled.snapshot_sha256().to_string()),
+                None,
+            )));
+        }
+        Err(ContextError::RegistryMismatch { expected, found }) => {
+            findings.push(CoreDiagnostic::new(
+                CORE_E7402,
+                FindingClass::Inadmissible,
+                "executor",
+                SourceLocation::new("registry", "/"),
+                format!(
+                    "registry hashes to `{found}` but the compiled snapshot was built against `{expected}` — refusing to bind a mixed context"
+                ),
+            ));
+            return Ok(CampaignEvaluation::refused(rejected(
+                findings,
+                Some(compiled.snapshot_sha256().to_string()),
+                None,
+            )));
+        }
+        Err(ContextError::RegistryUnreadable(detail)) => {
+            findings.push(CoreDiagnostic::new(
+                CORE_E7402,
+                FindingClass::Invalid,
+                "executor",
+                SourceLocation::new("registry", "/"),
+                format!("registry bytes could not be bound: {detail}"),
+            ));
+            return Ok(CampaignEvaluation::refused(rejected(
+                findings,
+                Some(compiled.snapshot_sha256().to_string()),
+                None,
+            )));
+        }
     };
-    let claims_sha256 = identities
-        .iter()
-        .find(|identity| identity.document == "claims")
-        .map(|identity| identity.sha256.clone())
-        .expect("a parsed claims document has an identity");
+    let claims_sha256 = context.record().claims_sha256.clone();
 
-    if claims.schema_version != CLAIMS_SCHEMA_VERSION || claims.semantic_profile != SEMANTIC_PROFILE
+    if context.claims().schema_version != CLAIMS_SCHEMA_VERSION
+        || context.claims().semantic_profile != SEMANTIC_PROFILE
     {
         findings.push(CoreDiagnostic::new(
             CORE_S1102,
@@ -231,13 +333,23 @@ pub fn evaluate_campaign_with_artifacts(
             SourceLocation::new("claims", "/schema_version"),
             format!("claims must declare `{CLAIMS_SCHEMA_VERSION}` under `{SEMANTIC_PROFILE}`"),
         ));
-        return Ok(rejected(
-            findings,
-            Some(compiled.snapshot_sha256),
-            Some(claims_sha256),
+        let refusals = vec![bind_refusal(
+            &context,
+            "claims_schema",
+            "unsupported",
+            CORE_S1102,
+        )];
+        return Ok(refused_evaluation(
+            rejected(
+                findings,
+                Some(compiled.snapshot_sha256().to_string()),
+                Some(claims_sha256),
+            ),
+            context,
+            refusals,
         ));
     }
-    if claims.compiled_snapshot_sha256 != compiled.snapshot_sha256 {
+    if context.claims().compiled_snapshot_sha256 != compiled.snapshot_sha256() {
         findings.push(CoreDiagnostic::new(
             CORE_E7001,
             FindingClass::Inadmissible,
@@ -245,59 +357,87 @@ pub fn evaluate_campaign_with_artifacts(
             SourceLocation::new("claims", "/compiled_snapshot_sha256"),
             format!(
                 "claims were produced for `{}`, but these documents compile to `{}`",
-                claims.compiled_snapshot_sha256, compiled.snapshot_sha256
+                context.claims().compiled_snapshot_sha256,
+                compiled.snapshot_sha256()
             ),
         ));
-        return Ok(rejected(
-            findings,
-            Some(compiled.snapshot_sha256),
-            Some(claims_sha256),
+        let refusals = vec![bind_refusal(
+            &context,
+            "compiled_snapshot",
+            "mismatch",
+            CORE_E7001,
+        )];
+        return Ok(refused_evaluation(
+            rejected(
+                findings,
+                Some(compiled.snapshot_sha256().to_string()),
+                Some(claims_sha256),
+            ),
+            context,
+            refusals,
         ));
     }
 
-    let mut admissions = admission::admit(&compiled, &registry, &claims, &mut findings);
-    if !artifact_digests.is_empty() {
-        let attested: BTreeMap<String, &str> = claims
-            .inputs
-            .iter()
-            .map(|attestation| {
-                (
-                    format!("input:{}", attestation.input_id),
-                    attestation.artifact.sha256.as_str(),
-                )
-            })
-            .chain(
-                claims
-                    .claims
-                    .iter()
-                    .map(|claim| (claim.claim_id.clone(), claim.artifact.sha256.as_str())),
-            )
-            .collect();
-        for record in &mut admissions {
-            if let Some(sha256) = attested.get(record.evidence_id.as_str()) {
-                record.artifact = Some(ArtifactCheck {
-                    sha256: (*sha256).to_string(),
-                    check: if artifact_digests.contains(*sha256) {
-                        ArtifactCheckState::Verified
-                    } else {
-                        ArtifactCheckState::NotChecked
-                    },
-                });
-            }
+    let (admissions, mut admission_findings) = context.admit();
+    findings.append(&mut admission_findings);
+    let verdicts = match context.derive_verdicts(&admissions) {
+        Ok(verdicts) => verdicts,
+        Err(EvaluationError::ContextMismatch { expected, found }) => {
+            findings.push(CoreDiagnostic::new(
+                CORE_E7401,
+                FindingClass::Inadmissible,
+                "executor",
+                SourceLocation::new("claims", "/"),
+                format!(
+                    "admissions were minted under context `{found}`, which does not match the bound context `{expected}`"
+                ),
+            ));
+            let refusals = vec![bind_refusal(&context, "admissions", "mismatch", CORE_E7401)];
+            return Ok(refused_evaluation(
+                rejected(
+                    findings,
+                    Some(compiled.snapshot_sha256().to_string()),
+                    Some(claims_sha256),
+                ),
+                context,
+                refusals,
+            ));
         }
-    }
-    let boundary = VerdictBoundary {
-        semantic_profile: SEMANTIC_PROFILE.into(),
-        compiler: compiled.compiler.clone(),
-        evaluator: EVALUATOR_ID.into(),
-        compiled_snapshot_sha256: compiled.snapshot_sha256.clone(),
-        claims_sha256: claims_sha256.clone(),
     };
-    let verdicts = verdicts::evaluate(&compiled, &registry, &claims, &admissions, &boundary);
+    let mut applications =
+        Vec::with_capacity(1 + admissions.applications().len() + verdicts.applications().len());
+    applications.push(bound_application(&context));
+    applications.extend(admissions.applications().iter().cloned());
+    applications.extend(verdicts.applications().iter().cloned());
+    if applications.len() > MAX_RULE_APPLICATIONS {
+        findings.push(CoreDiagnostic::new(
+            CORE_E7501,
+            FindingClass::Inadmissible,
+            "executor",
+            SourceLocation::new("derivation", "/applications"),
+            format!(
+                "the evaluation produced more than {MAX_RULE_APPLICATIONS} rule applications — the derivation bound was exceeded"
+            ),
+        ));
+        let refusals = vec![bind_refusal(
+            &context,
+            "derivation",
+            "exhausted",
+            CORE_E7501,
+        )];
+        return Ok(refused_evaluation(
+            rejected(
+                findings,
+                Some(compiled.snapshot_sha256().to_string()),
+                Some(claims_sha256),
+            ),
+            context,
+            refusals,
+        ));
+    }
     let completion = compiled
-        .completion
-        .as_ref()
-        .map(|block| assess_completion(block, &verdicts));
+        .completion()
+        .map(|block| assess_completion(block, verdicts.records()));
     crate::compile::sort_findings(&mut findings);
 
     #[derive(Serialize)]
@@ -317,11 +457,11 @@ pub fn evaluate_campaign_with_artifacts(
         schema_version: CAMPAIGN_REPORT_SCHEMA_VERSION,
         semantic_profile: SEMANTIC_PROFILE,
         status: CampaignStatus::Evaluated,
-        compiled_snapshot_sha256: &compiled.snapshot_sha256,
+        compiled_snapshot_sha256: compiled.snapshot_sha256(),
         claims_sha256: &claims_sha256,
         findings: &findings,
-        admissions: &admissions,
-        verdicts: &verdicts,
+        admissions: admissions.records(),
+        verdicts: verdicts.records(),
         completion: completion.as_ref(),
     };
     let bytes = serde_json::to_vec(&body)
@@ -330,19 +470,131 @@ pub fn evaluate_campaign_with_artifacts(
         .map_err(|error| CompilerError::InternalCanonicalization(error.to_string()))?;
     let campaign_sha256 = format!("sha256:{:x}", Sha256::digest(&canonical));
 
-    Ok(CampaignReport {
-        schema_version: CAMPAIGN_REPORT_SCHEMA_VERSION.into(),
-        semantic_profile: SEMANTIC_PROFILE.into(),
-        status: CampaignStatus::Evaluated,
-        compiled_snapshot_sha256: Some(compiled.snapshot_sha256),
-        claims_sha256: Some(claims_sha256),
-        findings,
-        admissions,
-        verdicts,
-        completion,
-        campaign_sha256: Some(campaign_sha256),
-        notice: CAMPAIGN_NOTICE.into(),
+    let derivation = assemble_derivation(&context, applications, Some(&campaign_sha256));
+
+    Ok(CampaignEvaluation {
+        report: CampaignReport {
+            schema_version: CAMPAIGN_REPORT_SCHEMA_VERSION.into(),
+            semantic_profile: SEMANTIC_PROFILE.into(),
+            status: CampaignStatus::Evaluated,
+            compiled_snapshot_sha256: Some(compiled.snapshot_sha256().to_string()),
+            claims_sha256: Some(claims_sha256),
+            findings,
+            admissions: admissions.records().to_vec(),
+            verdicts: verdicts.records().to_vec(),
+            completion,
+            campaign_sha256: Some(campaign_sha256),
+            notice: if context.observations().is_empty() {
+                CAMPAIGN_NOTICE.into()
+            } else {
+                CAMPAIGN_NOTICE_OBSERVED.into()
+            },
+        },
+        context: Some(context),
+        derivation: Some(derivation),
     })
+}
+
+/// The `context.bind` application recording a successful binding — the
+/// derivation's entry point naming every bound identity.
+fn bound_application(context: &EvaluationContext) -> RuleApplication {
+    let record = context.record();
+    let mut application = RuleApplication::new("context.bind", context.context_sha256(), "bound");
+    application.premises.push(RulePremise {
+        kind: "compiled_snapshot".into(),
+        id: record.compiled_snapshot_sha256.clone(),
+        state: "bound".into(),
+    });
+    application.premises.push(RulePremise {
+        kind: "registry".into(),
+        id: format!(
+            "{}@{}:{}",
+            record.registry_id, record.registry_revision, record.registry_sha256
+        ),
+        state: "bound".into(),
+    });
+    application.premises.push(RulePremise {
+        kind: "claims".into(),
+        id: record.claims_sha256.clone(),
+        state: "bound".into(),
+    });
+    application.premises.push(RulePremise {
+        kind: "execution_policy".into(),
+        id: "compiled".into(),
+        state: "bound".into(),
+    });
+    for qualification in &record.qualifications {
+        application.premises.push(RulePremise {
+            kind: "qualification".into(),
+            id: qualification.clone(),
+            state: "bound".into(),
+        });
+    }
+    for observed in &record.artifact_observations {
+        application.premises.push(RulePremise {
+            kind: "artifact_observation".into(),
+            id: observed.clone(),
+            state: "checked".into(),
+        });
+    }
+    application
+}
+
+/// A refusal application for an evaluation rejected after binding — the
+/// premises name which bound check failed.
+fn bind_refusal(
+    context: &EvaluationContext,
+    premise: &str,
+    state: &str,
+    code: &str,
+) -> RuleApplication {
+    let mut application = RuleApplication::new("context.bind", context.context_sha256(), "refused");
+    application.premises.push(RulePremise {
+        kind: premise.into(),
+        id: context.record().claims_sha256.clone(),
+        state: state.into(),
+    });
+    application.reasons.push(code.into());
+    application
+}
+
+/// A rejected report plus a derivation recording the refusal under the
+/// bound context.
+fn refused_evaluation(
+    report: CampaignReport,
+    context: EvaluationContext,
+    refusals: Vec<RuleApplication>,
+) -> CampaignEvaluation {
+    let derivation = assemble_derivation(&context, refusals, None);
+    CampaignEvaluation {
+        report,
+        context: Some(context),
+        derivation: Some(derivation),
+    }
+}
+
+/// Assemble the derivation document and stamp its canonical identity.
+fn assemble_derivation(
+    context: &EvaluationContext,
+    applications: Vec<RuleApplication>,
+    campaign_sha256: Option<&str>,
+) -> VerdictDerivation {
+    let mut derivation = VerdictDerivation {
+        schema_version: DERIVATION_SCHEMA_VERSION.into(),
+        semantic_profile: SEMANTIC_PROFILE.into(),
+        evaluator: EVALUATOR_ID.into(),
+        context_sha256: context.context_sha256().to_string(),
+        context: context.record().clone(),
+        applications,
+        campaign_sha256: campaign_sha256.map(str::to_string),
+        derivation_sha256: None,
+        notice: DERIVATION_NOTICE.into(),
+    };
+    derivation.derivation_sha256 = derivation
+        .recompute_identity()
+        .map(Some)
+        .unwrap_or_default();
+    derivation
 }
 
 /// SC-9 clause 6: the declared delivery statement against the derived

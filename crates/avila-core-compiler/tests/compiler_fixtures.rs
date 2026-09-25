@@ -198,7 +198,9 @@ fn compiler_defect_fixtures_are_executable() {
 
     // The unmutated base pair must compile: every fixture's findings are
     // then attributable to its seeded defect, not the corpus itself.
-    let base_report = compile_documents(&contract_bytes, &registry_bytes).unwrap();
+    let base_report = compile_documents(&contract_bytes, &registry_bytes)
+        .unwrap()
+        .into_report();
     assert_eq!(base_report.status, CompilationStatus::Compiled);
     assert!(
         base_report
@@ -222,7 +224,8 @@ fn compiler_defect_fixtures_are_executable() {
             serde_json::to_string_pretty(&contract).unwrap().as_bytes(),
             serde_json::to_string_pretty(&registry).unwrap().as_bytes(),
         )
-        .unwrap();
+        .unwrap()
+        .into_report();
 
         assert_eq!(
             status_label(report.status),
@@ -252,7 +255,7 @@ fn compiler_defect_fixtures_are_executable() {
         );
         match &fixture.expected.snapshot_sha256 {
             Some(expected) => assert_eq!(
-                report.compiled.as_ref().unwrap().snapshot_sha256,
+                report.compiled.as_ref().unwrap().snapshot_sha256(),
                 *expected,
                 "{} snapshot identity",
                 fixture.fixture_id
@@ -325,7 +328,9 @@ fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
             fixture.fixture_id
         );
         let contract_bytes = fs::read(fixture_root.join(&fixture.contract)).unwrap();
-        let report = compile_documents(&contract_bytes, &registry_bytes).unwrap();
+        let report = compile_documents(&contract_bytes, &registry_bytes)
+            .unwrap()
+            .into_report();
 
         assert_eq!(
             status_label(report.status),
@@ -361,18 +366,19 @@ fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
                     .as_ref()
                     .unwrap_or_else(|| panic!("{} did not compile", fixture.fixture_id));
                 assert_eq!(
-                    compiled.snapshot_sha256, expected.snapshot_sha256,
+                    compiled.snapshot_sha256(),
+                    expected.snapshot_sha256,
                     "{} snapshot identity",
                     fixture.fixture_id
                 );
                 assert_eq!(
-                    serde_json::to_value(&compiled.execution_policy).unwrap(),
+                    serde_json::to_value(compiled.execution_policy()).unwrap(),
                     expected.execution_policy,
                     "{} execution policy",
                     fixture.fixture_id
                 );
                 let step_order: Vec<_> = compiled
-                    .workflow
+                    .workflow()
                     .iter()
                     .map(|step| step.step_id.clone())
                     .collect();
@@ -382,7 +388,7 @@ fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
                     fixture.fixture_id
                 );
                 let bindings: Vec<_> = compiled
-                    .workflow
+                    .workflow()
                     .iter()
                     .flat_map(|step| {
                         step.bindings.iter().map(|binding| ExpectedBinding {
@@ -398,7 +404,7 @@ fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
                     fixture.fixture_id
                 );
                 let parameters: Vec<_> = compiled
-                    .workflow
+                    .workflow()
                     .iter()
                     .flat_map(|step| {
                         step.parameters
@@ -416,7 +422,7 @@ fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
                     fixture.fixture_id
                 );
                 let reproducibility: Vec<_> = compiled
-                    .workflow
+                    .workflow()
                     .iter()
                     .map(|step| ExpectedReproducibility {
                         step_id: step.step_id.clone(),
@@ -429,7 +435,7 @@ fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
                     fixture.fixture_id
                 );
                 let reviews: Vec<_> = compiled
-                    .workflow
+                    .workflow()
                     .iter()
                     .filter_map(|step| {
                         step.presentation_gate
@@ -442,7 +448,7 @@ fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
                     .collect();
                 assert_eq!(reviews, expected.reviews, "{} reviews", fixture.fixture_id);
                 let limits: Vec<_> = compiled
-                    .requirements
+                    .requirements()
                     .iter()
                     .map(|requirement| ExpectedLimit {
                         requirement_id: requirement.requirement_id.clone(),
@@ -450,9 +456,9 @@ fn execute_suite(fixture_root: &Path, suite_name: &str) -> usize {
                             "{}@{}",
                             requirement.purpose.id, requirement.purpose.major
                         ),
-                        kind: requirement.limit.kind.clone(),
-                        value: requirement.limit.value.clone(),
-                        unit: requirement.limit.unit.clone(),
+                        kind: requirement.limit.kind().to_string(),
+                        value: requirement.limit.value().canonical_rational(),
+                        unit: requirement.limit.unit().to_string(),
                         tolerance: requirement
                             .tolerance
                             .as_ref()

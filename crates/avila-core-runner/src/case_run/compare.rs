@@ -62,7 +62,7 @@ pub(crate) fn margins(
         .iter()
         .map(|verdict| {
             let comparison = compiled
-                .requirements
+                .requirements()
                 .iter()
                 .find(|requirement| requirement.requirement_id == verdict.requirement_id)
                 .map(|requirement| requirement.comparison);

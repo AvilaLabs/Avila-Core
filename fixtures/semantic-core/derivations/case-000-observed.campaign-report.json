@@ -1,0 +1,363 @@
+{
+  "schema_version": "avila.core/campaign-report/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "status": "evaluated",
+  "compiled_snapshot_sha256": "sha256:d5c778e04d4402cbcf290a94a6849f840b53698ff52d8f4a7e4f2e864827aa9c",
+  "claims_sha256": "sha256:b9784092ac0dd034eee692b6ea72863830193fa4c74c7e0fbbc01ac443691d8c",
+  "admissions": [
+    {
+      "evidence_id": "input:actinv-activation-library",
+      "source": {
+        "source": "contract_input",
+        "input_id": "actinv-activation-library"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "input:actinv-data-notice",
+      "source": {
+        "source": "contract_input",
+        "input_id": "actinv-data-notice"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:191117ff8aaff8d9981a93c9bb59b418cfe54505dc7363128d2bc5e728a6a62c",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "input:actinv-decay-fallback",
+      "source": {
+        "source": "contract_input",
+        "input_id": "actinv-decay-fallback"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "input:actinv-decay-primary",
+      "source": {
+        "source": "contract_input",
+        "input_id": "actinv-decay-primary"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "input:actinv-dump-helper",
+      "source": {
+        "source": "contract_input",
+        "input_id": "actinv-dump-helper"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:651694c29051f6b05a786c17f9597ebc17acc016b2cbe3b1503d3099a0f41084",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "input:actinv-executable",
+      "source": {
+        "source": "contract_input",
+        "input_id": "actinv-executable"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "input:actinv-library-index",
+      "source": {
+        "source": "contract_input",
+        "input_id": "actinv-library-index"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "input:aftermatter-case",
+      "source": {
+        "source": "contract_input",
+        "input_id": "aftermatter-case"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:5b63361ac78e2090c556f5d67dba5033c385dbdfc606566c130cf72f553f007b",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "input:aftermatter-clive-rulepack",
+      "source": {
+        "source": "contract_input",
+        "input_id": "aftermatter-clive-rulepack"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:22d6cc2b045227073faa56654bf7a70938eef04c323823b7e5771472aa5fed3c",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "input:aftermatter-federal-rulepack",
+      "source": {
+        "source": "contract_input",
+        "input_id": "aftermatter-federal-rulepack"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:c9ef110349c22de71eb6677c9a85bdc39b250ba4368246c18d701b236542bd49",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "input:aftermatter-sources-manifest",
+      "source": {
+        "source": "contract_input",
+        "input_id": "aftermatter-sources-manifest"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:50faba035c762f7e47ed1624a6b78064809e43b6e8f835c083c195e4743816b1",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "input:aftermatter-wcs-rulepack",
+      "source": {
+        "source": "contract_input",
+        "input_id": "aftermatter-wcs-rulepack"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:eb9142992c0963b7cf0fab47eac9cdbc79ba20f9bf0509554b200b02c902d52c",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "input:fns-spectrum",
+      "source": {
+        "source": "contract_input",
+        "input_id": "fns-spectrum"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:8ba5f9856176afe48d6b67fa0a9f568c16eeab76ace29e776d3076a947ed4532",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "input:r0-builder",
+      "source": {
+        "source": "contract_input",
+        "input_id": "r0-builder"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:0b3438e6a88ac97fabd3a9b24f53a048c9541b1373113633a55fb0c167a6f5db",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "actinv-r0-problem",
+      "source": {
+        "source": "step_output",
+        "step_id": "activation",
+        "output_slot": "problem"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:010d95e23cff58144a8a977b61d980d87ef22396f5e64b0ce4272577aa1d6151",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "actinv-r0-inventory",
+      "source": {
+        "source": "step_output",
+        "step_id": "activation",
+        "output_slot": "inventory"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:3942d6f3337b786c018ac28474f4e7206d4d49301317812e7aef80058ca62bc8",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "actinv-r0-decay-metadata",
+      "source": {
+        "source": "step_output",
+        "step_id": "activation",
+        "output_slot": "decay-metadata"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:d80f972fe26608139cb26d5a31a9a2bfc7a461be928fb8984f71830bf505535c",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "aftermatter-r0-table-1-class-a-fraction",
+      "source": {
+        "source": "step_output",
+        "step_id": "classification",
+        "output_slot": "table-1-class-a-fraction"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "aftermatter-r0-table-2-class-a-fraction",
+      "source": {
+        "source": "step_output",
+        "step_id": "classification",
+        "output_slot": "table-2-class-a-fraction"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718",
+        "check": "not_checked"
+      }
+    },
+    {
+      "evidence_id": "aftermatter-r0-clive-route-state",
+      "source": {
+        "source": "step_output",
+        "step_id": "classification",
+        "output_slot": "route-state"
+      },
+      "state": "admitted",
+      "artifact": {
+        "sha256": "sha256:3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718",
+        "check": "not_checked"
+      }
+    }
+  ],
+  "verdicts": [
+    {
+      "requirement_id": "CASE-000-R1",
+      "statement": "At the frozen 50-year checkpoint, the bounded Table 1 Class A mixture fraction is strictly less than 1.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "classification",
+        "output_slot": "table-1-class-a-fraction"
+      },
+      "evidence_ids": [
+        "aftermatter-r0-table-1-class-a-fraction"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "bounded.lt.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1",
+        "lower_canonical": "4087797275991635917280885867/5000000000000000000000000000",
+        "upper_canonical": "4087797275991635917280948683/5000000000000000000000000000",
+        "nominal_canonical": "163511891039665436691236691/200000000000000000000000000",
+        "reasons": [
+          {
+            "code": "CORE-A4403",
+            "owner": "policy_owner"
+          },
+          {
+            "evidence_id": "aftermatter-r0-table-1-class-a-fraction",
+            "state": "unqualified"
+          }
+        ]
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:d5c778e04d4402cbcf290a94a6849f840b53698ff52d8f4a7e4f2e864827aa9c",
+        "claims_sha256": "sha256:b9784092ac0dd034eee692b6ea72863830193fa4c74c7e0fbbc01ac443691d8c"
+      }
+    },
+    {
+      "requirement_id": "CASE-000-R2",
+      "statement": "At the frozen 50-year checkpoint, the bounded Table 2 Class A mixture fraction is strictly less than 1.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "classification",
+        "output_slot": "table-2-class-a-fraction"
+      },
+      "evidence_ids": [
+        "aftermatter-r0-table-2-class-a-fraction"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "bounded.lt.within",
+        "canonical_unit": "1",
+        "limit_canonical": "1",
+        "lower_canonical": "444749880957701847845906437/1000000000000000000000000000",
+        "upper_canonical": "2223749404788509239229544743/5000000000000000000000000000",
+        "nominal_canonical": "69492168899640913725923077/156250000000000000000000000",
+        "reasons": [
+          {
+            "code": "CORE-A4403",
+            "owner": "policy_owner"
+          },
+          {
+            "evidence_id": "aftermatter-r0-table-2-class-a-fraction",
+            "state": "unqualified"
+          }
+        ]
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:d5c778e04d4402cbcf290a94a6849f840b53698ff52d8f4a7e4f2e864827aa9c",
+        "claims_sha256": "sha256:b9784092ac0dd034eee692b6ea72863830193fa4c74c7e0fbbc01ac443691d8c"
+      }
+    },
+    {
+      "requirement_id": "CASE-000-R3",
+      "statement": "At the frozen 50-year checkpoint, the Clive route reaches Aftermatter's feasible state under the bounded research screen.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "classification",
+        "output_slot": "route-state"
+      },
+      "evidence_ids": [
+        "aftermatter-r0-clive-route-state"
+      ],
+      "verdict": {
+        "status": "fail",
+        "rule": "categorical.equals.mismatch",
+        "numbers_present": false,
+        "observed_category": "unresolved",
+        "accepted_categories": [
+          "feasible"
+        ]
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:d5c778e04d4402cbcf290a94a6849f840b53698ff52d8f4a7e4f2e864827aa9c",
+        "claims_sha256": "sha256:b9784092ac0dd034eee692b6ea72863830193fa4c74c7e0fbbc01ac443691d8c"
+      }
+    }
+  ],
+  "campaign_sha256": "sha256:4603407f169284a933be1155cfdc8ce6a420a01bc2e445960bdaf6c7cd11526b",
+  "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes are checked only when supplied as observations; execution receipts, package identities, signatures, and fresh qualification assessment are outside this evaluator. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
+}

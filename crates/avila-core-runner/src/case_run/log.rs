@@ -252,7 +252,7 @@ pub(crate) fn append_log(
             .compile
             .as_ref()
             .and_then(|compile| compile.compiled.as_ref())
-            .map(|compiled| compiled.snapshot_sha256.as_str()),
+            .map(|compiled| compiled.snapshot_sha256()),
         documents: report
             .integrity
             .documents
@@ -311,7 +311,7 @@ pub(crate) fn append_log(
                     .compile
                     .as_ref()
                     .and_then(|compile| compile.compiled.as_ref())
-                    .map(|compiled| compiled.snapshot_sha256.clone())
+                    .map(|compiled| compiled.snapshot_sha256().to_string())
                     .unwrap_or_default(),
                 campaign_sha256: report
                     .campaign

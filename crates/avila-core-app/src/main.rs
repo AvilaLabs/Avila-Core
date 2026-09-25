@@ -168,9 +168,9 @@ impl Specimen {
         self.check =
             compile_documents(self.contract_text.as_bytes(), self.registry_text.as_bytes())
                 .map_err(|error| error.to_string())
-                .and_then(|report| {
+                .and_then(|compilation| {
                     serde_json::from_str::<ContractSource>(&self.contract_text)
-                        .map(|contract| (contract, report))
+                        .map(|contract| (contract, compilation.into_report()))
                         .map_err(|error| error.to_string())
                 });
         self.check.as_ref().map(|_| ()).map_err(Clone::clone)
@@ -3025,11 +3025,11 @@ fn show_compiled(ui: &mut egui::Ui, report: &CompileReport) {
     };
     ui.add_space(10.0);
     card(ui, |ui| {
-        key_value(ui, "Snapshot", &compiled.snapshot_sha256);
-        key_value(ui, "Compiler", &compiled.compiler);
-        key_value(ui, "Semantic profile", &compiled.semantic_profile);
+        key_value(ui, "Snapshot", compiled.snapshot_sha256());
+        key_value(ui, "Compiler", compiled.compiler());
+        key_value(ui, "Semantic profile", compiled.semantic_profile());
     });
-    for (index, step) in compiled.workflow.iter().enumerate() {
+    for (index, step) in compiled.workflow().iter().enumerate() {
         ui.add_space(7.0);
         card(ui, |ui| {
             ui.horizontal(|ui| {

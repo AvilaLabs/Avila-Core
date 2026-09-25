@@ -76,6 +76,18 @@ const TEST_PINNED: &[(&str, &str)] = &[
         "CORE-A4905",
         "avila-core-compiler compile::tests::org_policy — policy_superseded notice",
     ),
+    (
+        "CORE-E7401",
+        "avila-core-compiler tests::context_binding — admissions minted under a foreign context are refused (the report path mints its own admissions, so the diagnostic is exercised at the public boundary it guards)",
+    ),
+    (
+        "CORE-E7402",
+        "avila-core-compiler tests::context_binding — binding registry bytes other than the snapshot's own is a mixed-context refusal",
+    ),
+    (
+        "CORE-E7501",
+        "avila-core-compiler tests::context_binding — an evaluation exceeding the derivation bound refuses with this code",
+    ),
 ];
 
 fn fixture_root() -> PathBuf {

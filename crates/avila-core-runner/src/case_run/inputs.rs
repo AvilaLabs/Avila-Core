@@ -9,88 +9,30 @@ use avila_core_compiler::{
     CompiledContract, FindingClass, RegistrySnapshot, SourceLocation, SourceRef, locate,
     validate_against_schema,
 };
-use avila_core_evidence::{
-    ArtifactCheck, IntegrityCheckState, PackageArtifact, VerifiedCasePackage, sha256_file,
-};
+use avila_core_evidence::VerifiedCasePackage;
 use avila_core_kernel::{diagnose_authoritative_json, read_authoritative_json};
 
 use super::{CORE_X1301, CaseRunOptions, RunFinding, RunStage, SuppliedInput};
 
 /// Hash each supplied free input and let it stand for its contract input in
 /// this run: the manifest's artifact and the integrity check for that
-/// evidence record are replaced by the supplied bytes' identity.
+/// evidence record are replaced by the supplied bytes' identity. The
+/// package performs the substitution itself — `supply_free_input` is the
+/// only mutation a verified package accepts (ADR-0026).
 pub(crate) fn supply_free_inputs(
     package: &mut VerifiedCasePackage,
     options: &CaseRunOptions,
 ) -> Result<Vec<SuppliedInput>, Box<dyn Error>> {
     let mut supplied = Vec::new();
     for (input_id, path) in &options.inputs {
-        if !package.manifest.free_inputs.contains(input_id) {
-            return Err(format!(
-                "input `{input_id}` is not a free input of this package; free inputs: [{}]",
-                package.manifest.free_inputs.join(", ")
-            )
-            .into());
-        }
-        let canonical = fs::canonicalize(path)
+        let free = package
+            .supply_free_input(input_id, path)
             .map_err(|error| format!("input `{input_id}` at `{}`: {error}", path.display()))?;
-        let (sha256, _) = sha256_file(&canonical)?;
-        let evidence_id = format!("input:{input_id}");
-        let display = canonical.display().to_string();
-        match package
-            .manifest
-            .artifacts
-            .iter_mut()
-            .find(|artifact| artifact.evidence_ids.contains(&evidence_id))
-        {
-            Some(artifact) if artifact.evidence_ids.len() > 1 => {
-                return Err(format!(
-                    "input `{input_id}` is bound by artifact `{}` together with other evidence; it cannot be supplied separately",
-                    artifact.artifact_id
-                )
-                .into());
-            }
-            Some(artifact) => {
-                artifact.source_root = "supplied".into();
-                artifact.path = display.clone();
-                artifact.sha256 = sha256.clone();
-            }
-            None => package.manifest.artifacts.push(PackageArtifact {
-                artifact_id: evidence_id.clone(),
-                evidence_ids: vec![evidence_id.clone()],
-                source_root: "supplied".into(),
-                path: display.clone(),
-                sha256: sha256.clone(),
-            }),
-        }
-        match package
-            .integrity
-            .artifacts
-            .iter_mut()
-            .find(|check| check.evidence_ids.contains(&evidence_id))
-        {
-            Some(check) => {
-                check.source_root = "supplied".into();
-                check.path = display.clone();
-                check.expected_sha256 = sha256.clone();
-                check.actual_sha256 = Some(sha256.clone());
-                check.state = IntegrityCheckState::Verified;
-            }
-            None => package.integrity.artifacts.push(ArtifactCheck {
-                artifact_id: evidence_id.clone(),
-                evidence_ids: vec![evidence_id.clone()],
-                source_root: "supplied".into(),
-                path: display.clone(),
-                expected_sha256: sha256.clone(),
-                actual_sha256: Some(sha256.clone()),
-                state: IntegrityCheckState::Verified,
-            }),
-        }
         supplied.push(SuppliedInput {
-            input_id: input_id.clone(),
-            evidence_id,
-            path: display,
-            sha256,
+            input_id: free.input_id,
+            evidence_id: free.evidence_id,
+            path: free.path,
+            sha256: free.sha256,
         });
     }
     Ok(supplied)
@@ -114,7 +56,7 @@ pub(crate) fn validate_free_inputs(
     let mut findings = Vec::new();
     for input in supplied {
         let Some(contract_input) = compiled
-            .inputs
+            .inputs()
             .iter()
             .find(|candidate| candidate.input_id == input.input_id)
         else {
@@ -196,7 +138,7 @@ pub(crate) fn steps_reached_by_inputs(
         .map(|input| input.input_id.as_str())
         .collect();
     let mut reached = BTreeSet::new();
-    for step in &compiled.workflow {
+    for step in compiled.workflow() {
         let hit = step
             .bindings
             .iter()

@@ -1,0 +1,1258 @@
+{
+  "schema_version": "avila.core/verdict-derivation/v0.1-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "evaluator": "avila.core/kernel-rust@0.1.0",
+  "context_sha256": "sha256:ab14adb3f68bec181198e2ab9cf3d6dda10f2db52a9c0bcb5307036923cfdfd7",
+  "context": {
+    "schema_version": "avila.core/evaluation-context/v0.1-draft",
+    "semantic_profile": "avila.core/semantic/0.2-draft",
+    "evaluator": "avila.core/kernel-rust@0.1.0",
+    "compiled_snapshot_sha256": "sha256:d5c778e04d4402cbcf290a94a6849f840b53698ff52d8f4a7e4f2e864827aa9c",
+    "registry_id": "case-000.actinv-aftermatter.registry",
+    "registry_revision": 3,
+    "registry_sha256": "sha256:b91d27dd5394647d758f5e8554d978ddc1b4c9aa46527ae25a682ad60de5f30d",
+    "claims_sha256": "sha256:b9784092ac0dd034eee692b6ea72863830193fa4c74c7e0fbbc01ac443691d8c",
+    "execution_policy": {
+      "permitted_nondeterministic_roles": []
+    },
+    "artifact_observations": [
+      "sha256:0c6505f2125881d933f58d3dd71cad81f82bb46b2a86d3dda1f6aeb49386a039"
+    ]
+  },
+  "applications": [
+    {
+      "rule": "context.bind",
+      "subject": "sha256:ab14adb3f68bec181198e2ab9cf3d6dda10f2db52a9c0bcb5307036923cfdfd7",
+      "premises": [
+        {
+          "kind": "compiled_snapshot",
+          "id": "sha256:d5c778e04d4402cbcf290a94a6849f840b53698ff52d8f4a7e4f2e864827aa9c",
+          "state": "bound"
+        },
+        {
+          "kind": "registry",
+          "id": "case-000.actinv-aftermatter.registry@3:sha256:b91d27dd5394647d758f5e8554d978ddc1b4c9aa46527ae25a682ad60de5f30d",
+          "state": "bound"
+        },
+        {
+          "kind": "claims",
+          "id": "sha256:b9784092ac0dd034eee692b6ea72863830193fa4c74c7e0fbbc01ac443691d8c",
+          "state": "bound"
+        },
+        {
+          "kind": "execution_policy",
+          "id": "compiled",
+          "state": "bound"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:0c6505f2125881d933f58d3dd71cad81f82bb46b2a86d3dda1f6aeb49386a039",
+          "state": "checked"
+        }
+      ],
+      "conclusion": "bound"
+    },
+    {
+      "rule": "admission.input",
+      "subject": "input:actinv-activation-library",
+      "premises": [
+        {
+          "kind": "contract_input",
+          "id": "actinv-activation-library",
+          "state": "declared"
+        },
+        {
+          "kind": "input_attestation",
+          "id": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44",
+          "state": "attested"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:ec4c72bf598dc8ad3d533d9cfafdcf493e2d1f949a3e4db6251495659b68cc44",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/vnd.numpy.npz",
+          "state": "match"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.input",
+      "subject": "input:actinv-data-notice",
+      "premises": [
+        {
+          "kind": "contract_input",
+          "id": "actinv-data-notice",
+          "state": "declared"
+        },
+        {
+          "kind": "input_attestation",
+          "id": "sha256:191117ff8aaff8d9981a93c9bb59b418cfe54505dc7363128d2bc5e728a6a62c",
+          "state": "attested"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:191117ff8aaff8d9981a93c9bb59b418cfe54505dc7363128d2bc5e728a6a62c",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:191117ff8aaff8d9981a93c9bb59b418cfe54505dc7363128d2bc5e728a6a62c",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "text/markdown",
+          "state": "match"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.input",
+      "subject": "input:actinv-decay-fallback",
+      "premises": [
+        {
+          "kind": "contract_input",
+          "id": "actinv-decay-fallback",
+          "state": "declared"
+        },
+        {
+          "kind": "input_attestation",
+          "id": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123",
+          "state": "attested"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:850b8b7f85f8d88b6ad826c4cd341aaaffabd525c8ecf3c588a0ad437bf5d123",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/octet-stream",
+          "state": "match"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.input",
+      "subject": "input:actinv-decay-primary",
+      "premises": [
+        {
+          "kind": "contract_input",
+          "id": "actinv-decay-primary",
+          "state": "declared"
+        },
+        {
+          "kind": "input_attestation",
+          "id": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb",
+          "state": "attested"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:6f04cf009086c179021f243a58dadc2d5bb078de5ba39c4fe46ccad77d228ddb",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/octet-stream",
+          "state": "match"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.input",
+      "subject": "input:actinv-dump-helper",
+      "premises": [
+        {
+          "kind": "contract_input",
+          "id": "actinv-dump-helper",
+          "state": "declared"
+        },
+        {
+          "kind": "input_attestation",
+          "id": "sha256:651694c29051f6b05a786c17f9597ebc17acc016b2cbe3b1503d3099a0f41084",
+          "state": "attested"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:651694c29051f6b05a786c17f9597ebc17acc016b2cbe3b1503d3099a0f41084",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:651694c29051f6b05a786c17f9597ebc17acc016b2cbe3b1503d3099a0f41084",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/x-executable",
+          "state": "match"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.input",
+      "subject": "input:actinv-executable",
+      "premises": [
+        {
+          "kind": "contract_input",
+          "id": "actinv-executable",
+          "state": "declared"
+        },
+        {
+          "kind": "input_attestation",
+          "id": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426",
+          "state": "attested"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:46cbe5ccb0cbcab1bf9a27a9bc83b8455027a02b14339a429b61805147b34426",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/x-executable",
+          "state": "match"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.input",
+      "subject": "input:actinv-library-index",
+      "premises": [
+        {
+          "kind": "contract_input",
+          "id": "actinv-library-index",
+          "state": "declared"
+        },
+        {
+          "kind": "input_attestation",
+          "id": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb",
+          "state": "attested"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:8bd19b4001c246758e739cd0067a0087e1ce5c2157438dae97bd52e1d3beb3fb",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/json",
+          "state": "match"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.input",
+      "subject": "input:aftermatter-case",
+      "premises": [
+        {
+          "kind": "contract_input",
+          "id": "aftermatter-case",
+          "state": "declared"
+        },
+        {
+          "kind": "input_attestation",
+          "id": "sha256:5b63361ac78e2090c556f5d67dba5033c385dbdfc606566c130cf72f553f007b",
+          "state": "attested"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:5b63361ac78e2090c556f5d67dba5033c385dbdfc606566c130cf72f553f007b",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:5b63361ac78e2090c556f5d67dba5033c385dbdfc606566c130cf72f553f007b",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/vnd.aftermatter.project+json",
+          "state": "match"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.input",
+      "subject": "input:aftermatter-clive-rulepack",
+      "premises": [
+        {
+          "kind": "contract_input",
+          "id": "aftermatter-clive-rulepack",
+          "state": "declared"
+        },
+        {
+          "kind": "input_attestation",
+          "id": "sha256:22d6cc2b045227073faa56654bf7a70938eef04c323823b7e5771472aa5fed3c",
+          "state": "attested"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:22d6cc2b045227073faa56654bf7a70938eef04c323823b7e5771472aa5fed3c",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:22d6cc2b045227073faa56654bf7a70938eef04c323823b7e5771472aa5fed3c",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/vnd.aftermatter.rulepack+json",
+          "state": "match"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.input",
+      "subject": "input:aftermatter-federal-rulepack",
+      "premises": [
+        {
+          "kind": "contract_input",
+          "id": "aftermatter-federal-rulepack",
+          "state": "declared"
+        },
+        {
+          "kind": "input_attestation",
+          "id": "sha256:c9ef110349c22de71eb6677c9a85bdc39b250ba4368246c18d701b236542bd49",
+          "state": "attested"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:c9ef110349c22de71eb6677c9a85bdc39b250ba4368246c18d701b236542bd49",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:c9ef110349c22de71eb6677c9a85bdc39b250ba4368246c18d701b236542bd49",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/vnd.aftermatter.rulepack+json",
+          "state": "match"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.input",
+      "subject": "input:aftermatter-sources-manifest",
+      "premises": [
+        {
+          "kind": "contract_input",
+          "id": "aftermatter-sources-manifest",
+          "state": "declared"
+        },
+        {
+          "kind": "input_attestation",
+          "id": "sha256:50faba035c762f7e47ed1624a6b78064809e43b6e8f835c083c195e4743816b1",
+          "state": "attested"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:50faba035c762f7e47ed1624a6b78064809e43b6e8f835c083c195e4743816b1",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:50faba035c762f7e47ed1624a6b78064809e43b6e8f835c083c195e4743816b1",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/vnd.aftermatter.source-manifest+json",
+          "state": "match"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.input",
+      "subject": "input:aftermatter-wcs-rulepack",
+      "premises": [
+        {
+          "kind": "contract_input",
+          "id": "aftermatter-wcs-rulepack",
+          "state": "declared"
+        },
+        {
+          "kind": "input_attestation",
+          "id": "sha256:eb9142992c0963b7cf0fab47eac9cdbc79ba20f9bf0509554b200b02c902d52c",
+          "state": "attested"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:eb9142992c0963b7cf0fab47eac9cdbc79ba20f9bf0509554b200b02c902d52c",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:eb9142992c0963b7cf0fab47eac9cdbc79ba20f9bf0509554b200b02c902d52c",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/vnd.aftermatter.rulepack+json",
+          "state": "match"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.input",
+      "subject": "input:fns-spectrum",
+      "premises": [
+        {
+          "kind": "contract_input",
+          "id": "fns-spectrum",
+          "state": "declared"
+        },
+        {
+          "kind": "input_attestation",
+          "id": "sha256:8ba5f9856176afe48d6b67fa0a9f568c16eeab76ace29e776d3076a947ed4532",
+          "state": "attested"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:8ba5f9856176afe48d6b67fa0a9f568c16eeab76ace29e776d3076a947ed4532",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:8ba5f9856176afe48d6b67fa0a9f568c16eeab76ace29e776d3076a947ed4532",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/vnd.aftermatter.spectrum+json",
+          "state": "match"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.input",
+      "subject": "input:r0-builder",
+      "premises": [
+        {
+          "kind": "contract_input",
+          "id": "r0-builder",
+          "state": "declared"
+        },
+        {
+          "kind": "input_attestation",
+          "id": "sha256:0b3438e6a88ac97fabd3a9b24f53a048c9541b1373113633a55fb0c167a6f5db",
+          "state": "attested"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:0b3438e6a88ac97fabd3a9b24f53a048c9541b1373113633a55fb0c167a6f5db",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:0b3438e6a88ac97fabd3a9b24f53a048c9541b1373113633a55fb0c167a6f5db",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "text/x-python",
+          "state": "match"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.claim",
+      "subject": "actinv-r0-problem",
+      "premises": [
+        {
+          "kind": "workflow_step",
+          "id": "activation",
+          "state": "declared"
+        },
+        {
+          "kind": "output_slot",
+          "id": "activation.problem",
+          "state": "declared"
+        },
+        {
+          "kind": "claim_id",
+          "id": "actinv-r0-problem",
+          "state": "unique"
+        },
+        {
+          "kind": "slot_cardinality",
+          "id": "activation.problem",
+          "state": "unique"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:010d95e23cff58144a8a977b61d980d87ef22396f5e64b0ce4272577aa1d6151",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:010d95e23cff58144a8a977b61d980d87ef22396f5e64b0ce4272577aa1d6151",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/vnd.actinv.problem+json",
+          "state": "match"
+        },
+        {
+          "kind": "partial_result",
+          "id": "activation.problem",
+          "state": "none"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-dump-helper",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-executable",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-activation-library",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:r0-builder",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-data-notice",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-decay-fallback",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-decay-primary",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-library-index",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:fns-spectrum",
+          "state": "admitted"
+        },
+        {
+          "kind": "claim_model",
+          "id": "unquantified",
+          "state": "permitted"
+        },
+        {
+          "kind": "claim_shape",
+          "id": "actinv-r0-problem",
+          "state": "valid"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.claim",
+      "subject": "actinv-r0-inventory",
+      "premises": [
+        {
+          "kind": "workflow_step",
+          "id": "activation",
+          "state": "declared"
+        },
+        {
+          "kind": "output_slot",
+          "id": "activation.inventory",
+          "state": "declared"
+        },
+        {
+          "kind": "claim_id",
+          "id": "actinv-r0-inventory",
+          "state": "unique"
+        },
+        {
+          "kind": "slot_cardinality",
+          "id": "activation.inventory",
+          "state": "unique"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:3942d6f3337b786c018ac28474f4e7206d4d49301317812e7aef80058ca62bc8",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:3942d6f3337b786c018ac28474f4e7206d4d49301317812e7aef80058ca62bc8",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/vnd.aftermatter.inventory+json",
+          "state": "match"
+        },
+        {
+          "kind": "partial_result",
+          "id": "activation.inventory",
+          "state": "none"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-dump-helper",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-executable",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-activation-library",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:r0-builder",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-data-notice",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-decay-fallback",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-decay-primary",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-library-index",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:fns-spectrum",
+          "state": "admitted"
+        },
+        {
+          "kind": "claim_model",
+          "id": "unquantified",
+          "state": "permitted"
+        },
+        {
+          "kind": "claim_shape",
+          "id": "actinv-r0-inventory",
+          "state": "valid"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.claim",
+      "subject": "actinv-r0-decay-metadata",
+      "premises": [
+        {
+          "kind": "workflow_step",
+          "id": "activation",
+          "state": "declared"
+        },
+        {
+          "kind": "output_slot",
+          "id": "activation.decay-metadata",
+          "state": "declared"
+        },
+        {
+          "kind": "claim_id",
+          "id": "actinv-r0-decay-metadata",
+          "state": "unique"
+        },
+        {
+          "kind": "slot_cardinality",
+          "id": "activation.decay-metadata",
+          "state": "unique"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:d80f972fe26608139cb26d5a31a9a2bfc7a461be928fb8984f71830bf505535c",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:d80f972fe26608139cb26d5a31a9a2bfc7a461be928fb8984f71830bf505535c",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/vnd.aftermatter.decay-metadata+json",
+          "state": "match"
+        },
+        {
+          "kind": "partial_result",
+          "id": "activation.decay-metadata",
+          "state": "none"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-dump-helper",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-executable",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-activation-library",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:r0-builder",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-data-notice",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-decay-fallback",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-decay-primary",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:actinv-library-index",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:fns-spectrum",
+          "state": "admitted"
+        },
+        {
+          "kind": "claim_model",
+          "id": "unquantified",
+          "state": "permitted"
+        },
+        {
+          "kind": "claim_shape",
+          "id": "actinv-r0-decay-metadata",
+          "state": "valid"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.claim",
+      "subject": "aftermatter-r0-table-1-class-a-fraction",
+      "premises": [
+        {
+          "kind": "workflow_step",
+          "id": "classification",
+          "state": "declared"
+        },
+        {
+          "kind": "output_slot",
+          "id": "classification.table-1-class-a-fraction",
+          "state": "declared"
+        },
+        {
+          "kind": "claim_id",
+          "id": "aftermatter-r0-table-1-class-a-fraction",
+          "state": "unique"
+        },
+        {
+          "kind": "slot_cardinality",
+          "id": "classification.table-1-class-a-fraction",
+          "state": "unique"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/vnd.aftermatter.route-result+json",
+          "state": "match"
+        },
+        {
+          "kind": "partial_result",
+          "id": "classification.table-1-class-a-fraction",
+          "state": "none"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-case",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-clive-rulepack",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "step:activation/decay-metadata",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-federal-rulepack",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "step:activation/inventory",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-sources-manifest",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-wcs-rulepack",
+          "state": "admitted"
+        },
+        {
+          "kind": "claim_model",
+          "id": "interval",
+          "state": "permitted"
+        },
+        {
+          "kind": "claim_shape",
+          "id": "aftermatter-r0-table-1-class-a-fraction",
+          "state": "valid"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.claim",
+      "subject": "aftermatter-r0-table-2-class-a-fraction",
+      "premises": [
+        {
+          "kind": "workflow_step",
+          "id": "classification",
+          "state": "declared"
+        },
+        {
+          "kind": "output_slot",
+          "id": "classification.table-2-class-a-fraction",
+          "state": "declared"
+        },
+        {
+          "kind": "claim_id",
+          "id": "aftermatter-r0-table-2-class-a-fraction",
+          "state": "unique"
+        },
+        {
+          "kind": "slot_cardinality",
+          "id": "classification.table-2-class-a-fraction",
+          "state": "unique"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/vnd.aftermatter.route-result+json",
+          "state": "match"
+        },
+        {
+          "kind": "partial_result",
+          "id": "classification.table-2-class-a-fraction",
+          "state": "none"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-case",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-clive-rulepack",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "step:activation/decay-metadata",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-federal-rulepack",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "step:activation/inventory",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-sources-manifest",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-wcs-rulepack",
+          "state": "admitted"
+        },
+        {
+          "kind": "claim_model",
+          "id": "interval",
+          "state": "permitted"
+        },
+        {
+          "kind": "claim_shape",
+          "id": "aftermatter-r0-table-2-class-a-fraction",
+          "state": "valid"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "admission.claim",
+      "subject": "aftermatter-r0-clive-route-state",
+      "premises": [
+        {
+          "kind": "workflow_step",
+          "id": "classification",
+          "state": "declared"
+        },
+        {
+          "kind": "output_slot",
+          "id": "classification.route-state",
+          "state": "declared"
+        },
+        {
+          "kind": "claim_id",
+          "id": "aftermatter-r0-clive-route-state",
+          "state": "unique"
+        },
+        {
+          "kind": "slot_cardinality",
+          "id": "classification.route-state",
+          "state": "unique"
+        },
+        {
+          "kind": "artifact_identity",
+          "id": "sha256:3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718",
+          "state": "well_formed"
+        },
+        {
+          "kind": "artifact_observation",
+          "id": "sha256:3eeb782a04e3e464c905c824f1efb49a50a8fe9472f9e5f96ead2dcdda5f1718",
+          "state": "not_checked"
+        },
+        {
+          "kind": "media_type",
+          "id": "application/vnd.aftermatter.route-result+json",
+          "state": "match"
+        },
+        {
+          "kind": "partial_result",
+          "id": "classification.route-state",
+          "state": "none"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-case",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-clive-rulepack",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "step:activation/decay-metadata",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-federal-rulepack",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "step:activation/inventory",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-sources-manifest",
+          "state": "admitted"
+        },
+        {
+          "kind": "parent_admission",
+          "id": "input:aftermatter-wcs-rulepack",
+          "state": "admitted"
+        },
+        {
+          "kind": "claim_model",
+          "id": "unquantified",
+          "state": "permitted"
+        },
+        {
+          "kind": "claim_shape",
+          "id": "aftermatter-r0-clive-route-state",
+          "state": "valid"
+        }
+      ],
+      "conclusion": "admitted"
+    },
+    {
+      "rule": "bounded.lt.within",
+      "subject": "CASE-000-R1",
+      "premises": [
+        {
+          "kind": "requirement",
+          "id": "CASE-000-R1",
+          "state": "bounded.less_than"
+        },
+        {
+          "kind": "evaluation_context",
+          "id": "sha256:ab14adb3f68bec181198e2ab9cf3d6dda10f2db52a9c0bcb5307036923cfdfd7",
+          "state": "bound"
+        },
+        {
+          "kind": "evidence",
+          "id": "aftermatter-r0-table-1-class-a-fraction",
+          "state": "admitted"
+        },
+        {
+          "kind": "execution_policy",
+          "id": "permit_nominal_basis",
+          "state": "off"
+        },
+        {
+          "kind": "execution_policy",
+          "id": "require_qualification",
+          "state": "off"
+        },
+        {
+          "kind": "qualification",
+          "id": "aftermatter-r0-table-1-class-a-fraction",
+          "state": "missing"
+        },
+        {
+          "kind": "canonical_value",
+          "id": "canonical_unit",
+          "state": "1"
+        },
+        {
+          "kind": "canonical_value",
+          "id": "limit",
+          "state": "1"
+        },
+        {
+          "kind": "canonical_value",
+          "id": "lower",
+          "state": "4087797275991635917280885867/5000000000000000000000000000"
+        },
+        {
+          "kind": "canonical_value",
+          "id": "upper",
+          "state": "4087797275991635917280948683/5000000000000000000000000000"
+        },
+        {
+          "kind": "canonical_value",
+          "id": "nominal",
+          "state": "163511891039665436691236691/200000000000000000000000000"
+        }
+      ],
+      "conclusion": "pass",
+      "reasons": [
+        "CORE-A4403",
+        "aftermatter-r0-table-1-class-a-fraction:unqualified"
+      ]
+    },
+    {
+      "rule": "bounded.lt.within",
+      "subject": "CASE-000-R2",
+      "premises": [
+        {
+          "kind": "requirement",
+          "id": "CASE-000-R2",
+          "state": "bounded.less_than"
+        },
+        {
+          "kind": "evaluation_context",
+          "id": "sha256:ab14adb3f68bec181198e2ab9cf3d6dda10f2db52a9c0bcb5307036923cfdfd7",
+          "state": "bound"
+        },
+        {
+          "kind": "evidence",
+          "id": "aftermatter-r0-table-2-class-a-fraction",
+          "state": "admitted"
+        },
+        {
+          "kind": "execution_policy",
+          "id": "permit_nominal_basis",
+          "state": "off"
+        },
+        {
+          "kind": "execution_policy",
+          "id": "require_qualification",
+          "state": "off"
+        },
+        {
+          "kind": "qualification",
+          "id": "aftermatter-r0-table-2-class-a-fraction",
+          "state": "missing"
+        },
+        {
+          "kind": "canonical_value",
+          "id": "canonical_unit",
+          "state": "1"
+        },
+        {
+          "kind": "canonical_value",
+          "id": "limit",
+          "state": "1"
+        },
+        {
+          "kind": "canonical_value",
+          "id": "lower",
+          "state": "444749880957701847845906437/1000000000000000000000000000"
+        },
+        {
+          "kind": "canonical_value",
+          "id": "upper",
+          "state": "2223749404788509239229544743/5000000000000000000000000000"
+        },
+        {
+          "kind": "canonical_value",
+          "id": "nominal",
+          "state": "69492168899640913725923077/156250000000000000000000000"
+        }
+      ],
+      "conclusion": "pass",
+      "reasons": [
+        "CORE-A4403",
+        "aftermatter-r0-table-2-class-a-fraction:unqualified"
+      ]
+    },
+    {
+      "rule": "categorical.equals.mismatch",
+      "subject": "CASE-000-R3",
+      "premises": [
+        {
+          "kind": "requirement",
+          "id": "CASE-000-R3",
+          "state": "categorical.equals"
+        },
+        {
+          "kind": "evaluation_context",
+          "id": "sha256:ab14adb3f68bec181198e2ab9cf3d6dda10f2db52a9c0bcb5307036923cfdfd7",
+          "state": "bound"
+        },
+        {
+          "kind": "evidence",
+          "id": "aftermatter-r0-clive-route-state",
+          "state": "admitted"
+        },
+        {
+          "kind": "execution_policy",
+          "id": "permit_nominal_basis",
+          "state": "off"
+        },
+        {
+          "kind": "execution_policy",
+          "id": "require_qualification",
+          "state": "off"
+        },
+        {
+          "kind": "canonical_value",
+          "id": "observed_category",
+          "state": "unresolved"
+        }
+      ],
+      "conclusion": "fail"
+    }
+  ],
+  "campaign_sha256": "sha256:4603407f169284a933be1155cfdc8ce6a420a01bc2e445960bdaf6c7cd11526b",
+  "derivation_sha256": "sha256:225e56f46ea5d549b9ed126f47822d576848cf19f0abdd71ab519bff8320241d",
+  "notice": "A verdict derivation records the rule applications one evaluation performed under its bound context: which premises were checked, their states, and the conclusion each rule reached. Replaying the derivation re-runs the checks; it never trusts this file's conclusions."
+}

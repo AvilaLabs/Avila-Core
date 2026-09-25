@@ -26,7 +26,7 @@ pub(super) fn build_presentation_gates(
         return Ok(Vec::new());
     };
     let mut stages = Vec::new();
-    for step in &compiled.workflow {
+    for step in compiled.workflow() {
         let Some(gate) = &step.presentation_gate else {
             continue;
         };
@@ -45,7 +45,7 @@ pub(super) fn build_presentation_gates(
         };
         let mut gate = PresentationGateReport {
             request_sha256: String::new(),
-            compiled_snapshot_sha256: compiled.snapshot_sha256.clone(),
+            compiled_snapshot_sha256: compiled.snapshot_sha256().to_string(),
             campaign_sha256: campaign_sha256.clone(),
             step_id: step.step_id.clone(),
             gate_state: gate.state,

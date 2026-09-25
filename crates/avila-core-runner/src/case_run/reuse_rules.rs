@@ -69,7 +69,7 @@ pub(super) fn evaluate(
 ) -> (Vec<ResolvedRule>, Vec<RunFinding>) {
     let mut rules = Vec::new();
     let mut findings = Vec::new();
-    for document in &package.manifest.documents {
+    for document in &package.manifest().documents {
         if document.role != "reuse_rule" {
             continue;
         }
@@ -119,7 +119,7 @@ pub(super) fn evaluate(
         // an edge the contract does not contain widens the claim beyond
         // what it may narrow — refused.
         let bound = compiled
-            .workflow
+            .workflow()
             .iter()
             .find(|step| step.step_id == rule.scope.step_id)
             .is_some_and(|step| {

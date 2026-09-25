@@ -1598,10 +1598,10 @@ fn show_overview(
                 GREEN,
                 &format!(
                     "{} revision {}; {} steps; {} requirements",
-                    compiled.contract_id,
-                    compiled.contract_revision,
-                    compiled.workflow.len(),
-                    compiled.requirements.len() + compiled.categorical_requirements.len()
+                    compiled.contract_id(),
+                    compiled.contract_revision(),
+                    compiled.workflow().len(),
+                    compiled.requirements().len() + compiled.categorical_requirements().len()
                 ),
             ),
             None if report.compile.is_some() => stage_row(
@@ -1898,13 +1898,14 @@ fn show_compile(ui: &mut egui::Ui, compile: Option<&CompileReport>, sources: &[(
                     "Contract",
                     &format!(
                         "{} revision {}",
-                        compiled.contract_id, compiled.contract_revision
+                        compiled.contract_id(),
+                        compiled.contract_revision()
                     ),
                 );
-                key_value(ui, "Question", &compiled.question);
-                key_value(ui, "Snapshot", &compiled.snapshot_sha256);
+                key_value(ui, "Question", compiled.question());
+                key_value(ui, "Snapshot", compiled.snapshot_sha256());
                 ui.add_space(6.0);
-                for step in &compiled.workflow {
+                for step in compiled.workflow() {
                     ui.horizontal_wrapped(|ui| {
                         ui.label(egui::RichText::new(&step.step_id).strong());
                         ui.label(
@@ -1920,13 +1921,13 @@ fn show_compile(ui: &mut egui::Ui, compile: Option<&CompileReport>, sources: &[(
                     });
                 }
                 ui.add_space(6.0);
-                for requirement in &compiled.requirements {
+                for requirement in compiled.requirements() {
                     ui.horizontal_wrapped(|ui| {
                         ui.label(egui::RichText::new(&requirement.requirement_id).strong());
                         ui.label(&requirement.statement);
                     });
                 }
-                for requirement in &compiled.categorical_requirements {
+                for requirement in compiled.categorical_requirements() {
                     ui.horizontal_wrapped(|ui| {
                         ui.label(egui::RichText::new(&requirement.requirement_id).strong());
                         ui.label(&requirement.statement);

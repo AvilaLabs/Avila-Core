@@ -914,6 +914,7 @@ class VerdictResult:
     reasons: list = field(default_factory=list)
     margin: Optional[str] = None
     margin_unavailable_reason: Optional[str] = None
+    observed_category: Optional[str] = None
 
 
 def _pass_cond(strict: bool, bound: Fraction, limit: Fraction, side: str) -> bool:
@@ -1170,6 +1171,7 @@ def evaluate_categorical_requirement(operator: str, accepted: list[str], evidenc
     matched = (category == accepted[0]) if operator == "equals" else (category in accepted)
     result.status = "pass" if matched else "fail"
     result.rule = f"{prefix}.{'match' if matched else 'mismatch'}"
+    result.observed_category = category
     return result
 
 
@@ -5080,6 +5082,45 @@ def cmd_verify_case(args: argparse.Namespace) -> int:
     return report.exit_code()
 
 
+def cmd_verify_derivation(args: argparse.Namespace) -> int:
+    report = Report(f"verify-derivation {args.derivation}")
+    verify_derivation_document(
+        Path(args.derivation),
+        Path(args.contract),
+        Path(args.registry),
+        Path(args.claims),
+        args.artifact,
+        Path(args.campaign_report) if args.campaign_report else None,
+        report,
+    )
+    _emit(report, args)
+    return report.exit_code()
+
+
+def cmd_derivation_diff(args: argparse.Namespace) -> int:
+    try:
+        before = json.loads(Path(args.before).read_bytes())
+        after = json.loads(Path(args.after).read_bytes())
+    except (OSError, json.JSONDecodeError) as error:
+        print(f"derivation-diff: input unreadable: {error}", file=sys.stderr)
+        return 2
+    diff = explain_derivation_changes(before, after)
+    if args.json:
+        print(json.dumps(diff, indent=2))
+        return 0
+    print("derivation-diff — which bound uses changed")
+    print(f"  same_context: {diff['same_context']}")
+    print(f"  before: {diff['before_context_sha256']}")
+    print(f"  after:  {diff['after_context_sha256']}")
+    for use in diff["uses"]:
+        detail = ", ".join(use.get("changed_premise_kinds", []))
+        print(f"  [{use['change']}] {use['rule']}:{use['subject']}"
+              + (f" ({detail})" if detail else ""))
+    if not diff["uses"]:
+        print("  no changed uses")
+    return 0
+
+
 def cmd_self_test(args: argparse.Namespace) -> int:
     """Runs this file's own unit tests (the fixture-vector proofs) and
     reports pass/fail as a Report, for a single consistent CLI surface."""
@@ -5150,6 +5191,34 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p_self.add_argument("--json", action="store_true")
     p_self.set_defaults(func=cmd_self_test)
 
+    p_deriv = sub.add_parser(
+        "verify-derivation",
+        help="Replay a verdict derivation record: recompute its identities and re-run every "
+        "rule application against the supplied documents, never trusting the record's conclusions")
+    p_deriv.add_argument("derivation", help="The derivation document (evaluate --derivation or a workspace derivation.json)")
+    p_deriv.add_argument("--contract", required=True, help="contract.json bytes the evaluation compiled")
+    p_deriv.add_argument("--registry", required=True, help="registry.json bytes bound into the context")
+    p_deriv.add_argument("--claims", required=True, help="claims.json bytes the evaluation admitted")
+    p_deriv.add_argument(
+        "--artifact", action="append", metavar="FILE", default=[],
+        help="An artifact file whose bytes were supplied to the recorded evaluation; repeatable",
+    )
+    p_deriv.add_argument(
+        "--campaign-report", metavar="FILE",
+        help="The campaign report the recorded evaluation emitted; when supplied its identity is recomputed too",
+    )
+    p_deriv.add_argument("--json", action="store_true", help="Emit the machine-readable JSON report instead of text")
+    p_deriv.set_defaults(func=cmd_verify_derivation)
+
+    p_diff = sub.add_parser(
+        "derivation-diff",
+        help="Explain which bound uses changed between two derivation records — matched by "
+        "(rule, subject); a changed conclusion names the premise kinds that drove it")
+    p_diff.add_argument("before", help="The earlier derivation document")
+    p_diff.add_argument("after", help="The later derivation document")
+    p_diff.add_argument("--json", action="store_true", help="Emit the machine-readable diff instead of text")
+    p_diff.set_defaults(func=cmd_derivation_diff)
+
     return parser
 
 
@@ -5157,6 +5226,1029 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
     return args.func(args)
+
+
+# ---- verdict-derivation replay (ADR-0026) ----------------------------------
+#
+# `verify-derivation` re-runs the documented derivation rules itself — it
+# never trusts the recorded conclusions. For each recorded rule
+# application the verifier reconstructs the premises this profile can
+# decide from the supplied contract, registry, claims, and artifact
+# observations, then compares rule, subject, premises, conclusion, and
+# reasons. A forged conclusion is a mismatch even when the record's outer
+# digest was honestly recomputed: the digest proves the file, the replay
+# proves the inference.
+#
+# Coverage mirrors the campaign evaluator's supported subset: the four
+# rule families `context.bind`, `admission.input`, `admission.claim`,
+# `qualification.envelope`, and the verdict applications (kernel numeric
+# and categorical rules plus every `not_evaluated.*`/`inconclusive.*`
+# gating rule). Applications for rules outside that subset — and any
+# document shape this verifier cannot read authoritatively — are reported
+# `not_checked`, never `verified`.
+
+DERIVATION_SCHEMA_VERSION = "avila.core/verdict-derivation/v0.1-draft"
+CONTEXT_SCHEMA_VERSION = "avila.core/evaluation-context/v0.1-draft"
+CAMPAIGN_EVALUATOR_ID = "avila.core/kernel-rust@0.1.0"
+
+# The claim-shape premise kinds `validate_claim` can emit, in the order
+# campaign/admission.rs checks them.
+_CLAIM_MODELS = ("exact", "interval", "coverage_interval", "worst_case", "unquantified")
+
+
+def _sha256_prefixed(data: bytes) -> str:
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def _document_sha256(raw: bytes) -> str:
+    return _sha256_prefixed(canonicalize_json(raw))
+
+
+def _is_sha256(value) -> bool:
+    return isinstance(value, str) and len(value) == 71 and value.startswith("sha256:") and all(
+        c in "0123456789abcdef" for c in value[7:]
+    )
+
+
+def _source_label(source: dict) -> str:
+    if source.get("source") == "step_output":
+        return f"step:{source.get('step_id')}/{source.get('output_slot')}"
+    return f"input:{source.get('input_id')}"
+
+
+def _app(rule: str, subject: str, conclusion: str,
+         premises: Optional[list] = None, reasons: Optional[list] = None) -> dict:
+    return {
+        "rule": rule,
+        "subject": subject,
+        "premises": premises or [],
+        "conclusion": conclusion,
+        "reasons": reasons or [],
+    }
+
+
+def _premise(kind: str, id_: str, state: str) -> dict:
+    return {"kind": kind, "id": id_, "state": state}
+
+
+def _normalized_execution_policy(contract: dict) -> Optional[dict]:
+    """The execution_policy a compiled snapshot carries: the contract's
+    own with serde-defaultable fields made explicit. When the contract
+    pins an `organization_policy` floor the compiled policy is the merge
+    (ADR-0023), which this port does not reimplement — None there."""
+    src = contract.get("execution_policy", {}) or {}
+    if src.get("organization_policy"):
+        return None
+    out: dict = {
+        "permitted_nondeterministic_roles": src.get("permitted_nondeterministic_roles", [])
+    }
+    for flag in (
+        "permit_nominal_basis", "require_qualification", "require_signatures",
+        "require_provider_independence", "require_diverse_implementations",
+        "forbid_self_preference",
+    ):
+        if src.get(flag):
+            out[flag] = True
+    for field_name in (
+        "recognized_qualification_owners", "deny_providers", "allow_providers",
+        "maturity_floor", "cost_cap",
+    ):
+        if src.get(field_name):
+            out[field_name] = src[field_name]
+    return out
+
+
+def _replay_claim_model_problems(
+    output: dict, claim: dict, role, kinds: dict
+) -> list[tuple[str, str]]:
+    """Port of campaign/admission.rs `validate_claim`: returns the
+    (kind, detail) problems in the order the Rust check emits them. The
+    premise kinds are what the derivation compares; the details are kept
+    for reason-count fidelity only."""
+    problems: list[tuple[str, str]] = []
+    value = claim.get("claim", {})
+    model = value.get("model")
+
+    def model_permitted(decl: dict) -> bool:
+        d, c = decl.get("model"), model
+        if d == c and d != "worst_case":
+            return True
+        if d == "worst_case" and c == "worst_case":
+            if decl.get("side") == "lower":
+                return "lower" in value and "upper" not in value
+            return "upper" in value and "lower" not in value
+        return False
+
+    if not any(model_permitted(m) for m in output.get("permitted_claim_models", [])):
+        problems.append(("claim_model", "claim model is not permitted by this output"))
+
+    quantities: list[tuple[str, dict]] = []
+    if model == "exact":
+        quantities = [("nominal", value["nominal"])] if "nominal" in value else []
+    elif model == "interval":
+        quantities = [(f, value[f]) for f in ("lower", "upper") if f in value]
+        if "nominal" in value:
+            quantities.append(("nominal", value["nominal"]))
+    elif model == "coverage_interval":
+        try:
+            coverage = read_authoritative_exact(value["coverage"])
+            if coverage <= 0 or coverage > 1:
+                problems.append(("claim_shape", "coverage must lie in the interval (0, 1]"))
+        except (CanonError, KeyError):
+            problems.append(("claim_shape", "coverage must be a canonical decimal in (0, 1]"))
+        quantities = [(f, value[f]) for f in ("lower", "upper", "nominal") if f in value]
+    elif model == "worst_case":
+        if ("lower" in value) == ("upper" in value):
+            problems.append(("claim_shape", "a worst-case claim carries exactly one bound"))
+        quantities = [(f, value[f]) for f in ("lower", "upper", "nominal") if f in value]
+    elif model == "unquantified":
+        quantities = [("nominal", value["nominal"])] if "nominal" in value else []
+
+    if model == "unquantified" and isinstance(value.get("value"), str) and not value["value"].strip():
+        problems.append(("claim_shape", "an unquantified categorical value must not be empty"))
+
+    if role is not None and role.categorical_values:
+        if model == "unquantified" and "value" in value and "nominal" not in value:
+            if value["value"] not in role.categorical_values:
+                problems.append(("categorical", "categorical value is outside the role vocabulary"))
+        elif model == "unquantified" and "value" not in value:
+            problems.append(("categorical", "a categorical role requires a categorical value"))
+
+    kind_id = role.quantity_kind if role is not None else None
+    if kind_id is None:
+        if quantities:
+            problems.append(("quantity_required", "a non-quantity role admits no quantity values"))
+    else:
+        canonical: dict = {}
+        for field_name, quantity in quantities:
+            try:
+                scaled, _ = _scale_claim_quantity(kinds, kind_id, quantity)
+                canonical[field_name] = scaled
+            except (CanonError, KeyError, Exception):
+                problems.append(("unit_scaling", f"`{field_name}`: unit not admitted"))
+        if model == "unquantified" and "nominal" not in value:
+            problems.append(("quantity_required", "a quantity role requires a nominal value even when unquantified"))
+        if model == "unquantified" and "value" in value:
+            problems.append(("quantity_required", "a quantity role cannot carry an unquantified categorical value"))
+        if "lower" in canonical and "upper" in canonical and canonical["lower"] > canonical["upper"]:
+            problems.append(("claim_shape", "`lower` exceeds `upper`"))
+        if "nominal" in canonical:
+            if ("lower" in canonical and canonical["nominal"] < canonical["lower"]) or (
+                "upper" in canonical and canonical["nominal"] > canonical["upper"]
+            ):
+                problems.append(("claim_shape", "`nominal` lies outside the declared interval"))
+    return problems
+
+
+def _scale_claim_quantity(kinds: dict, kind_id: str, quantity: dict):
+    """`RegistryIndex::kinds.scale_quantity` — scale a value into its
+    canonical unit, raising on an inadmissible unit."""
+    kind = kinds.get(kind_id)
+    if kind is None:
+        raise CanonError(f"unknown kind {kind_id}")
+    value = read_authoritative_exact(quantity["value"])
+    return kind.scale(value, quantity["unit"]), kind.canonical_unit
+
+
+def _replay_admissions(
+    contract: dict,
+    index,
+    claims: dict,
+    observations: Optional[set],
+    bindings: Optional[dict] = None,
+) -> tuple[list, dict]:
+    """Port of campaign/admission.rs `admit`: returns the rule
+    applications it emits and the admission state per evidence id —
+    ``admitted``/``quarantined``/``missing``, or absent for a claim that
+    produced no record (refused before admission). `observations` is the
+    bound artifact-observation set, or None for a digest-only evaluation."""
+    apps: list[dict] = []
+    states: dict[str, str] = {}
+    admitted: set = set()
+
+    known_inputs = {i["input_id"] for i in contract.get("inputs", [])}
+    seen_inputs: set = set()
+    for attestation in claims.get("inputs", []):
+        input_id = attestation.get("input_id", "")
+        if input_id not in known_inputs:
+            apps.append(_app("admission.input", f"input:{input_id}", "refused",
+                             [_premise("contract_input", input_id, "undeclared")],
+                             ["CORE-E7002"]))
+            continue
+        if input_id in seen_inputs:
+            apps.append(_app("admission.input", f"input:{input_id}", "refused",
+                             [_premise("contract_input", input_id, "duplicated")],
+                             ["CORE-E7301"]))
+            continue
+        seen_inputs.add(input_id)
+
+    attestations: dict[str, list] = {}
+    for attestation in claims.get("inputs", []):
+        attestations.setdefault(attestation.get("input_id", ""), []).append(attestation)
+
+    for inp in sorted(contract.get("inputs", []), key=lambda i: i["input_id"]):
+        input_id = inp["input_id"]
+        evidence_id = f"input:{input_id}"
+        premises = [_premise("contract_input", input_id, "declared")]
+        found = attestations.get(input_id, [])
+        if not found:
+            premises.append(_premise("input_attestation", input_id, "missing"))
+            apps.append(_app("admission.input", evidence_id, "missing",
+                             premises, ["CORE-E7101"]))
+            states[evidence_id] = "missing"
+            continue
+        attestation = found[0]
+        digest = attestation.get("artifact", {}).get("sha256", "")
+        media = attestation.get("artifact", {}).get("media_type", "")
+        premises.append(_premise("input_attestation", digest,
+                                 "duplicated" if len(found) > 1 else "attested"))
+        reasons: list[str] = []
+        if len(found) > 1:
+            reasons.append("CORE-E7301")
+        well_formed = _is_sha256(digest)
+        premises.append(_premise("artifact_identity", digest,
+                                 "well_formed" if well_formed else "malformed"))
+        if not well_formed:
+            reasons.append("CORE-E7101")
+        if observations is not None and observations:
+            premises.append(_premise("artifact_observation", digest,
+                                     "verified" if digest in observations else "not_checked"))
+        media_ok = media == inp.get("media_type")
+        premises.append(_premise("media_type", media, "match" if media_ok else "mismatch"))
+        if not media_ok:
+            reasons.append("CORE-E7201")
+        if reasons:
+            apps.append(_app("admission.input", evidence_id, "quarantined", premises, reasons))
+            states[evidence_id] = "quarantined"
+        else:
+            apps.append(_app("admission.input", evidence_id, "admitted", premises, []))
+            states[evidence_id] = "admitted"
+            admitted.add(("contract_input", input_id))
+
+    # A3's parent cascade needs the claim admission order — claims order —
+    # with the admitted set built incrementally exactly as admit() does.
+    steps = {s["step_id"]: s for s in contract.get("workflow", [])}
+    claim_ids = [c.get("claim_id") for c in claims.get("claims", [])]
+    duplicated_claim_ids = {cid for cid in claim_ids if claim_ids.count(cid) > 1}
+    per_slot: dict = {}
+    for claim in claims.get("claims", []):
+        per_slot.setdefault((claim.get("step_id"), claim.get("output_slot")), []).append(claim)
+
+    for claim in claims.get("claims", []):
+        claim_id = claim.get("claim_id", "")
+        step_id = claim.get("step_id", "")
+        slot_id = claim.get("output_slot", "")
+        step = steps.get(step_id)
+        if step is None:
+            apps.append(_app("admission.claim", claim_id, "refused",
+                             [_premise("workflow_step", step_id, "undeclared")],
+                             ["CORE-E7002"]))
+            continue
+        premises = [_premise("workflow_step", step_id, "declared")]
+        capability = index.capability_types.get(_ref_key_of(step.get("capability_type", {})))
+        output = next(
+            (o for o in (capability.outputs if capability else [])
+             if o.get("slot_id") == slot_id),
+            None,
+        )
+        slot_key = f"{step_id}.{slot_id}"
+        if output is None:
+            premises.append(_premise("output_slot", slot_key, "undeclared"))
+            apps.append(_app("admission.claim", claim_id, "refused",
+                             premises, ["CORE-E7002"]))
+            continue
+        premises.append(_premise("output_slot", slot_key, "declared"))
+        premises.append(_premise("claim_id", claim_id,
+                                 "duplicated" if claim_id in duplicated_claim_ids else "unique"))
+        siblings = per_slot[(step_id, slot_id)]
+        reasons = []
+        premises.append(_premise("slot_cardinality", slot_key,
+                                 "duplicated" if len(siblings) > 1 else "unique"))
+        if len(siblings) > 1:
+            reasons.append("CORE-E7301")
+        digest = claim.get("artifact", {}).get("sha256", "")
+        well_formed = _is_sha256(digest)
+        premises.append(_premise("artifact_identity", digest,
+                                 "well_formed" if well_formed else "malformed"))
+        if not well_formed:
+            reasons.append("CORE-E7101")
+        if observations is not None and observations:
+            premises.append(_premise("artifact_observation", digest,
+                                     "verified" if digest in observations else "not_checked"))
+        media = claim.get("artifact", {}).get("media_type", "")
+        media_ok = media == output.get("media_type")
+        premises.append(_premise("media_type", media, "match" if media_ok else "mismatch"))
+        if not media_ok:
+            reasons.append("CORE-E7201")
+        partial = bool(claim.get("partial"))
+        permits = bool(output.get("permits_partial"))
+        premises.append(_premise("partial_result", slot_key,
+                                 "none" if not partial
+                                 else "permitted" if permits else "not_permitted"))
+        if partial and not permits:
+            reasons.append("CORE-E7201")
+        for binding in (bindings or {}).get(step_id, []):
+            source = binding["source"]
+            label = _source_label(source)
+            parent_ok = _source_admitted(source, admitted, states)
+            premises.append(_premise("parent_admission", label,
+                                     "admitted" if parent_ok else "not_admitted"))
+            if not parent_ok:
+                reasons.append("CORE-E7103")
+        role = index.roles.get(_ref_key_of(output.get("role", {}))) if index else None
+        problems = _replay_claim_model_problems(output, claim, role, index.kinds)
+        premises.append(_premise("claim_model", claim.get("claim", {}).get("model", ""),
+                                 "not_permitted"
+                                 if any(k == "claim_model" for k, _ in problems)
+                                 else "permitted"))
+        seen_kinds: set = set()
+        for kind_name, _detail in problems:
+            if kind_name not in seen_kinds:
+                seen_kinds.add(kind_name)
+                premises.append(_premise(kind_name, claim_id, "invalid"))
+            reasons.append("CORE-E7201")
+        if not problems:
+            premises.append(_premise("claim_shape", claim_id, "valid"))
+        if reasons:
+            apps.append(_app("admission.claim", claim_id, "quarantined", premises, reasons))
+            states[claim_id] = "quarantined"
+        else:
+            apps.append(_app("admission.claim", claim_id, "admitted", premises, []))
+            states[claim_id] = "admitted"
+            admitted.add(("step_output", step_id, slot_id))
+    return apps, states
+
+
+def _ref_key_of(ref: dict) -> tuple:
+    import avila_core_lower
+    return avila_core_lower._ref_key(ref)
+
+
+def _source_admitted(source: dict, admitted: set, states: dict) -> bool:
+    key = _claim_source_key(source)
+    if key[0] == "contract_input":
+        return states.get(f"input:{key[1]}") == "admitted"
+    return key in admitted
+
+
+def _replay_verdict_applications(
+    contract: dict,
+    claims: dict,
+    kinds: dict,
+    states: dict,
+    context_sha256: str,
+    execution_policy: dict,
+) -> list:
+    """Port of campaign/verdicts.rs `evaluate`: the qualification.envelope
+    and verdict applications, one verdict per requirement."""
+    apps: list[dict] = []
+    policy = contract.get("execution_policy", {}) or {}
+    require_qualification = bool(policy.get("require_qualification"))
+    permit_nominal = bool(policy.get("permit_nominal_basis"))
+    recognized_owners = policy.get("recognized_qualification_owners", {})
+    claims_by_id = {c.get("claim_id"): c for c in claims.get("claims", [])}
+
+    def _state_source(evidence_id: str) -> Optional[dict]:
+        if evidence_id.startswith("input:"):
+            return {"source": "contract_input", "input_id": evidence_id[6:]}
+        claim = claims_by_id.get(evidence_id)
+        if claim is None:
+            return None
+        return {"source": "step_output", "step_id": claim.get("step_id"),
+                "output_slot": claim.get("output_slot")}
+
+    def metric_records(metric: dict) -> list:
+        return [
+            (cid, state) for cid, state in states.items()
+            if _state_source(cid) == metric
+        ]
+
+    def envelope_apps(requirement_id: str, metric: dict) -> None:
+        for cid, state in states.items():
+            if state != "admitted" or _state_source(cid) != metric:
+                continue
+            qualification = (claims_by_id.get(cid) or {}).get("qualification")
+            if qualification is None:
+                continue
+            label = qualification.get("state", "")
+            premises = [
+                _premise("qualification",
+                         f"{qualification.get('qualification_id')}@{qualification.get('revision')}:{qualification.get('sha256')}",
+                         label),
+                _premise("execution_policy", "recognized_qualification_owners",
+                         "unrestricted" if not recognized_owners
+                         else "recognized" if qualification.get("owner") in recognized_owners
+                         else "not_recognized"),
+                _premise("requirement", requirement_id, "consumes"),
+            ]
+            if qualification.get("revoked_by"):
+                premises.append(_premise("qualification_lifecycle",
+                                         qualification["revoked_by"], "revoked"))
+            if qualification.get("superseded_by"):
+                premises.append(_premise("qualification_lifecycle",
+                                         qualification["superseded_by"], "superseded"))
+            if recognized_owners and qualification.get("owner") not in recognized_owners:
+                conclusion, reasons = "not_recognized", ["CORE-A4601"]
+            elif qualification.get("revoked_by"):
+                conclusion, reasons = "revoked", ["CORE-A4603"]
+            elif qualification.get("superseded_by"):
+                conclusion, reasons = "superseded", ["CORE-A4101"]
+            elif label == "inside":
+                conclusion, reasons = "inside", []
+            elif label == "expired":
+                conclusion, reasons = "expired", ["CORE-A4602"]
+            else:
+                conclusion, reasons = "unenclosed", ["CORE-A4401"]
+            apps.append(_app("qualification.envelope", cid, conclusion, premises, reasons))
+
+    for req in contract.get("requirements", []):
+        requirement_id = req["requirement_id"]
+        metric = req.get("metric", {})
+        basis_kind = req.get("basis", {}).get("kind")
+        applies = basis_kind != "nominal"
+        records = metric_records(metric)
+        gated: dict = {}
+        quarantined: list = []
+        refused: dict = {"not_recognized": [], "revoked": [], "superseded": []}
+        unqualified: list = []
+        for cid, state in records:
+            if state != "admitted":
+                continue
+            qualification = (claims_by_id.get(cid) or {}).get("qualification")
+            if qualification is None:
+                if applies:
+                    unqualified.append(cid)
+                continue
+            if applies:
+                if recognized_owners and qualification.get("owner") not in recognized_owners:
+                    refused["not_recognized"].append(cid)
+                elif qualification.get("revoked_by"):
+                    refused["revoked"].append(cid)
+                elif qualification.get("superseded_by"):
+                    refused["superseded"].append(cid)
+                elif qualification.get("state") != "inside":
+                    quarantined.append(cid)
+                else:
+                    gated[cid] = "inside"
+        for cid in quarantined:
+            q = claims_by_id[cid]["qualification"]
+            gated[cid] = q.get("state")
+        for cid in refused["not_recognized"]:
+            gated[cid] = "not_recognized"
+        for cid in refused["revoked"]:
+            gated[cid] = "revoked"
+        for cid in refused["superseded"]:
+            gated[cid] = "superseded"
+        for cid in unqualified:
+            gated[cid] = "missing"
+        if applies:
+            envelope_apps(requirement_id, metric)
+
+        if applies and (quarantined or any(refused.values())):
+            result = _qualification_verdict(quarantined, refused, claims_by_id)
+        elif applies and require_qualification and unqualified:
+            result = VerdictResult(status="not_evaluated", rule="not_evaluated.unqualified")
+            result.reasons = [{"code": "CORE-A4402", "owner": "method_owner"}] + [
+                {"evidence_id": cid, "state": "unqualified"} for cid in unqualified
+            ]
+        else:
+            result = _evaluate_numeric(contract, req, claims, kinds, states)
+            if applies and not require_qualification and unqualified:
+                result.reasons = list(result.reasons) + [
+                    {"code": "CORE-A4403", "owner": "policy_owner"}
+                ] + [{"evidence_id": cid, "state": "unqualified"} for cid in unqualified]
+        apps.append(_verdict_app(
+            context_sha256, requirement_id,
+            f"{basis_kind}.{req.get('comparison', '')}",
+            metric, records, permit_nominal, require_qualification, gated,
+            result,
+        ))
+
+    for req in contract.get("categorical_requirements", []):
+        requirement_id = req["requirement_id"]
+        metric = req.get("metric", {})
+        records = metric_records(metric)
+        gated: dict = {}
+        quarantined = []
+        refused = {"not_recognized": [], "revoked": [], "superseded": []}
+        for cid, state in records:
+            if state != "admitted":
+                continue
+            qualification = (claims_by_id.get(cid) or {}).get("qualification")
+            if qualification is None:
+                continue
+            if recognized_owners and qualification.get("owner") not in recognized_owners:
+                refused["not_recognized"].append(cid)
+            elif qualification.get("revoked_by"):
+                refused["revoked"].append(cid)
+            elif qualification.get("superseded_by"):
+                refused["superseded"].append(cid)
+            elif qualification.get("state") != "inside":
+                quarantined.append(cid)
+            else:
+                gated[cid] = "inside"
+        for cid in quarantined:
+            gated[cid] = claims_by_id[cid]["qualification"].get("state")
+        for cid in refused["not_recognized"]:
+            gated[cid] = "not_recognized"
+        for cid in refused["revoked"]:
+            gated[cid] = "revoked"
+        for cid in refused["superseded"]:
+            gated[cid] = "superseded"
+        envelope_apps(requirement_id, metric)
+        if quarantined or any(refused.values()):
+            result = _qualification_verdict(quarantined, refused, claims_by_id)
+        else:
+            predicate = req["predicate"]
+            accepted = [predicate["value"]] if predicate["operator"] == "equals" else predicate["values"]
+            reduced = []
+            for cid, state in records:
+                if state == "missing":
+                    continue
+                value = (claims_by_id.get(cid) or {}).get("claim", {}).get("value")
+                reduced.append(ReducedEvidence(
+                    evidence_id=cid, state=state, model="unquantified", category=value))
+            result = evaluate_categorical_requirement(predicate["operator"], accepted, reduced)
+        predicate_label = "equals" if req["predicate"]["operator"] == "equals" else "in_set"
+        apps.append(_verdict_app(
+            context_sha256, requirement_id, f"categorical.{predicate_label}",
+            metric, records, permit_nominal, False, gated, result,
+        ))
+    return apps
+
+
+def _qualification_verdict(quarantined: list, refused: dict, claims_by_id: dict) -> "VerdictResult":
+    """The pre-kernel not_evaluated rule precedence: issuer refusal, then
+    lifecycle, then envelope state (expired before outside before unknown)."""
+    if refused["not_recognized"]:
+        rule = "not_evaluated.qualification_not_recognized"
+    elif refused["revoked"]:
+        rule = "not_evaluated.qualification_revoked"
+    elif refused["superseded"]:
+        rule = "not_evaluated.qualification_superseded"
+    else:
+        states = {claims_by_id[cid]["qualification"].get("state") for cid in quarantined}
+        if "expired" in states:
+            rule = "not_evaluated.qualification_expired"
+        elif "outside" in states:
+            rule = "not_evaluated.outside_qualification"
+        else:
+            rule = "not_evaluated.qualification_unknown"
+    result = VerdictResult(status="not_evaluated", rule=rule)
+    reasons: list = []
+    if refused["not_recognized"]:
+        reasons.append({"code": "CORE-A4601", "owner": "policy_owner"})
+    if refused["revoked"]:
+        reasons.append({"code": "CORE-A4603", "owner": "method_owner"})
+    if refused["superseded"]:
+        reasons.append({"code": "CORE-A4101", "owner": "method_owner"})
+    for cid in quarantined:
+        if claims_by_id[cid]["qualification"].get("state") == "expired":
+            reasons.append({"code": "CORE-A4602", "owner": "method_owner"})
+            break
+    for cid in quarantined:
+        if claims_by_id[cid]["qualification"].get("state") != "expired":
+            reasons.append({"code": "CORE-A4401", "owner": "method_owner"})
+            break
+    for cid in refused["not_recognized"]:
+        reasons.append({"evidence_id": cid, "state": "qualification_not_recognized"})
+    for cid in refused["revoked"]:
+        reasons.append({"evidence_id": cid, "state": "qualification_revoked"})
+    for cid in refused["superseded"]:
+        reasons.append({"evidence_id": cid, "state": "qualification_superseded"})
+    for cid in quarantined:
+        q = claims_by_id[cid]["qualification"]
+        reasons.append({"evidence_id": cid,
+                        "state": f"{_ENVELOPE_STATE_REASON.get(q.get('state'), 'qualification_unknown')}"})
+    result.reasons = reasons
+    return result
+
+
+_ENVELOPE_STATE_REASON = {
+    "outside": "outside_qualification",
+    "unknown": "qualification_unknown",
+    "expired": "qualification_expired",
+    "inside": "inside_qualification",
+}
+
+
+def _evaluate_numeric(contract: dict, req: dict, claims: dict, kinds: dict, states: dict) -> "VerdictResult":
+    """Kernel evaluation for one numeric requirement over the replayed
+    admission states."""
+    claims_by_id = {c.get("claim_id"): c for c in claims.get("claims", [])}
+    metric = req.get("metric", {})
+    reduced = []
+    for cid, state in states.items():
+        claim = claims_by_id.get(cid)
+        if claim is None or state == "missing":
+            continue
+        if claim.get("step_id") != metric.get("step_id") or claim.get("output_slot") != metric.get("output_slot"):
+            continue
+        try:
+            reduced.append(reduce_claim_value(cid, state, claim["claim"]))
+        except CanonError:
+            reduced.append(ReducedEvidence(evidence_id=cid, state="quarantined",
+                                           model=claim.get("claim", {}).get("model", "?")))
+    kind_id = req["limit"]["kind"]
+    kind = kinds.get(kind_id)
+    if kind is None:
+        return VerdictResult(status="not_evaluated", rule="not_evaluated.missing")
+    limit = read_authoritative_exact(req["limit"]["value"])
+    tolerance = read_authoritative_exact(req["tolerance"]["value"]) if "tolerance" in req else None
+    coverage = (read_authoritative_exact(req["basis"]["coverage"])
+                if "coverage" in req.get("basis", {}) else None)
+    return evaluate_numeric_requirement(
+        req["comparison"], limit, kind, req["limit"]["unit"], req["basis"]["kind"],
+        coverage, tolerance, req["tolerance"]["unit"] if "tolerance" in req else None,
+        reduced, aggregation=req.get("aggregation"),
+    )
+
+
+def _verdict_app(
+    context_sha256: str,
+    requirement_id: str,
+    requirement_state: str,
+    metric: dict,
+    records: list,
+    permit_nominal: bool,
+    require_qualification: bool,
+    gated: dict,
+    result: "VerdictResult",
+) -> dict:
+    premises = [
+        _premise("requirement", requirement_id, requirement_state),
+        _premise("evaluation_context", context_sha256, "bound"),
+    ]
+    for cid, state in records:
+        if state == "missing":
+            continue
+        premises.append(_premise("evidence", cid, state))
+    premises.append(_premise("execution_policy", "permit_nominal_basis",
+                             "on" if permit_nominal else "off"))
+    premises.append(_premise("execution_policy", "require_qualification",
+                             "on" if require_qualification else "off"))
+    for cid in sorted(gated):
+        premises.append(_premise("qualification", cid, gated[cid]))
+    for field_name, value in (
+        ("canonical_unit", result.canonical_unit),
+        ("limit", result.limit_canonical),
+        ("lower", result.lower_canonical),
+        ("upper", result.upper_canonical),
+        ("nominal", result.nominal_canonical),
+        ("tolerance", result.tolerance_canonical),
+        ("coverage", result.coverage),
+        ("observed_category", getattr(result, "observed_category", None)),
+    ):
+        if value is not None:
+            premises.append(_premise("canonical_value", field_name, str(value)))
+    reasons = [_reason_label(r) for r in result.reasons]
+    return _app(result.rule, requirement_id, result.status, premises, reasons)
+
+
+def _reason_label(reason) -> str:
+    if isinstance(reason, str):
+        return reason
+    if isinstance(reason, dict):
+        if "evidence_id" in reason and "state" in reason:
+            return f"{reason['evidence_id']}:{reason['state']}"
+        if "code" in reason:
+            return reason["code"]
+    return str(reason)
+
+
+def _premises_match(recorded: list, replayed: list) -> Optional[str]:
+    """Premise lists compare element-wise; returns a divergence
+    description or None."""
+    if len(recorded) != len(replayed):
+        return f"premise count: recorded {len(recorded)}, replayed {len(replayed)}"
+    for index, (r, p) in enumerate(zip(recorded, replayed)):
+        if r != p:
+            return (f"premise {index}: recorded {json.dumps(r, sort_keys=True)} "
+                    f"but the replayed check is {json.dumps(p, sort_keys=True)}")
+    return None
+
+
+def _reasons_match(recorded: list, replayed: list) -> Optional[str]:
+    """Reason labels compare as a multiset. EvidenceState labels carry a
+    formatted state string after `evidence_id:` — the evidence id itself
+    is checked (the premise list already pins the gated state verbatim)."""
+    pool = list(replayed)
+    unmatched = []
+    for label in recorded:
+        if label in pool:
+            pool.remove(label)
+            continue
+        prefix = label.split(":", 1)[0] + ":" if ":" in label else None
+        hit = next((i for i, p in enumerate(pool) if prefix and p.startswith(prefix)), None)
+        if hit is not None:
+            pool.pop(hit)
+        else:
+            unmatched.append(label)
+    if unmatched:
+        return f"recorded reasons {unmatched!r} are absent from the replayed check"
+    if pool:
+        return f"the replayed check emits reasons {pool!r} the record omits"
+    return None
+
+
+def verify_derivation_document(
+    derivation_path: Path,
+    contract_path: Path,
+    registry_path: Path,
+    claims_path: Path,
+    artifact_paths: list,
+    campaign_report_path: Optional[Path],
+    report: Report,
+) -> None:
+    """Replay one recorded verdict derivation. Every check lands on the
+    report: identities recomputed, each rule application re-derived, and
+    anything this verifier cannot decide is `not_checked`."""
+    try:
+        derivation_raw = derivation_path.read_bytes()
+        derivation = json.loads(derivation_raw)
+        contract_raw = contract_path.read_bytes()
+        registry_raw = registry_path.read_bytes()
+        claims_raw = claims_path.read_bytes()
+        contract = json.loads(contract_raw)
+        registry = json.loads(registry_raw)
+        claims = json.loads(claims_raw)
+    except (OSError, json.JSONDecodeError) as error:
+        report.not_checked("derivation.read", f"input unreadable: {error}")
+        return
+
+    if (derivation.get("schema_version") != DERIVATION_SCHEMA_VERSION
+            or derivation.get("semantic_profile") != SEMANTIC_PROFILE):
+        report.not_checked(
+            "derivation.schema",
+            f"record declares {derivation.get('schema_version')!r} under "
+            f"{derivation.get('semantic_profile')!r}; this verifier supports "
+            f"{DERIVATION_SCHEMA_VERSION} under {SEMANTIC_PROFILE}")
+        return
+    report.verified("derivation.schema", DERIVATION_SCHEMA_VERSION)
+
+    # The file's own identity: the body minus derivation_sha256 must hash
+    # to the recorded value. This catches byte tampering; it says nothing
+    # about whether the inferences are honest — that is what replay does.
+    body = {k: v for k, v in derivation.items() if k != "derivation_sha256"}
+    recomputed = _sha256_prefixed(canonicalize_json(json.dumps(body).encode("utf-8")))
+    if derivation.get("derivation_sha256") == recomputed:
+        report.verified("derivation.identity", recomputed)
+    else:
+        report.mismatch("derivation.identity",
+                        f"recorded {derivation.get('derivation_sha256')!r} but the body hashes to {recomputed}")
+
+    context = derivation.get("context")
+    if not isinstance(context, dict):
+        report.mismatch("derivation.context", "the record carries no context block")
+        return
+    context_recomputed = _sha256_prefixed(
+        canonicalize_json(json.dumps(context).encode("utf-8")))
+    if derivation.get("context_sha256") == context_recomputed:
+        report.verified("derivation.context", context_recomputed)
+    else:
+        report.mismatch("derivation.context",
+                        f"recorded {derivation.get('context_sha256')!r} but the record hashes to {context_recomputed}")
+
+    if context.get("schema_version") != CONTEXT_SCHEMA_VERSION:
+        report.not_checked("derivation.context.schema",
+                           f"context schema {context.get('schema_version')!r} is not {CONTEXT_SCHEMA_VERSION}")
+    else:
+        report.verified("derivation.context.schema", CONTEXT_SCHEMA_VERSION)
+
+    # The bound material's identities, each recomputed from the supplied
+    # documents — the context claims to bind *these* bytes.
+    try:
+        registry_sha256 = _document_sha256(registry_raw)
+        claims_sha256 = _document_sha256(claims_raw)
+    except CanonError as error:
+        report.not_checked("derivation.context.documents",
+                           f"registry/claims bytes are outside the authoritative profile: {error}")
+        return
+    if context.get("registry_sha256") == registry_sha256:
+        report.verified("derivation.context.registry_sha256", registry_sha256)
+    else:
+        report.mismatch("derivation.context.registry_sha256",
+                        f"recorded {context.get('registry_sha256')!r} but registry.json hashes to {registry_sha256}")
+    if context.get("claims_sha256") == claims_sha256:
+        report.verified("derivation.context.claims_sha256", claims_sha256)
+    else:
+        report.mismatch("derivation.context.claims_sha256",
+                        f"recorded {context.get('claims_sha256')!r} but claims.json hashes to {claims_sha256}")
+    if (context.get("registry_id") == registry.get("registry_id")
+            and context.get("registry_revision") == registry.get("revision")):
+        report.verified("derivation.context.registry_id",
+                        f"{registry.get('registry_id')}@{registry.get('revision')}")
+    else:
+        report.mismatch("derivation.context.registry_id",
+                        "recorded registry id/revision differ from registry.json")
+
+    try:
+        import avila_core_lower
+        snapshot_sha256 = avila_core_lower.lower_compiled_snapshot(contract_raw, registry_raw)
+        if context.get("compiled_snapshot_sha256") == snapshot_sha256:
+            report.verified("derivation.context.compiled_snapshot", snapshot_sha256)
+        else:
+            report.mismatch("derivation.context.compiled_snapshot",
+                            f"recorded {context.get('compiled_snapshot_sha256')!r} but the pair lowers to {snapshot_sha256}")
+    except avila_core_lower.WouldReject as error:
+        report.not_checked("derivation.context.compiled_snapshot",
+                           f"the contract+registry pair would not compile: {error}")
+    except Exception as error:
+        report.not_checked("derivation.context.compiled_snapshot",
+                           f"the pair uses constructs outside this verifier's lowering subset: {error}")
+
+    expected_policy = _normalized_execution_policy(contract)
+    if expected_policy is None:
+        report.not_checked("derivation.context.execution_policy",
+                           "the contract pins an organization_policy floor; the merged policy is out of scope")
+    elif context.get("execution_policy") == expected_policy:
+        report.verified("derivation.context.execution_policy")
+    else:
+        report.mismatch("derivation.context.execution_policy",
+                        "recorded policy differs from the contract's normalized execution_policy")
+
+    qualifications = sorted({
+        f"{q.get('qualification_id')}@{q.get('revision')}:{q.get('sha256')}"
+        for c in claims.get("claims", [])
+        for q in [c.get("qualification")] if q
+    })
+    if context.get("qualifications", []) == qualifications:
+        report.verified("derivation.context.qualifications", f"{len(qualifications)} bound")
+    else:
+        report.mismatch("derivation.context.qualifications",
+                        f"recorded {context.get('qualifications')!r} but the claims carry {qualifications!r}")
+
+    supplied_digests: Optional[set] = None
+    if artifact_paths:
+        supplied_digests = set()
+        for path in artifact_paths:
+            try:
+                supplied_digests.add(_sha256_prefixed(Path(path).read_bytes()))
+            except OSError as error:
+                report.not_checked("derivation.context.artifact_observations",
+                                   f"artifact {path} unreadable: {error}")
+                return
+    recorded_observations = context.get("artifact_observations", [])
+    if supplied_digests is not None:
+        if sorted(supplied_digests) == sorted(recorded_observations):
+            report.verified("derivation.context.artifact_observations",
+                            f"{len(recorded_observations)} checked")
+        else:
+            report.mismatch("derivation.context.artifact_observations",
+                            f"recorded {sorted(recorded_observations)} but the supplied artifacts hash to {sorted(supplied_digests)}")
+    elif recorded_observations:
+        report.not_checked("derivation.context.artifact_observations",
+                           "the record binds artifact observations but no --artifact bytes were supplied to re-check")
+    else:
+        report.verified("derivation.context.artifact_observations", "digest-only evaluation")
+
+    # Application replay. The observation set used for `artifact_observation`
+    # premises is the bound record's own list — the context identity ties
+    # the record to it; --artifact additionally proves the digests real.
+    try:
+        import avila_core_lower
+        index = avila_core_lower._build_index(registry)
+        kinds = index.kinds
+    except Exception as error:
+        report.not_checked("derivation.applications",
+                           f"registry could not be indexed: {error}")
+        return
+    try:
+        bindings, _order = avila_core_lower.resolved_workflow(contract, registry)
+    except Exception:
+        bindings = None
+    # The `artifact_observation` premises replay against the bound record's
+    # own list — the context identity ties the record to it; --artifact
+    # additionally proves the digests real (checked above).
+    observation_set = set(recorded_observations)
+
+    replayed: list[dict] = [_app(
+        "context.bind", context_recomputed, "bound",
+        [_premise("compiled_snapshot", context.get("compiled_snapshot_sha256", ""), "bound"),
+         _premise("registry",
+                  f"{context.get('registry_id')}@{context.get('registry_revision')}:{context.get('registry_sha256')}",
+                  "bound"),
+         _premise("claims", context.get("claims_sha256", ""), "bound"),
+         _premise("execution_policy", "compiled", "bound")]
+        + [_premise("qualification", q, "bound") for q in qualifications]
+        + [_premise("artifact_observation", o, "checked") for o in recorded_observations],
+    )]
+    try:
+        admission_apps, states = _replay_admissions(
+            contract, index, claims, observation_set, bindings)
+        replayed.extend(admission_apps)
+        replayed.extend(_replay_verdict_applications(
+            contract, claims, kinds, states, context_recomputed,
+            expected_policy or {}))
+    except (CanonError, KeyError, TypeError) as error:
+        report.not_checked("derivation.applications",
+                           f"replay hit a construct outside the covered subset: {error}")
+        return
+
+    unmatched = list(enumerate(derivation.get("applications", [])))
+    replayed_pool = list(replayed)
+    for position, recorded in unmatched:
+        subject = recorded.get("subject", "?")
+        check = f"derivation.application[{position}]({recorded.get('rule', '?')}:{subject})"
+        candidates = [r for r in replayed_pool
+                      if r["rule"] == recorded.get("rule") and r["subject"] == subject]
+        if not candidates:
+            if any(r["subject"] == subject for r in replayed_pool):
+                report.mismatch(check, "the replay ran a different rule on this subject")
+            else:
+                report.mismatch(check, "the replay produced no such application")
+            continue
+        replayed_app = candidates[0]
+        replayed_pool.remove(replayed_app)
+        problems = []
+        if recorded.get("conclusion") != replayed_app["conclusion"]:
+            problems.append(f"conclusion: recorded {recorded.get('conclusion')!r}, replayed {replayed_app['conclusion']!r}")
+        premise_problem = _premises_match(recorded.get("premises", []), replayed_app["premises"])
+        if premise_problem:
+            problems.append(premise_problem)
+        reason_problem = _reasons_match(recorded.get("reasons", []), replayed_app["reasons"])
+        if reason_problem:
+            problems.append(reason_problem)
+        if problems:
+            report.mismatch(check, "; ".join(problems))
+        else:
+            report.verified(check, f"{recorded.get('rule')} → {recorded.get('conclusion')}")
+    for leftover in replayed_pool:
+        report.mismatch(
+            f"derivation.application[{leftover['rule']}:{leftover['subject']}]",
+            "the replay produced this application but the record omits it")
+
+    if campaign_report_path is not None:
+        try:
+            campaign = json.loads(Path(campaign_report_path).read_bytes())
+            # Same rule verdict.campaign_sha256 uses: `campaign_sha256` and
+            # `notice` are outside the body; `findings` is always in the
+            # identity body even though the committed report omits it empty.
+            campaign_body = {k: v for k, v in campaign.items()
+                             if k not in ("campaign_sha256", "notice")}
+            campaign_body.setdefault("findings", [])
+            recomputed = sha256_bytes(canonicalize_value(campaign_body))
+            if derivation.get("campaign_sha256") == recomputed:
+                report.verified("derivation.campaign", recomputed)
+            else:
+                report.mismatch("derivation.campaign",
+                                f"recorded {derivation.get('campaign_sha256')!r} but the report body hashes to {recomputed}")
+        except (OSError, json.JSONDecodeError) as error:
+            report.not_checked("derivation.campaign", f"campaign report unreadable: {error}")
+    elif derivation.get("campaign_sha256"):
+        report.not_checked("derivation.campaign",
+                           "the record carries a campaign identity but no --campaign-report was supplied")
+
+
+def explain_derivation_changes(before: dict, after: dict) -> dict:
+    """Port of the compiler's `explain_derivation_changes`: applications
+    matched by (rule, subject); a changed conclusion names the premise
+    kinds that differ; equal verdicts under different premises stay
+    distinct. `same_context` reports whether the two records bound the
+    same context — when not, every application is a cross-context
+    comparison, not an invalidation."""
+    def index(d: dict) -> dict:
+        return {(a.get("rule"), a.get("subject")): a
+                for a in d.get("applications", [])}
+
+    before_apps, after_apps = index(before), index(after)
+    uses = []
+    for key in sorted(set(before_apps) | set(after_apps)):
+        prior, current = before_apps.get(key), after_apps.get(key)
+        if prior is None:
+            uses.append({"change": "added", "rule": key[0], "subject": key[1],
+                         "after_conclusion": current.get("conclusion")})
+        elif current is None:
+            uses.append({"change": "removed", "rule": key[0], "subject": key[1],
+                         "before_conclusion": prior.get("conclusion")})
+        else:
+            prior_set = {(p.get("kind"), p.get("id"), p.get("state"))
+                         for p in prior.get("premises", [])}
+            current_set = {(p.get("kind"), p.get("id"), p.get("state"))
+                           for p in current.get("premises", [])}
+            changed_kinds = sorted({
+                kind
+                for kind in {p[0] for p in prior_set} | {p[0] for p in current_set}
+                if {p for p in prior_set if p[0] == kind}
+                != {p for p in current_set if p[0] == kind}
+            })
+            if prior.get("conclusion") != current.get("conclusion"):
+                uses.append({"change": "conclusion_changed", "rule": key[0],
+                             "subject": key[1],
+                             "before_conclusion": prior.get("conclusion"),
+                             "after_conclusion": current.get("conclusion"),
+                             "changed_premise_kinds": changed_kinds})
+            elif changed_kinds or prior.get("reasons") != current.get("reasons"):
+                uses.append({"change": "premises_changed", "rule": key[0],
+                             "subject": key[1],
+                             "conclusion": current.get("conclusion"),
+                             "changed_premise_kinds": changed_kinds})
+    return {
+        "same_context": before.get("context_sha256") == after.get("context_sha256"),
+        "before_context_sha256": before.get("context_sha256"),
+        "after_context_sha256": after.get("context_sha256"),
+        "uses": uses,
+    }
 
 
 COMPARISON_TOKEN_TO_COMPARISON = {

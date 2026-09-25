@@ -267,8 +267,7 @@ mod execution {
             )
             .unwrap();
             let compiled = compilation
-                .compiled
-                .as_ref()
+                .contract()
                 .unwrap_or_else(|| panic!("{compilation:?}"));
             let claim = if model == "interval" {
                 json!({"model":"interval",
@@ -283,7 +282,7 @@ mod execution {
                 &json!({
                     "schema_version":"avila.core/evidence-claims/v0.2-draft",
                     "semantic_profile":"avila.core/semantic/0.2-draft",
-                    "compiled_snapshot_sha256":compiled.snapshot_sha256,
+                    "compiled_snapshot_sha256":compiled.snapshot_sha256(),
                     "inputs":[{"input_id":"candidate","artifact":{"sha256":output_sha,"media_type":"application/json"}}],
                     "claims":[{"claim_id":"measurement","step_id":"check","output_slot":"measurement",
                         "artifact":{"sha256":output_sha,"media_type":"application/json"},

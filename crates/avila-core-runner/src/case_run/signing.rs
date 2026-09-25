@@ -65,7 +65,7 @@ pub(super) fn find_signature_for(
     target_document_id: &str,
 ) -> Option<(String, SignatureDocument)> {
     package
-        .manifest
+        .manifest()
         .documents
         .iter()
         .filter(|document| document.role == "signature")
@@ -88,7 +88,7 @@ pub(super) fn manifest_signature_status(
     trust_root: Option<&TrustRoot>,
 ) -> SignatureStatus {
     let Some((signature_document_id, document)) =
-        find_signature_for(package, "manifest", &package.manifest.case_id)
+        find_signature_for(package, "manifest", &package.manifest().case_id)
     else {
         return SignatureStatus::Unsigned;
     };

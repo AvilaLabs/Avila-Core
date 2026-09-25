@@ -269,7 +269,7 @@ pub(super) fn verify_bindings(
     }
 
     let required_policies: BTreeSet<String> = compiled
-        .workflow
+        .workflow()
         .iter()
         .filter_map(|step| step.presentation_gate.as_ref())
         .map(|review| review.reviewer_eligibility_policy.sha256.clone())
@@ -326,7 +326,7 @@ pub(super) fn replay_expected(
     campaign: &CampaignReport,
 ) -> Result<Option<ReplayReport>, Box<dyn Error>> {
     let Some(document) = package
-        .manifest
+        .manifest()
         .documents
         .iter()
         .find(|document| document.role == "expected_campaign_report")

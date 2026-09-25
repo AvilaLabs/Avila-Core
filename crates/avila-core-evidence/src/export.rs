@@ -119,10 +119,15 @@ pub fn export_package(
         canonical_roots.insert(name.clone(), canonical_directory(path)?);
     }
 
-    let verified = verify_case_package(&manifest_bytes, &package_root, &canonical_roots, None)?;
-    if verified.integrity.status != crate::PackageIntegrityStatus::Complete {
-        return Err(ExportError::IntegrityNotComplete(verified.integrity.status));
-    }
+    let verified =
+        match verify_case_package(&manifest_bytes, &package_root, &canonical_roots, None)? {
+            crate::PackageVerification::Verified(package) => package,
+            other => {
+                return Err(ExportError::IntegrityNotComplete(
+                    other.integrity_report().status,
+                ));
+            }
+        };
 
     prepare_out_dir(out_dir)?;
 
@@ -195,7 +200,7 @@ pub fn export_package(
         schema_version: EXPORT_REPORT_SCHEMA_VERSION,
         status: ExportStatus::Exported,
         case_id: &manifest.case_id,
-        manifest_sha256: &verified.integrity.manifest_sha256,
+        manifest_sha256: &verified.integrity().manifest_sha256,
         documents: &documents,
         artifacts: &artifacts,
         source_roots: &exported_roots,
@@ -209,7 +214,7 @@ pub fn export_package(
         schema_version: EXPORT_REPORT_SCHEMA_VERSION.into(),
         status: ExportStatus::Exported,
         case_id: manifest.case_id.clone(),
-        manifest_sha256: verified.integrity.manifest_sha256.clone(),
+        manifest_sha256: verified.integrity().manifest_sha256.clone(),
         documents,
         artifacts,
         source_roots: exported_roots,
@@ -402,8 +407,14 @@ mod tests {
             None,
         )
         .unwrap();
-        assert_eq!(verified.integrity.status, PackageIntegrityStatus::Complete);
-        assert_eq!(verified.integrity.manifest_sha256, report.manifest_sha256);
+        let verified = verified
+            .into_package()
+            .expect("a complete export verifies the bundle");
+        assert_eq!(
+            verified.integrity().status,
+            PackageIntegrityStatus::Complete
+        );
+        assert_eq!(verified.integrity().manifest_sha256, report.manifest_sha256);
 
         // The report is content-identified: recomputing the canonical body
         // minus the digest field and informational notice reproduces

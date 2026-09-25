@@ -5,7 +5,7 @@ use super::stderr::{
 };
 use super::*;
 use crate::diagnostic::{CORE_X6501, CORE_X6502};
-use avila_core_compiler::compile_documents;
+use avila_core_compiler::{compile_documents, evaluate_campaign};
 use sha2::{Digest, Sha256};
 
 fn comparison_attempt() -> AttemptRecord {
@@ -206,7 +206,7 @@ fn case_001_materializes_an_exact_optional_practical_review_request() {
     let contract = fs::read(case_001().join("contract.json")).unwrap();
     let registry = fs::read(case_001().join("registry.json")).unwrap();
     let compile = compile_documents(&contract, &registry).unwrap();
-    let compiled = compile.compiled.as_ref().unwrap();
+    let compiled = compile.report().compiled.as_ref().unwrap();
     let claims_bytes = fs::read(case_001().join("claims.json")).unwrap();
     let claims: ClaimsDocument = serde_json::from_slice(&claims_bytes).unwrap();
     let campaign = evaluate_campaign(&contract, &registry, &claims_bytes).unwrap();
@@ -333,7 +333,7 @@ fn a_routing_record_verifies_and_each_broken_binding_quarantines() {
     let contract = fs::read(case_001().join("contract.json")).unwrap();
     let registry = fs::read(case_001().join("registry.json")).unwrap();
     let compile = compile_documents(&contract, &registry).unwrap();
-    let compiled = compile.compiled.as_ref().unwrap();
+    let compiled = compile.report().compiled.as_ref().unwrap();
     let claims_bytes = fs::read(case_001().join("claims.json")).unwrap();
     let claims: ClaimsDocument = serde_json::from_slice(&claims_bytes).unwrap();
     let campaign = evaluate_campaign(&contract, &registry, &claims_bytes).unwrap();
@@ -396,7 +396,7 @@ fn routing_records_skip_unmaterialized_gates_and_quarantine_undeclared_ones() {
     let contract = fs::read(case_001().join("contract.json")).unwrap();
     let registry = fs::read(case_001().join("registry.json")).unwrap();
     let compile = compile_documents(&contract, &registry).unwrap();
-    let compiled = compile.compiled.as_ref().unwrap();
+    let compiled = compile.report().compiled.as_ref().unwrap();
     let claims_bytes = fs::read(case_001().join("claims.json")).unwrap();
     let claims: ClaimsDocument = serde_json::from_slice(&claims_bytes).unwrap();
     let campaign = evaluate_campaign(&contract, &registry, &claims_bytes).unwrap();
@@ -404,8 +404,10 @@ fn routing_records_skip_unmaterialized_gates_and_quarantine_undeclared_ones() {
     assert_eq!(gates.len(), 1);
 
     let manifest_bytes = fs::read(case_001().join("package.json")).unwrap();
-    let package =
-        verify_case_package(&manifest_bytes, &case_001(), &shielding_root(), None).unwrap();
+    let package = verify_case_package(&manifest_bytes, &case_001(), &shielding_root(), None)
+        .unwrap()
+        .into_package()
+        .expect("the fixture package verifies");
 
     // The committed record names `practical-review` — a declared gate,
     // materialized here. Its request_sha256 was bound by an older
@@ -445,8 +447,10 @@ fn routing_records_skip_unmaterialized_gates_and_quarantine_undeclared_ones() {
     .unwrap();
 
     let forged_manifest = fs::read(&manifest_path).unwrap();
-    let forged_package =
-        verify_case_package(&forged_manifest, &temp, &shielding_root(), None).unwrap();
+    let forged_package = verify_case_package(&forged_manifest, &temp, &shielding_root(), None)
+        .unwrap()
+        .into_package()
+        .expect("the forged manifest still verifies as bytes");
     let findings = routing::check_routing_records(&forged_package, compiled, &mut gates);
     let finding = findings
         .iter()
@@ -1217,7 +1221,9 @@ fn org_policy_fixture(
         &std::collections::BTreeMap::new(),
         None,
     )
-    .unwrap();
+    .unwrap()
+    .into_package()
+    .expect("the fixture package verifies");
     (temp, package, contract_bytes, seed)
 }
 

@@ -186,8 +186,10 @@ fn optional_agent_review_is_not_a_technical_verdict_input() {
 
     let contract = serde_json::to_vec(&contract).unwrap();
     let registry = serde_json::to_vec(&registry).unwrap();
-    let compile = compile_documents(&contract, &registry).unwrap();
-    let snapshot = compile.compiled.unwrap().snapshot_sha256;
+    let compile = compile_documents(&contract, &registry)
+        .unwrap()
+        .into_report();
+    let snapshot = compile.compiled.unwrap().snapshot_sha256().to_string();
     let mut claims: Value = serde_json::from_slice(
         &fs::read(root.join("campaign.practical-review.pass.claims.json")).unwrap(),
     )
@@ -243,9 +245,11 @@ fn categorical_claims_produce_closed_set_pass_and_fail_verdicts() {
     let registry = serde_json::to_vec(&registry).unwrap();
     let snapshot = compile_documents(&contract, &registry)
         .unwrap()
+        .into_report()
         .compiled
         .unwrap()
-        .snapshot_sha256;
+        .snapshot_sha256()
+        .to_string();
     let mut claims: Value = serde_json::from_slice(
         &fs::read(root.join("campaign.le.within.pass.claims.json")).unwrap(),
     )

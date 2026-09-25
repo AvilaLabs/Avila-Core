@@ -67,7 +67,9 @@ fn purpose_registry() -> RegistrySnapshot {
 }
 
 fn compile_contract(contract: &ContractSource) -> CompileReport {
-    compile_documents(&serde_json::to_vec(contract).unwrap(), REGISTRY).unwrap()
+    compile_documents(&serde_json::to_vec(contract).unwrap(), REGISTRY)
+        .unwrap()
+        .into_report()
 }
 
 fn compile_with_registry(contract: &ContractSource, registry: &RegistrySnapshot) -> CompileReport {
@@ -76,6 +78,7 @@ fn compile_with_registry(contract: &ContractSource, registry: &RegistrySnapshot)
         &serde_json::to_vec(registry).unwrap(),
     )
     .unwrap()
+    .into_report()
 }
 
 fn codes(report: &CompileReport) -> BTreeSet<&str> {
@@ -88,18 +91,24 @@ fn codes(report: &CompileReport) -> BTreeSet<&str> {
 
 #[test]
 fn resolved_fixture_compiles_deterministically() {
-    let first = compile_documents(CONTRACT, REGISTRY).unwrap();
-    let second = compile_documents(CONTRACT, REGISTRY).unwrap();
+    let first = compile_documents(CONTRACT, REGISTRY).unwrap().into_report();
+    let second = compile_documents(CONTRACT, REGISTRY).unwrap().into_report();
     assert_eq!(first, second);
     assert_eq!(first.status, CompilationStatus::Compiled);
     assert!(first.findings.is_empty());
     let compiled = first.compiled.unwrap();
-    assert_eq!(compiled.workflow.len(), 2);
-    assert_eq!(compiled.workflow[1].bindings.len(), 1);
-    assert_eq!(compiled.requirements[0].limit.value, "1/36000000");
-    assert_eq!(compiled.requirements[0].limit.unit, "Sv/s");
+    assert_eq!(compiled.workflow().len(), 2);
+    assert_eq!(compiled.workflow()[1].bindings.len(), 1);
     assert_eq!(
-        compiled.snapshot_sha256,
+        compiled.requirements()[0]
+            .limit
+            .value()
+            .canonical_rational(),
+        "1/36000000"
+    );
+    assert_eq!(compiled.requirements()[0].limit.unit(), "Sv/s");
+    assert_eq!(
+        compiled.snapshot_sha256(),
         "sha256:cc802164995a2a326855de6414b175e2fb750072711fcebc175957540904bd3d"
     );
 }
@@ -131,8 +140,8 @@ fn closed_vocabulary_categorical_requirements_compile_without_changing_numeric_s
         report.findings
     );
     let compiled = report.compiled.unwrap();
-    assert_eq!(compiled.requirements.len(), 1);
-    assert_eq!(compiled.categorical_requirements.len(), 1);
+    assert_eq!(compiled.requirements().len(), 1);
+    assert_eq!(compiled.categorical_requirements().len(), 1);
 
     source.categorical_requirements[0].predicate = CategoricalPredicate::InSet {
         values: vec!["clear".into(), "invented".into()],
@@ -150,7 +159,9 @@ fn closed_vocabulary_categorical_requirements_compile_without_changing_numeric_s
 
 #[test]
 fn authoritative_failures_become_findings() {
-    let report = compile_documents(br#"{"value":1.0}"#, REGISTRY).unwrap();
+    let report = compile_documents(br#"{"value":1.0}"#, REGISTRY)
+        .unwrap()
+        .into_report();
     assert_eq!(report.status, CompilationStatus::Rejected);
     assert!(report.compiled.is_none());
     let located: Vec<_> = report
@@ -175,8 +186,9 @@ fn authoritative_failures_become_findings() {
 fn source_layer_findings_name_the_offending_value() {
     let mut float_parameter: serde_json::Value = serde_json::from_slice(CONTRACT).unwrap();
     float_parameter["workflow"][0]["parameters"]["x"] = serde_json::json!(1.5);
-    let report =
-        compile_documents(&serde_json::to_vec(&float_parameter).unwrap(), REGISTRY).unwrap();
+    let report = compile_documents(&serde_json::to_vec(&float_parameter).unwrap(), REGISTRY)
+        .unwrap()
+        .into_report();
     assert_eq!(report.findings.len(), 1, "{:?}", report.findings);
     assert_eq!(report.findings[0].code, CORE_S1102);
     assert_eq!(
@@ -186,7 +198,9 @@ fn source_layer_findings_name_the_offending_value() {
 
     let mut unknown_field: serde_json::Value = serde_json::from_slice(CONTRACT).unwrap();
     unknown_field["workflow"][1]["bogus_field"] = serde_json::json!(1);
-    let report = compile_documents(&serde_json::to_vec(&unknown_field).unwrap(), REGISTRY).unwrap();
+    let report = compile_documents(&serde_json::to_vec(&unknown_field).unwrap(), REGISTRY)
+        .unwrap()
+        .into_report();
     assert_eq!(report.findings.len(), 1, "{:?}", report.findings);
     assert_eq!(report.findings[0].code, CORE_S1101);
     assert_eq!(
@@ -196,7 +210,9 @@ fn source_layer_findings_name_the_offending_value() {
 
     let mut wrong_variant: serde_json::Value = serde_json::from_slice(CONTRACT).unwrap();
     wrong_variant["requirements"][0]["comparison"] = serde_json::json!("lessthan");
-    let report = compile_documents(&serde_json::to_vec(&wrong_variant).unwrap(), REGISTRY).unwrap();
+    let report = compile_documents(&serde_json::to_vec(&wrong_variant).unwrap(), REGISTRY)
+        .unwrap()
+        .into_report();
     assert_eq!(report.findings.len(), 1, "{:?}", report.findings);
     assert_eq!(report.findings[0].code, CORE_S1102);
     assert_eq!(
@@ -216,7 +232,9 @@ fn source_layer_findings_name_the_offending_value() {
 
     let mut noncanonical: serde_json::Value = serde_json::from_slice(CONTRACT).unwrap();
     noncanonical["requirements"][0]["limit"]["value"] = serde_json::json!("100.0");
-    let report = compile_documents(&serde_json::to_vec(&noncanonical).unwrap(), REGISTRY).unwrap();
+    let report = compile_documents(&serde_json::to_vec(&noncanonical).unwrap(), REGISTRY)
+        .unwrap()
+        .into_report();
     assert_eq!(report.findings.len(), 1, "{:?}", report.findings);
     assert_eq!(report.findings[0].code, CORE_S1102);
     assert_eq!(
@@ -244,7 +262,9 @@ fn source_layer_findings_name_the_offending_value() {
         .as_object_mut()
         .unwrap()
         .remove("statement");
-    let report = compile_documents(&serde_json::to_vec(&several).unwrap(), REGISTRY).unwrap();
+    let report = compile_documents(&serde_json::to_vec(&several).unwrap(), REGISTRY)
+        .unwrap()
+        .into_report();
     let located: Vec<_> = report
         .findings
         .iter()
@@ -418,11 +438,13 @@ fn required_slots_fail_closed_when_unresolved_or_ambiguous() {
 
 #[test]
 fn optional_agent_review_never_becomes_a_technical_verdict() {
-    let report = compile_documents(REVIEW_CONTRACT, REVIEW_REGISTRY).unwrap();
+    let report = compile_documents(REVIEW_CONTRACT, REVIEW_REGISTRY)
+        .unwrap()
+        .into_report();
     assert_eq!(report.status, CompilationStatus::Compiled);
     let compiled = report.compiled.unwrap();
     let review = compiled
-        .workflow
+        .workflow()
         .iter()
         .find(|step| step.step_id == "review")
         .and_then(|step| step.presentation_gate.as_ref())
@@ -431,7 +453,7 @@ fn optional_agent_review_never_becomes_a_technical_verdict() {
     assert_eq!(review.reviewer_role, ReviewerRole::Agent);
     assert_eq!(review.presented_evidence[0].input_slot, "trace");
     assert_eq!(review.presented_evidence[1].input_slot, "result");
-    assert!(compiled.requirements.iter().all(|requirement| {
+    assert!(compiled.requirements().iter().all(|requirement| {
         !matches!(
             &requirement.metric,
             SourceRef::StepOutput { step_id, .. } if step_id == "review"
@@ -463,13 +485,12 @@ fn agent_review_is_instructed_and_routes_presentation() {
         vec!["Critique practical implementation and never construct a technical verdict.".into()];
     let report = compile_with_registry(&source, &registry);
     assert_eq!(report.status, CompilationStatus::Compiled);
-    let review = report
-        .compiled
-        .unwrap()
-        .workflow
-        .into_iter()
+    let compiled = report.compiled.unwrap();
+    let review = compiled
+        .workflow()
+        .iter()
         .find(|step| step.step_id == "review")
-        .and_then(|step| step.presentation_gate)
+        .and_then(|step| step.presentation_gate.as_ref())
         .unwrap();
     assert_eq!(review.state, PresentationGateState::AwaitingAgent);
     assert_eq!(review.reviewer_role, ReviewerRole::Agent);
@@ -529,10 +550,12 @@ fn incomplete_review_type_declarations_fail_closed() {
 
 #[test]
 fn purpose_exclusions_are_nominal_and_fail_closed() {
-    let allowed = compile_documents(PURPOSE_CONTRACT, PURPOSE_REGISTRY).unwrap();
+    let allowed = compile_documents(PURPOSE_CONTRACT, PURPOSE_REGISTRY)
+        .unwrap()
+        .into_report();
     assert_eq!(allowed.status, CompilationStatus::Compiled);
     assert_eq!(
-        allowed.compiled.unwrap().requirements[0].purpose,
+        allowed.compiled.unwrap().requirements()[0].purpose,
         VersionedRef {
             id: "fixture.design_compliance".into(),
             major: 1,
@@ -611,7 +634,7 @@ fn explicit_binding_resolves_ambiguity_without_mutating_source() {
     assert_eq!(report.status, CompilationStatus::Compiled);
     let compiled = report.compiled.unwrap();
     assert_eq!(
-        compiled.workflow[0].bindings[0].source,
+        compiled.workflow()[0].bindings[0].source,
         SourceRef::ContractInput {
             input_id: "case".into()
         }
@@ -906,9 +929,9 @@ fn equality_requires_a_nonnegative_tolerance_of_the_metric_kind() {
     let report = compile_contract(&valid);
     assert_eq!(report.status, CompilationStatus::Compiled);
     let compiled = report.compiled.unwrap();
-    let tolerance = compiled.requirements[0].tolerance.as_ref().unwrap();
-    assert_eq!(tolerance.value, "1/3600000000");
-    assert_eq!(tolerance.unit, "Sv/s");
+    let tolerance = compiled.requirements()[0].tolerance.as_ref().unwrap();
+    assert_eq!(tolerance.value().canonical_rational(), "1/3600000000");
+    assert_eq!(tolerance.unit(), "Sv/s");
 }
 
 #[test]
@@ -952,7 +975,7 @@ fn coverage_must_be_a_canonical_decimal_in_the_unit_interval_on_a_bounded_basis(
         let report = with_coverage(BasisKind::Bounded, valid);
         assert_eq!(report.status, CompilationStatus::Compiled, "{valid}");
         assert_eq!(
-            report.compiled.unwrap().requirements[0]
+            report.compiled.unwrap().requirements()[0]
                 .basis
                 .coverage
                 .as_deref(),
@@ -1045,7 +1068,7 @@ fn a_completion_block_compiles_into_the_snapshot() {
     let block = report
         .compiled
         .as_ref()
-        .and_then(|compiled| compiled.completion.as_ref())
+        .and_then(|compiled| compiled.completion())
         .expect("the declared block is carried into the compiled contract");
     assert_eq!(
         block.fulfilling_verdicts,
@@ -1087,7 +1110,9 @@ fn campaign_states_do_not_exist_on_a_contract() {
     // vocabulary is closed, so a campaign state cannot even be named.
     let mut document = serde_json::to_value(contract()).unwrap();
     document["status"] = serde_json::json!("running");
-    let report = compile_documents(&document.to_string().into_bytes(), REGISTRY).unwrap();
+    let report = compile_documents(&document.to_string().into_bytes(), REGISTRY)
+        .unwrap()
+        .into_report();
     assert_eq!(report.status, CompilationStatus::Rejected);
 }
 
@@ -1205,17 +1230,18 @@ fn a_cross_kind_conversion_is_an_explicit_capability_type() {
         &source.to_string().into_bytes(),
         &registry.to_string().into_bytes(),
     )
-    .unwrap();
+    .unwrap()
+    .into_report();
     assert_eq!(report.status, CompilationStatus::Compiled, "{report:#?}");
     let compiled = report.compiled.unwrap();
-    assert_eq!(compiled.workflow.len(), 1);
-    assert_eq!(compiled.workflow[0].step_id, "convert");
+    assert_eq!(compiled.workflow().len(), 1);
+    assert_eq!(compiled.workflow()[0].step_id, "convert");
     let sv_kind = "nuclear.dose_equivalent_rate";
     assert!(
         compiled
-            .requirements
+            .requirements()
             .iter()
-            .any(|requirement| requirement.limit.kind == sv_kind)
+            .any(|requirement| requirement.limit.kind() == sv_kind)
     );
 }
 
@@ -1255,7 +1281,8 @@ fn a_decision_rounding_capability_declares_its_transformation() {
         &serde_json::to_vec(&contract()).unwrap(),
         &reg.to_string().into_bytes(),
     )
-    .unwrap();
+    .unwrap()
+    .into_report();
     assert_eq!(report.status, CompilationStatus::Compiled, "{report:#?}");
     let compiled = report.compiled.unwrap();
 
@@ -1292,11 +1319,12 @@ fn a_decision_rounding_capability_declares_its_transformation() {
         &serde_json::to_vec(&contract()).unwrap(),
         &other.to_string().into_bytes(),
     )
-    .unwrap();
+    .unwrap()
+    .into_report();
     assert_eq!(other_report.status, CompilationStatus::Compiled);
     assert_ne!(
-        compiled.snapshot_sha256,
-        other_report.compiled.unwrap().snapshot_sha256
+        compiled.snapshot_sha256(),
+        other_report.compiled.unwrap().snapshot_sha256()
     );
 }
 
@@ -1333,7 +1361,8 @@ fn a_rounding_raw_input_edge_must_name_a_declared_input() {
         &serde_json::to_vec(&contract()).unwrap(),
         &registry.to_string().into_bytes(),
     )
-    .unwrap();
+    .unwrap()
+    .into_report();
     assert_eq!(report.status, CompilationStatus::Rejected);
     assert!(
         report
@@ -1352,7 +1381,9 @@ fn rounding_cannot_be_smuggled_into_a_requirement() {
     let mut source = serde_json::to_value(contract()).unwrap();
     source["requirements"][0]["rounding"] =
         serde_json::json!({"quantum": {"value": "0.1", "unit": "uSv/h"}, "mode": "half_up"});
-    let report = compile_documents(&serde_json::to_vec(&source).unwrap(), REGISTRY).unwrap();
+    let report = compile_documents(&serde_json::to_vec(&source).unwrap(), REGISTRY)
+        .unwrap()
+        .into_report();
     assert_eq!(report.status, CompilationStatus::Rejected);
 }
 
@@ -1815,6 +1846,7 @@ mod instantiation {
             },
         )
         .unwrap()
+        .into_report()
     }
 
     #[test]
@@ -2122,6 +2154,7 @@ mod org_policy {
             },
         )
         .unwrap()
+        .into_report()
     }
 
     fn merged_policy(report: &CompileReport) -> ExecutionPolicy {
@@ -2129,7 +2162,7 @@ mod org_policy {
             .compiled
             .as_ref()
             .expect("compiles")
-            .execution_policy
+            .execution_policy()
             .clone()
     }
 

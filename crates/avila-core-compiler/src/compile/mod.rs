@@ -52,8 +52,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub use self::schema::validate_against_schema;
 pub use ir::{
-    COMPILE_NOTICE, CanonicalTypedQuantity, CompilationStatus, CompileReport,
-    CompiledCategoricalRequirement, CompiledContract, CompiledParameterValue,
+    COMPILE_NOTICE, CanonicalTypedQuantity, CheckedCompilation, Compilation, CompilationStatus,
+    CompileReport, CompiledCategoricalRequirement, CompiledContract, CompiledParameterValue,
     CompiledPresentationGate, CompiledReproducibility, CompiledRequirement, CompiledStep,
     CompilerError, DocumentIdentity, PresentationGateState, ResolvedBinding,
 };
@@ -83,12 +83,13 @@ const MAX_WORKFLOW_STEPS: usize = 2_048;
 
 /// Compile authoritative JSON documents against one explicit registry snapshot.
 ///
-/// User-caused problems are returned as deterministic findings. `Err` is
-/// reserved for a compiler-internal failure while constructing successful IR.
+/// Returns the closed `Compilation` outcome: `Compiled` carries the checked
+/// contract, `Rejected` carries the findings-only report. `Err` is reserved
+/// for a compiler-internal failure while constructing successful IR.
 pub fn compile_documents(
     contract_bytes: &[u8],
     registry_bytes: &[u8],
-) -> Result<CompileReport, CompilerError> {
+) -> Result<Compilation, CompilerError> {
     compile_documents_with_material(
         contract_bytes,
         registry_bytes,
@@ -104,7 +105,7 @@ pub fn compile_documents_with_material(
     contract_bytes: &[u8],
     registry_bytes: &[u8],
     material: &instantiation::CompilationMaterial<'_>,
-) -> Result<CompileReport, CompilerError> {
+) -> Result<Compilation, CompilerError> {
     let mut findings = Vec::new();
     let mut source_identities = Vec::new();
 
@@ -260,15 +261,17 @@ pub fn compile_documents_with_material(
         merged_policy.as_ref().unwrap_or(&contract.execution_policy),
     )?;
 
-    Ok(CompileReport {
-        schema_version: COMPILE_REPORT_SCHEMA_VERSION.into(),
-        semantic_profile: SEMANTIC_PROFILE.into(),
-        status: CompilationStatus::Compiled,
-        source_identities,
-        findings,
-        compiled: Some(compiled),
-        notice: COMPILE_NOTICE.into(),
-    })
+    Ok(Compilation::Compiled(CheckedCompilation::new(
+        CompileReport {
+            schema_version: COMPILE_REPORT_SCHEMA_VERSION.into(),
+            semantic_profile: SEMANTIC_PROFILE.into(),
+            status: CompilationStatus::Compiled,
+            source_identities,
+            findings,
+            compiled: Some(compiled),
+            notice: COMPILE_NOTICE.into(),
+        },
+    )))
 }
 
 /// SC-9 clause 6: a declared completion block must be internally possible.
@@ -420,33 +423,33 @@ fn create_compiled_contract(
         .map_err(|error| CompilerError::InternalCanonicalization(error.to_string()))?;
     let snapshot_sha256 = prefixed_sha256(canonical);
 
-    Ok(CompiledContract {
-        schema_version: COMPILED_CONTRACT_SCHEMA_VERSION.into(),
-        semantic_profile: SEMANTIC_PROFILE.into(),
-        compiler: COMPILER_ID.into(),
-        contract_id: contract.contract_id.clone(),
-        contract_revision: contract.revision,
+    Ok(CompiledContract::new(
+        COMPILED_CONTRACT_SCHEMA_VERSION.into(),
+        SEMANTIC_PROFILE.into(),
+        COMPILER_ID.into(),
+        contract.contract_id.clone(),
+        contract.revision,
         contract_sha256,
-        question: contract.question.clone(),
-        assumptions: contract.assumptions.clone(),
-        registry_id: registry.registry_id.clone(),
-        registry_revision: registry.revision,
+        contract.question.clone(),
+        contract.assumptions.clone(),
+        registry.registry_id.clone(),
+        registry.revision,
         registry_sha256,
-        execution_policy: execution_policy.clone(),
-        completion: contract.completion.clone(),
+        execution_policy.clone(),
+        contract.completion.clone(),
         inputs,
         workflow,
         requirements,
         categorical_requirements,
         snapshot_sha256,
-    })
+    ))
 }
 
 fn rejected_report(
     source_identities: Vec<DocumentIdentity>,
     findings: Vec<CoreDiagnostic>,
-) -> CompileReport {
-    CompileReport {
+) -> Compilation {
+    Compilation::Rejected(CompileReport {
         schema_version: COMPILE_REPORT_SCHEMA_VERSION.into(),
         semantic_profile: SEMANTIC_PROFILE.into(),
         status: CompilationStatus::Rejected,
@@ -454,7 +457,7 @@ fn rejected_report(
         findings,
         compiled: None,
         notice: COMPILE_NOTICE.into(),
-    }
+    })
 }
 
 pub(crate) fn sort_findings(findings: &mut [CoreDiagnostic]) {

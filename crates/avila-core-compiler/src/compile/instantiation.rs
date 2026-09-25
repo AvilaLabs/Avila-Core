@@ -869,10 +869,7 @@ fn check_validation_cases(
                     }
                 };
                 let report = super::compile_documents(&contract_bytes, registry_bytes);
-                let compiles = matches!(
-                    report,
-                    Ok(ref report) if report.status == super::ir::CompilationStatus::Compiled
-                );
+                let compiles = matches!(report, Ok(super::Compilation::Compiled(_)));
                 if !compiles {
                     finding(
                         CORE_A4805,

@@ -98,7 +98,7 @@ impl<'a> Runner<'a> {
         resolved_rules: &'a [super::reuse_rules::ResolvedRule],
     ) -> Self {
         let artifact_checks = package
-            .integrity
+            .integrity()
             .artifacts
             .iter()
             .flat_map(|check| {
@@ -173,7 +173,7 @@ impl<'a> Runner<'a> {
     }
 
     fn resolve_adapter(&self, adapter_id: &str) -> Result<Adapter, String> {
-        let document = self.package.manifest.documents.iter().find(|document| {
+        let document = self.package.manifest().documents.iter().find(|document| {
             document.role == EXTERNAL_CHECKER_DOCUMENT_ROLE && document.document_id == adapter_id
         });
         if let Some(adapter) = Adapter::by_id(adapter_id) {
@@ -210,7 +210,7 @@ impl<'a> Runner<'a> {
     pub(super) fn run_all(&mut self) -> Result<ExecutionReport, Box<dyn Error>> {
         let executions: BTreeMap<&str, &PackageExecution> = self
             .package
-            .manifest
+            .manifest()
             .executions
             .iter()
             .map(|execution| (execution.step_id.as_str(), execution))
@@ -219,7 +219,7 @@ impl<'a> Runner<'a> {
         let mut not_executed = Vec::new();
         // Compiled order is topological, so a fresh output exists before any
         // later executed step binds it.
-        for step in &self.compiled.workflow {
+        for step in self.compiled.workflow() {
             match executions.get(step.step_id.as_str()) {
                 Some(execution) => steps.push(self.run_step(step, execution)?),
                 None => not_executed.push(NotExecutedStep {
@@ -232,10 +232,10 @@ impl<'a> Runner<'a> {
                 }),
             }
         }
-        for execution in &self.package.manifest.executions {
+        for execution in &self.package.manifest().executions {
             if !self
                 .compiled
-                .workflow
+                .workflow()
                 .iter()
                 .any(|step| step.step_id == execution.step_id)
             {
@@ -318,7 +318,7 @@ impl<'a> Runner<'a> {
     pub(super) fn bound_plan(&self, execution: &ExecutionReport) -> BoundPlan {
         let declared: BTreeMap<&str, &PackageExecution> = self
             .package
-            .manifest
+            .manifest()
             .executions
             .iter()
             .map(|execution| (execution.step_id.as_str(), execution))
@@ -334,7 +334,7 @@ impl<'a> Runner<'a> {
             .map(|step| (step.step_id.as_str(), step))
             .collect();
         let mut steps = Vec::new();
-        for workflow_step in &self.compiled.workflow {
+        for workflow_step in self.compiled.workflow() {
             if let Some(step) = reported.get(workflow_step.step_id.as_str()) {
                 steps.push(self.bound_step(step, declared.get(step.step_id.as_str()).copied()));
             } else if let Some(skip) = skipped.get(workflow_step.step_id.as_str()) {
@@ -360,7 +360,7 @@ impl<'a> Runner<'a> {
         for step in &execution.steps {
             if !self
                 .compiled
-                .workflow
+                .workflow()
                 .iter()
                 .any(|workflow_step| workflow_step.step_id == step.step_id)
             {
@@ -384,9 +384,9 @@ impl<'a> Runner<'a> {
         let impact = self.impact_report(&steps);
         BoundPlan {
             schema_version: BOUND_PLAN_SCHEMA_VERSION.to_string(),
-            case_id: self.package.manifest.case_id.clone(),
-            manifest_sha256: self.package.integrity.manifest_sha256.clone(),
-            compiled_snapshot_sha256: Some(self.compiled.snapshot_sha256.clone()),
+            case_id: self.package.manifest().case_id.clone(),
+            manifest_sha256: self.package.integrity().manifest_sha256.clone(),
+            compiled_snapshot_sha256: Some(self.compiled.snapshot_sha256().to_string()),
             status,
             steps,
             unresolved,
@@ -407,7 +407,7 @@ impl<'a> Runner<'a> {
         let mut reached: BTreeSet<&str> = BTreeSet::new();
         let mut condemned: BTreeMap<&str, Vec<String>> = BTreeMap::new();
         let exempted = super::reuse_rules::exempted_edges(self.resolved_rules);
-        for step in &self.compiled.workflow {
+        for step in self.compiled.workflow() {
             let mut edges = Vec::new();
             for binding in &step.bindings {
                 if exempted.contains(&(step.step_id.clone(), binding.input_slot.clone())) {
@@ -437,7 +437,7 @@ impl<'a> Runner<'a> {
         }
         let invalidated: Vec<InvalidatedNode> = self
             .compiled
-            .workflow
+            .workflow()
             .iter()
             .filter(|step| reached.contains(step.step_id.as_str()))
             .map(|step| InvalidatedNode {
@@ -631,7 +631,7 @@ impl<'a> Runner<'a> {
         }
         let declared = self
             .package
-            .manifest
+            .manifest()
             .capabilities
             .iter()
             .find(|capability| capability.capability_id == capability_id)?;
@@ -650,7 +650,7 @@ impl<'a> Runner<'a> {
         let (path, source) = self.resolve_capability_path(capability_id)?;
         let declared = self
             .package
-            .manifest
+            .manifest()
             .capabilities
             .iter()
             .find(|capability| capability.capability_id == capability_id)?;
@@ -669,7 +669,7 @@ impl<'a> Runner<'a> {
     /// step requires. One entry per name, keeping the most severe state.
     fn unresolved_requirements(&self, steps: &[BoundStep]) -> Vec<UnresolvedRequirement> {
         let mut roots: BTreeMap<&str, IntegrityCheckState> = BTreeMap::new();
-        for check in &self.package.integrity.artifacts {
+        for check in &self.package.integrity().artifacts {
             roots
                 .entry(check.source_root.as_str())
                 .and_modify(|state| {
@@ -758,7 +758,7 @@ impl<'a> Runner<'a> {
 
         let Some(declared) = self
             .package
-            .manifest
+            .manifest()
             .capabilities
             .iter()
             .find(|capability| capability.capability_id == execution.capability_id)
@@ -1120,7 +1120,7 @@ impl<'a> Runner<'a> {
                         };
                         let Some(declared) = self
                             .compiled
-                            .inputs
+                            .inputs()
                             .iter()
                             .find(|input| &input.input_id == input_id)
                             .map(|input| &input.attributes)
@@ -1186,7 +1186,7 @@ impl<'a> Runner<'a> {
                 &plan,
                 &identity,
                 &parameters,
-                &self.package.manifest.case_id,
+                &self.package.manifest().case_id,
             ),
             None => vec![ChangeRecord {
                 class: ChangeClass::NoCommittedReceipt,
@@ -1452,8 +1452,8 @@ impl<'a> Runner<'a> {
         let workspace = self.workspace_dir()?;
         let step_dir = workspace.join(&step.step_id);
         let request = ExecutionRequest {
-            case_id: self.package.manifest.case_id.clone(),
-            compiled_snapshot_sha256: self.compiled.snapshot_sha256.clone(),
+            case_id: self.package.manifest().case_id.clone(),
+            compiled_snapshot_sha256: self.compiled.snapshot_sha256().to_string(),
             step_id: step.step_id.clone(),
             adapter: adapter.clone(),
             capability: identity.clone(),
@@ -1506,8 +1506,8 @@ impl<'a> Runner<'a> {
             );
         }
         let expectations = ReceiptExpectations {
-            case_id: self.package.manifest.case_id.clone(),
-            compiled_snapshot_sha256: self.compiled.snapshot_sha256.clone(),
+            case_id: self.package.manifest().case_id.clone(),
+            compiled_snapshot_sha256: self.compiled.snapshot_sha256().to_string(),
             step_id: step.step_id.clone(),
             capability_type: expected_type,
             adapter: adapter.id().into(),
@@ -1828,7 +1828,7 @@ impl<'a> Runner<'a> {
         &self,
         step_id: &str,
     ) -> Result<Option<(String, ExecutionReceipt)>, Box<dyn Error>> {
-        let Some(document) = self.package.manifest.documents.iter().find(|document| {
+        let Some(document) = self.package.manifest().documents.iter().find(|document| {
             document.role == "execution_receipt" && document.step_id.as_deref() == Some(step_id)
         }) else {
             return Ok(None);
@@ -1842,7 +1842,7 @@ impl<'a> Runner<'a> {
 
     fn document_path(&self, document_id: &str) -> String {
         self.package
-            .manifest
+            .manifest()
             .documents
             .iter()
             .find(|document| document.document_id == document_id)
@@ -1852,7 +1852,7 @@ impl<'a> Runner<'a> {
 
     fn document_sha256(&self, document_id: &str) -> String {
         self.package
-            .manifest
+            .manifest()
             .documents
             .iter()
             .find(|document| document.document_id == document_id)
@@ -1875,7 +1875,7 @@ impl<'a> Runner<'a> {
             let Some(sha256) = output.sha256.as_deref() else {
                 return Err(format!("output `{}` carries no digest", output.output_id));
             };
-            let located = self.package.integrity.artifacts.iter().find(|check| {
+            let located = self.package.integrity().artifacts.iter().find(|check| {
                 matches!(
                     check.state,
                     IntegrityCheckState::Verified | IntegrityCheckState::VerifiedCached
@@ -1916,7 +1916,7 @@ impl<'a> Runner<'a> {
                     .filter(|character| character.is_ascii_alphanumeric())
                     .collect();
                 PathBuf::from("workspaces")
-                    .join(&self.package.manifest.case_id)
+                    .join(&self.package.manifest().case_id)
                     .join(format!("{stamp}-{}", std::process::id()))
             }
         };
@@ -1940,7 +1940,7 @@ impl<'a> Runner<'a> {
             SourceRef::ContractInput { input_id } => {
                 let media_type = self
                     .compiled
-                    .inputs
+                    .inputs()
                     .iter()
                     .find(|input| &input.input_id == input_id)
                     .map(|input| input.media_type.clone())
@@ -2029,7 +2029,7 @@ impl<'a> Runner<'a> {
         if !self.replay_applicable {
             return Ok(None);
         }
-        let Some(document) = self.package.manifest.documents.iter().find(|document| {
+        let Some(document) = self.package.manifest().documents.iter().find(|document| {
             document.role == "execution_receipt" && document.step_id.as_deref() == Some(step_id)
         }) else {
             return Ok(None);

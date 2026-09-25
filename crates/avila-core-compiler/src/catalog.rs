@@ -217,6 +217,27 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         next_action: "Keep exactly one claim per output slot; a rerun creates a new claim only after the previous one is withdrawn.",
     },
     DiagnosticExplanation {
+        code: "CORE-E7401",
+        title: "Admissions minted under a different context",
+        rule: "SC-11 and ADR-0026",
+        meaning: "Verdict derivation was handed admission records minted under a different evaluation context than the bound one. Mixing contexts is refused rather than composed silently.",
+        next_action: "Re-derive admissions under the same context that will derive the verdicts; a `EvaluationContext` mints its own admissions.",
+    },
+    DiagnosticExplanation {
+        code: "CORE-E7402",
+        title: "Registry does not match the compiled snapshot",
+        rule: "SC-11 and ADR-0026",
+        meaning: "The supplied registry bytes do not hash to the registry identity the compiled snapshot was built against. The context refuses to bind material that is not the snapshot's own.",
+        next_action: "Supply the exact registry bytes the contract compiled against; the compile report's `source_identities` names them.",
+    },
+    DiagnosticExplanation {
+        code: "CORE-E7501",
+        title: "Derivation bound exceeded",
+        rule: "SC-11 and ADR-0026",
+        meaning: "The evaluation produced more rule applications than the derivation record permits. The evaluation is refused rather than emitting a truncated or unbounded record.",
+        next_action: "Reduce the bound workflow or claim count; the limit protects the record, not the semantics — no verdict was derived.",
+    },
+    DiagnosticExplanation {
         code: "CORE-R3101",
         title: "No compatible source",
         rule: "SC-6 R1",

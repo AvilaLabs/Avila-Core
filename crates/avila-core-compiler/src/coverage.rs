@@ -271,12 +271,12 @@ pub fn assess_coverage(
         let mut covered_by = Vec::new();
         for requirement_id in declaration.mapping.get(id).into_iter().flatten() {
             let Some(contract_requirement) = compiled
-                .requirements
+                .requirements()
                 .iter()
                 .find(|candidate| &candidate.requirement_id == requirement_id)
             else {
                 if compiled
-                    .categorical_requirements
+                    .categorical_requirements()
                     .iter()
                     .any(|candidate| &candidate.requirement_id == requirement_id)
                 {
@@ -291,10 +291,11 @@ pub fn assess_coverage(
                 continue;
             };
             mapped_contract_ids.insert(requirement_id.clone());
-            if contract_requirement.limit.kind != requirement.kind {
+            if contract_requirement.limit.kind() != requirement.kind {
                 entry_issues.push(format!(
                     "`{requirement_id}` compares kind `{}`, the set entry requires `{}`",
-                    contract_requirement.limit.kind, requirement.kind
+                    contract_requirement.limit.kind(),
+                    requirement.kind
                 ));
                 continue;
             }
@@ -347,13 +348,13 @@ pub fn assess_coverage(
     }
 
     let additional_requirements = compiled
-        .requirements
+        .requirements()
         .iter()
         .map(|requirement| requirement.requirement_id.clone())
         .filter(|id| !mapped_contract_ids.contains(id))
         .chain(
             compiled
-                .categorical_requirements
+                .categorical_requirements()
                 .iter()
                 .map(|requirement| requirement.requirement_id.clone()),
         )
@@ -372,8 +373,8 @@ pub fn assess_coverage(
         set_revision: set.revision,
         set_sha256: set_sha256.into(),
         set_owner: set.owner.clone(),
-        contract_id: compiled.contract_id.clone(),
-        contract_revision: compiled.contract_revision,
+        contract_id: compiled.contract_id().to_string(),
+        contract_revision: compiled.contract_revision(),
         status: if incomplete {
             CoverageStatus::Incomplete
         } else {
@@ -397,8 +398,9 @@ mod tests {
         let registry = std::fs::read(root.join("registry.json")).unwrap();
         compile_documents(&contract, &registry)
             .unwrap()
-            .compiled
+            .contract()
             .unwrap()
+            .clone()
     }
 
     fn set_json(extra: &str) -> Vec<u8> {

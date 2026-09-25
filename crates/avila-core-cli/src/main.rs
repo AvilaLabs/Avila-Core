@@ -11,8 +11,8 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use avila_core_compiler::{
-    CampaignStatus, CompilationStatus, DIAGNOSTIC_CATALOG, compile_documents,
-    evaluate_campaign_with_artifacts, explain, render_campaign_report, render_compile_report,
+    ArtifactObservations, CampaignStatus, CompilationStatus, DIAGNOSTIC_CATALOG, compile_documents,
+    evaluate_campaign_in_context, explain, render_campaign_report, render_compile_report,
 };
 use avila_core_evidence::sha256_hex;
 use avila_core_evidence::signature::{self, KeyRole};
@@ -126,10 +126,21 @@ enum Command {
         /// every attested artifact is marked `verified` or `not_checked`.
         #[arg(long)]
         artifact: Vec<PathBuf>,
+        /// Write the verdict derivation — the context-bound record of every
+        /// rule application — to this file. Replaying it re-runs the checks;
+        /// see `avila-core derivation diff` for comparing two.
+        #[arg(long, value_name = "FILE")]
+        derivation: Option<PathBuf>,
         /// Print findings and verdicts as readable text with source locations
         /// instead of the JSON report.
         #[arg(long)]
         text: bool,
+    },
+    /// Inspect verdict derivations: replay and compare the context-bound
+    /// rule-application records an evaluation emits.
+    Derivation {
+        #[command(subcommand)]
+        command: DerivationCommand,
     },
     /// Run a composed case package through integrity checks, compilation,
     /// controlled execution with receipts, claim generation, evidence
@@ -176,6 +187,39 @@ enum Command {
     Sign {
         #[command(subcommand)]
         command: SignCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum DerivationCommand {
+    /// Compare two derivation records and explain which rule uses changed —
+    /// which applications are gone, which are new, and which premises or
+    /// conclusions diverged. A changed context identity invalidates the
+    /// comparison of the applications themselves.
+    Diff {
+        /// The earlier derivation record.
+        before: PathBuf,
+        /// The later derivation record.
+        after: PathBuf,
+    },
+    /// Replay a derivation record: re-run the evaluation from the supplied
+    /// documents and compare every recorded rule application against the
+    /// fresh one. A forged conclusion is a mismatch even when the record's
+    /// outer digest was honestly recomputed. Exit 0 when every check
+    /// verified, 1 when anything mismatched or could not be checked.
+    Verify {
+        /// The recorded derivation document.
+        derivation: PathBuf,
+        #[arg(long)]
+        contract: PathBuf,
+        #[arg(long)]
+        registry: PathBuf,
+        #[arg(long)]
+        claims: PathBuf,
+        /// Supply an artifact file to be re-hashed, matching the
+        /// observations the recorded evaluation performed. Repeatable.
+        #[arg(long)]
+        artifact: Vec<PathBuf>,
     },
 }
 
@@ -692,14 +736,14 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 print!(
                     "{}",
                     render_compile_report(
-                        &report,
+                        report.report(),
                         &[("contract", &contract), ("registry", &registry)]
                     )
                 );
             } else {
-                println!("{}", serde_json::to_string_pretty(&report)?);
+                println!("{}", serde_json::to_string_pretty(report.report())?);
             }
-            if report.status == CompilationStatus::Rejected {
+            if report.report().status == CompilationStatus::Rejected {
                 return Ok(ExitCode::from(1));
             }
         }
@@ -708,25 +752,41 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             registry,
             claims,
             artifact,
+            derivation,
             text,
         } => {
             let contract = fs::read(contract)?;
             let registry = fs::read(registry)?;
             let claims = fs::read(claims)?;
-            let mut artifact_digests = std::collections::BTreeSet::new();
+            let mut observations = ArtifactObservations::none();
             for path in &artifact {
                 let bytes = fs::read(path).map_err(|error| {
                     format!("cannot read artifact `{}`: {error}", path.display())
                 })?;
-                artifact_digests.insert(format!("sha256:{}", sha256_hex(&bytes)));
+                observations.check_bytes(&bytes);
             }
-            let report =
-                evaluate_campaign_with_artifacts(&contract, &registry, &claims, &artifact_digests)?;
+            let evaluation =
+                evaluate_campaign_in_context(&contract, &registry, &claims, observations)?;
+            if let Some(path) = derivation {
+                match evaluation.derivation() {
+                    Some(derivation) => {
+                        fs::write(&path, serde_json::to_string_pretty(derivation)?).map_err(
+                            |error| format!("cannot write `{}`: {error}", path.display()),
+                        )?;
+                    }
+                    None => {
+                        return Err(
+                            "the evaluation bound no context, so no derivation was recorded".into(),
+                        );
+                    }
+                }
+            }
+            let report = evaluation.report();
             if text {
                 print!(
                     "{}",
                     render_campaign_report(
-                        &report,
+                        report,
                         &[
                             ("contract", &contract),
                             ("registry", &registry),
@@ -735,12 +795,61 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                     )
                 );
             } else {
-                println!("{}", serde_json::to_string_pretty(&report)?);
+                println!("{}", serde_json::to_string_pretty(report)?);
             }
             if report.status == CampaignStatus::Rejected {
                 return Ok(ExitCode::from(1));
             }
         }
+        Command::Derivation { command } => match command {
+            DerivationCommand::Diff { before, after } => {
+                let before_bytes = fs::read(&before)
+                    .map_err(|error| format!("cannot read `{}`: {error}", before.display()))?;
+                let after_bytes = fs::read(&after)
+                    .map_err(|error| format!("cannot read `{}`: {error}", after.display()))?;
+                let before: avila_core_compiler::VerdictDerivation =
+                    serde_json::from_slice(&before_bytes).map_err(|error| {
+                        format!("`{}` is not a derivation record: {error}", before.display())
+                    })?;
+                let after: avila_core_compiler::VerdictDerivation =
+                    serde_json::from_slice(&after_bytes).map_err(|error| {
+                        format!("`{}` is not a derivation record: {error}", after.display())
+                    })?;
+                let diff = avila_core_compiler::explain_derivation_changes(&before, &after);
+                println!("{}", serde_json::to_string_pretty(&diff)?);
+            }
+            DerivationCommand::Verify {
+                derivation,
+                contract,
+                registry,
+                claims,
+                artifact,
+            } => {
+                let derivation_bytes = fs::read(&derivation)
+                    .map_err(|error| format!("cannot read `{}`: {error}", derivation.display()))?;
+                let contract = fs::read(contract)?;
+                let registry = fs::read(registry)?;
+                let claims = fs::read(claims)?;
+                let mut observations = ArtifactObservations::none();
+                for path in &artifact {
+                    let bytes = fs::read(path).map_err(|error| {
+                        format!("cannot read artifact `{}`: {error}", path.display())
+                    })?;
+                    observations.check_bytes(&bytes);
+                }
+                let verification = avila_core_compiler::verify_derivation(
+                    &contract,
+                    &registry,
+                    &claims,
+                    observations,
+                    &derivation_bytes,
+                )?;
+                println!("{}", serde_json::to_string_pretty(&verification)?);
+                if !verification.is_verified() {
+                    return Ok(ExitCode::from(1));
+                }
+            }
+        },
         Command::Run(args) => {
             let RunArgs {
                 case,

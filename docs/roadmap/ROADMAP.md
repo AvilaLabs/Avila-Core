@@ -19,6 +19,13 @@ assessments, and accepted baselines. They do not change the stage exit gates.
 
 ## Near-term implementation handoff
 
+The [Rust-informed architecture proposal](proposals/2026-09-24-rust-informed-semantic-architecture.md)
+and [SWE-2 implementation handoff](RUST_ARCHITECTURE_HANDOFF.md) define a bounded
+semantic implementation slice: protected checked values, explicit context and
+admission premises, replayable derivations, and change-impact explanations.
+The handoff distinguishes that work from the larger infrastructure subject to
+S-034. Its implementation has not been claimed complete.
+
 The [agent work queue](AGENT_WORK_QUEUE.md) gives a finite, dependency-ordered
 path from existing attempt lineage to a real design-history workbench. It
 includes acceptance criteria and a copyable worker prompt. It does not resume

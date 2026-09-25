@@ -1,18 +1,27 @@
 //! One verdict per compiled requirement, derived by the kernel from the
 //! admission states and claims for the requirement's metric source.
+//!
+//! Each verdict also emits its rule applications (ADR-0026): a
+//! `qualification.envelope` application per gated claim and a verdict
+//! application naming the requirement, the bound context, the admitted
+//! evidence, and the canonical values the comparison consumed.
+
+use std::collections::BTreeMap;
 
 use avila_core_kernel::{
     BasisKind as KernelBasis, CategoricalComparison, CategoricalEvidenceClaim,
     CategoricalRequirement, CategoricalVerdictCase, CategoricalVerdictEvaluator, EvidenceClaim,
-    EvidenceModel, EvidenceState, ExactNumber, KernelRequirement, Quantity,
+    EvidenceModel, EvidenceState, KernelRequirement, Quantity,
     RequirementBasis as KernelRequirementBasis, RequirementPolicy, VerdictCase, VerdictComparison,
     VerdictEvaluator, VerdictOutput, VerdictReason, VerdictStatus,
 };
 
+use super::context::{CheckedAdmissions, DerivedVerdicts, EvaluationContext};
+use super::derivation::{RuleApplication, RulePremise};
 use super::document::{ClaimValue, ClaimsDocument};
 use super::{AdmissionRecord, AdmissionState, VerdictBoundary, VerdictRecord};
+use crate::compile::CanonicalTypedQuantity;
 use crate::compile::registry::RegistryIndex;
-use crate::compile::{CanonicalTypedQuantity, CompiledContract};
 use crate::diagnostic::{
     CORE_A4101, CORE_A4401, CORE_A4402, CORE_A4403, CORE_A4601, CORE_A4602, CORE_A4603,
 };
@@ -20,16 +29,19 @@ use crate::document::{BasisKind, CategoricalPredicate, Comparison, QuantityValue
 use crate::qualification::{ClaimQualification, EnvelopeState};
 
 pub(super) fn evaluate(
-    compiled: &CompiledContract,
+    context: &EvaluationContext,
     registry: &RegistryIndex<'_>,
-    claims: &ClaimsDocument,
-    admissions: &[AdmissionRecord],
+    admissions: &CheckedAdmissions,
     boundary: &VerdictBoundary,
-) -> Vec<VerdictRecord> {
+) -> DerivedVerdicts {
+    let compiled = context.compiled();
+    let claims = context.claims();
+    let records = admissions.records();
     let evaluator = VerdictEvaluator::new(&registry.kinds);
+    let mut applications: Vec<RuleApplication> = Vec::new();
 
     let mut verdicts: Vec<_> = compiled
-        .requirements
+        .requirements()
         .iter()
         .map(|requirement| {
             let kind = registry
@@ -38,7 +50,7 @@ pub(super) fn evaluate(
                 .and_then(|role| role.quantity_kind.clone())
                 .unwrap_or_default();
             let mut evidence = Vec::new();
-            for record in admissions
+            for record in records
                 .iter()
                 .filter(|record| record.source == requirement.metric)
             {
@@ -75,7 +87,7 @@ pub(super) fn evaluate(
                     },
                     tolerance: requirement.tolerance.as_ref().map(quantity),
                     policy: RequirementPolicy {
-                        permit_nominal_basis: compiled.execution_policy.permit_nominal_basis,
+                        permit_nominal_basis: compiled.execution_policy().permit_nominal_basis,
                     },
                     aggregation: None,
                     display_rounding: None,
@@ -87,28 +99,38 @@ pub(super) fn evaluate(
             // Nominal-basis requirements are unaffected by any of this
             // (ADR-0008 clause 4).
             let applies_qualification = requirement.basis.kind != BasisKind::Nominal;
-            let quarantined = quarantined_by_qualification(&requirement.metric, claims, admissions);
+            let quarantined = quarantined_by_qualification(&requirement.metric, claims, records);
             let refusals = if applies_qualification {
                 refused_claims(
                     &requirement.metric,
                     claims,
-                    admissions,
-                    &compiled.execution_policy.recognized_qualification_owners,
+                    records,
+                    &compiled.execution_policy().recognized_qualification_owners,
                 )
             } else {
                 LifecycleRefusals::default()
             };
             let unqualified = if applies_qualification {
-                unqualified_claims(&requirement.metric, claims, admissions)
+                unqualified_claims(&requirement.metric, claims, records)
             } else {
                 Vec::new()
             };
+            if applies_qualification {
+                emit_qualification_applications(
+                    &requirement.requirement_id,
+                    &requirement.metric,
+                    claims,
+                    records,
+                    &compiled.execution_policy().recognized_qualification_owners,
+                    &mut applications,
+                );
+            }
             let verdict = if applies_qualification
                 && (!quarantined.is_empty() || !refusals.is_empty())
             {
                 qualification_verdict(&quarantined, &refusals)
             } else if applies_qualification
-                && compiled.execution_policy.require_qualification
+                && compiled.execution_policy().require_qualification
                 && !unqualified.is_empty()
             {
                 // The profile requires a qualification assessment on every
@@ -144,7 +166,7 @@ pub(super) fn evaluate(
                 // the gap must stay visible rather than reading as silently
                 // validated.
                 if applies_qualification
-                    && !compiled.execution_policy.require_qualification
+                    && !compiled.execution_policy().require_qualification
                     && !unqualified.is_empty()
                 {
                     output.reasons.extend(unqualified_reasons(
@@ -155,6 +177,23 @@ pub(super) fn evaluate(
                 }
                 output
             };
+            applications.push(verdict_application(
+                context,
+                &requirement.requirement_id,
+                &format!(
+                    "{}.{}",
+                    basis_label(requirement.basis.kind),
+                    comparison_label(requirement.comparison)
+                ),
+                &requirement.metric,
+                claims,
+                records,
+                &quarantined,
+                &refusals,
+                &unqualified,
+                compiled.execution_policy().require_qualification,
+                &verdict,
+            ));
             VerdictRecord {
                 requirement_id: requirement.requirement_id.clone(),
                 statement: requirement.statement.clone(),
@@ -166,98 +205,413 @@ pub(super) fn evaluate(
         })
         .collect();
 
-    verdicts.extend(compiled.categorical_requirements.iter().map(|requirement| {
-        let mut evidence = Vec::new();
-        for record in admissions
+    verdicts.extend(
+        compiled
+            .categorical_requirements()
             .iter()
-            .filter(|record| record.source == requirement.metric)
+            .map(|requirement| {
+                let mut evidence = Vec::new();
+                for record in records
+                    .iter()
+                    .filter(|record| record.source == requirement.metric)
+                {
+                    let state = match record.state {
+                        AdmissionState::Admitted => EvidenceState::Admitted,
+                        AdmissionState::Quarantined => EvidenceState::Quarantined,
+                        AdmissionState::Missing => continue,
+                    };
+                    let claim = claims
+                        .claims
+                        .iter()
+                        .find(|claim| claim.claim_id == record.evidence_id);
+                    let Some(claim) = claim else {
+                        continue;
+                    };
+                    let value = match &claim.claim {
+                        ClaimValue::Unquantified { value, .. } => value.clone(),
+                        _ => None,
+                    };
+                    evidence.push(CategoricalEvidenceClaim {
+                        evidence_id: record.evidence_id.clone(),
+                        state,
+                        value,
+                    });
+                }
+                let evidence_ids = evidence
+                    .iter()
+                    .map(|claim| claim.evidence_id.clone())
+                    .collect();
+                let (comparison, accepted_values, predicate_label) = match &requirement.predicate {
+                    CategoricalPredicate::Equals { value } => {
+                        (CategoricalComparison::Equals, vec![value.clone()], "equals")
+                    }
+                    CategoricalPredicate::InSet { values } => {
+                        (CategoricalComparison::InSet, values.clone(), "in_set")
+                    }
+                };
+                let case = CategoricalVerdictCase {
+                    requirement: CategoricalRequirement {
+                        comparison,
+                        accepted_values,
+                    },
+                    evidence,
+                };
+                let quarantined =
+                    quarantined_by_qualification(&requirement.metric, claims, records);
+                let refusals = refused_claims(
+                    &requirement.metric,
+                    claims,
+                    records,
+                    &compiled.execution_policy().recognized_qualification_owners,
+                );
+                emit_qualification_applications(
+                    &requirement.requirement_id,
+                    &requirement.metric,
+                    claims,
+                    records,
+                    &compiled.execution_policy().recognized_qualification_owners,
+                    &mut applications,
+                );
+                let verdict = if quarantined.is_empty() && refusals.is_empty() {
+                    CategoricalVerdictEvaluator::evaluate(&case).unwrap_or_else(|error| {
+                        VerdictOutput {
+                            status: VerdictStatus::NotEvaluated,
+                            rule: "not_evaluated.kernel_refusal".into(),
+                            aggregation: None,
+                            canonical_unit: None,
+                            limit_canonical: None,
+                            lower_canonical: None,
+                            upper_canonical: None,
+                            nominal_canonical: None,
+                            tolerance_canonical: None,
+                            coverage: None,
+                            basis_visible: None,
+                            numbers_present: Some(false),
+                            observed_category: None,
+                            accepted_categories: Some(case.requirement.accepted_values.clone()),
+                            reasons: vec![VerdictReason::CodeOwner {
+                                code: error.code().into(),
+                                owner: "executor".into(),
+                            }],
+                            display_upper_text: None,
+                        }
+                    })
+                } else {
+                    let mut output = qualification_verdict(&quarantined, &refusals);
+                    output.accepted_categories = Some(case.requirement.accepted_values.clone());
+                    output
+                };
+                applications.push(verdict_application(
+                    context,
+                    &requirement.requirement_id,
+                    &format!("categorical.{predicate_label}"),
+                    &requirement.metric,
+                    claims,
+                    records,
+                    &quarantined,
+                    &refusals,
+                    &[],
+                    false,
+                    &verdict,
+                ));
+                VerdictRecord {
+                    requirement_id: requirement.requirement_id.clone(),
+                    statement: requirement.statement.clone(),
+                    metric: requirement.metric.clone(),
+                    evidence_ids,
+                    verdict,
+                    boundary: boundary.clone(),
+                }
+            }),
+    );
+    verdicts.sort_by(|left, right| left.requirement_id.cmp(&right.requirement_id));
+    DerivedVerdicts {
+        context_sha256: context.context_sha256().to_string(),
+        records: verdicts,
+        applications,
+    }
+}
+
+/// `qualification.envelope` applications for the admitted claims feeding
+/// `metric` that carry an assessment — one per claim, in claims order, so
+/// each envelope gate is replayable against the bound context.
+fn emit_qualification_applications(
+    requirement_id: &str,
+    metric: &SourceRef,
+    claims: &ClaimsDocument,
+    records: &[AdmissionRecord],
+    recognized_owners: &BTreeMap<String, String>,
+    applications: &mut Vec<RuleApplication>,
+) {
+    for record in records
+        .iter()
+        .filter(|record| &record.source == metric)
+        .filter(|record| record.state == AdmissionState::Admitted)
+    {
+        let Some(qualification) = claims
+            .claims
+            .iter()
+            .find(|claim| claim.claim_id == record.evidence_id)
+            .and_then(|claim| claim.qualification.as_ref())
+        else {
+            continue;
+        };
+        let state = envelope_state_label(qualification.state);
+        let (conclusion, mut reasons) = if !recognized_owners.is_empty()
+            && !recognized_owners.contains_key(&qualification.owner)
         {
-            let state = match record.state {
-                AdmissionState::Admitted => EvidenceState::Admitted,
-                AdmissionState::Quarantined => EvidenceState::Quarantined,
-                AdmissionState::Missing => continue,
-            };
-            let claim = claims
-                .claims
-                .iter()
-                .find(|claim| claim.claim_id == record.evidence_id);
-            let Some(claim) = claim else {
-                continue;
-            };
-            let value = match &claim.claim {
-                ClaimValue::Unquantified { value, .. } => value.clone(),
-                _ => None,
-            };
-            evidence.push(CategoricalEvidenceClaim {
-                evidence_id: record.evidence_id.clone(),
-                state,
-                value,
+            ("not_recognized", vec![CORE_A4601])
+        } else if qualification.revoked_by.is_some() {
+            ("revoked", vec![CORE_A4603])
+        } else if qualification.superseded_by.is_some() {
+            ("superseded", vec![CORE_A4101])
+        } else {
+            match qualification.state {
+                EnvelopeState::Inside => ("inside", Vec::new()),
+                EnvelopeState::Expired => ("expired", vec![CORE_A4602]),
+                EnvelopeState::Outside | EnvelopeState::Unknown => ("unenclosed", vec![CORE_A4401]),
+            }
+        };
+        let mut application =
+            RuleApplication::new("qualification.envelope", &record.evidence_id, conclusion);
+        application.premises.push(RulePremise {
+            kind: "qualification".into(),
+            id: format!(
+                "{}@{}:{}",
+                qualification.qualification_id, qualification.revision, qualification.sha256
+            ),
+            state: state.into(),
+        });
+        application.premises.push(RulePremise {
+            kind: "execution_policy".into(),
+            id: "recognized_qualification_owners".into(),
+            state: if recognized_owners.is_empty() {
+                "unrestricted"
+            } else if recognized_owners.contains_key(&qualification.owner) {
+                "recognized"
+            } else {
+                "not_recognized"
+            }
+            .into(),
+        });
+        application.premises.push(RulePremise {
+            kind: "requirement".into(),
+            id: requirement_id.into(),
+            state: "consumes".into(),
+        });
+        if let Some(revocation) = &qualification.revoked_by {
+            application.premises.push(RulePremise {
+                kind: "qualification_lifecycle".into(),
+                id: revocation.clone(),
+                state: "revoked".into(),
             });
         }
-        let evidence_ids = evidence
-            .iter()
-            .map(|claim| claim.evidence_id.clone())
-            .collect();
-        let (comparison, accepted_values) = match &requirement.predicate {
-            CategoricalPredicate::Equals { value } => {
-                (CategoricalComparison::Equals, vec![value.clone()])
-            }
-            CategoricalPredicate::InSet { values } => {
-                (CategoricalComparison::InSet, values.clone())
-            }
-        };
-        let case = CategoricalVerdictCase {
-            requirement: CategoricalRequirement {
-                comparison,
-                accepted_values,
-            },
-            evidence,
-        };
-        let quarantined = quarantined_by_qualification(&requirement.metric, claims, admissions);
-        let refusals = refused_claims(
-            &requirement.metric,
-            claims,
-            admissions,
-            &compiled.execution_policy.recognized_qualification_owners,
-        );
-        let verdict = if quarantined.is_empty() && refusals.is_empty() {
-            CategoricalVerdictEvaluator::evaluate(&case).unwrap_or_else(|error| VerdictOutput {
-                status: VerdictStatus::NotEvaluated,
-                rule: "not_evaluated.kernel_refusal".into(),
-                aggregation: None,
-                canonical_unit: None,
-                limit_canonical: None,
-                lower_canonical: None,
-                upper_canonical: None,
-                nominal_canonical: None,
-                tolerance_canonical: None,
-                coverage: None,
-                basis_visible: None,
-                numbers_present: Some(false),
-                observed_category: None,
-                accepted_categories: Some(case.requirement.accepted_values.clone()),
-                reasons: vec![VerdictReason::CodeOwner {
-                    code: error.code().into(),
-                    owner: "executor".into(),
-                }],
-                display_upper_text: None,
-            })
-        } else {
-            let mut output = qualification_verdict(&quarantined, &refusals);
-            output.accepted_categories = Some(case.requirement.accepted_values.clone());
-            output
-        };
-        VerdictRecord {
-            requirement_id: requirement.requirement_id.clone(),
-            statement: requirement.statement.clone(),
-            metric: requirement.metric.clone(),
-            evidence_ids,
-            verdict,
-            boundary: boundary.clone(),
+        if let Some(supersession) = &qualification.superseded_by {
+            application.premises.push(RulePremise {
+                kind: "qualification_lifecycle".into(),
+                id: supersession.clone(),
+                state: "superseded".into(),
+            });
         }
-    }));
-    verdicts.sort_by(|left, right| left.requirement_id.cmp(&right.requirement_id));
-    verdicts
+        if qualification.state != EnvelopeState::Inside {
+            reasons.extend(qualification.failed_terms().iter().map(|_| ""));
+        }
+        application.reasons.extend(
+            reasons
+                .iter()
+                .filter(|code| !code.is_empty())
+                .map(|code| (*code).to_string()),
+        );
+        applications.push(application);
+    }
+}
+
+/// The verdict rule application for one requirement: the named rule, the
+/// premises it consulted, and the verdict status they yielded.
+#[allow(clippy::too_many_arguments)]
+fn verdict_application(
+    context: &EvaluationContext,
+    requirement_id: &str,
+    requirement_state: &str,
+    metric: &SourceRef,
+    claims: &ClaimsDocument,
+    records: &[AdmissionRecord],
+    quarantined: &[(String, ClaimQualification)],
+    refusals: &LifecycleRefusals,
+    unqualified: &[String],
+    require_qualification: bool,
+    verdict: &VerdictOutput,
+) -> RuleApplication {
+    let mut application =
+        RuleApplication::new(&verdict.rule, requirement_id, status_label(verdict.status));
+    application.premises.push(RulePremise {
+        kind: "requirement".into(),
+        id: requirement_id.into(),
+        state: requirement_state.into(),
+    });
+    application.premises.push(RulePremise {
+        kind: "evaluation_context".into(),
+        id: context.context_sha256().to_string(),
+        state: "bound".into(),
+    });
+    for record in records
+        .iter()
+        .filter(|record| &record.source == metric)
+        .filter(|record| record.state != AdmissionState::Missing)
+    {
+        application.premises.push(RulePremise {
+            kind: "evidence".into(),
+            id: record.evidence_id.clone(),
+            state: match record.state {
+                AdmissionState::Admitted => "admitted",
+                AdmissionState::Quarantined => "quarantined",
+                AdmissionState::Missing => unreachable!("missing filtered"),
+            }
+            .into(),
+        });
+    }
+    application.premises.push(RulePremise {
+        kind: "execution_policy".into(),
+        id: "permit_nominal_basis".into(),
+        state: if context.compiled().execution_policy().permit_nominal_basis {
+            "on"
+        } else {
+            "off"
+        }
+        .into(),
+    });
+    application.premises.push(RulePremise {
+        kind: "execution_policy".into(),
+        id: "require_qualification".into(),
+        state: if require_qualification { "on" } else { "off" }.into(),
+    });
+    // The qualification gate's per-claim outcome as it applied to this
+    // requirement — `inside` claims still name their envelope.
+    let mut gated: BTreeMap<&str, &str> = BTreeMap::new();
+    for (evidence_id, qualification) in quarantined {
+        gated.insert(
+            evidence_id.as_str(),
+            match qualification.state {
+                EnvelopeState::Expired => "expired",
+                EnvelopeState::Outside => "outside",
+                EnvelopeState::Unknown => "unknown",
+                EnvelopeState::Inside => "inside",
+            },
+        );
+    }
+    for (evidence_id, _) in &refusals.not_recognized {
+        gated.insert(evidence_id.as_str(), "not_recognized");
+    }
+    for (evidence_id, _) in &refusals.revoked {
+        gated.insert(evidence_id.as_str(), "revoked");
+    }
+    for (evidence_id, _) in &refusals.superseded {
+        gated.insert(evidence_id.as_str(), "superseded");
+    }
+    for evidence_id in unqualified {
+        gated.insert(evidence_id.as_str(), "missing");
+    }
+    // Admitted claims carrying an `inside` qualification that never gated.
+    for record in records
+        .iter()
+        .filter(|record| &record.source == metric)
+        .filter(|record| record.state == AdmissionState::Admitted)
+    {
+        if gated.contains_key(record.evidence_id.as_str()) {
+            continue;
+        }
+        let Some(qualification) = claims
+            .claims
+            .iter()
+            .find(|claim| claim.claim_id == record.evidence_id)
+            .and_then(|claim| claim.qualification.as_ref())
+        else {
+            continue;
+        };
+        if qualification.state == EnvelopeState::Inside
+            && qualification.revoked_by.is_none()
+            && qualification.superseded_by.is_none()
+        {
+            gated.insert(record.evidence_id.as_str(), "inside");
+        }
+    }
+    for (evidence_id, state) in gated {
+        application.premises.push(RulePremise {
+            kind: "qualification".into(),
+            id: evidence_id.to_string(),
+            state: state.to_string(),
+        });
+    }
+    // Canonical values the comparison consumed — the numbers that decide
+    // the verdict, never display rounding.
+    for (id, value) in [
+        ("canonical_unit", verdict.canonical_unit.as_ref()),
+        ("limit", verdict.limit_canonical.as_ref()),
+        ("lower", verdict.lower_canonical.as_ref()),
+        ("upper", verdict.upper_canonical.as_ref()),
+        ("nominal", verdict.nominal_canonical.as_ref()),
+        ("tolerance", verdict.tolerance_canonical.as_ref()),
+        ("coverage", verdict.coverage.as_ref()),
+        ("observed_category", verdict.observed_category.as_ref()),
+    ] {
+        if let Some(value) = value {
+            application.premises.push(RulePremise {
+                kind: "canonical_value".into(),
+                id: id.into(),
+                state: value.clone(),
+            });
+        }
+    }
+    application
+        .reasons
+        .extend(verdict.reasons.iter().map(reason_label));
+    application
+}
+
+fn reason_label(reason: &VerdictReason) -> String {
+    match reason {
+        VerdictReason::CodeOwner { code, .. } => code.clone(),
+        VerdictReason::EvidenceState { evidence_id, state } => {
+            format!("{evidence_id}:{state}")
+        }
+        VerdictReason::DuplicateClaims { code, .. } => code.clone(),
+    }
+}
+
+const fn status_label(status: VerdictStatus) -> &'static str {
+    match status {
+        VerdictStatus::Pass => "pass",
+        VerdictStatus::Fail => "fail",
+        VerdictStatus::Inconclusive => "inconclusive",
+        VerdictStatus::NotEvaluated => "not_evaluated",
+    }
+}
+
+const fn basis_label(kind: BasisKind) -> &'static str {
+    match kind {
+        BasisKind::Bounded => "bounded",
+        BasisKind::Enclosure => "enclosure",
+        BasisKind::Nominal => "nominal",
+    }
+}
+
+const fn comparison_label(comparison: Comparison) -> &'static str {
+    match comparison {
+        Comparison::LessThan => "less_than",
+        Comparison::LessThanOrEqual => "less_than_or_equal",
+        Comparison::GreaterThan => "greater_than",
+        Comparison::GreaterThanOrEqual => "greater_than_or_equal",
+        Comparison::Equal => "equal",
+    }
+}
+
+const fn envelope_state_label(state: EnvelopeState) -> &'static str {
+    match state {
+        EnvelopeState::Inside => "inside",
+        EnvelopeState::Outside => "outside",
+        EnvelopeState::Unknown => "unknown",
+        EnvelopeState::Expired => "expired",
+    }
 }
 
 /// Admitted claims for the requirement's metric whose producer's envelope
@@ -312,7 +666,7 @@ fn refused_claims(
     metric: &SourceRef,
     claims: &ClaimsDocument,
     admissions: &[AdmissionRecord],
-    recognized_owners: &std::collections::BTreeMap<String, String>,
+    recognized_owners: &BTreeMap<String, String>,
 ) -> LifecycleRefusals {
     let mut refusals = LifecycleRefusals::default();
     for record in admissions
@@ -616,9 +970,8 @@ fn authored(value: &QuantityValue) -> Quantity {
 
 fn quantity(value: &CanonicalTypedQuantity) -> Quantity {
     Quantity {
-        value: ExactNumber::from_canonical(&value.value)
-            .expect("compiled quantities are canonical"),
-        unit: value.unit.clone(),
+        value: value.value().clone(),
+        unit: value.unit().into(),
     }
 }
 

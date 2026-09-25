@@ -239,9 +239,7 @@ pub(super) fn lower_typed_value(
                     );
                     None
                 }
-                Ok(false) => Some(CompiledParameterValue::ExactNumber {
-                    value: value.canonical_rational(),
-                }),
+                Ok(false) => Some(CompiledParameterValue::ExactNumber { value }),
                 Err(error) => {
                     parameter_type_finding(
                         value_kind,
@@ -354,7 +352,7 @@ pub(super) fn lower_quantity_parameter(
         }
         Ok(false) => Some(CompiledParameterValue::Quantity {
             kind: kind.into(),
-            value: canonical.value.canonical_rational(),
+            value: canonical.value,
             unit: canonical.canonical_unit,
         }),
         Err(error) => {

@@ -274,7 +274,9 @@ fn compiled_bases() -> Vec<Base> {
 }
 
 fn compile(doc: &Value, registry: &[u8]) -> CompileReport {
-    compile_documents(&serde_json::to_vec(doc).unwrap(), registry).unwrap()
+    compile_documents(&serde_json::to_vec(doc).unwrap(), registry)
+        .unwrap()
+        .into_report()
 }
 
 /// A pointer anchors when it resolves, names a documented logical slot under

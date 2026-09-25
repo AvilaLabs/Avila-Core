@@ -92,7 +92,7 @@ fn bound_document<'a>(
     sha256: &str,
 ) -> Option<&'a [u8]> {
     package
-        .manifest
+        .manifest()
         .documents
         .iter()
         .filter(|document| document.role == role)

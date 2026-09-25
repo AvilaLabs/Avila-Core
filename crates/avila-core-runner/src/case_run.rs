@@ -13,21 +13,21 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use avila_core_compiler::{
-    CampaignReport, CampaignStatus, ClaimQualification, ClaimsDocument, CompilationStatus,
-    CompileReport, CompiledContract, CompiledStep, CoverageDeclaration, CoverageReport,
-    CoverageStatus, DeclaredOmission, EnvelopeAssessment, FindingClass, ImmutablePolicyRef,
-    PresentationGateState, RegistrySnapshot, ReviewDisposition, ReviewIndependence, ReviewerRole,
-    SourceLocation, SourceRef, assess_coverage, compile_documents_with_material, evaluate_campaign,
-    evaluate_envelope, parse_requirement_set, registry_kinds, render_campaign_report,
-    render_compile_report,
+    ArtifactObservations, CampaignReport, CampaignStatus, ClaimQualification, ClaimsDocument,
+    CompilationStatus, CompileReport, CompiledContract, CompiledStep, CoverageDeclaration,
+    CoverageReport, CoverageStatus, DeclaredOmission, EnvelopeAssessment, FindingClass,
+    ImmutablePolicyRef, PresentationGateState, RegistrySnapshot, ReviewDisposition,
+    ReviewIndependence, ReviewerRole, SourceLocation, SourceRef, assess_coverage,
+    compile_documents_with_material, evaluate_campaign_in_context, evaluate_envelope,
+    parse_requirement_set, registry_kinds, render_campaign_report, render_compile_report,
 };
 use avila_core_evidence::signature::{self, TrustRoot};
 use avila_core_evidence::{
     ArtifactCheck, CapabilityIdentity, ExecutionReceipt, ExpectedInput, HashCache,
     HashCacheContext, IntegrityCheckState, OutputState, PackageExecution, PackageIntegrityReport,
-    PackageIntegrityStatus, ReceiptCheck, ReceiptCheckState, ReceiptExpectations, ReceiptOutput,
-    ReceiptStatus, VerifiedCasePackage, load_hash_cache, parse_receipt, save_hash_cache,
-    sha256_file, verify_case_package, verify_receipt,
+    PackageIntegrityStatus, PackageVerification, ReceiptCheck, ReceiptCheckState,
+    ReceiptExpectations, ReceiptOutput, ReceiptStatus, VerifiedCasePackage, load_hash_cache,
+    parse_receipt, save_hash_cache, sha256_file, verify_case_package, verify_receipt,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -872,7 +872,7 @@ fn execute_case_inner(
         None => (None, None),
     };
     let hash_cache_verified_at = rfc3339_now();
-    let mut package = verify_case_package(
+    let verification = verify_case_package(
         &manifest_bytes,
         package_root,
         &options.source_roots,
@@ -896,18 +896,75 @@ fn execute_case_inner(
         }),
         _ => None,
     };
+    // A failed integrity check mints no package: nothing downstream may
+    // consume those bytes as checked (ADR-0026). The refusal report carries
+    // the integrity observations; supplied inputs are not admitted, so none
+    // are recorded.
+    let mut package = match verification {
+        PackageVerification::Verified(package)
+        | PackageVerification::PartiallyVerified(package) => package,
+        PackageVerification::Refused(integrity) => {
+            let mut report = CaseRunReport {
+                schema_version: CASE_RUN_REPORT_SCHEMA_VERSION.into(),
+                case_id: integrity.case_id.clone(),
+                title: String::new(),
+                status: CaseRunStatus::Rejected,
+                attempt: None,
+                attempt_comparison: None,
+                findings: Vec::new(),
+                integrity,
+                manifest_signature: None,
+                compile: None,
+                coverage: None,
+                rendered_findings: None,
+                execution: None,
+                bound_plan: None,
+                claims: None,
+                bindings: None,
+                campaign: None,
+                margins: Vec::new(),
+                presentation_gates: Vec::new(),
+                supplied_inputs: Vec::new(),
+                invalidated_steps: Vec::new(),
+                replay_applicable: options.inputs.is_empty(),
+                replay: None,
+                notice: CASE_RUN_NOTICE.into(),
+            };
+            report.findings.extend(cache_load_finding);
+            report.findings.extend(cache_save_finding);
+            // The requester's manifest pin needs no package bytes and keeps
+            // its precedence over the integrity refusal.
+            if let Some(expected) = &options.expected_manifest_sha256
+                && expected != &report.integrity.manifest_sha256
+            {
+                report.notice = format!(
+                    "package manifest sha256 {} differs from the pinned {}; the run is refused before anything is compiled or executed",
+                    report.integrity.manifest_sha256, expected
+                );
+                report.findings.push(RunFinding::runtime(
+                    CORE_X1002,
+                    FindingClass::Inadmissible,
+                    RunStage::PackageIntegrity,
+                    "requester",
+                    SourceLocation::new("case-package", ""),
+                    report.notice.clone(),
+                ));
+            }
+            return Ok(report);
+        }
+    };
     let supplied_inputs = supply_free_inputs(&mut package, options)?;
     let replay_applicable = supplied_inputs.is_empty();
 
     let mut report = CaseRunReport {
         schema_version: CASE_RUN_REPORT_SCHEMA_VERSION.into(),
-        case_id: package.manifest.case_id.clone(),
-        title: package.manifest.title.clone(),
+        case_id: package.manifest().case_id.clone(),
+        title: package.manifest().title.clone(),
         status: CaseRunStatus::Rejected,
         attempt: None,
         attempt_comparison: None,
         findings: Vec::new(),
-        integrity: package.integrity.clone(),
+        integrity: package.integrity().clone(),
         manifest_signature: None,
         compile: None,
         coverage: None,
@@ -971,7 +1028,7 @@ fn execute_case_inner(
 
     // A missing root is an explicit partial check. A supplied-but-missing or
     // different artifact is a failed integrity gate and nothing else runs.
-    if package.integrity.status == PackageIntegrityStatus::Failed {
+    if package.integrity().status == PackageIntegrityStatus::Failed {
         return Ok(report);
     }
 
@@ -986,7 +1043,7 @@ fn execute_case_inner(
     // select what they are checked against.
     let bound_documents = |role: &str| -> Vec<&[u8]> {
         package
-            .manifest
+            .manifest()
             .documents
             .iter()
             .filter(|document| document.role == role)
@@ -1004,17 +1061,16 @@ fn execute_case_inner(
         attestations: &attestations,
     };
     let compile = compile_documents_with_material(contract, registry, &bound_material)?;
-    if compile.status == CompilationStatus::Rejected {
+    if compile.report().status == CompilationStatus::Rejected {
         report.rendered_findings = Some(render_compile_report(
-            &compile,
+            compile.report(),
             &[("contract", contract), ("registry", registry)],
         ));
-        report.compile = Some(compile);
+        report.compile = Some(compile.into_report());
         return Ok(report);
     }
     let compiled = compile
-        .compiled
-        .as_ref()
+        .contract()
         .ok_or("compiler reported `compiled` without a compiled snapshot")?;
     // SC-12.3 reuse rules: authorized non-dependence claims exempt the
     // binding edges they scope from propagation. Evaluated before reach —
@@ -1033,7 +1089,7 @@ fn execute_case_inner(
     // A contract that requires signed execution cannot be run at all without
     // a trust root to check against: falling back to the default "reused or
     // rerun, visibly" behavior would defeat the policy silently.
-    if compiled.execution_policy.require_signatures && trust_root.is_none() {
+    if compiled.execution_policy().require_signatures && trust_root.is_none() {
         report.notice = "the contract's execution policy sets require_signatures, but no --trust-root was supplied to verify against".into();
         report.findings.push(RunFinding::runtime(
             CORE_X1005,
@@ -1043,7 +1099,7 @@ fn execute_case_inner(
             SourceLocation::new("contract", "/execution_policy/require_signatures"),
             report.notice.clone(),
         ));
-        report.compile = Some(compile.clone());
+        report.compile = Some(compile.report().clone());
         return Ok(report);
     }
 
@@ -1055,7 +1111,7 @@ fn execute_case_inner(
     if !org_policy_findings.is_empty() {
         report.notice = "an organization policy or replacement attestation cannot authenticate under a `policy_owner` key; the run is refused".into();
         report.findings.extend(org_policy_findings);
-        report.compile = Some(compile.clone());
+        report.compile = Some(compile.report().clone());
         return Ok(report);
     }
 
@@ -1068,16 +1124,16 @@ fn execute_case_inner(
     if !free_input_findings.is_empty() {
         report.notice = "a supplied free input violates its role's declared schema; the run is refused before anything is staged or executed".into();
         report.findings.extend(free_input_findings);
-        report.compile = Some(compile.clone());
+        report.compile = Some(compile.report().clone());
         return Ok(report);
     }
 
     // Coverage against the library requirement set, when declared. A search
     // optimizes exactly what is written; an unstated omission is refused
     // before any evaluation is spent on it.
-    if let Some(declared) = &package.manifest.coverage {
+    if let Some(declared) = &package.manifest().coverage {
         let set_document = package
-            .manifest
+            .manifest()
             .documents
             .iter()
             .find(|document| document.document_id == declared.requirement_set)
@@ -1102,12 +1158,12 @@ fn execute_case_inner(
         let incomplete = coverage.status == CoverageStatus::Incomplete;
         report.coverage = Some(coverage);
         if incomplete {
-            report.compile = Some(compile.clone());
+            report.compile = Some(compile.report().clone());
             return Ok(report);
         }
     }
 
-    report.compile = Some(compile.clone());
+    report.compile = Some(compile.report().clone());
     if let Some(request) = &options.attempt {
         let candidate_path = options
             .inputs
@@ -1123,7 +1179,7 @@ fn execute_case_inner(
             candidate_path,
             supplied_candidate_sha256,
             &report.integrity.manifest_sha256,
-            &compiled.snapshot_sha256,
+            compiled.snapshot_sha256(),
             &report.case_id,
             trust_root,
         ) {
@@ -1156,7 +1212,7 @@ fn execute_case_inner(
         &package,
         compiled,
         registry,
-        &compiled.execution_policy.recognized_qualification_owners,
+        &compiled.execution_policy().recognized_qualification_owners,
     )?;
     report.findings.extend(loaded.findings);
     let envelopes = Envelopes {
@@ -1175,7 +1231,7 @@ fn execute_case_inner(
         compiled,
         &serde_json::from_slice::<RegistrySnapshot>(registry)?,
         package
-            .manifest
+            .manifest()
             .documents
             .iter()
             .find(|document| document.role == "registry")
@@ -1194,7 +1250,7 @@ fn execute_case_inner(
         return Ok(report);
     }
 
-    if !package.manifest.executions.is_empty() {
+    if !package.manifest().executions.is_empty() {
         let mut runner = Runner::new(
             &package,
             compiled,
@@ -1219,7 +1275,7 @@ fn execute_case_inner(
         // `not_run`. By this point require_signatures already implies
         // trust_root is Some (refused earlier otherwise), so every status
         // here is Unsigned, Invalid, or Verified, never NotChecked.
-        if compiled.execution_policy.require_signatures && !options.plan_only {
+        if compiled.execution_policy().require_signatures && !options.plan_only {
             for step in &execution.steps {
                 if !matches!(
                     step.state,
@@ -1254,7 +1310,7 @@ fn execute_case_inner(
                 }
             }
         }
-        let signature_policy_violation = compiled.execution_policy.require_signatures
+        let signature_policy_violation = compiled.execution_policy().require_signatures
             && !options.plan_only
             && report
                 .findings
@@ -1275,19 +1331,19 @@ fn execute_case_inner(
             report.status = CaseRunStatus::Planned;
         }
         report.execution = Some(execution);
-        report.compile = Some(compile.clone());
+        report.compile = Some(compile.report().clone());
         if stop {
             return Ok(report);
         }
     } else {
-        report.compile = Some(compile.clone());
+        report.compile = Some(compile.report().clone());
     }
 
     // Generate the claims document from the package identities, the fresh
     // outputs, and the recorded attestations for steps that did not run.
     let generated = generate_claims(
         compiled,
-        &package.manifest,
+        package.manifest(),
         &committed_claims,
         &executed_claims,
         &invalidated_steps,
@@ -1316,14 +1372,31 @@ fn execute_case_inner(
     }
 
     let claims: ClaimsDocument = serde_json::from_slice(&generated.bytes)?;
-    let bindings = verify_bindings(&package.manifest, &claims, compiled, &invalidated_steps);
+    let bindings = verify_bindings(package.manifest(), &claims, compiled, &invalidated_steps);
     let bindings_failed = bindings.status == BindingStatus::Failed;
     report.bindings = Some(bindings);
     if bindings_failed {
         return Ok(report);
     }
 
-    let campaign = evaluate_campaign(contract, registry, &generated.bytes)?;
+    // Digest-only evaluation for the committed replay path: fresh artifact
+    // bytes are checked at the package-integrity boundary, not re-fed here,
+    // so the report bytes — and the committed expectations compared below —
+    // stay what the case pinned. The derivation record still lands beside
+    // the report (ADR-0026): a real run emits its attributable chain.
+    let evaluation = evaluate_campaign_in_context(
+        contract,
+        registry,
+        &generated.bytes,
+        ArtifactObservations::none(),
+    )?;
+    if let (Some(workspace), Some(derivation)) = (workspace.as_deref(), evaluation.derivation())
+        && let Ok(mut bytes) = serde_json::to_vec_pretty(derivation)
+    {
+        bytes.push(b'\n');
+        let _ = fs::write(workspace.join("derivation.json"), bytes);
+    }
+    let campaign = evaluation.into_report();
     let campaign_rejected = campaign.status == CampaignStatus::Rejected;
     report.margins = margins(compiled, &campaign);
     report.presentation_gates = build_presentation_gates(

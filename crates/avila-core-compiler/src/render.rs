@@ -324,9 +324,9 @@ pub fn render_compile_report(report: &CompileReport, sources: &[(&str, &[u8])]) 
             let _ = writeln!(
                 out,
                 "compiled: {} revision {} → snapshot {}{}",
-                compiled.contract_id,
-                compiled.contract_revision,
-                compiled.snapshot_sha256,
+                compiled.contract_id(),
+                compiled.contract_revision(),
+                compiled.snapshot_sha256(),
                 plural(notices, " notice")
             );
         }
@@ -542,15 +542,17 @@ mod tests {
         let registry =
             include_bytes!("../../../examples/registry/shutdown-dose-specimen.registry.json");
         let report = compile_documents(contract, registry).unwrap();
-        let text =
-            render_compile_report(&report, &[("contract", contract), ("registry", registry)]);
+        let text = render_compile_report(
+            report.report(),
+            &[("contract", contract), ("registry", registry)],
+        );
         assert!(text.starts_with("missing[CORE-S1301]"), "{text}");
         assert!(text.contains("--> contract:"), "{text}");
         assert!(text.contains("= owner: requester"), "{text}");
         assert!(text.contains("= next:"), "{text}");
         assert!(text.contains("^"), "{text}");
         assert!(text.trim_end().ends_with("blocking findings"), "{text}");
-        for finding in &report.findings {
+        for finding in &report.report().findings {
             let span = locate(contract, &finding.primary.pointer).unwrap();
             assert!(span.line > 1, "{}", finding.primary.pointer);
         }

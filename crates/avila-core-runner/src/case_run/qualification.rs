@@ -80,7 +80,7 @@ pub(crate) fn load_qualifications(
     let mut bound = Vec::new();
     let mut findings = Vec::new();
     for document in package
-        .manifest
+        .manifest()
         .documents
         .iter()
         .filter(|document| document.role == "qualification")
@@ -96,7 +96,7 @@ pub(crate) fn load_qualifications(
         let record = parse_qualification(bytes)
             .map_err(|error| format!("document `{}`: {error}", document.document_id))?;
         let capability = package
-            .manifest
+            .manifest()
             .capabilities
             .iter()
             .find(|capability| capability.capability_id == record.capability.capability_id)
@@ -123,7 +123,7 @@ pub(crate) fn load_qualifications(
         // bound capability implementation exactly, checked just above, and
         // it never applies to a step whose pair is not exercised.
         if record.supersedes.is_empty()
-            && !package.manifest.executions.iter().any(|execution| {
+            && !package.manifest().executions.iter().any(|execution| {
                 execution.adapter == record.adapter
                     && execution.capability_id == record.capability.capability_id
             })
@@ -139,7 +139,7 @@ pub(crate) fn load_qualifications(
         // refusal exists only where a declared vocabulary does, so a role
         // carrying no `attributes` map cannot refuse a name.
         let exercised_steps: BTreeSet<&str> = package
-            .manifest
+            .manifest()
             .executions
             .iter()
             .filter(|execution| {
@@ -221,7 +221,7 @@ pub(crate) fn load_qualifications(
     // it is package-asserted and applies unsigned.
     let mut revoked_by = BTreeMap::new();
     for document in package
-        .manifest
+        .manifest()
         .documents
         .iter()
         .filter(|document| document.role == "qualification_revocation")
@@ -332,7 +332,7 @@ fn check_scope_attributes(
     let mut references = Vec::new();
     collect_attribute_references(&scope, &mut references);
     let inputs: BTreeMap<&str, &avila_core_compiler::VersionedRef> = compiled
-        .inputs
+        .inputs()
         .iter()
         .map(|input| (input.input_id.as_str(), &input.role))
         .collect();
@@ -341,7 +341,7 @@ fn check_scope_attributes(
         // the slot for this assessment — the same slot name elsewhere in
         // the workflow is a different channel.
         let mut bound_input = None;
-        for step in &compiled.workflow {
+        for step in compiled.workflow() {
             if !exercised_steps.contains(step.step_id.as_str()) {
                 continue;
             }
@@ -488,6 +488,7 @@ mod tests {
             &registry_bytes,
         )
         .expect("the fixture compiles")
+        .into_report()
         .compiled
         .expect("the fixture compiles");
         (compiled, serde_json::from_slice(&registry_bytes).unwrap())

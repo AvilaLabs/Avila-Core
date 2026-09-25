@@ -52,7 +52,7 @@ pub(crate) fn load_selection(
     registry_doc_sha256: &str,
     trust_root: Option<&TrustRoot>,
 ) -> Result<Vec<RunFinding>, Box<dyn Error>> {
-    let policy = &compiled.execution_policy;
+    let policy = &compiled.execution_policy();
     let policy_active = !policy.deny_providers.is_empty()
         || !policy.allow_providers.is_empty()
         || policy.require_provider_independence
@@ -62,7 +62,7 @@ pub(crate) fn load_selection(
         || policy.cost_cap.is_some();
 
     let documents: Vec<_> = package
-        .manifest
+        .manifest()
         .documents
         .iter()
         .filter(|document| document.role == "capability_selection")
@@ -131,7 +131,7 @@ pub(crate) fn load_selection(
     // exist.
     for entry in &selection.selections {
         if !package
-            .manifest
+            .manifest()
             .executions
             .iter()
             .any(|execution| execution.step_id == entry.step_id)
@@ -146,7 +146,7 @@ pub(crate) fn load_selection(
 
     let mut selected_owners: Vec<(String, String)> = Vec::new();
     let mut selected_executables: Vec<(String, String)> = Vec::new();
-    for execution in &package.manifest.executions {
+    for execution in &package.manifest().executions {
         let step_id = execution.step_id.as_str();
         let Some(entry) = selection
             .selections
@@ -389,7 +389,7 @@ fn bound_triple(
     execution: &PackageExecution,
 ) -> Result<BoundTriple, Box<dyn Error>> {
     let step = compiled
-        .workflow
+        .workflow()
         .iter()
         .find(|step| step.step_id == execution.step_id)
         .ok_or_else(|| {
@@ -399,7 +399,7 @@ fn bound_triple(
             )
         })?;
     let capability = package
-        .manifest
+        .manifest()
         .capabilities
         .iter()
         .find(|capability| capability.capability_id == execution.capability_id)
@@ -426,7 +426,7 @@ fn selection_signature_reason(
     compiled: &CompiledContract,
     trust_root: Option<&TrustRoot>,
 ) -> Option<String> {
-    if !compiled.execution_policy.require_signatures {
+    if !compiled.execution_policy().require_signatures {
         return None;
     }
     let Some((_, signature_document)) =

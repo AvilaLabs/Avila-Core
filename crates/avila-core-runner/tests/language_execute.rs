@@ -2,7 +2,10 @@
 //! declared `synthetic/…` executables under a cleared environment with a
 //! timeout, collect the declared output, and emit the observation set
 //! `evaluate` binds. These tests run actual child processes; they require
-//! `python3` on PATH (the synthetic executables' shebang).
+//! `python3` on PATH (the synthetic executables' shebang), which only a
+//! Unix shell resolves — the shared `spawn_step`/`wait_with_timeout`
+//! process-tree behavior is covered for Windows in `execute::tests`.
+#![cfg(unix)]
 
 use std::collections::BTreeMap;
 use std::fs;

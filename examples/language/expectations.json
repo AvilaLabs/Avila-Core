@@ -413,6 +413,31 @@
     }
    ],
    "verdicts": "none \u2014 the goal stays open until authored"
+  },
+  "invalid-mixed-units.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8001",
+     "kind": "malformed",
+     "at": "quantity_kinds[rate]",
+     "detail": "kind `rate` declares no canonical unit"
+    },
+    {
+     "code": "CORE-E8010",
+     "kind": "type_mismatch",
+     "at": "body[0].implementation",
+     "detail": "operands carry different units `mm` vs `cm`"
+    },
+    {
+     "code": "CORE-E8002",
+     "kind": "library_pin_mismatch",
+     "at": "library",
+     "detail": "supplied library is not admitted; its pin cannot be checked"
+    }
+   ],
+   "note": "EL-02 review: a kind without canonical_unit let [1,2]mm + [10,20]cm silently bind [11,22]. canonical_unit is now required at library admission and the additive rules require coincident units \u2014 sum stays unestablished."
   }
  },
  "identity_cases": {

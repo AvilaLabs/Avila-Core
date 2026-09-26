@@ -307,10 +307,14 @@ Each rule names the authority that establishes its premises.
 
 ### A. Kinded exact and interval arithmetic (authority: kernel)
 
-Additive rules require a shared kind and compatible relation maps:
+Additive rules require a shared kind, a shared unit, and compatible
+relation maps — every kind declares a `canonical_unit` and admission
+normalizes each value to it, so operands of one kind always coincide in
+unit and the rules perform no conversion:
 
 ```text
-a, b : same kind k ; claims ∈ {exact,enclosure} ; ρₐ ∪ ρ_b consistent [P-ADD/P-SUB]
+a, b : same kind k ; same unit ; claims ∈ {exact,enclosure} ;
+       ρₐ ∪ ρ_b consistent                                     [P-ADD/P-SUB]
 ─────────────────────────────
 a ± b : kind k, claim = weakest-of(exact→enclosure), over ρ = ρₐ ∪ ρ_b
   +: [a₁+b₁, a₂+b₂]   −: [a₁−b₂, a₂−b₂]

@@ -653,6 +653,8 @@ def eval_expression(expr, operands: dict, kind_products: dict, _depth: int = 0) 
     if rule in ("add", "sub"):
         if left.ty.quantity_kind != right.ty.quantity_kind:
             raise EvalFailure("type_mismatch", "kind mismatch")
+        if left.unit != right.unit:
+            raise EvalFailure("type_mismatch", "unit mismatch")
         quantity_kind, unit = left.ty.quantity_kind, left.unit
     else:
         pair = kind_products.get((left.ty.quantity_kind, right.ty.quantity_kind))
@@ -1126,7 +1128,11 @@ class Replay:
         return None
 
     def poison(self, bind: str, ty: QuantityType):
-        self.env[bind] = SemVal(ty, "", None, "unestablished", [], set())
+        unit = (
+            (self.kinds.get(ty.quantity_kind) or {}).get("canonical_unit")
+            or ""
+        )
+        self.env[bind] = SemVal(ty, unit, None, "unestablished", [], set())
 
     def infer(self, index: int, bind: str, infer: dict):
         rule = EXPR_RULES.get(infer.get("rule"))
@@ -2496,6 +2502,11 @@ def library_admission_ok(library: dict) -> bool:
             for k in (library.get(collection) or {})
         ):
             return False
+    if any(
+        (decl or {}).get("canonical_unit") is None
+        for decl in kinds.values()
+    ):
+        return False
     method_ids = set()
     for _, method in canonical_order(methods, METHOD):
         if not identifier_charset_ok(method.get("id", "")):

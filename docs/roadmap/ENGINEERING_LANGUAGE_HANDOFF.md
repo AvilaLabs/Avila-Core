@@ -213,6 +213,12 @@ findings. The finding-by-finding closure and adjudication items are in
 [the revision response](reviews/2026-09-25-engineering-language-el02-closure.md).
 Returned for independent review before EL-03.
 
+An [implementation self-review](reviews/2026-09-26-engineering-language-el02-implementation-review.md)
+later found and fixed a unit gap the corpus never exercised (kinds without
+`canonical_unit` admitted mixed-unit arithmetic; now refused at admission
+and at the additive rules, in both implementations). Independent review
+remains open.
+
 ## EL-03 — Execute the synthetic program through the shared runner
 
 After EL-00 and EL-02, integrate a narrow experimental plan with the existing

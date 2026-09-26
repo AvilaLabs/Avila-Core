@@ -10,8 +10,10 @@ the spec rather than the other way around.
 ## Layout
 
 - `libraries/` — method libraries (`avila.core/method-library/v0.1-draft`):
-  `thermal-expansion` (the charter's toy model) and `measurement-scaling`
-  (the second library, pinning independence-premise behavior).
+  `thermal-expansion` (the charter's toy model), `measurement-scaling`
+  (the second library, pinning independence-premise behavior), and
+  `uncanonical-units` (a deliberately inadmissible library — a kind with
+  no `canonical_unit`, exercising the unit-admission gate).
 - `programs/` — authored programs (`avila.core/language-program/v0.1-draft`).
 - `expectations.json` — per-program specified analysis/plan/verdict
   outcomes, the `identity_cases` semantic-projection requirements
@@ -45,6 +47,7 @@ the spec rather than the other way around.
 | `invalid-shared-source-independence` | `provenance_disjoint` refuted by the shared calibration edge; `independent` stays open — neither blocks silently |
 | `invalid-independence-unknown` | independence open — disjoint recorded provenance, but no attested premise |
 | `invalid-provenance-conflict` | `premise_conflict` — asserting `provenance_disjoint` against a recorded shared edge contradicts the record itself |
+| `invalid-mixed-units` | inadmissible library — a kind with no `canonical_unit` (`malformed`); the additive rules also refuse mixed-unit operands (`type_mismatch`); `sum` stays unestablished |
 | `unfinished-missing-input` | authoring hole — `coefficient` declared but never bound |
 | `unfinished-goal-hole` | open hole reachable from the requirement |
 | `unfinished-ambiguous-methods` | named ambiguity — three methods match the goal's type, no silent choice |

@@ -89,14 +89,6 @@ const TEST_PINNED: &[(&str, &str)] = &[
         "avila-core-compiler tests::context_binding — an evaluation exceeding the derivation bound refuses with this code",
     ),
     (
-        "CORE-E8001",
-        "avila-core-compiler tests::language_fixtures::admission_and_identity_are_checked — inadmissible bytes, undeclared fields, and projection failures",
-    ),
-    (
-        "CORE-E8002",
-        "avila-core-compiler tests::language_fixtures::admission_and_identity_are_checked — a library other than the pinned semantic identity is refused",
-    ),
-    (
         "CORE-E8003",
         "avila-core-compiler tests::language_fixtures::admission_and_identity_are_checked — an assumption naming an undeclared proposition",
     ),

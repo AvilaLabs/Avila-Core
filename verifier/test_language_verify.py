@@ -1196,3 +1196,29 @@ class AdmissionParityTests(unittest.TestCase):
             lambda p, l: p["body"][0].__setitem__("apply", "no-such-method")
         )
         self.assertFalse(ok)
+
+    def test_kind_without_canonical_unit_unadmits_library(self):
+        # EL-02 review: a unitless kind bypassed every unit check — values
+        # of one kind could carry mixed units into the additive rules.
+        _, lib, _ = self._mini_admission(
+            lambda p, l: l["quantity_kinds"]["coeff"].pop("canonical_unit")
+        )
+        self.assertFalse(lib)
+
+    def test_mixed_unit_addition_fails(self):
+        # The eval gate directly: add of equal kinds with different units
+        # is a type_mismatch rule failure, not a silently wrong result.
+        from fractions import Fraction
+        from language_verify import (
+            eval_expression, EvalFailure, Numeric, QuantityType, SemVal)
+        ty = QuantityType("length", "enclosure", {})
+        operands = {
+            "a": SemVal(ty, "mm", Numeric(lower=Fraction(1), upper=Fraction(2)),
+                        "established", [], set()),
+            "b": SemVal(ty, "cm", Numeric(lower=Fraction(10), upper=Fraction(20)),
+                        "established", [], set()),
+        }
+        with self.assertRaises(EvalFailure) as ctx:
+            eval_expression(("call", "add", [("name", "a"), ("name", "b")]),
+                            operands, {})
+        self.assertEqual(ctx.exception.kind, "type_mismatch")

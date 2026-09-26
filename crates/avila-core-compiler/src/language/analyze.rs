@@ -1408,6 +1408,18 @@ impl<'a, 'f> LibraryChecker<'a, 'f> {
                 }
             }
         }
+        // Every kind declares its canonical unit — admission normalizes all
+        // values to it, and the arithmetic rules (no conversion) depend on
+        // that uniformity. A unitless kind cannot be checked.
+        for (kind, decl) in &doc.quantity_kinds {
+            if decl.canonical_unit.is_none() {
+                self.finding(
+                    "malformed",
+                    &format!("quantity_kinds[{kind}]"),
+                    format!("kind `{kind}` declares no canonical unit"),
+                );
+            }
+        }
         let mut method_ids = BTreeSet::new();
         // `methods` is a declared set — iterate canonically so the findings
         // order is the same for every source ordering.
@@ -3043,11 +3055,12 @@ impl<'a> Analyzer<'a> {
     /// Inserts an unestablished binding so later steps still resolve — one
     /// refusal does not cascade malformed findings through dependents.
     fn poison(&mut self, bind: &str, ty: QuantityType) {
+        let unit = canonical_unit(self.library.doc, &ty.quantity_kind).unwrap_or_default();
         self.env.insert(
             bind.to_string(),
             SemanticValue {
                 ty,
-                unit: String::new(),
+                unit,
                 value: None,
                 state: ValueState::Unestablished,
                 edges: BTreeSet::new(),
@@ -4623,6 +4636,10 @@ impl<'a> Analyzer<'a> {
             RuleFailure::KindMismatch { left, right } => (
                 "type_mismatch",
                 format!("`{left}` and `{right}` are different quantity kinds"),
+            ),
+            RuleFailure::UnitMismatch { left, right } => (
+                "type_mismatch",
+                format!("operands carry different units `{left}` vs `{right}`"),
             ),
             RuleFailure::NoProductRow { lhs, rhs } => (
                 "unsupported",

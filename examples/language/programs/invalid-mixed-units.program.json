@@ -1,0 +1,63 @@
+{
+ "schema_version": "avila.core/language-program/v0.1-draft",
+ "profile": "avila.core/language/0.1-draft",
+ "id": "invalid-mixed-units",
+ "title": "Mixed-unit operands under a unitless kind",
+ "library": {
+  "name": "uncanonical-units",
+  "revision": 1,
+  "semantic_sha256": ""
+ },
+ "entities": {},
+ "inputs": [
+  {
+   "id": "rate_a",
+   "type": {
+    "quantity_kind": "rate",
+    "claim": "enclosure"
+   },
+   "binding": {
+    "state": "bound",
+    "value": {
+     "kind": "enclosure",
+     "lower": "1",
+     "upper": "2",
+     "unit": "mm"
+    }
+   }
+  },
+  {
+   "id": "rate_b",
+   "type": {
+    "quantity_kind": "rate",
+    "claim": "enclosure"
+   },
+   "binding": {
+    "state": "bound",
+    "value": {
+     "kind": "enclosure",
+     "lower": "10",
+     "upper": "20",
+     "unit": "cm"
+    }
+   }
+  }
+ ],
+ "assumptions": [],
+ "premises": [],
+ "body": [
+  {
+   "bind": "sum",
+   "apply": "add-rates",
+   "arguments": {
+    "a": {
+     "ref": "rate_a"
+    },
+    "b": {
+     "ref": "rate_b"
+    }
+   }
+  }
+ ],
+ "requirements": []
+}

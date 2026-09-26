@@ -272,6 +272,9 @@ pub enum RuleFailure {
     NominalOperand { operand: String },
     /// add/sub on different quantity kinds.
     KindMismatch { left: String, right: String },
+    /// add/sub on equal kinds carrying different units — the rules have no
+    /// conversion, so coincident units are required.
+    UnitMismatch { left: String, right: String },
     /// mul with no declared kind_products row.
     NoProductRow { lhs: String, rhs: String },
     /// Operands disagree on an entity for a shared relation key.
@@ -381,6 +384,12 @@ fn apply_binary(
                 return Err(RuleFailure::KindMismatch {
                     left: left.ty.quantity_kind.clone(),
                     right: right.ty.quantity_kind.clone(),
+                });
+            }
+            if left.unit != right.unit {
+                return Err(RuleFailure::UnitMismatch {
+                    left: left.unit.clone(),
+                    right: right.unit.clone(),
                 });
             }
             (left.ty.quantity_kind.clone(), left.unit.clone())

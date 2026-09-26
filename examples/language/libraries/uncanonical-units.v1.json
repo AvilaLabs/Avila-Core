@@ -1,0 +1,42 @@
+{
+ "schema_version": "avila.core/method-library/v0.1-draft",
+ "profile": "avila.core/language/0.1-draft",
+ "library": {
+  "name": "uncanonical-units",
+  "revision": 1
+ },
+ "title": "Adversarial: a kind without a canonical unit",
+ "quantity_kinds": {
+  "rate": {}
+ },
+ "kind_products": [],
+ "propositions": {},
+ "methods": [
+  {
+   "id": "add-rates",
+   "variables": {},
+   "inputs": {
+    "a": {
+     "quantity_kind": "rate",
+     "claim": "enclosure"
+    },
+    "b": {
+     "quantity_kind": "rate",
+     "claim": "enclosure"
+    }
+   },
+   "output": {
+    "quantity_kind": "rate",
+    "claim": "enclosure"
+   },
+   "requires": [],
+   "ensures": [],
+   "assumes": [],
+   "effects": [],
+   "implementation": {
+    "kind": "primitive",
+    "body": "interval.add(a, b)"
+   }
+  }
+ ]
+}

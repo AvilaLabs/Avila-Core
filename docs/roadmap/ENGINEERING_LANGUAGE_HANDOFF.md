@@ -390,6 +390,14 @@ point: `independence` discharge requires the premise's `at` to equal the
 full union scope of the operands' relations — the scope-equality burden
 the assessment already names.
 
+The control-group comparison — the same seeds through case-010's contract
+path — is
+[2026-09-26-case-010-control-comparison.md](reviews/2026-09-26-case-010-control-comparison.md):
+two silent accepts the language refuses (wrong-format verification passes
+all four contract requirements; a rank requirement mis-bound to the `fails`
+slot passes end-to-end), one vocabulary absence (input provenance), parity
+on byte forgery, and the honest ceiling (declared semantics only).
+
 ### EL-05 brief
 
 Add a second synthetic library exercising different composition over the same

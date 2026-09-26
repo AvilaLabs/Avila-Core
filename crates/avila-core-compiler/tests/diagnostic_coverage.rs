@@ -128,6 +128,10 @@ const TEST_PINNED: &[(&str, &str)] = &[
         "CORE-E8027",
         "avila-core-compiler tests::language_fixtures::identity_is_withheld_and_expressions_are_bounded — an expression past the depth bound is a finding, not a crash",
     ),
+    (
+        "CORE-E8028",
+        "avila-core-compiler tests::language_execution::tampered_digests_keep_the_observation_foreign — input/output/receipt/site tampering rejects the observation",
+    ),
 ];
 
 fn fixture_root() -> PathBuf {

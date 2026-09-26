@@ -206,4 +206,5 @@ degenerate element orders by content.
   EL-03/EL-04. Analysis emits `pending` for verdicts awaiting observation
   and `not_evaluated.*` only for statically-decidable refusals.
 - `case-010-matmul-rank/` is untouched and still untracked.
-- The EL-02 revision remains **uncommitted** for independent review.
+- The EL-02 revision is committed (`acd778c`) and remains **pending
+  independent review** — EL-02 is not claimed complete.

@@ -717,7 +717,7 @@ fn missing_output(output: &ResolvedAdapterOutput) -> ReceiptOutput {
 /// Establish containment before any adapter code runs. Windows creates the child
 /// suspended, assigns it to a Job Object, then resumes it. Failure
 /// to establish the job fails the spawn instead of running an uncontained child.
-fn spawn_step(command: Command) -> io::Result<StepChild> {
+pub(crate) fn spawn_step(command: Command) -> io::Result<StepChild> {
     let mut command = process_wrap::std::CommandWrap::from(command);
     #[cfg(unix)]
     command.wrap(process_wrap::std::ProcessGroup::leader());
@@ -726,10 +726,10 @@ fn spawn_step(command: Command) -> io::Result<StepChild> {
     command.spawn().map(StepChild)
 }
 
-struct StepChild(Box<dyn process_wrap::std::ChildWrapper>);
+pub(crate) struct StepChild(Box<dyn process_wrap::std::ChildWrapper>);
 
 impl StepChild {
-    fn as_mut(&mut self) -> &mut dyn process_wrap::std::ChildWrapper {
+    pub(crate) fn as_mut(&mut self) -> &mut dyn process_wrap::std::ChildWrapper {
         self.0.as_mut()
     }
 }
@@ -743,7 +743,7 @@ impl Drop for StepChild {
     }
 }
 
-fn wait_with_timeout(
+pub(crate) fn wait_with_timeout(
     child: &mut dyn process_wrap::std::ChildWrapper,
     timeout: Duration,
 ) -> io::Result<(std::process::ExitStatus, bool)> {
@@ -769,13 +769,13 @@ fn wait_with_timeout(
 }
 
 #[cfg(unix)]
-fn signal_of(status: &std::process::ExitStatus) -> Option<i32> {
+pub(crate) fn signal_of(status: &std::process::ExitStatus) -> Option<i32> {
     use std::os::unix::process::ExitStatusExt as _;
     status.signal()
 }
 
 #[cfg(not(unix))]
-fn signal_of(_status: &std::process::ExitStatus) -> Option<i32> {
+pub(crate) fn signal_of(_status: &std::process::ExitStatus) -> Option<i32> {
     None
 }
 

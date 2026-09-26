@@ -13,15 +13,16 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use avila_core_kernel::{CanonicalJsonValue, ExactNumber, read_authoritative_json};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use super::document::{
     ANALYSIS_SCHEMA_VERSION, ImportDecl, LANGUAGE_PROFILE, LIBRARY_SCHEMA_VERSION, LibraryDocument,
     MethodDecl, ObligationDecl, PROGRAM_SCHEMA_VERSION, ProgramDocument, ProvenanceDecl, RefDecl,
-    SlotDecl, ValueDecl,
+    RequirementDecl, SlotDecl, ValueDecl,
 };
 use super::eval::{self, Expression, FailureKind, KindProducts, PrimitiveRule, RuleFailure};
+use super::execution;
 use super::model::{
     ClaimModel, Enclosure, NumericValue, QuantityType, RelationMap, ScopedProposition,
     SemanticValue, ValueState,
@@ -30,7 +31,7 @@ use super::projection::{self, LanguageDocument};
 use crate::diagnostic::{
     CORE_E8001, CORE_E8002, CORE_E8003, CORE_E8004, CORE_E8005, CORE_E8010, CORE_E8011, CORE_E8012,
     CORE_E8013, CORE_E8014, CORE_E8015, CORE_E8016, CORE_E8017, CORE_E8018, CORE_E8019, CORE_E8020,
-    CORE_E8021, CORE_E8022, CORE_E8023, CORE_E8024, CORE_E8025, CORE_E8026, CORE_E8027,
+    CORE_E8021, CORE_E8022, CORE_E8023, CORE_E8024, CORE_E8025, CORE_E8026, CORE_E8027, CORE_E8028,
 };
 
 /// Finding-kind → stable diagnostic code (the catalog in `catalog.rs`
@@ -59,6 +60,7 @@ pub const FINDING_CODES: &[(&str, &str)] = &[
     ("undeclared_projection", CORE_E8025),
     ("lifecycle_refused", CORE_E8026),
     ("budget", CORE_E8027),
+    ("observation_foreign", CORE_E8028),
 ];
 
 fn code_for(kind: &str) -> &'static str {
@@ -146,7 +148,7 @@ const MAX_WITNESS_DEPTH: usize = MAX_PREMISES;
 /// admitted input it belongs to; `pointer` is the JSON pointer into that
 /// document when the path resolves to a single position; `binding` scopes
 /// the finding to a bound name for requirement reachability.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LanguageFinding {
     pub code: String,
@@ -874,6 +876,20 @@ struct Analyzer<'a> {
     /// Support contributed by witnesses discharged inside the running step —
     /// drained into the result binding when the application completes.
     pending_support: DischargeSupport,
+    /// Evaluation material (empty under plain `analyze`): application-site
+    /// index → the supplied observation, plus the plan identity the
+    /// observations must belong to.
+    observations: BTreeMap<usize, execution::ObservationRecord>,
+    expected_plan_sha256: Option<String>,
+    /// Sites whose supplied observation passed the digest binding — their
+    /// runtime obligations are decidable at `evaluate`.
+    observed_sites: BTreeSet<usize>,
+    /// Site index → the observed output value the obligations replay.
+    observed_values: BTreeMap<usize, Option<NumericValue>>,
+    /// `analyze` leaves verdicts pending; `evaluate` derives them.
+    evaluating: bool,
+    /// Observe/discharge applications recorded during an evaluation run.
+    eval_events: Vec<execution::RuleOutcome>,
 }
 
 /// The shared analysis operation. Always returns a record: an inadmissible
@@ -883,6 +899,40 @@ pub fn analyze_program(
     library_bytes: &[u8],
     options: &AnalysisOptions,
 ) -> LanguageAnalysis {
+    analyze_core(program_bytes, library_bytes, options, None, false).0
+}
+
+/// The triple `analyze_core` returns: the analysis record, its lowered
+/// execution plan, and — under `evaluate` — the rule applications the
+/// observation binding and verdict comparison performed.
+type CoreOutcome = (
+    LanguageAnalysis,
+    execution::ExecutionPlanDocument,
+    Vec<execution::RuleOutcome>,
+);
+
+/// The runtime material `evaluate` carries into a re-run of the analysis:
+/// the identity of the plan the observations must answer, plus the
+/// observation records keyed by application site once admitted.
+struct EvalMaterial {
+    plan_sha256: String,
+    /// `body[{index}]` → observation; records whose `at` is not a body site
+    /// are foreign and never enter this map.
+    observations: BTreeMap<usize, execution::ObservationRecord>,
+}
+
+/// The analysis pipeline shared by `analyze` (no evaluation material —
+/// `external` outputs stay `declared`), `plan` (same run, emitting the
+/// execution plan), and `evaluate` (the same derivation replayed against
+/// supplied observations). Returns the analysis record and the execution
+/// plan document it lowers to.
+fn analyze_core(
+    program_bytes: &[u8],
+    library_bytes: &[u8],
+    options: &AnalysisOptions,
+    eval_material: Option<&EvalMaterial>,
+    evaluating: bool,
+) -> CoreOutcome {
     let mut findings = Vec::new();
     let library = admit::<LibraryDocument>(
         "library",
@@ -934,34 +984,42 @@ pub fn analyze_program(
                 None,
             );
         }
-        return LanguageAnalysis::refused(
-            findings,
-            ProgramIdentityReport {
-                id: program.typed.as_ref().map(|t| t.id.clone()),
-                identity: DocumentIdentityReport {
-                    document_sha256: program.document_sha256,
-                    semantic_sha256: if program_admitted {
-                        program.semantic_sha256
-                    } else {
-                        None
+        return (
+            LanguageAnalysis::refused(
+                findings.clone(),
+                ProgramIdentityReport {
+                    id: program.typed.as_ref().map(|t| t.id.clone()),
+                    identity: DocumentIdentityReport {
+                        document_sha256: program.document_sha256.clone(),
+                        semantic_sha256: if program_admitted {
+                            program.semantic_sha256.clone()
+                        } else {
+                            None
+                        },
+                        admitted: program_admitted,
                     },
-                    admitted: program_admitted,
                 },
-            },
-            LibraryIdentityReport {
-                name: library.typed.as_ref().map(|t| t.library.name.clone()),
-                revision: library.typed.as_ref().map(|t| t.library.revision),
-                identity: DocumentIdentityReport {
-                    document_sha256: library.document_sha256,
-                    semantic_sha256: if library_admitted {
-                        library.semantic_sha256
-                    } else {
-                        None
+                LibraryIdentityReport {
+                    name: library.typed.as_ref().map(|t| t.library.name.clone()),
+                    revision: library.typed.as_ref().map(|t| t.library.revision),
+                    identity: DocumentIdentityReport {
+                        document_sha256: library.document_sha256.clone(),
+                        semantic_sha256: if library_admitted {
+                            library.semantic_sha256.clone()
+                        } else {
+                            None
+                        },
+                        admitted: library_admitted,
                     },
-                    admitted: library_admitted,
+                    pin_match: false,
                 },
-                pin_match: false,
-            },
+                Vec::new(),
+            ),
+            refused_plan(
+                program.semantic_sha256.clone(),
+                library.semantic_sha256.clone(),
+                &findings,
+            ),
             Vec::new(),
         );
     };
@@ -986,6 +1044,14 @@ pub fn analyze_program(
         malformed_requirements: BTreeSet::new(),
         current_binding: None,
         pending_support: DischargeSupport::default(),
+        observations: eval_material
+            .map(|m| m.observations.clone())
+            .unwrap_or_default(),
+        expected_plan_sha256: eval_material.map(|m| m.plan_sha256.clone()),
+        observed_sites: BTreeSet::new(),
+        observed_values: BTreeMap::new(),
+        evaluating,
+        eval_events: Vec::new(),
     };
     analyzer.run();
 
@@ -1085,15 +1151,15 @@ pub fn analyze_program(
         })
         .collect();
 
-    LanguageAnalysis {
+    let analysis = LanguageAnalysis {
         schema_version: ANALYSIS_SCHEMA_VERSION.into(),
         profile: LANGUAGE_PROFILE.into(),
         program: ProgramIdentityReport {
             id: Some(program_doc.id.clone()),
             identity: DocumentIdentityReport {
-                document_sha256: program.document_sha256,
+                document_sha256: program.document_sha256.clone(),
                 semantic_sha256: if program_admitted {
-                    program.semantic_sha256
+                    program.semantic_sha256.clone()
                 } else {
                     None
                 },
@@ -1104,9 +1170,9 @@ pub fn analyze_program(
             name: Some(library_doc.library.name.clone()),
             revision: Some(library_doc.library.revision),
             identity: DocumentIdentityReport {
-                document_sha256: library.document_sha256,
+                document_sha256: library.document_sha256.clone(),
                 semantic_sha256: if library_admitted {
-                    library.semantic_sha256
+                    library.semantic_sha256.clone()
                 } else {
                     None
                 },
@@ -1120,18 +1186,28 @@ pub fn analyze_program(
             "findings"
         }
         .into(),
-        findings,
+        findings: findings.clone(),
         bindings,
         obligations: analyzer.obligations.clone(),
         requirements,
-        goals: analyzer.goals,
-        lifecycle: analyzer.lifecycle,
+        goals: analyzer.goals.clone(),
+        lifecycle: analyzer.lifecycle.clone(),
         plan: PlanReport {
             state: if blocked_plan { "refused" } else { "ready" }.into(),
-            steps,
+            steps: steps.clone(),
             runtime_obligations,
         },
-    }
+    };
+    let plan = if blocked_plan {
+        refused_plan(
+            program.semantic_sha256.clone(),
+            library.semantic_sha256.clone(),
+            &findings,
+        )
+    } else {
+        analyzer.emit_execution_plan(&analysis, &reachable)
+    };
+    (analysis, plan, analyzer.eval_events.clone())
 }
 
 /// Declared identifiers are interpolated into report paths
@@ -3410,7 +3486,20 @@ impl<'a> Analyzer<'a> {
                     .and_then(|i| i.produces.as_ref())
                     .map(|p| p.unit.clone())
                     .unwrap_or_default();
-                (declared_value, unit, state)
+                // §7 [O1] — under `evaluate` a supplied observation binds
+                // here: the observed output materializes the value, and the
+                // runtime obligations replay against it. An unbound site
+                // stays `declared` and its obligations open.
+                if self.evaluating
+                    && let Some(observed) =
+                        self.bind_observation(index, method, &slot_values, &variables)
+                {
+                    self.observed_sites.insert(index);
+                    self.observed_values.insert(index, observed.value.clone());
+                    (observed.value, observed.unit, ValueState::Established)
+                } else {
+                    (declared_value, unit, state)
+                }
             }
             _ => {
                 self.program_finding(
@@ -3489,7 +3578,34 @@ impl<'a> Analyzer<'a> {
                 }
             } else {
                 // External postconditions are runtime obligations: executed,
-                // then checked against the observed values.
+                // then checked against the observed values. Under `evaluate`
+                // the check replays now — the observed output must equal the
+                // value the postcondition computes over the operands.
+                let (state, mut replay_failure) = if !self.evaluating {
+                    (ObligationState::Runtime, None)
+                } else if !self.observed_sites.contains(&index) {
+                    (ObligationState::Open, None)
+                } else {
+                    match eval::parse_ensures(&ensures.expression) {
+                        Ok(rhs) => match eval::eval(&rhs, &slot_values, &self.library) {
+                            Ok(expected) => match (
+                                &expected.value,
+                                self.observed_values.get(&index).and_then(|v| v.as_ref()),
+                            ) {
+                                (Some(want), Some(got)) if want == got => {
+                                    (ObligationState::Discharged, None)
+                                }
+                                (Some(_), Some(_)) => (ObligationState::Refuted, None),
+                                _ => (ObligationState::Open, None),
+                            },
+                            Err(failure) => (ObligationState::Open, Some(failure)),
+                        },
+                        // A postcondition that cannot even parse is an
+                        // authoring defect — already reported; the
+                        // obligation stays open.
+                        Err(_) => (ObligationState::Open, None),
+                    }
+                };
                 self.step_obligations
                     .entry(index)
                     .or_default()
@@ -3499,12 +3615,36 @@ impl<'a> Analyzer<'a> {
                     kind: "postcondition".into(),
                     at: obligation_at.clone(),
                     step: index,
-                    state: ObligationState::Runtime.as_str().into(),
+                    state: state.as_str().into(),
                     check: Some(ensures.check.clone()),
                     expression: Some(ensures.expression.clone()),
                     operands: slot_values.keys().cloned().collect(),
                     detail: format!("`{}` checked by {}", ensures.expression, ensures.check),
                 });
+                self.eval_events.push(execution::RuleOutcome {
+                    rule: "discharge".into(),
+                    subject: obligation_at.clone(),
+                    state: state.as_str().into(),
+                    detail: format!(
+                        "postcondition `{}` {} by {}",
+                        ensures.expression,
+                        state.as_str(),
+                        ensures.check
+                    ),
+                });
+                if state == ObligationState::Refuted {
+                    self.program_finding(
+                        "obligation_refuted",
+                        &obligation_at,
+                        format!(
+                            "postcondition `{}` replays to a different value than the observation produced",
+                            ensures.expression
+                        ),
+                    );
+                }
+                if let Some(failure) = replay_failure.take() {
+                    self.rule_failure(&obligation_at, failure);
+                }
             }
         }
         if !is_primitive && method.ensures.is_empty() {
@@ -3512,6 +3652,13 @@ impl<'a> Analyzer<'a> {
             // owes the observation itself — the output value enters only
             // through execution, and there is nothing to replay.
             let id = format!("{at}.observation");
+            let state = if !self.evaluating {
+                ObligationState::Runtime
+            } else if self.observed_sites.contains(&index) {
+                ObligationState::Discharged
+            } else {
+                ObligationState::Open
+            };
             self.step_obligations
                 .entry(index)
                 .or_default()
@@ -3521,7 +3668,7 @@ impl<'a> Analyzer<'a> {
                 kind: "observation".into(),
                 at: at.clone(),
                 step: index,
-                state: ObligationState::Runtime.as_str().into(),
+                state: state.as_str().into(),
                 check: None,
                 expression: None,
                 operands: slot_values.keys().cloned().collect(),
@@ -3529,6 +3676,14 @@ impl<'a> Analyzer<'a> {
                     "output `{bind}` must be observed at execution; `{method_id}` declares no postcondition — nothing to replay"
                 ),
             });
+            if self.evaluating {
+                self.eval_events.push(execution::RuleOutcome {
+                    rule: "observe".into(),
+                    subject: at.clone(),
+                    state: state.as_str().into(),
+                    detail: format!("observation obligation for `{bind}`"),
+                });
+            }
         }
 
         // A refuted or open obligation blocks verdicts derived from this
@@ -3587,6 +3742,14 @@ impl<'a> Analyzer<'a> {
             }
         }
         edges.extend(witness_support.edges);
+        // §8.3 — an observed output rides a first-class provenance edge: the
+        // receipt's digest is the edge identity, as `attribution` is for
+        // declared sources.
+        if self.observed_sites.contains(&index)
+            && let Some(record) = self.observations.get(&index)
+        {
+            edges.insert(format!("observation:{}", record.receipt_sha256));
+        }
         for premise in witness_support.premises {
             self.depends
                 .entry(bind.to_string())
@@ -4592,11 +4755,783 @@ impl<'a> Analyzer<'a> {
             .collect()
     }
 
+    /// The `avila.core/execution-plan/v0.1-draft` document this analysis
+    /// lowers to (§1 `plan` — spec §7.4). Only reachable `apply` steps whose
+    /// implementation is `external` become invocations; every runtime
+    /// obligation is attached to its invocation — a step that cannot carry
+    /// its obligations refuses the plan rather than omitting them.
+    fn emit_execution_plan(
+        &self,
+        analysis: &LanguageAnalysis,
+        reachable: &BTreeSet<String>,
+    ) -> execution::ExecutionPlanDocument {
+        let context = execution::PlanContext {
+            program_sha256: analysis
+                .program
+                .identity
+                .semantic_sha256
+                .clone()
+                .unwrap_or_default(),
+            library_sha256: analysis
+                .library
+                .identity
+                .semantic_sha256
+                .clone()
+                .unwrap_or_default(),
+            analysis_sha256: sha256_of(
+                &execution::canonical_json_bytes(&analysis).unwrap_or_default(),
+            ),
+        };
+        let mut invocations = Vec::new();
+        for (index, step) in self.program.body.iter().enumerate() {
+            let Some(method_id) = &step.apply else {
+                continue;
+            };
+            if !reachable.contains(&step.bind) || step.hole.is_some() {
+                continue;
+            }
+            let Some(method) = self.library.methods.get(method_id.as_str()) else {
+                continue;
+            };
+            let Some(implementation) = &method.implementation else {
+                continue;
+            };
+            if implementation.kind != "external" {
+                continue;
+            }
+            let mut inputs = BTreeMap::new();
+            for slot in method.inputs.keys() {
+                let binding = step
+                    .arguments
+                    .as_ref()
+                    .and_then(|a| a.get(slot))
+                    .map(|r| r.reference.clone())
+                    .unwrap_or_default();
+                let entry = match self.env.get(&binding).and_then(|value| {
+                    execution::staged_value_bytes(value)
+                        .ok()
+                        .map(|bytes| (value, bytes))
+                }) {
+                    Some((value, bytes)) => execution::PlannedInput {
+                        binding: binding.clone(),
+                        state: "staged".into(),
+                        value: execution::value_decl(value).ok(),
+                        sha256: Some(sha256_of(&bytes)),
+                    },
+                    // No stageable value reaches this slot — the invocation
+                    // cannot run; the plan says so rather than fabricating
+                    // an operand the executable never saw.
+                    None => execution::PlannedInput {
+                        binding: binding.clone(),
+                        state: "unstaged".into(),
+                        value: None,
+                        sha256: None,
+                    },
+                };
+                inputs.insert(slot.clone(), entry);
+            }
+            invocations.push(execution::PlannedInvocation {
+                at: format!("body[{index}]"),
+                bind: step.bind.clone(),
+                method: method_id.clone(),
+                executable: implementation.executable.clone().unwrap_or_default(),
+                effects: method.effects.clone(),
+                inputs,
+                produces: implementation
+                    .produces
+                    .as_ref()
+                    .map(|p| execution::Produces {
+                        quantity_kind: p.quantity_kind.clone(),
+                        unit: p.unit.clone(),
+                    }),
+                obligations: self
+                    .step_obligations
+                    .get(&index)
+                    .cloned()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter(|id| {
+                        self.obligations
+                            .iter()
+                            .find(|o| &o.id == id)
+                            .is_some_and(|o| o.state == "runtime")
+                    })
+                    .collect(),
+            });
+        }
+        let mut doc = execution::ExecutionPlanDocument {
+            schema_version: execution::EXECUTION_PLAN_SCHEMA_VERSION.into(),
+            profile: LANGUAGE_PROFILE.into(),
+            state: "ready".into(),
+            context,
+            invocations,
+            refused_by: Vec::new(),
+            plan_sha256: None,
+        };
+        doc.plan_sha256 = Some(plan_identity(&doc));
+        doc
+    }
+
+    /// §7 [O1] — bind a supplied observation to this application site. The
+    /// observation must name the site, carry the digest of every staged
+    /// input exactly, re-hash its receipt, and agree with the receipt's
+    /// own input/output digests — a receipt or output transplanted from
+    /// another invocation fails the comparison. Returns the admitted
+    /// output value on success; the caller records the site as observed.
+    fn bind_observation(
+        &mut self,
+        index: usize,
+        method: &MethodDecl,
+        slot_values: &BTreeMap<String, SemanticValue>,
+        variables: &BTreeMap<String, String>,
+    ) -> Option<SemanticValue> {
+        let at = format!("body[{index}]");
+        let record = self.observations.get(&index)?.clone();
+        let reject = |analyzer: &mut Self, detail: String| {
+            analyzer.program_finding("observation_foreign", &at, detail.clone());
+            analyzer.eval_events.push(execution::RuleOutcome {
+                rule: "observe".into(),
+                subject: at.clone(),
+                state: "rejected".into(),
+                detail,
+            });
+        };
+        if record.at != at {
+            reject(
+                self,
+                format!(
+                    "observation declares site `{}` — supplied for `{at}`",
+                    record.at
+                ),
+            );
+            return None;
+        }
+        // Receipt bytes must re-hash to the declared digest — otherwise the
+        // observation's own integrity claim fails before any content check.
+        let receipt_digest = execution::canonical_json_bytes(&record.receipt)
+            .ok()
+            .map(|b| sha256_of(&b));
+        if receipt_digest.as_deref() != Some(record.receipt_sha256.as_str()) {
+            reject(
+                self,
+                "receipt bytes do not re-hash to the declared `receipt_sha256`".into(),
+            );
+            return None;
+        }
+        // The receipt must claim this plan, this site, and this executable —
+        // a receipt cut for another invocation is foreign even when its
+        // digests are internally consistent.
+        let declared_executable = method
+            .implementation
+            .as_ref()
+            .and_then(|i| i.executable.clone())
+            .unwrap_or_default();
+        if record.receipt.plan_sha256.as_str()
+            != self.expected_plan_sha256.as_deref().unwrap_or_default()
+            || record.receipt.at != at
+            || record.receipt.executable != declared_executable
+            || record.executable != declared_executable
+        {
+            reject(
+                self,
+                "receipt does not belong to this plan, site, or executable".into(),
+            );
+            return None;
+        }
+        // Input digests: every slot the plan staged must appear with the
+        // digest of its canonical bytes — same set, same digests.
+        let mut expected_inputs = BTreeMap::new();
+        for (slot, value) in slot_values {
+            if let Ok(bytes) = execution::staged_value_bytes(value) {
+                expected_inputs.insert(slot.clone(), sha256_of(&bytes));
+            }
+        }
+        if record.inputs.len() != expected_inputs.len()
+            || record
+                .inputs
+                .iter()
+                .any(|(slot, digest)| expected_inputs.get(slot) != Some(digest))
+            || record.receipt.inputs.len() != expected_inputs.len()
+            || record
+                .receipt
+                .inputs
+                .iter()
+                .any(|input| expected_inputs.get(&input.slot) != Some(&input.sha256))
+        {
+            reject(
+                self,
+                "observation input digests do not match the invocation's operands".into(),
+            );
+            return None;
+        }
+        // The invocation identity re-derives from capability + inputs +
+        // invocation; the recorded digest must match — a receipt that
+        // claims one thing and attests another fails here.
+        let invocation_digest = execution::invocation_identity(&record.receipt);
+        if invocation_digest.as_deref() != Some(record.receipt.invocation_sha256.as_str()) {
+            reject(
+                self,
+                "receipt `invocation_sha256` does not re-derive from its parts".into(),
+            );
+            return None;
+        }
+        if record.receipt.status != "completed" || record.output.is_none() {
+            reject(
+                self,
+                "the invocation did not produce a completed output".into(),
+            );
+            return None;
+        }
+        let Some(output_decl) = &record.output else {
+            return None;
+        };
+        let output_digest = execution::canonical_json_bytes(output_decl)
+            .ok()
+            .map(|b| sha256_of(&b));
+        if output_digest.as_deref() != record.output_sha256.as_deref()
+            || record
+                .receipt
+                .outputs
+                .iter()
+                .find(|o| o.output_id == "output")
+                .is_none_or(|o| o.state != "collected" || o.sha256 != record.output_sha256)
+        {
+            reject(
+                self,
+                "output digest does not cover the supplied output document".into(),
+            );
+            return None;
+        }
+        // Admit the observed output at the declared output type — the
+        // receipt proves the process ran; admission decides the value is
+        // usable at this signature.
+        let output_ty = self.output_type(method, variables);
+        let observed = self.admit_value(output_decl, &output_ty, &format!("{at}.output"))?;
+        self.eval_events.push(execution::RuleOutcome {
+            rule: "observe".into(),
+            subject: at.clone(),
+            state: "established".into(),
+            detail: format!(
+                "invocation digests verified; receipt {} re-hashes",
+                record.receipt_sha256
+            ),
+        });
+        Some(SemanticValue {
+            ty: output_ty,
+            unit: method
+                .implementation
+                .as_ref()
+                .and_then(|i| i.produces.as_ref())
+                .map(|p| p.unit.clone())
+                .unwrap_or_default(),
+            value: Some(observed),
+            state: ValueState::Established,
+            edges: slot_values
+                .values()
+                .flat_map(|v| v.edges.iter().cloned())
+                .chain([format!("observation:{}", record.receipt_sha256)])
+                .collect(),
+            assumptions: Vec::new(),
+        })
+    }
+
+    /// §10 [V-*] — the bounded comparator: an enclosure subject against an
+    /// exact limit. `ge` passes when the lower bound meets the limit, fails
+    /// when the upper bound falls below it; `le` symmetric. Anything
+    /// between is `inconclusive` — never rounded to a nearer verdict.
+    fn requirement_verdict(
+        &mut self,
+        requirement: &RequirementDecl,
+        subject: &SemanticValue,
+    ) -> RequirementReport {
+        let at = format!("requirements[{}]", requirement.id);
+        let Some(limit) = requirement
+            .limit
+            .value
+            .as_deref()
+            .and_then(|v| ExactNumber::from_canonical(v).ok())
+        else {
+            // Admission already refuses a malformed limit; unreachable in a
+            // ready plan — stay honest anyway.
+            return RequirementReport {
+                state: "not_evaluated".into(),
+                verdict: Some(VerdictReport {
+                    status: "not_evaluated".into(),
+                    rule: "not_evaluated.malformed".into(),
+                    detail: "the requirement limit is not an exact number".into(),
+                }),
+                declared_value: subject.value_text(),
+            };
+        };
+        let Some(numeric) = subject.value.clone() else {
+            return RequirementReport {
+                state: "not_evaluated".into(),
+                verdict: Some(VerdictReport {
+                    status: "not_evaluated".into(),
+                    rule: "not_evaluated.missing_evidence".into(),
+                    detail: self.unestablished_detail(&requirement.subject.reference),
+                }),
+                declared_value: None,
+            };
+        };
+        let (lower, upper) = numeric.bounds();
+        let cmp = |a: &ExactNumber, b: &ExactNumber| {
+            a.checked_cmp(b).unwrap_or(std::cmp::Ordering::Greater)
+        };
+        let symbol = requirement.comparison.as_str();
+        let (status, detail) = match symbol {
+            "ge" => {
+                if !cmp(&lower, &limit).is_lt() {
+                    (
+                        "pass",
+                        format!(
+                            "{} satisfies >= {} {}: {} >= {}",
+                            render_subject(subject),
+                            limit.canonical_rational(),
+                            requirement.limit.unit,
+                            lower.canonical_rational(),
+                            limit.canonical_rational(),
+                        ),
+                    )
+                } else if cmp(&upper, &limit).is_lt() {
+                    (
+                        "fail",
+                        format!(
+                            "upper bound {} < limit {}",
+                            upper.canonical_rational(),
+                            limit.canonical_rational(),
+                        ),
+                    )
+                } else {
+                    (
+                        "inconclusive",
+                        format!(
+                            "{} straddles limit {}",
+                            render_subject_no_unit(subject),
+                            limit.canonical_rational(),
+                        ),
+                    )
+                }
+            }
+            _ => {
+                if !cmp(&upper, &limit).is_gt() {
+                    (
+                        "pass",
+                        format!(
+                            "{} satisfies <= {} {}: {} <= {}",
+                            render_subject(subject),
+                            limit.canonical_rational(),
+                            requirement.limit.unit,
+                            upper.canonical_rational(),
+                            limit.canonical_rational(),
+                        ),
+                    )
+                } else if cmp(&lower, &limit).is_gt() {
+                    (
+                        "fail",
+                        format!(
+                            "lower bound {} > limit {}",
+                            lower.canonical_rational(),
+                            limit.canonical_rational(),
+                        ),
+                    )
+                } else {
+                    (
+                        "inconclusive",
+                        format!(
+                            "{} straddles limit {}",
+                            render_subject_no_unit(subject),
+                            limit.canonical_rational(),
+                        ),
+                    )
+                }
+            }
+        };
+        // Residual assumptions qualify the verdict — a pass conditional on
+        // undischarged premises is reported conditional, not unconditional.
+        let conditional = render_conditionals(&subject.assumptions);
+        let detail = if subject.assumptions.is_empty() {
+            detail
+        } else if status == "pass" {
+            format!("{detail}, conditional on {conditional}")
+        } else {
+            format!("{detail}; conditional on {conditional}")
+        };
+        self.eval_events.push(execution::RuleOutcome {
+            rule: format!("bounded.{symbol}"),
+            subject: at.clone(),
+            state: status.into(),
+            detail: detail.clone(),
+        });
+        RequirementReport {
+            state: "evaluated".into(),
+            verdict: Some(VerdictReport {
+                status: status.into(),
+                rule: format!("bounded.{symbol}"),
+                detail,
+            }),
+            declared_value: subject.value_text(),
+        }
+    }
+
+    /// The `missing_evidence` explanation: name the unavailable inputs and
+    /// unestablished bindings in the subject's dependency cone, not just
+    /// the subject.
+    fn unestablished_detail(&self, subject: &str) -> String {
+        let mut cone = BTreeSet::new();
+        let mut frontier = vec![subject.to_string()];
+        while let Some(name) = frontier.pop() {
+            if cone.insert(name.clone())
+                && let Some(operands) = self.deps.get(&name)
+            {
+                frontier.extend(operands.iter().cloned());
+            }
+        }
+        let mut clauses = Vec::new();
+        let mut named = BTreeSet::new();
+        for input in &self.program.inputs {
+            let unavailable = input
+                .binding
+                .as_ref()
+                .is_some_and(|b| b.state == "unavailable");
+            if unavailable && cone.contains(&input.id) {
+                clauses.push(format!("input {} declared unavailable", input.id));
+                named.insert(input.id.clone());
+            }
+        }
+        for name in &cone {
+            if name == subject || named.contains(name) {
+                continue;
+            }
+            if self
+                .env
+                .get(name)
+                .is_some_and(|v| v.state == ValueState::Unestablished)
+            {
+                clauses.push(format!("{name} has no established value"));
+            }
+        }
+        if clauses.is_empty() {
+            clauses.push(format!("{subject} has no established value"));
+        }
+        clauses.join("; ")
+    }
+}
+
+/// Canonical identity of the plan body — the digest the observation set and
+/// every receipt binds to.
+fn plan_identity(plan: &execution::ExecutionPlanDocument) -> String {
+    let mut body = plan.clone();
+    body.plan_sha256 = None;
+    execution::canonical_json_bytes(&body)
+        .map(|b| sha256_of(&b))
+        .unwrap_or_default()
+}
+
+/// The `{claim} {value} {unit}` rendering used in verdict details.
+fn render_subject(subject: &SemanticValue) -> String {
+    let base = render_subject_no_unit(subject);
+    if subject.unit.is_empty() {
+        base
+    } else {
+        format!("{base} {}", subject.unit)
+    }
+}
+
+fn render_subject_no_unit(subject: &SemanticValue) -> String {
+    match &subject.value {
+        Some(NumericValue::Exact(n)) => {
+            format!("{} {}", subject.ty.claim.as_str(), n.canonical_rational())
+        }
+        Some(NumericValue::Enclosure(e)) => format!(
+            "{} [{}, {}]",
+            subject.ty.claim.as_str(),
+            e.lower.canonical_rational(),
+            e.upper.canonical_rational()
+        ),
+        None => format!("{} <unestablished>", subject.ty.claim.as_str()),
+    }
+}
+
+/// `proposition@({v1, v2})` — the conditional-qualification render; entity
+/// values in key order, matching the expectation vocabulary.
+fn render_conditionals(assumptions: &[ScopedProposition]) -> String {
+    assumptions
+        .iter()
+        .map(|a| {
+            if a.at.is_empty() {
+                a.proposition.clone()
+            } else {
+                format!(
+                    "{}@({})",
+                    a.proposition,
+                    a.at.values().cloned().collect::<Vec<_>>().join(", ")
+                )
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// The plan document of a refused analysis: no invocations, the blocking
+/// findings' codes as the refusal's explanation.
+fn refused_plan(
+    program_sha256: Option<String>,
+    library_sha256: Option<String>,
+    findings: &[LanguageFinding],
+) -> execution::ExecutionPlanDocument {
+    let mut doc = execution::ExecutionPlanDocument {
+        schema_version: execution::EXECUTION_PLAN_SCHEMA_VERSION.into(),
+        profile: LANGUAGE_PROFILE.into(),
+        state: "refused".into(),
+        context: execution::PlanContext {
+            program_sha256: program_sha256.unwrap_or_default(),
+            library_sha256: library_sha256.unwrap_or_default(),
+            analysis_sha256: String::new(),
+        },
+        invocations: Vec::new(),
+        refused_by: findings
+            .iter()
+            .filter(|f| f.blocking)
+            .map(|f| format!("{}:{}", f.code, f.kind))
+            .collect(),
+        plan_sha256: None,
+    };
+    doc.plan_sha256 = Some(plan_identity(&doc));
+    doc
+}
+
+/// The `plan` stage (spec §1): analyze and emit the execution plan binding
+/// the analysis identity. Always returns a record — a refused analysis
+/// lowers to a refused plan, never to a partial one.
+pub fn execution_plan(
+    program_bytes: &[u8],
+    library_bytes: &[u8],
+    options: &AnalysisOptions,
+) -> execution::ExecutionPlanDocument {
+    analyze_core(program_bytes, library_bytes, options, None, false).1
+}
+
+/// The `evaluate` stage (spec §1, §7): replay the analysis with supplied
+/// observations bound to their application sites, then derive requirement
+/// verdicts. An observation that fails the digest binding is foreign and
+/// leaves the obligation open; an absent observation does the same — the
+/// requirement ends `not_evaluated`, never silently `pass`.
+pub fn evaluate_program(
+    program_bytes: &[u8],
+    library_bytes: &[u8],
+    options: &AnalysisOptions,
+    observations_bytes: &[u8],
+) -> execution::LanguageEvaluation {
+    // Pass one derives the plan identity the observations must answer;
+    // pass two replays the derivation with the admitted material bound.
+    let (baseline, plan, _) = analyze_core(program_bytes, library_bytes, options, None, false);
+    let plan_sha256 = plan.plan_sha256.clone().unwrap_or_default();
+
+    // Admit the observation document — strict schema, canonical bytes.
+    let (observations_doc, observations_sha256, observation_findings) =
+        match read_authoritative_json(observations_bytes) {
+            Ok(canonical) => {
+                let bytes = canonical_bytes_of(&canonical).unwrap_or_default();
+                let parsed = serde_json::from_slice::<execution::ObservationsDocument>(&bytes);
+                match parsed {
+                    Ok(doc)
+                        if doc.schema_version == execution::OBSERVATIONS_SCHEMA_VERSION
+                            && doc.profile == LANGUAGE_PROFILE =>
+                    {
+                        (Some(doc), sha256_of(&bytes), Vec::new())
+                    }
+                    Ok(doc) => (
+                        None,
+                        sha256_of(&bytes),
+                        vec![format!(
+                            "schema `{}`/profile `{}` is not an observations document",
+                            doc.schema_version, doc.profile
+                        )],
+                    ),
+                    Err(error) => (None, sha256_of(&bytes), vec![error.to_string()]),
+                }
+            }
+            Err(error) => (
+                None,
+                String::new(),
+                vec![format!("observations document does not decode: {error}")],
+            ),
+        };
+
+    // The document-level context gate: an observations set that claims
+    // another plan is foreign in toto — every site stays unobserved.
+    let context_ok = observations_doc
+        .as_ref()
+        .is_some_and(|doc| doc.plan_sha256 == plan_sha256)
+        && plan.state == "ready";
+
+    let mut site_map: BTreeMap<usize, execution::ObservationRecord> = BTreeMap::new();
+    let mut outcomes: Vec<execution::ObservationOutcome> = Vec::new();
+    if let Some(doc) = &observations_doc {
+        for record in &doc.observations {
+            let site = record
+                .at
+                .strip_prefix("body[")
+                .and_then(|s| s.strip_suffix(']'))
+                .and_then(|s| s.parse::<usize>().ok());
+            match site {
+                Some(index) if context_ok => {
+                    site_map.insert(index, record.clone());
+                }
+                _ => {
+                    outcomes.push(execution::ObservationOutcome {
+                        at: record.at.clone(),
+                        bind: record.bind.clone(),
+                        state: "rejected".into(),
+                        detail: if context_ok {
+                            "observation does not name a `body[{index}]` application site".into()
+                        } else {
+                            "the supplied observations do not belong to this plan".into()
+                        },
+                    });
+                }
+            }
+        }
+    }
+
+    let material = if context_ok {
+        Some(EvalMaterial {
+            plan_sha256: plan_sha256.clone(),
+            observations: site_map,
+        })
+    } else {
+        None
+    };
+    let (evaluated, _, events) = analyze_core(
+        program_bytes,
+        library_bytes,
+        options,
+        material.as_ref(),
+        true,
+    );
+
+    // A supplied record that failed the digest binding surfaces as a
+    // rejected observation — the `observe` events carry the reason.
+    for event in &events {
+        if event.rule == "observe" && event.state == "rejected" {
+            outcomes.push(execution::ObservationOutcome {
+                at: event.subject.clone(),
+                bind: String::new(),
+                state: "rejected".into(),
+                detail: event.detail.clone(),
+            });
+        }
+    }
+
+    // Requirements: the evaluated run's verdicts; fall back to the
+    // baseline's pending rows when the evaluation itself was refused.
+    let mut requirements = BTreeMap::new();
+    for (id, report) in &evaluated.requirements {
+        let verdict = report.verdict.clone().unwrap_or(VerdictReport {
+            status: "not_evaluated".into(),
+            rule: "not_evaluated.missing_evidence".into(),
+            detail: "the requirement stayed pending — the observation that would resolve it never arrived".into(),
+        });
+        requirements.insert(
+            id.clone(),
+            execution::RequirementVerdict {
+                status: verdict.status,
+                rule: verdict.rule,
+                detail: verdict.detail,
+                subject_value: report.declared_value.clone(),
+            },
+        );
+    }
+
+    // Absent-observation outcomes: every planned invocation that no
+    // supplied record answered.
+    let supplied_sites: BTreeSet<&str> = observations_doc
+        .iter()
+        .flat_map(|d| d.observations.iter())
+        .map(|o| o.at.as_str())
+        .collect();
+    for invocation in &plan.invocations {
+        if !supplied_sites.contains(invocation.at.as_str()) {
+            outcomes.push(execution::ObservationOutcome {
+                at: invocation.at.clone(),
+                bind: invocation.bind.clone(),
+                state: "absent".into(),
+                detail: "no observation supplied for this invocation — its obligations stay open"
+                    .into(),
+            });
+        }
+    }
+
+    let context = execution::EvaluationContext {
+        semantic_profile: LANGUAGE_PROFILE.into(),
+        program_sha256: baseline
+            .program
+            .identity
+            .semantic_sha256
+            .clone()
+            .unwrap_or_default(),
+        library_sha256: baseline
+            .library
+            .identity
+            .semantic_sha256
+            .clone()
+            .unwrap_or_default(),
+        analysis_sha256: sha256_of(&execution::canonical_json_bytes(&baseline).unwrap_or_default()),
+        plan_sha256,
+        observations_sha256,
+        lifecycle: options
+            .lifecycle
+            .iter()
+            .map(|e| format!("{}={}", e.key, e.state))
+            .collect(),
+    };
+    let context_sha256 = sha256_of(&execution::canonical_json_bytes(&context).unwrap_or_default());
+    let mut evaluation = execution::LanguageEvaluation {
+        schema_version: execution::EVALUATION_SCHEMA_VERSION.into(),
+        profile: LANGUAGE_PROFILE.into(),
+        context,
+        context_sha256,
+        obligations: evaluated
+            .obligations
+            .iter()
+            .map(|o| execution::RuleOutcome {
+                rule: o.kind.clone(),
+                subject: o.id.clone(),
+                state: o.state.clone(),
+                detail: o.detail.clone(),
+            })
+            .collect(),
+        observations: outcomes,
+        requirements,
+        document_findings: observation_findings,
+        findings: evaluated.findings.clone(),
+        applications: Vec::new(),
+        evaluation_sha256: None,
+    };
+    evaluation.applications = events;
+    evaluation.evaluation_sha256 = Some(evaluation_identity(&evaluation));
+    evaluation
+}
+
+fn evaluation_identity(evaluation: &execution::LanguageEvaluation) -> String {
+    let mut body = evaluation.clone();
+    body.evaluation_sha256 = None;
+    execution::canonical_json_bytes(&body)
+        .map(|b| sha256_of(&b))
+        .unwrap_or_default()
+}
+
+impl Analyzer<'_> {
+    /// Requirement admission already ran in the static phase; here each
+    /// requirement's subject is resolved to a report — `pending` under
+    /// `analyze`, a verdict under `evaluate`.
     fn requirement_reports(&mut self) -> BTreeMap<String, RequirementReport> {
         let mut reports = BTreeMap::new();
-        for (_, requirement) in
-            canonical_order(&self.program.requirements, &projection::REQUIREMENT)
-        {
+        // `program` is a document reference — requirement decls borrow from
+        // it, not from `self`, so verdict derivation can take `&mut self`.
+        let program = self.program;
+        for (_, requirement) in canonical_order(&program.requirements, &projection::REQUIREMENT) {
             let at = format!("requirements[{}]", requirement.id);
             if self.malformed_requirements.contains(&requirement.id) {
                 reports.insert(
@@ -4663,10 +5598,12 @@ impl<'a> Analyzer<'a> {
                             "not_evaluated.missing_evidence".to_string()
                         }
                     });
-                reports.insert(
-                    requirement.id.clone(),
-                    not_evaluated(&rule, "subject has no established value".into()),
-                );
+                let detail = if rule == "not_evaluated.missing_evidence" {
+                    self.unestablished_detail(&requirement.subject.reference)
+                } else {
+                    "subject has no established value".into()
+                };
+                reports.insert(requirement.id.clone(), not_evaluated(&rule, detail));
                 continue;
             }
             // A generated obligation's refusal blocks verdicts on otherwise
@@ -4750,6 +5687,17 @@ impl<'a> Analyzer<'a> {
                                 "subject is a nominal assertion; the requirement needs an established claim".into(),
                             ),
                         );
+                    } else if self.evaluating {
+                        // Declared under `evaluate` means the observation
+                        // never bound — the runtime evidence is absent.
+                        reports.insert(
+                            requirement.id.clone(),
+                            not_evaluated(
+                                "not_evaluated.missing_evidence",
+                                "the runtime observation that would establish the subject did not bind"
+                                    .into(),
+                            ),
+                        );
                     } else {
                         reports.insert(
                             requirement.id.clone(),
@@ -4763,9 +5711,10 @@ impl<'a> Analyzer<'a> {
                 }
                 ValueState::Established => {
                     // The subject is usable and the requirement well-formed —
-                    // but pass/fail/inconclusive verdicts are `evaluate`'s
-                    // output, not analysis'. The requirement stays pending
-                    // until an execution context discharges its observations.
+                    // pass/fail/inconclusive verdicts are `evaluate`'s output,
+                    // not `analyze`'s: under plain analysis the requirement
+                    // stays pending until an execution context discharges
+                    // its observations.
                     if subject.ty.claim == ClaimModel::Nominal {
                         reports.insert(
                             requirement.id.clone(),
@@ -4773,6 +5722,11 @@ impl<'a> Analyzer<'a> {
                                 "not_evaluated.unestablished",
                                 "subject claim cannot satisfy a bounded requirement".into(),
                             ),
+                        );
+                    } else if self.evaluating {
+                        reports.insert(
+                            requirement.id.clone(),
+                            self.requirement_verdict(requirement, &subject),
                         );
                     } else {
                         reports.insert(

@@ -399,6 +399,13 @@ pub const DIAGNOSTIC_CATALOG: &[DiagnosticExplanation] = &[
         next_action: "Factor the program or declaration so it fits the profile's stated bounds; the bound that fired is named in the finding.",
     },
     DiagnosticExplanation {
+        code: "CORE-E8028",
+        title: "Foreign observation",
+        rule: "ENGINEERING_LANGUAGE §7 [O1]",
+        meaning: "A supplied observation failed to bind to its application site: the recorded input digests do not match the invocation's operands, the output digest does not cover the supplied output document, the receipt bytes do not re-hash to the declared digest, or the receipt belongs to a different plan or site. Foreign material is refused, never silently dropped; the obligations it claimed remain open.",
+        next_action: "Produce the observation by executing the plan's own invocation; a receipt or output from another run cannot substitute.",
+    },
+    DiagnosticExplanation {
         code: "CORE-R3101",
         title: "No compatible source",
         rule: "SC-6 R1",

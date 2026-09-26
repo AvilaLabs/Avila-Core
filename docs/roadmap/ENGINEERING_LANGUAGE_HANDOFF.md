@@ -240,6 +240,42 @@ Done when a real run emits the full attributable argument, failed or incomplete
 execution cannot establish its promised claim, and policy-required missing
 premises remain blocking. No live scientific solver is required for this test.
 
+### EL-03 status — implemented, in review
+
+The analyze → plan → execute → evaluate chain is live end-to-end:
+
+- `language::execution_plan` emits `avila.core/execution-plan/v0.1-draft` —
+  per-invocation staged inputs (canonical `ValueDecl` bytes + digests), the
+  declared `produces`, the obligation ids the invocation can discharge, and a
+  plan digest binding the analysis identity. Unstageable operands are
+  declared `unstaged`, not hidden.
+- `runner::language::execute_plan` stages `inputs/{slot}.json`, resolves
+  `synthetic/…` executables only through a caller-supplied map, spawns under
+  a cleared environment + minimal PATH with the shared `wait_with_timeout`,
+  writes `logs/`, collects the declared output as a canonical `ValueDecl`,
+  and emits `avila.core/language-observations/v0.1-draft` — each record
+  carrying a receipt (`avila.core/language-receipt/v0.1-draft`) with
+  invocation identity, input digests, output digest, and process status.
+- `language::evaluate_program` replays the analyzer against the supplied
+  observations: every record is re-hashed and bound to its application site
+  (receipt digest, plan digest, site, executable, input digest set, output
+  digest — §7 O1); an admitted output is re-admitted at the declared type and
+  runtime postconditions replay against it (§7 O2 — discharged/refuted/open).
+  Requirements then derive `pass | fail | inconclusive | not_evaluated`; a
+  rejected or absent observation leaves the obligation open and the
+  requirement `not_evaluated` with `CORE-E8028 observation_foreign`.
+- `avila-core language plan|execute|evaluate` expose all three stages.
+
+Synthetic executables live in `examples/language/executables/` (exact-rational
+interval arithmetic over the staged `ValueDecl`s). Coverage: compiler tests
+`language_execution.rs` (digest-binding matrix — tampered input/output/
+receipt/site, foreign plan, absent record, transplanted receipts, verdict
+boundaries) plus runner tests `language_execute.rs` (real processes, timeout,
+missing output). All pinned `expected_on_execution` verdicts in
+`examples/language/expectations.json` reproduce, including the conditional-on
+residual grammar. EL-04's independent replay remains a separate verifier —
+this chain is the reference implementation, not the check of it.
+
 ## EL-04 — Replay the language and explain changes
 
 Extend the independent verifier from the written rules. Reconstruct supported

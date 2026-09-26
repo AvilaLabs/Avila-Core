@@ -900,7 +900,7 @@ fn witnesses_must_carry_attribution_and_support() {
     // its own assumptions and provenance edge to `combined_rate`.
     let analysis = analyze_program(&program, &library, &options);
     let support = &analysis.bindings["combined_rate"];
-    let edges = support.source_edges.iter().cloned().collect::<Vec<_>>();
+    let edges = support.source_edges.to_vec();
     assert!(
         edges.contains(&"indep-memo-7".to_string()),
         "the witness's provenance edge must reach the result: {edges:?}"

@@ -15,6 +15,7 @@
 mod analyze;
 mod document;
 mod eval;
+mod execution;
 mod model;
 mod projection;
 
@@ -22,9 +23,19 @@ pub use analyze::{
     AnalysisOptions, BindingReport, BindingTypeReport, DocumentIdentityReport, FINDING_CODES,
     GoalReport, LanguageAnalysis, LanguageFinding, LibraryIdentityReport, LifecycleEntry,
     LifecycleReport, ObligationReport, PlanReport, PlanStepReport, ProgramIdentityReport,
-    RequirementReport, ScopedAssumptionReport, VerdictReport, analyze_program,
+    RequirementReport, ScopedAssumptionReport, VerdictReport, analyze_program, evaluate_program,
+    execution_plan,
 };
 pub use document::{
     ANALYSIS_SCHEMA_VERSION, LANGUAGE_PROFILE, LIBRARY_SCHEMA_VERSION, PROGRAM_SCHEMA_VERSION,
+    ValueDecl,
+};
+pub use execution::{
+    EVALUATION_SCHEMA_VERSION, EXECUTION_PLAN_SCHEMA_VERSION, EvaluationContext,
+    ExecutionPlanDocument, LanguageEvaluation, LanguageInvocation, LanguageReceipt,
+    OBSERVATIONS_SCHEMA_VERSION, ObservationOutcome, ObservationRecord, ObservationsDocument,
+    PlanContext, PlannedInput, PlannedInvocation, ProcessOutcome, Produces, RECEIPT_SCHEMA_VERSION,
+    ReceiptInput, ReceiptLog, ReceiptOutput, RequirementVerdict, RuleOutcome, RunnerIdentity,
+    canonical_json_bytes, invocation_identity,
 };
 pub use projection::{LanguageDocument, ProjectionError, project_document};

@@ -219,6 +219,50 @@ enum LanguageCommand {
         #[arg(long)]
         text: bool,
     },
+    /// Emit the execution plan (`avila.core/execution-plan/v0.1-draft`):
+    /// per-invocation staged inputs, digests, and runtime obligations, bound
+    /// to the analysis identity. A refused analysis lowers to a refused
+    /// plan — the record explains, never truncates.
+    Plan {
+        #[arg(long)]
+        program: PathBuf,
+        #[arg(long)]
+        library: PathBuf,
+        #[arg(long = "lifecycle", value_name = "KEY=STATE")]
+        lifecycle: Vec<String>,
+    },
+    /// Execute a `ready` plan's external invocations against supplied
+    /// executables — `synthetic/linear-expansion@1=path/to/exe`, repeatable —
+    /// and emit the observations document
+    /// (`avila.core/language-observations/v0.1-draft`).
+    Execute {
+        /// The execution plan document to run.
+        #[arg(long)]
+        plan: PathBuf,
+        /// Fresh workspace root for staging, logs, and outputs.
+        #[arg(long)]
+        workdir: PathBuf,
+        /// Executable resolution as `id=path`, repeatable.
+        #[arg(long = "executable", value_name = "ID=PATH")]
+        executables: Vec<String>,
+        /// Per-invocation timeout in milliseconds (default 30 000).
+        #[arg(long, default_value_t = 30_000)]
+        timeout_ms: u64,
+    },
+    /// Replay the analysis against an observations document: bind each
+    /// observation to its application site by digest, re-check runtime
+    /// obligations, and emit the `avila.core/language-evaluation/v0.1-draft`
+    /// verdict record. Exits 1 when any requirement fails.
+    Evaluate {
+        #[arg(long)]
+        program: PathBuf,
+        #[arg(long)]
+        library: PathBuf,
+        #[arg(long)]
+        observations: PathBuf,
+        #[arg(long = "lifecycle", value_name = "KEY=STATE")]
+        lifecycle: Vec<String>,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -698,6 +742,37 @@ struct CapabilitiesArgs {
     on_path: bool,
 }
 
+/// Read the program + library documents for a `language` command.
+fn read_language_documents(
+    program: &PathBuf,
+    library: &PathBuf,
+) -> Result<(Vec<u8>, Vec<u8>), Box<dyn Error>> {
+    let program_bytes = fs::read(program)
+        .map_err(|error| format!("cannot read program `{}`: {error}", program.display()))?;
+    let library_bytes = fs::read(library)
+        .map_err(|error| format!("cannot read library `{}`: {error}", library.display()))?;
+    Ok((program_bytes, library_bytes))
+}
+
+/// Build `AnalysisOptions` from the repeatable `--lifecycle key=state` flag.
+fn language_options(
+    lifecycle: &[String],
+) -> Result<avila_core_compiler::language::AnalysisOptions, Box<dyn Error>> {
+    let mut options = avila_core_compiler::language::AnalysisOptions::default();
+    for entry in lifecycle {
+        let (key, state) = entry
+            .split_once('=')
+            .ok_or_else(|| format!("lifecycle entry `{entry}` must be `key=state`"))?;
+        options
+            .lifecycle
+            .push(avila_core_compiler::language::LifecycleEntry {
+                key: key.to_string(),
+                state: state.to_string(),
+            });
+    }
+    Ok(options)
+}
+
 fn main() -> ExitCode {
     match run() {
         Ok(code) => code,
@@ -931,6 +1006,85 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                     println!("{}", serde_json::to_string_pretty(&analysis)?);
                 }
                 if analysis.plan.state == "refused" {
+                    return Ok(ExitCode::from(1));
+                }
+            }
+            LanguageCommand::Plan {
+                program,
+                library,
+                lifecycle,
+            } => {
+                let (program_bytes, library_bytes) = read_language_documents(&program, &library)?;
+                let options = language_options(&lifecycle)?;
+                let plan = avila_core_compiler::language::execution_plan(
+                    &program_bytes,
+                    &library_bytes,
+                    &options,
+                );
+                println!("{}", serde_json::to_string_pretty(&plan)?);
+                if plan.state == "refused" {
+                    return Ok(ExitCode::from(1));
+                }
+            }
+            LanguageCommand::Execute {
+                plan,
+                workdir,
+                executables,
+                timeout_ms,
+            } => {
+                let plan_bytes = fs::read(&plan)
+                    .map_err(|error| format!("cannot read plan `{}`: {error}", plan.display()))?;
+                let plan_doc: avila_core_compiler::language::ExecutionPlanDocument =
+                    serde_json::from_slice(&plan_bytes).map_err(|error| {
+                        format!("plan `{}` does not decode: {error}", plan.display())
+                    })?;
+                if plan_doc.state != "ready" {
+                    return Err(format!(
+                        "plan `{}` is `{}` — only a ready plan executes",
+                        plan.display(),
+                        plan_doc.state
+                    )
+                    .into());
+                }
+                let mut executable_map = std::collections::BTreeMap::new();
+                for entry in &executables {
+                    let (id, path) = entry
+                        .split_once('=')
+                        .ok_or_else(|| format!("executable `{entry}` must be `id=path`"))?;
+                    executable_map.insert(id.to_string(), PathBuf::from(path));
+                }
+                let observations = avila_core_runner::execute_plan(
+                    &plan_doc,
+                    &workdir,
+                    &avila_core_runner::LanguageExecuteOptions {
+                        executables: executable_map,
+                        timeout: std::time::Duration::from_millis(timeout_ms),
+                    },
+                )?;
+                println!("{}", serde_json::to_string_pretty(&observations)?);
+            }
+            LanguageCommand::Evaluate {
+                program,
+                library,
+                observations,
+                lifecycle,
+            } => {
+                let (program_bytes, library_bytes) = read_language_documents(&program, &library)?;
+                let options = language_options(&lifecycle)?;
+                let observation_bytes = fs::read(&observations).map_err(|error| {
+                    format!(
+                        "cannot read observations `{}`: {error}",
+                        observations.display()
+                    )
+                })?;
+                let evaluation = avila_core_compiler::language::evaluate_program(
+                    &program_bytes,
+                    &library_bytes,
+                    &options,
+                    &observation_bytes,
+                );
+                println!("{}", serde_json::to_string_pretty(&evaluation)?);
+                if evaluation.requirements.values().any(|v| v.status == "fail") {
                     return Ok(ExitCode::from(1));
                 }
             }

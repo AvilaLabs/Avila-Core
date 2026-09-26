@@ -16,6 +16,7 @@ mod case_run;
 mod diagnostic;
 mod execute;
 mod history;
+mod language;
 pub mod query;
 pub mod transitions;
 
@@ -53,3 +54,4 @@ pub use history::{
     NAMED_REFERENCE_SCHEMA_VERSION, NamedReference, RevisionRequest, create_revision,
     record_amendment, set_reference,
 };
+pub use language::{LanguageExecuteOptions, execute_plan};

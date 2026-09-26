@@ -349,6 +349,25 @@ derivations replay, and rehashing a false semantic claim never makes it verified
 
 ## EL-05 — Demonstrate transfer and assess the experiment
 
+### EL-05 status — implemented, in review
+
+The second library is `examples/language/libraries/measurement-scaling.v1.json`
+(written at EL-01, exercised at EL-02, replayed at EL-04). `scaled-sum`
+declares `provenance_disjoint` plus an `independence` obligation that only
+an attested premise closes; `invalid-shared-source-independence` and
+`positive-measurement-pass` pin both directions. The compiler contains no
+branch keyed to a library, method, or domain name — checked, not claimed.
+
+The assessment is
+[2026-09-26-engineering-language-el05-assessment.md](reviews/2026-09-26-engineering-language-el05-assessment.md):
+what the common rules established, the trusted-assertion remainder, the
+burdensome declarations, what failed to generalize, the migrate-vs-shared
+profile surface, and the measured costs (analyze ~8 ms, plan ~9 ms,
+execute ~48 ms subprocess-bound, evaluate ~11 ms, Python replay ~138 ms;
+i3-N305, rustc 1.95.0, Python 3.14.4).
+
+### EL-05 brief
+
 Add a second synthetic library exercising different composition over the same
 primitives, for example scoped measurement transformation with shared source
 dependencies. It must require no compiler branches keyed to its domain or

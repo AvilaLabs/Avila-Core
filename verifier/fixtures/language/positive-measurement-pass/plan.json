@@ -1,0 +1,11 @@
+{
+  "schema_version": "avila.core/execution-plan/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "state": "ready",
+  "context": {
+    "program_sha256": "sha256:9040ec9576d2a618bb9d519c0038fc51d93f070f9e0628dff59a3d9088abccac",
+    "library_sha256": "sha256:889cae89aaf04ddd952c74f1c4fd6273b418c4001a3542b25f4f26ba2ec0b4a5",
+    "analysis_sha256": "sha256:9f0ea40037b5c8e47664cbd3f33c0f3ddfe9e8b638bcfca14bacc4fa020d326c"
+  },
+  "plan_sha256": "sha256:4dd58c74943020cf52a04918143c7c712fa98e725b3f28f64e82a2e6659f63a4"
+}

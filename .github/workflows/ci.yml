@@ -68,6 +68,10 @@ jobs:
         working-directory: verifier
         run: python3 -m unittest test_verifier -v
 
+      - name: Replay the committed language-evaluation corpus (EL-04)
+        working-directory: verifier
+        run: python3 -m unittest test_language_verify -v
+
       - name: Verify CASE-003 (thermal spreader, no external roots needed, ADR-0015 signatures)
         working-directory: verifier
         run: |

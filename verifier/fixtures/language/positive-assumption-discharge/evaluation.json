@@ -1,0 +1,62 @@
+{
+  "schema_version": "avila.core/language-evaluation/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "context": {
+    "semantic_profile": "avila.core/language/0.1-draft",
+    "program_sha256": "sha256:e67749fe026478876b67b18501104d711531cd16854c0f6ae28b53791a4f0023",
+    "library_sha256": "sha256:dc5f2165e51c09d99e751a714acb400dae77d708e6b42241d3eef6916ec45d0b",
+    "analysis_sha256": "sha256:9f4729bf05a2f2c21d26238ea3027e0c1da9a2b96b6acfa799a71a3e2305a983",
+    "plan_sha256": "sha256:01f6990abb79ee3b4f7518183a1f23a614b21b0183ef59acfa4f5cc14e643955",
+    "observations_sha256": "sha256:f39d84fe1e5bebf36d01fc4eb7786baf32b726c1f3df18f183b7e7179dd821a8"
+  },
+  "context_sha256": "sha256:fc9e3ab42ae7ffd70fc30c675c770da067ef6906385270f593c3bdb1eed87f89",
+  "obligations": [
+    {
+      "rule": "domain_containment",
+      "subject": "body[0].requires[0]",
+      "state": "discharged",
+      "detail": "`scenario.operating_domain` ⊆ `material.applicability`"
+    },
+    {
+      "rule": "postcondition",
+      "subject": "body[0].ensures[0]",
+      "state": "discharged",
+      "detail": "`output = coefficient * temperature_change * length` checked by interval_arithmetic"
+    },
+    {
+      "rule": "postcondition",
+      "subject": "body[1].ensures[0]",
+      "state": "discharged",
+      "detail": "`output = initial_clearance - displacement` checked by interval_arithmetic"
+    }
+  ],
+  "requirements": {
+    "EL-R1": {
+      "status": "pass",
+      "rule": "bounded.ge",
+      "detail": "enclosure [3/10, 2/5] mm satisfies >= 1/4 mm: 3/10 >= 1/4, conditional on fixture-symmetric@(bracket@2)",
+      "subject_value": "[3/10, 2/5]"
+    }
+  },
+  "applications": [
+    {
+      "rule": "observe",
+      "subject": "body[0]",
+      "state": "established",
+      "detail": "invocation digests verified; receipt sha256:13c7bed46ec0b9af9e8bf3551af3f5163f57317e8d3bf3bf338b0b8a516ca358 re-hashes"
+    },
+    {
+      "rule": "discharge",
+      "subject": "body[0] linear-expansion",
+      "state": "discharged",
+      "detail": "postcondition `output = coefficient * temperature_change * length` discharged by interval_arithmetic"
+    },
+    {
+      "rule": "bounded.ge",
+      "subject": "requirements[EL-R1]",
+      "state": "pass",
+      "detail": "enclosure [3/10, 2/5] mm satisfies >= 1/4 mm: 3/10 >= 1/4, conditional on fixture-symmetric@(bracket@2)"
+    }
+  ],
+  "evaluation_sha256": "sha256:8aa2d64a9b1ff0c791a2e5bd82077b50d1dda784c9aa014d735a218b32045284"
+}

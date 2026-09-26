@@ -1,0 +1,288 @@
+{
+  "schema_version": "avila.core/language-analysis/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "program": {
+    "id": "clearance-fail",
+    "document_sha256": "sha256:7ee6fd3ca86a0655f189cb83af64dbbaf745fab2255bfe61c05f67bb2fc75f16",
+    "semantic_sha256": "sha256:85d6431272001d46cee4ec8d8cb639e7b3b670662d813c0663878487e00d243c",
+    "admitted": true
+  },
+  "library": {
+    "name": "thermal-expansion",
+    "revision": 1,
+    "document_sha256": "sha256:be90b2cd9c56453e7cc87888669bec53333314bf6810ac4451cf41a6aae96eab",
+    "semantic_sha256": "sha256:dc5f2165e51c09d99e751a714acb400dae77d708e6b42241d3eef6916ec45d0b",
+    "admitted": true,
+    "pin_match": true
+  },
+  "status": "clean",
+  "findings": [],
+  "bindings": {
+    "coefficient": {
+      "type": {
+        "quantity_kind": "thermal_expansion_coefficient",
+        "claim": "exact",
+        "relations": {
+          "material": "al-6061-t6"
+        }
+      },
+      "value_state": "established",
+      "value": "1/10000",
+      "source_edges": [
+        "material-cert-m44"
+      ]
+    },
+    "displacement": {
+      "type": {
+        "quantity_kind": "length",
+        "claim": "enclosure",
+        "relations": {
+          "geometry": "bracket@2",
+          "material": "al-6061-t6",
+          "scenario": "thermal-soak-steady"
+        }
+      },
+      "value_state": "declared",
+      "value": "[1/10, 1/5]",
+      "residual_assumptions": [
+        {
+          "proposition": "linear-expansion-model",
+          "at": {
+            "material": "al-6061-t6",
+            "scenario": "thermal-soak-steady"
+          }
+        },
+        {
+          "proposition": "uniform-temperature-change",
+          "at": {
+            "geometry": "bracket@2",
+            "scenario": "thermal-soak-steady"
+          }
+        }
+      ],
+      "source_edges": [
+        "drawing-d1187@2",
+        "material-cert-m44",
+        "scenario-spec-9"
+      ],
+      "dependencies": [
+        {
+          "kind": "operand",
+          "target": "coefficient"
+        },
+        {
+          "kind": "operand",
+          "target": "length"
+        },
+        {
+          "kind": "operand",
+          "target": "temperature_change"
+        },
+        {
+          "kind": "method",
+          "target": "linear-expansion"
+        }
+      ]
+    },
+    "initial_clearance": {
+      "type": {
+        "quantity_kind": "length",
+        "claim": "exact",
+        "relations": {
+          "geometry": "bracket@2"
+        }
+      },
+      "value_state": "established",
+      "value": "1/2",
+      "source_edges": [
+        "drawing-d1187@2"
+      ]
+    },
+    "length": {
+      "type": {
+        "quantity_kind": "length",
+        "claim": "exact",
+        "relations": {
+          "geometry": "bracket@2"
+        }
+      },
+      "value_state": "established",
+      "value": "100",
+      "source_edges": [
+        "drawing-d1187@2"
+      ]
+    },
+    "remaining_clearance": {
+      "type": {
+        "quantity_kind": "length",
+        "claim": "enclosure",
+        "relations": {
+          "geometry": "bracket@2",
+          "material": "al-6061-t6",
+          "scenario": "thermal-soak-steady"
+        }
+      },
+      "value_state": "declared",
+      "value": "[3/10, 2/5]",
+      "residual_assumptions": [
+        {
+          "proposition": "linear-expansion-model",
+          "at": {
+            "material": "al-6061-t6",
+            "scenario": "thermal-soak-steady"
+          }
+        },
+        {
+          "proposition": "uniform-temperature-change",
+          "at": {
+            "geometry": "bracket@2",
+            "scenario": "thermal-soak-steady"
+          }
+        }
+      ],
+      "source_edges": [
+        "drawing-d1187@2",
+        "material-cert-m44",
+        "scenario-spec-9"
+      ],
+      "dependencies": [
+        {
+          "kind": "operand",
+          "target": "displacement"
+        },
+        {
+          "kind": "operand",
+          "target": "initial_clearance"
+        },
+        {
+          "kind": "method",
+          "target": "clearance-difference"
+        }
+      ]
+    },
+    "temperature_change": {
+      "type": {
+        "quantity_kind": "temperature",
+        "claim": "enclosure",
+        "relations": {
+          "scenario": "thermal-soak-steady"
+        }
+      },
+      "value_state": "established",
+      "value": "[10, 20]",
+      "source_edges": [
+        "scenario-spec-9"
+      ]
+    }
+  },
+  "obligations": [
+    {
+      "id": "body[0].requires[0]",
+      "kind": "domain_containment",
+      "at": "body[0] linear-expansion",
+      "step": 0,
+      "state": "discharged",
+      "expression": "scenario.operating_domain ⊆ material.applicability",
+      "detail": "`scenario.operating_domain` ⊆ `material.applicability`"
+    },
+    {
+      "id": "body[0].ensures[0]",
+      "kind": "postcondition",
+      "at": "body[0] linear-expansion",
+      "step": 0,
+      "state": "runtime",
+      "check": "interval_arithmetic",
+      "expression": "output = coefficient * temperature_change * length",
+      "operands": [
+        "coefficient",
+        "length",
+        "temperature_change"
+      ],
+      "detail": "`output = coefficient * temperature_change * length` checked by interval_arithmetic"
+    },
+    {
+      "id": "body[1].ensures[0]",
+      "kind": "postcondition",
+      "at": "body[1] clearance-difference",
+      "step": 1,
+      "state": "discharged",
+      "check": "interval_arithmetic",
+      "expression": "output = initial_clearance - displacement",
+      "operands": [
+        "displacement",
+        "initial_clearance"
+      ],
+      "detail": "`output = initial_clearance - displacement` checked by interval_arithmetic"
+    }
+  ],
+  "requirements": {
+    "EL-R1": {
+      "state": "pending",
+      "declared_value": "[3/10, 2/5]"
+    }
+  },
+  "lifecycle": [
+    {
+      "at": "body[0]",
+      "method": "linear-expansion",
+      "state": "absent"
+    },
+    {
+      "at": "body[1]",
+      "method": "clearance-difference",
+      "state": "absent"
+    }
+  ],
+  "plan": {
+    "state": "ready",
+    "steps": [
+      {
+        "at": "body[0]",
+        "bind": "displacement",
+        "operation": "apply",
+        "target": "linear-expansion",
+        "arguments": {
+          "coefficient": "coefficient",
+          "length": "length",
+          "temperature_change": "temperature_change"
+        },
+        "obligations": [
+          "body[0].requires[0]",
+          "body[0].ensures[0]"
+        ],
+        "unit": "mm"
+      },
+      {
+        "at": "body[1]",
+        "bind": "remaining_clearance",
+        "operation": "apply",
+        "target": "clearance-difference",
+        "arguments": {
+          "displacement": "displacement",
+          "initial_clearance": "initial_clearance"
+        },
+        "obligations": [
+          "body[1].ensures[0]"
+        ],
+        "unit": "mm"
+      }
+    ],
+    "runtime_obligations": [
+      {
+        "id": "body[0].ensures[0]",
+        "kind": "postcondition",
+        "at": "body[0] linear-expansion",
+        "step": 0,
+        "state": "runtime",
+        "check": "interval_arithmetic",
+        "expression": "output = coefficient * temperature_change * length",
+        "operands": [
+          "coefficient",
+          "length",
+          "temperature_change"
+        ],
+        "detail": "`output = coefficient * temperature_change * length` checked by interval_arithmetic"
+      }
+    ]
+  }
+}

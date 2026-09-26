@@ -1,0 +1,193 @@
+{
+  "schema_version": "avila.core/language-analysis/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "program": {
+    "id": "positive-measurement-pass",
+    "document_sha256": "sha256:1db219d574868158193c7b9a07045068d0ed32e8ed598558057347b294cfbc6b",
+    "semantic_sha256": "sha256:9040ec9576d2a618bb9d519c0038fc51d93f070f9e0628dff59a3d9088abccac",
+    "admitted": true
+  },
+  "library": {
+    "name": "measurement-scaling",
+    "revision": 1,
+    "document_sha256": "sha256:7966c57480576b613c642c6f75f32afe9770b6f6b6eb9e9600a6ac6aa699af56",
+    "semantic_sha256": "sha256:889cae89aaf04ddd952c74f1c4fd6273b418c4001a3542b25f4f26ba2ec0b4a5",
+    "admitted": true,
+    "pin_match": true
+  },
+  "status": "clean",
+  "findings": [],
+  "bindings": {
+    "calibration": {
+      "type": {
+        "quantity_kind": "dimensionless_factor",
+        "claim": "exact",
+        "relations": {}
+      },
+      "value_state": "established",
+      "value": "11/10",
+      "source_edges": [
+        "calibration-cert-55"
+      ]
+    },
+    "combined_rate": {
+      "type": {
+        "quantity_kind": "dose_rate",
+        "claim": "enclosure",
+        "relations": {
+          "scenario": "field-survey-1"
+        }
+      },
+      "value_state": "established",
+      "value": "[187/100, 231/100]",
+      "residual_assumptions": [
+        {
+          "proposition": "calibration-current",
+          "at": {}
+        },
+        {
+          "proposition": "uniform-field",
+          "at": {
+            "scenario": "field-survey-1"
+          }
+        },
+        {
+          "proposition": "separate-instrumentation",
+          "at": {}
+        }
+      ],
+      "source_edges": [
+        "calibration-cert-55",
+        "calibration-cert-61",
+        "indep-memo-7"
+      ],
+      "dependencies": [
+        {
+          "kind": "operand",
+          "target": "calibration"
+        },
+        {
+          "kind": "operand",
+          "target": "reading_a"
+        },
+        {
+          "kind": "operand",
+          "target": "reading_b"
+        },
+        {
+          "kind": "method",
+          "target": "scaled-sum"
+        },
+        {
+          "kind": "premise",
+          "target": "p-independence"
+        }
+      ]
+    },
+    "reading_a": {
+      "type": {
+        "quantity_kind": "dose_rate",
+        "claim": "enclosure",
+        "relations": {
+          "scenario": "field-survey-1"
+        }
+      },
+      "value_state": "established",
+      "value": "[9/10, 11/10]",
+      "source_edges": [
+        "calibration-cert-55"
+      ]
+    },
+    "reading_b": {
+      "type": {
+        "quantity_kind": "dose_rate",
+        "claim": "enclosure",
+        "relations": {
+          "scenario": "field-survey-1"
+        }
+      },
+      "value_state": "established",
+      "value": "[4/5, 1]",
+      "source_edges": [
+        "calibration-cert-61"
+      ]
+    }
+  },
+  "obligations": [
+    {
+      "id": "body[0].requires[0]",
+      "kind": "independence",
+      "at": "body[0] scaled-sum",
+      "step": 0,
+      "state": "discharged",
+      "operands": [
+        "reading_a",
+        "reading_b"
+      ],
+      "detail": "discharged by premise p-independence"
+    },
+    {
+      "id": "body[0].requires[1]",
+      "kind": "provenance_disjoint",
+      "at": "body[0] scaled-sum",
+      "step": 0,
+      "state": "discharged",
+      "operands": [
+        "reading_a",
+        "reading_b"
+      ],
+      "detail": "over reading_a, reading_b"
+    },
+    {
+      "id": "body[0].ensures[0]",
+      "kind": "postcondition",
+      "at": "body[0] scaled-sum",
+      "step": 0,
+      "state": "discharged",
+      "check": "interval_arithmetic",
+      "expression": "output = calibration * (reading_a + reading_b)",
+      "operands": [
+        "calibration",
+        "reading_a",
+        "reading_b"
+      ],
+      "detail": "`output = calibration * (reading_a + reading_b)` checked by interval_arithmetic"
+    }
+  ],
+  "requirements": {
+    "EL-R2": {
+      "state": "pending",
+      "declared_value": "[187/100, 231/100]"
+    }
+  },
+  "lifecycle": [
+    {
+      "at": "body[0]",
+      "method": "scaled-sum",
+      "state": "absent"
+    }
+  ],
+  "plan": {
+    "state": "ready",
+    "steps": [
+      {
+        "at": "body[0]",
+        "bind": "combined_rate",
+        "operation": "apply",
+        "target": "scaled-sum",
+        "arguments": {
+          "calibration": "calibration",
+          "reading_a": "reading_a",
+          "reading_b": "reading_b"
+        },
+        "obligations": [
+          "body[0].requires[0]",
+          "body[0].requires[1]",
+          "body[0].ensures[0]"
+        ],
+        "unit": "mSv/h"
+      }
+    ],
+    "runtime_obligations": []
+  }
+}

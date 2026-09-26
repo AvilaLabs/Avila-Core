@@ -1,0 +1,103 @@
+{
+  "schema_version": "avila.core/language-evaluation/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "context": {
+    "semantic_profile": "avila.core/language/0.1-draft",
+    "program_sha256": "sha256:b1a71e82d220d306da5d651b9cf784ede16e28f5068917d0c500c70c6f469e8c",
+    "library_sha256": "sha256:dc5f2165e51c09d99e751a714acb400dae77d708e6b42241d3eef6916ec45d0b",
+    "analysis_sha256": "sha256:105a1e56c9b018683b4497da91ab1a610a5f36c8599036fff91f90d0cac2d421",
+    "plan_sha256": "sha256:69952d6f873a434af7c515098dad92f4a5a7af9cc7ba94299b3aa877c8bbb56b",
+    "observations_sha256": "sha256:46301bf73f4ed68e65d23566ec000f245db66c58fb1805f1ecd372991d92f79a"
+  },
+  "context_sha256": "sha256:86226b90064fe8bb8102687ef2668ddc406d26f733fda6cb3aa3c92f4011a143",
+  "obligations": [
+    {
+      "rule": "domain_containment",
+      "subject": "body[0].requires[0]",
+      "state": "discharged",
+      "detail": "`scenario.operating_domain` ⊆ `material.applicability`"
+    },
+    {
+      "rule": "postcondition",
+      "subject": "body[0].ensures[0]",
+      "state": "open",
+      "detail": "`output = coefficient * temperature_change * length` checked by interval_arithmetic"
+    },
+    {
+      "rule": "observation",
+      "subject": "body[1].observation",
+      "state": "open",
+      "detail": "output `remaining_clearance` must be observed at execution; `clearance-heuristic` declares no postcondition — nothing to replay"
+    }
+  ],
+  "observations": [
+    {
+      "at": "body[0]",
+      "bind": "",
+      "state": "rejected",
+      "detail": "receipt does not belong to this plan, site, or executable"
+    },
+    {
+      "at": "body[1]",
+      "bind": "",
+      "state": "rejected",
+      "detail": "receipt does not belong to this plan, site, or executable"
+    }
+  ],
+  "requirements": {
+    "EL-R1": {
+      "status": "not_evaluated",
+      "rule": "not_evaluated.obligation_unmet",
+      "detail": "a generated obligation blocks this subject"
+    }
+  },
+  "findings": [
+    {
+      "code": "CORE-E8028",
+      "kind": "observation_foreign",
+      "document": "program",
+      "at": "body[0]",
+      "pointer": "/body/0",
+      "binding": "displacement",
+      "detail": "receipt does not belong to this plan, site, or executable",
+      "blocking": false
+    },
+    {
+      "code": "CORE-E8028",
+      "kind": "observation_foreign",
+      "document": "program",
+      "at": "body[1]",
+      "pointer": "/body/1",
+      "binding": "remaining_clearance",
+      "detail": "receipt does not belong to this plan, site, or executable",
+      "blocking": false
+    }
+  ],
+  "applications": [
+    {
+      "rule": "observe",
+      "subject": "body[0]",
+      "state": "rejected",
+      "detail": "receipt does not belong to this plan, site, or executable"
+    },
+    {
+      "rule": "discharge",
+      "subject": "body[0] linear-expansion",
+      "state": "open",
+      "detail": "postcondition `output = coefficient * temperature_change * length` open by interval_arithmetic"
+    },
+    {
+      "rule": "observe",
+      "subject": "body[1]",
+      "state": "rejected",
+      "detail": "receipt does not belong to this plan, site, or executable"
+    },
+    {
+      "rule": "observe",
+      "subject": "body[1]",
+      "state": "open",
+      "detail": "observation obligation for `remaining_clearance`"
+    }
+  ],
+  "evaluation_sha256": "sha256:74090f49b0abe0e41bd227b39d74ca3addd7ae8e5cbc844b4303d3be51e7e2dc"
+}

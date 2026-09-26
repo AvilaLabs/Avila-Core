@@ -278,6 +278,38 @@ this chain is the reference implementation, not the check of it.
 
 ## EL-04 — Replay the language and explain changes
 
+### EL-04 status — implemented, in review
+
+`verifier/language_verify.py` is a stdlib-only port of the evaluate chain:
+schema-directed projection for the program/library semantic digests, the
+full §7 [O1] binding (receipt re-hash, plan/site/executable triple, staged
+input digest-set, invocation identity, completed status, output digest,
+typed re-admission), [O2] postcondition replay under exact-rational
+interval arithmetic, the static `requires` obligations
+(`domain_containment`, `scope_check`, `provenance_disjoint`,
+`independence` — including premise-witness support joining the residual
+cone), premise admissibility (attribution, denial, cyclic-witness groups,
+provenance-disjoint at use), and the `bounded.ge`/`bounded.le` verdict
+comparator with residual `conditional on` detail. `explain` diffs two
+evaluations of one program at requirement, obligation, and observation
+granularity.
+
+The committed corpus under `verifier/fixtures/language/` was generated
+once from the reference implementation and held constant, keeping the
+replay independent of the Rust toolchain. `test_language_verify.py`
+covers all seven corpus programs plus the adversarial matrix — tampered
+output, forged executable digest, foreign plan, transplanted receipts,
+duplicate site claims, absent and malformed observation documents, and a
+forged evaluation record that recomputes its own digests honestly (still
+flagged `mismatch`). The CI `verifier` job runs it.
+
+Open surfaces: `analysis_sha256` is recomputed when `--analysis` supplies
+the document (`not_checked` otherwise); program-level blocking findings
+(the `analyze` gate) are outside the replay — a malformed program's
+evaluation reports its own `document_findings`, which the record binds.
+
+### EL-04 brief
+
 Extend the independent verifier from the written rules. Reconstruct supported
 type relationships, assumptions, interval transformations, runtime bindings,
 and requirement conclusions from supplied material. Check the relation between

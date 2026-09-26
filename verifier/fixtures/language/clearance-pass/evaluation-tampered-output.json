@@ -1,0 +1,76 @@
+{
+  "schema_version": "avila.core/language-evaluation/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "context": {
+    "semantic_profile": "avila.core/language/0.1-draft",
+    "program_sha256": "sha256:c456f7f3fefde72785de465b589281ee9ab44996a589350be88dc5e197ff293c",
+    "library_sha256": "sha256:dc5f2165e51c09d99e751a714acb400dae77d708e6b42241d3eef6916ec45d0b",
+    "analysis_sha256": "sha256:b13d9a6be3b6e7b1008b283d946391b9f018315aab7710b71b5589d3a6a5dd51",
+    "plan_sha256": "sha256:56e6cc2dcc556b9b283e72a89560ce15d23ffe59d97617baaaa6382eb0db558e",
+    "observations_sha256": "sha256:e549daa40c0945db4d7f38ef2a3c2ae8ccb863c0ff57d21e2e4d8def6aa0af7b"
+  },
+  "context_sha256": "sha256:17e0572c99bd596beee3c8fe5743db22d2dd981265e52fb2ac536e3a5f9b617d",
+  "obligations": [
+    {
+      "rule": "domain_containment",
+      "subject": "body[0].requires[0]",
+      "state": "discharged",
+      "detail": "`scenario.operating_domain` ⊆ `material.applicability`"
+    },
+    {
+      "rule": "postcondition",
+      "subject": "body[0].ensures[0]",
+      "state": "open",
+      "detail": "`output = coefficient * temperature_change * length` checked by interval_arithmetic"
+    },
+    {
+      "rule": "postcondition",
+      "subject": "body[1].ensures[0]",
+      "state": "discharged",
+      "detail": "`output = initial_clearance - displacement` checked by interval_arithmetic"
+    }
+  ],
+  "observations": [
+    {
+      "at": "body[0]",
+      "bind": "",
+      "state": "rejected",
+      "detail": "output digest does not cover the supplied output document"
+    }
+  ],
+  "requirements": {
+    "EL-R1": {
+      "status": "not_evaluated",
+      "rule": "not_evaluated.obligation_unmet",
+      "detail": "a generated obligation blocks this subject",
+      "subject_value": "[3/10, 2/5]"
+    }
+  },
+  "findings": [
+    {
+      "code": "CORE-E8028",
+      "kind": "observation_foreign",
+      "document": "program",
+      "at": "body[0]",
+      "pointer": "/body/0",
+      "binding": "displacement",
+      "detail": "output digest does not cover the supplied output document",
+      "blocking": false
+    }
+  ],
+  "applications": [
+    {
+      "rule": "observe",
+      "subject": "body[0]",
+      "state": "rejected",
+      "detail": "output digest does not cover the supplied output document"
+    },
+    {
+      "rule": "discharge",
+      "subject": "body[0] linear-expansion",
+      "state": "open",
+      "detail": "postcondition `output = coefficient * temperature_change * length` open by interval_arithmetic"
+    }
+  ],
+  "evaluation_sha256": "sha256:7bc02e0cca427363bfb5bab5985273d26dc9f4c26f4f1dbf28b303af9e2024e8"
+}

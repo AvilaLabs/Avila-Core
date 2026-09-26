@@ -1,0 +1,68 @@
+{
+  "schema_version": "avila.core/language-evaluation/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "context": {
+    "semantic_profile": "avila.core/language/0.1-draft",
+    "program_sha256": "sha256:b1a71e82d220d306da5d651b9cf784ede16e28f5068917d0c500c70c6f469e8c",
+    "library_sha256": "sha256:dc5f2165e51c09d99e751a714acb400dae77d708e6b42241d3eef6916ec45d0b",
+    "analysis_sha256": "sha256:105a1e56c9b018683b4497da91ab1a610a5f36c8599036fff91f90d0cac2d421",
+    "plan_sha256": "sha256:69952d6f873a434af7c515098dad92f4a5a7af9cc7ba94299b3aa877c8bbb56b",
+    "observations_sha256": "sha256:a22717897fab62bbf875ff0397fdbf4316df7d574de643accbe68dd19c3d97ee"
+  },
+  "context_sha256": "sha256:70fb9128b659d56efe5c544d4f8d335855f7bdbf8593cfe841a39270c55e0f94",
+  "obligations": [
+    {
+      "rule": "domain_containment",
+      "subject": "body[0].requires[0]",
+      "state": "discharged",
+      "detail": "`scenario.operating_domain` ⊆ `material.applicability`"
+    },
+    {
+      "rule": "postcondition",
+      "subject": "body[0].ensures[0]",
+      "state": "discharged",
+      "detail": "`output = coefficient * temperature_change * length` checked by interval_arithmetic"
+    },
+    {
+      "rule": "observation",
+      "subject": "body[1].observation",
+      "state": "discharged",
+      "detail": "output `remaining_clearance` must be observed at execution; `clearance-heuristic` declares no postcondition — nothing to replay"
+    }
+  ],
+  "requirements": {
+    "EL-R1": {
+      "status": "not_evaluated",
+      "rule": "not_evaluated.unestablished",
+      "detail": "subject claim cannot satisfy a bounded requirement",
+      "subject_value": "7/20"
+    }
+  },
+  "applications": [
+    {
+      "rule": "observe",
+      "subject": "body[0]",
+      "state": "established",
+      "detail": "invocation digests verified; receipt sha256:7d7638f414182122664cac2222481c3a6a24aadda820422272bae6060bd7e24d re-hashes"
+    },
+    {
+      "rule": "discharge",
+      "subject": "body[0] linear-expansion",
+      "state": "discharged",
+      "detail": "postcondition `output = coefficient * temperature_change * length` discharged by interval_arithmetic"
+    },
+    {
+      "rule": "observe",
+      "subject": "body[1]",
+      "state": "established",
+      "detail": "invocation digests verified; receipt sha256:24d15a2c0065c4bca8cf1d94b3eec650ac0fcba15515e8ebbc52b97a9fac62c5 re-hashes"
+    },
+    {
+      "rule": "observe",
+      "subject": "body[1]",
+      "state": "discharged",
+      "detail": "observation obligation for `remaining_clearance`"
+    }
+  ],
+  "evaluation_sha256": "sha256:0c946110a2e123dcf4b5b1503ef26bb643b430066bd545f9d9c04d806c3e5bd2"
+}

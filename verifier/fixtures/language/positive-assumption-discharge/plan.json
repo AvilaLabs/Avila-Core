@@ -1,0 +1,63 @@
+{
+  "schema_version": "avila.core/execution-plan/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "state": "ready",
+  "context": {
+    "program_sha256": "sha256:e67749fe026478876b67b18501104d711531cd16854c0f6ae28b53791a4f0023",
+    "library_sha256": "sha256:dc5f2165e51c09d99e751a714acb400dae77d708e6b42241d3eef6916ec45d0b",
+    "analysis_sha256": "sha256:9f4729bf05a2f2c21d26238ea3027e0c1da9a2b96b6acfa799a71a3e2305a983"
+  },
+  "invocations": [
+    {
+      "at": "body[0]",
+      "bind": "displacement",
+      "method": "linear-expansion",
+      "executable": "synthetic/linear-expansion@1",
+      "effects": [
+        "process_spawn",
+        "write_output"
+      ],
+      "inputs": {
+        "coefficient": {
+          "binding": "coefficient",
+          "state": "staged",
+          "value": {
+            "kind": "exact",
+            "value": "1/10000",
+            "unit": "1/K"
+          },
+          "sha256": "sha256:16d692db2cf9ad6e80ff3d69c7a316522e43395bb28ad99c91a9e725ad3e5930"
+        },
+        "length": {
+          "binding": "length",
+          "state": "staged",
+          "value": {
+            "kind": "exact",
+            "value": "100",
+            "unit": "mm"
+          },
+          "sha256": "sha256:02836471a3d0e5177271daa73f348ffd2a15b943e7a2fcf89010e189705b2e32"
+        },
+        "temperature_change": {
+          "binding": "temperature_change",
+          "state": "staged",
+          "value": {
+            "kind": "enclosure",
+            "lower": "10",
+            "upper": "20",
+            "unit": "K"
+          },
+          "sha256": "sha256:b4c096f019d0b017bc482106bd0c59bee2f576ff0d6aacc90173517e666ee1cb"
+        }
+      },
+      "produces": {
+        "quantity_kind": "length",
+        "unit": "mm"
+      },
+      "obligations": [
+        "body[0].ensures[0]"
+      ]
+    }
+  ],
+  "plan_sha256": "sha256:01f6990abb79ee3b4f7518183a1f23a614b21b0183ef59acfa4f5cc14e643955"
+}

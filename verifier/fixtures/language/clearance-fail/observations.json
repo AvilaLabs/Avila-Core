@@ -1,0 +1,106 @@
+{
+  "schema_version": "avila.core/language-observations/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "plan_sha256": "sha256:60d0f0be0a99075f18a584e685d18ad5c47c1560bdd134d03770110ce0c7a796",
+  "observations": [
+    {
+      "at": "body[0]",
+      "bind": "displacement",
+      "executable": "synthetic/linear-expansion@1",
+      "inputs": {
+        "coefficient": "sha256:16d692db2cf9ad6e80ff3d69c7a316522e43395bb28ad99c91a9e725ad3e5930",
+        "length": "sha256:02836471a3d0e5177271daa73f348ffd2a15b943e7a2fcf89010e189705b2e32",
+        "temperature_change": "sha256:b4c096f019d0b017bc482106bd0c59bee2f576ff0d6aacc90173517e666ee1cb"
+      },
+      "output_sha256": "sha256:d0a26d2676fb4acdc8442d03b9c32315132eeb8d97574843ecfde211d7635817",
+      "output": {
+        "kind": "enclosure",
+        "lower": "1/10",
+        "upper": "1/5",
+        "unit": "mm"
+      },
+      "receipt_sha256": "sha256:833f9fa5f763fde627f0b730e22171ba911db68feea254483eeca8232252c089",
+      "receipt": {
+        "schema_version": "avila.core/language-receipt/v0.1-draft",
+        "plan_sha256": "sha256:60d0f0be0a99075f18a584e685d18ad5c47c1560bdd134d03770110ce0c7a796",
+        "at": "body[0]",
+        "executable": "synthetic/linear-expansion@1",
+        "executable_sha256": "sha256:d53957a56adc4e7f240361b04778820ffb3c2e453ba61a966c17cad7d327ba8d",
+        "inputs": [
+          {
+            "slot": "coefficient",
+            "workspace_path": "inputs/coefficient.json",
+            "sha256": "sha256:16d692db2cf9ad6e80ff3d69c7a316522e43395bb28ad99c91a9e725ad3e5930",
+            "bytes": 47
+          },
+          {
+            "slot": "length",
+            "workspace_path": "inputs/length.json",
+            "sha256": "sha256:02836471a3d0e5177271daa73f348ffd2a15b943e7a2fcf89010e189705b2e32",
+            "bytes": 42
+          },
+          {
+            "slot": "temperature_change",
+            "workspace_path": "inputs/temperature_change.json",
+            "sha256": "sha256:b4c096f019d0b017bc482106bd0c59bee2f576ff0d6aacc90173517e666ee1cb",
+            "bytes": 57
+          }
+        ],
+        "invocation": {
+          "arguments": [
+            "inputs",
+            "outputs/output.json"
+          ],
+          "working_directory": "invocations/body_0_",
+          "environment": {
+            "PATH": "/usr/local/bin:/usr/bin:/bin"
+          },
+          "timeout_ms": 30000
+        },
+        "invocation_sha256": "sha256:fb07a84edfea8dd85891576b7e6332bc20c4aabdf970642fa55a44b3fc417668",
+        "process": {
+          "started_at": "2026-09-26T05:13:07.628Z",
+          "finished_at": "2026-09-26T05:13:07.688Z",
+          "duration_ms": 60,
+          "exit_status": 0,
+          "timed_out": false
+        },
+        "logs": [
+          {
+            "stream": "stdout",
+            "workspace_path": "logs/stdout.log",
+            "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          {
+            "stream": "stderr",
+            "workspace_path": "logs/stderr.log",
+            "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          }
+        ],
+        "outputs": [
+          {
+            "output_id": "output",
+            "workspace_path": "outputs/output.json",
+            "state": "collected",
+            "sha256": "sha256:d0a26d2676fb4acdc8442d03b9c32315132eeb8d97574843ecfde211d7635817",
+            "bytes": 62
+          }
+        ],
+        "runner": {
+          "runner": "avila-core-runner/language",
+          "os": "linux",
+          "arch": "x86_64"
+        },
+        "status": "completed",
+        "limitations": [
+          "Exit status and output digests are process evidence, not scientific success.",
+          "The executable digest identifies the bytes that ran; it does not qualify the method.",
+          "No sandbox or resource accounting was applied beyond a cleared environment, a working directory confined to the workspace, and terminating the child's process group or Job Object on timeout."
+        ]
+      }
+    }
+  ],
+  "observations_sha256": "sha256:c4a14fa4204522411c9bda99450b71856a66879b9c638fec356e66fae0863127"
+}

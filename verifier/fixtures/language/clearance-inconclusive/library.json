@@ -1,0 +1,185 @@
+{
+  "schema_version": "avila.core/method-library/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "library": {
+    "name": "thermal-expansion",
+    "revision": 1
+  },
+  "quantity_kinds": {
+    "length": {"canonical_unit": "mm"},
+    "temperature": {"canonical_unit": "K"},
+    "thermal_expansion_coefficient": {"canonical_unit": "1/K"},
+    "strain": {"canonical_unit": "1"}
+  },
+  "kind_products": [
+    {
+      "lhs_kind": "thermal_expansion_coefficient",
+      "rhs_kind": "temperature",
+      "result_kind": "strain",
+      "result_unit": "1"
+    },
+    {
+      "lhs_kind": "strain",
+      "rhs_kind": "length",
+      "result_kind": "length",
+      "result_unit": "mm"
+    }
+  ],
+  "propositions": {
+    "uniform-temperature-change": {
+      "params": ["geometry", "scenario"],
+      "gloss": "the whole body experiences one temperature change"
+    },
+    "linear-expansion-model": {
+      "params": ["material", "scenario"],
+      "gloss": "displacement is coefficient*ΔT over the declared domain"
+    },
+    "tabulated-expansion-model": {
+      "params": ["material", "scenario"],
+      "gloss": "displacement is the tabulated coefficient response over the declared domain"
+    },
+    "fixture-symmetric": {
+      "params": ["geometry"],
+      "gloss": "the fixture holds the part symmetrically"
+    }
+  },
+  "methods": [
+    {
+      "id": "linear-expansion",
+      "variables": {"g": "geometry", "s": "scenario", "m": "material"},
+      "inputs": {
+        "length": {
+          "quantity_kind": "length", "claim": "enclosure", "geometry": "g"
+        },
+        "coefficient": {
+          "quantity_kind": "thermal_expansion_coefficient", "claim": "enclosure", "material": "m"
+        },
+        "temperature_change": {
+          "quantity_kind": "temperature", "claim": "enclosure", "scenario": "s"
+        }
+      },
+      "output": {
+        "quantity_kind": "length", "claim": "enclosure",
+        "geometry": "g", "scenario": "s", "material": "m"
+      },
+      "requires": [
+        {
+          "kind": "domain_containment",
+          "domain": "scenario.operating_domain",
+          "within": "material.applicability",
+          "label": "operating domain within material applicability"
+        }
+      ],
+      "ensures": [
+        {
+          "kind": "relation",
+          "expression": "output = coefficient * temperature_change * length",
+          "check": "interval_arithmetic"
+        }
+      ],
+      "assumes": ["uniform-temperature-change", "linear-expansion-model"],
+      "effects": ["process_spawn", "write_output"],
+      "implementation": {
+        "kind": "external",
+        "executable": "synthetic/linear-expansion@1",
+        "produces": {"quantity_kind": "length", "unit": "mm"}
+      }
+    },
+    {
+      "id": "linear-expansion-via-table",
+      "variables": {"g": "geometry", "s": "scenario", "m": "material"},
+      "inputs": {
+        "length": {
+          "quantity_kind": "length", "claim": "enclosure", "geometry": "g"
+        },
+        "coefficient": {
+          "quantity_kind": "thermal_expansion_coefficient", "claim": "enclosure", "material": "m"
+        },
+        "temperature_change": {
+          "quantity_kind": "temperature", "claim": "enclosure", "scenario": "s"
+        }
+      },
+      "output": {
+        "quantity_kind": "length", "claim": "enclosure",
+        "geometry": "g", "scenario": "s", "material": "m"
+      },
+      "requires": [
+        {
+          "kind": "domain_containment",
+          "domain": "scenario.operating_domain",
+          "within": "material.applicability",
+          "label": "operating domain within material applicability"
+        }
+      ],
+      "ensures": [
+        {
+          "kind": "relation",
+          "expression": "output = coefficient * temperature_change * length",
+          "check": "interval_arithmetic"
+        }
+      ],
+      "assumes": ["uniform-temperature-change", "tabulated-expansion-model"],
+      "effects": ["process_spawn", "write_output"],
+      "implementation": {
+        "kind": "external",
+        "executable": "synthetic/linear-expansion-table@1",
+        "produces": {"quantity_kind": "length", "unit": "mm"}
+      }
+    },
+    {
+      "id": "clearance-difference",
+      "variables": {"g": "geometry", "s": "scenario", "m": "material"},
+      "inputs": {
+        "initial_clearance": {
+          "quantity_kind": "length", "claim": "enclosure", "geometry": "g"
+        },
+        "displacement": {
+          "quantity_kind": "length", "claim": "enclosure", "geometry": "g", "scenario": "s", "material": "m"
+        }
+      },
+      "output": {
+        "quantity_kind": "length", "claim": "enclosure",
+        "geometry": "g", "scenario": "s", "material": "m"
+      },
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "relation",
+          "expression": "output = initial_clearance - displacement",
+          "check": "interval_arithmetic"
+        }
+      ],
+      "assumes": [],
+      "effects": [],
+      "implementation": {
+        "kind": "primitive",
+        "body": "interval.sub(initial_clearance, displacement)"
+      }
+    },
+    {
+      "id": "clearance-heuristic",
+      "variables": {"g": "geometry", "s": "scenario", "m": "material"},
+      "inputs": {
+        "initial_clearance": {
+          "quantity_kind": "length", "claim": "enclosure", "geometry": "g"
+        },
+        "displacement": {
+          "quantity_kind": "length", "claim": "enclosure", "geometry": "g", "scenario": "s", "material": "m"
+        }
+      },
+      "output": {
+        "quantity_kind": "length", "claim": "nominal",
+        "geometry": "g", "scenario": "s", "material": "m"
+      },
+      "requires": [],
+      "ensures": [],
+      "assumes": [],
+      "effects": ["process_spawn", "write_output"],
+      "implementation": {
+        "kind": "external",
+        "executable": "synthetic/clearance-heuristic@1",
+        "produces": {"quantity_kind": "length", "unit": "mm"}
+      }
+    }
+  ]
+}

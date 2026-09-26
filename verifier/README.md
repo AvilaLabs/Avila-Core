@@ -178,6 +178,45 @@ otherwise silently pass or silently mismatch:
   campaign fixture whose verdict depends on a step binding the lowerer
   cannot resolve stays named, not silently passed.
 
+## Language evaluations — `language_verify.py`
+
+`language_verify.py` replays the engineering-language evaluate chain
+(`avila.core/language-evaluation/v0.1-draft` records) from the supplied
+program, library, execution plan, and observations — an independent port
+of the §7 [O1]/[O2] evidence-binding rules, §8 premise admissibility, and
+§10 semantic-identity projection, without importing Rust behavior.
+Checks: program/library *semantic* digests (annotations dropped, declared
+sets sorted by projected bytes) against the evaluation context; the
+program's library pin; plan self-identity and the plan↔context link;
+every planned invocation's fields against the verifier's own binding
+replay (bind/method/executable + re-staged input digests); observation
+records through the full O1 chain (receipt re-hash, plan/site/executable
+triple, input digest-set equality, invocation identity, completed status,
+output digest, typed admission); runtime obligations re-derived
+(`domain_containment`, `scope_check`, `provenance_disjoint`,
+`independence`, postcondition `output = <expr>` replay under
+exact-rational interval arithmetic); premise discharge cones with their
+residual `conditional on` assumptions; and every requirement verdict —
+`pass`/`fail`/`inconclusive`/`not_evaluated` under `bounded.ge`/
+`bounded.le` — against the record's claimed status, rule, and detail.
+Foreign, transplanted, duplicated, tampered, absent, or malformed
+observation material stays rejected in the replay exactly as the record
+must report it; `language_verify.py explain` diffs two evaluations of one
+program at requirement, obligation, and observation granularity.
+
+```bash
+python3 language_verify.py verify-evaluation \
+  --program P.json --library L.json --plan plan.json \
+  --observations obs.json --evaluation eval.json [--analysis a.json]
+python3 language_verify.py explain \
+  --program P.json --evaluation-old A.json --evaluation-new B.json
+python3 -m unittest test_language_verify -v   # corpus + adversarial suite
+```
+
+The committed corpus under `fixtures/language/` was generated once from
+the reference implementation and held constant — the replay stays
+independent of the Rust toolchain.
+
 ## Usage
 
 ```bash

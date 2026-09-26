@@ -1,0 +1,50 @@
+{
+  "schema_version": "avila.core/language-evaluation/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "context": {
+    "semantic_profile": "avila.core/language/0.1-draft",
+    "program_sha256": "sha256:9040ec9576d2a618bb9d519c0038fc51d93f070f9e0628dff59a3d9088abccac",
+    "library_sha256": "sha256:889cae89aaf04ddd952c74f1c4fd6273b418c4001a3542b25f4f26ba2ec0b4a5",
+    "analysis_sha256": "sha256:9f0ea40037b5c8e47664cbd3f33c0f3ddfe9e8b638bcfca14bacc4fa020d326c",
+    "plan_sha256": "sha256:4dd58c74943020cf52a04918143c7c712fa98e725b3f28f64e82a2e6659f63a4",
+    "observations_sha256": "sha256:8da3214b7e14bddaaf71695ae128f233c6b82690a673359f51eacd9e1a1d2b4d"
+  },
+  "context_sha256": "sha256:8f4a9411a8f96cef0b5611bc6146f7df9498f4bc32ed3b006e8baa44ba262f98",
+  "obligations": [
+    {
+      "rule": "independence",
+      "subject": "body[0].requires[0]",
+      "state": "discharged",
+      "detail": "discharged by premise p-independence"
+    },
+    {
+      "rule": "provenance_disjoint",
+      "subject": "body[0].requires[1]",
+      "state": "discharged",
+      "detail": "over reading_a, reading_b"
+    },
+    {
+      "rule": "postcondition",
+      "subject": "body[0].ensures[0]",
+      "state": "discharged",
+      "detail": "`output = calibration * (reading_a + reading_b)` checked by interval_arithmetic"
+    }
+  ],
+  "requirements": {
+    "EL-R2": {
+      "status": "pass",
+      "rule": "bounded.le",
+      "detail": "enclosure [187/100, 231/100] mSv/h satisfies <= 5/2 mSv/h: 231/100 <= 5/2, conditional on calibration-current, uniform-field@(field-survey-1), separate-instrumentation",
+      "subject_value": "[187/100, 231/100]"
+    }
+  },
+  "applications": [
+    {
+      "rule": "bounded.le",
+      "subject": "requirements[EL-R2]",
+      "state": "pass",
+      "detail": "enclosure [187/100, 231/100] mSv/h satisfies <= 5/2 mSv/h: 231/100 <= 5/2, conditional on calibration-current, uniform-field@(field-survey-1), separate-instrumentation"
+    }
+  ],
+  "evaluation_sha256": "sha256:117166aea06c708d0800388e778389f397d12b61ac2700daee63b0d2a3f5e64b"
+}

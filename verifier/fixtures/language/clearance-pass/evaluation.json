@@ -1,0 +1,62 @@
+{
+  "schema_version": "avila.core/language-evaluation/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "context": {
+    "semantic_profile": "avila.core/language/0.1-draft",
+    "program_sha256": "sha256:c456f7f3fefde72785de465b589281ee9ab44996a589350be88dc5e197ff293c",
+    "library_sha256": "sha256:dc5f2165e51c09d99e751a714acb400dae77d708e6b42241d3eef6916ec45d0b",
+    "analysis_sha256": "sha256:b13d9a6be3b6e7b1008b283d946391b9f018315aab7710b71b5589d3a6a5dd51",
+    "plan_sha256": "sha256:56e6cc2dcc556b9b283e72a89560ce15d23ffe59d97617baaaa6382eb0db558e",
+    "observations_sha256": "sha256:2f4d1e9cc2ac64fa7d5cc6359162c7d63e38d5e1e400d4ba14680ed5161697fe"
+  },
+  "context_sha256": "sha256:6b6ff3acb9624ee7e6cb5b2f55e50b11b26c4748261f07b8060ecb47911fcb0f",
+  "obligations": [
+    {
+      "rule": "domain_containment",
+      "subject": "body[0].requires[0]",
+      "state": "discharged",
+      "detail": "`scenario.operating_domain` ⊆ `material.applicability`"
+    },
+    {
+      "rule": "postcondition",
+      "subject": "body[0].ensures[0]",
+      "state": "discharged",
+      "detail": "`output = coefficient * temperature_change * length` checked by interval_arithmetic"
+    },
+    {
+      "rule": "postcondition",
+      "subject": "body[1].ensures[0]",
+      "state": "discharged",
+      "detail": "`output = initial_clearance - displacement` checked by interval_arithmetic"
+    }
+  ],
+  "requirements": {
+    "EL-R1": {
+      "status": "pass",
+      "rule": "bounded.ge",
+      "detail": "enclosure [3/10, 2/5] mm satisfies >= 1/4 mm: 3/10 >= 1/4, conditional on linear-expansion-model@(al-6061-t6, thermal-soak-steady), uniform-temperature-change@(bracket@2, thermal-soak-steady)",
+      "subject_value": "[3/10, 2/5]"
+    }
+  },
+  "applications": [
+    {
+      "rule": "observe",
+      "subject": "body[0]",
+      "state": "established",
+      "detail": "invocation digests verified; receipt sha256:606dd1086df2ffb7eef21de52a7a0ab11622832db67856fd2df7863d4ede3c4b re-hashes"
+    },
+    {
+      "rule": "discharge",
+      "subject": "body[0] linear-expansion",
+      "state": "discharged",
+      "detail": "postcondition `output = coefficient * temperature_change * length` discharged by interval_arithmetic"
+    },
+    {
+      "rule": "bounded.ge",
+      "subject": "requirements[EL-R1]",
+      "state": "pass",
+      "detail": "enclosure [3/10, 2/5] mm satisfies >= 1/4 mm: 3/10 >= 1/4, conditional on linear-expansion-model@(al-6061-t6, thermal-soak-steady), uniform-temperature-change@(bracket@2, thermal-soak-steady)"
+    }
+  ],
+  "evaluation_sha256": "sha256:2df190dbef4c966c9a30efb85a17db1d0b0cfc1dd18a294049c613f0b329cf59"
+}

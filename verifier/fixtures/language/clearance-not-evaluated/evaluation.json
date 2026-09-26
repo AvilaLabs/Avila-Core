@@ -1,0 +1,57 @@
+{
+  "schema_version": "avila.core/language-evaluation/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "context": {
+    "semantic_profile": "avila.core/language/0.1-draft",
+    "program_sha256": "sha256:06cbb12436149c65968abc3eb97cfd6a3837d0684dd575e117175b551ce8cb21",
+    "library_sha256": "sha256:dc5f2165e51c09d99e751a714acb400dae77d708e6b42241d3eef6916ec45d0b",
+    "analysis_sha256": "sha256:e7dae95b8e0289fbedf06f0f6cc54618c98579fbb530e6c0c3d28c6a1a96f9c2",
+    "plan_sha256": "sha256:d24fcd81f6ab155226322b9b68272e7a3109dbfb5487cb34541d6e273897f55b",
+    "observations_sha256": "sha256:6a4c33f14b35a35b12d7307486dff03b0bf2bdaeca3d314a35843417c216cdf4"
+  },
+  "context_sha256": "sha256:234e670de595303a0086bcbb37a3094ff8026b647f2f18a0eb5a04153afb6de0",
+  "obligations": [
+    {
+      "rule": "domain_containment",
+      "subject": "body[0].requires[0]",
+      "state": "discharged",
+      "detail": "`scenario.operating_domain` ⊆ `material.applicability`"
+    },
+    {
+      "rule": "postcondition",
+      "subject": "body[0].ensures[0]",
+      "state": "open",
+      "detail": "`output = coefficient * temperature_change * length` checked by interval_arithmetic"
+    },
+    {
+      "rule": "postcondition",
+      "subject": "body[1].ensures[0]",
+      "state": "open",
+      "detail": "`output = initial_clearance - displacement` checked by interval_arithmetic"
+    }
+  ],
+  "observations": [
+    {
+      "at": "body[0]",
+      "bind": "displacement",
+      "state": "absent",
+      "detail": "no observation supplied for this invocation — its obligations stay open"
+    }
+  ],
+  "requirements": {
+    "EL-R1": {
+      "status": "not_evaluated",
+      "rule": "not_evaluated.missing_evidence",
+      "detail": "input temperature_change declared unavailable; displacement has no established value"
+    }
+  },
+  "applications": [
+    {
+      "rule": "discharge",
+      "subject": "body[0] linear-expansion",
+      "state": "open",
+      "detail": "postcondition `output = coefficient * temperature_change * length` open by interval_arithmetic"
+    }
+  ],
+  "evaluation_sha256": "sha256:ae60c976c5f1574cecf9931b52ee2c47b5138af31671745952cf63c030e0a7ce"
+}

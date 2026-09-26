@@ -4,6 +4,10 @@ Follow `CONTRIBUTING.md` for code changes. Keep authoritative calculations in
 the existing compiler/kernel/runner boundaries; CLI, MCP, and UI are clients
 of shared operations.
 
+After every push to GitHub, verify the CI run goes green
+(`gh run list --limit 3` / `gh run view <id>`): never leave a failing (✗)
+run standing, and never assume a push is done until its checks pass.
+
 When operating engineering cases or interpreting their results:
 
 - Use `avila-core inspect`, `history`, and `attempt` (or their MCP equivalents)

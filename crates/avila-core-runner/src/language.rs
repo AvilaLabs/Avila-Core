@@ -26,7 +26,7 @@ use avila_core_compiler::language::{
     ExecutionPlanDocument, LanguageInvocation, LanguageReceipt, OBSERVATIONS_SCHEMA_VERSION,
     ObservationRecord, ObservationsDocument, PlannedInvocation, ProcessOutcome,
     RECEIPT_SCHEMA_VERSION, ReceiptInput, ReceiptLog, ReceiptOutput, RunnerIdentity, ValueDecl,
-    invocation_identity,
+    canonical_json_bytes, invocation_identity,
 };
 use avila_core_evidence::sha256_file;
 use sha2::{Digest, Sha256};
@@ -49,6 +49,9 @@ pub fn execute_plan(
     workdir: &Path,
     options: &LanguageExecuteOptions,
 ) -> Result<ObservationsDocument, Box<dyn Error>> {
+    if plan.state != "ready" {
+        return Err(format!("plan is `{}` — only a ready plan executes", plan.state).into());
+    }
     let plan_sha256 = plan.plan_sha256.clone().unwrap_or_default();
     let mut observations = Vec::new();
     // binding name → the observed output bytes + digest, for chained
@@ -80,27 +83,11 @@ pub fn execute_plan(
     Ok(doc)
 }
 
-/// Canonical bytes of a serializable document — the bytes on disk and the
-/// bytes digests cover are the same canonical form. Absent optional fields
-/// serialize as `null`; the canonical grammar carries only present fields,
-/// so nulls are stripped first.
+/// Canonical bytes of a serializable document — the shared recipe in
+/// `language::execution` (null-stripped, kernel-canonicalized) so the bytes
+/// the runner digests are the bytes `evaluate` re-derives.
 fn canonical_bytes_of<T: serde::Serialize>(value: &T) -> Result<Vec<u8>, Box<dyn Error>> {
-    fn strip_nulls(value: &mut serde_json::Value) {
-        match value {
-            serde_json::Value::Object(map) => {
-                map.retain(|_, v| !v.is_null());
-                map.values_mut().for_each(strip_nulls);
-            }
-            serde_json::Value::Array(items) => {
-                items.iter_mut().for_each(strip_nulls);
-            }
-            _ => {}
-        }
-    }
-    let mut json = serde_json::to_value(value)?;
-    strip_nulls(&mut json);
-    let bytes = serde_json::to_vec(&json)?;
-    Ok(avila_core_kernel::canonicalize_json(&bytes)?)
+    canonical_json_bytes(value).map_err(Into::into)
 }
 
 fn sha256_text(bytes: &[u8]) -> String {
@@ -144,8 +131,16 @@ fn execute_invocation(
             }
         };
         // The staged bytes must match the plan's declared digest — either
-        // the declared operand bytes or a bound upstream observation.
+        // the declared operand bytes or a bound upstream observation. A
+        // `staged` input that declares no digest is a malformed plan.
         let declared = input.sha256.clone().unwrap_or_default();
+        if declared.is_empty() && !observed_outputs.contains_key(&input.binding) {
+            return Err(format!(
+                "plan input `{slot}` of {} is `staged` but declares no digest",
+                invocation.at
+            )
+            .into());
+        }
         let digest = sha256_text(&bytes);
         if !declared.is_empty()
             && digest != declared

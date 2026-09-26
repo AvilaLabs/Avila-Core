@@ -5075,13 +5075,24 @@ impl<'a> Analyzer<'a> {
             };
         };
         let (lower, upper) = numeric.bounds();
-        let cmp = |a: &ExactNumber, b: &ExactNumber| {
-            a.checked_cmp(b).unwrap_or(std::cmp::Ordering::Greater)
+        let (Ok(lower_cmp), Ok(upper_cmp)) = (lower.checked_cmp(&limit), upper.checked_cmp(&limit))
+        else {
+            // Unreachable for well-formed rationals — a bound that cannot be
+            // compared never silently satisfies or fails a limit.
+            return RequirementReport {
+                state: "not_evaluated".into(),
+                verdict: Some(VerdictReport {
+                    status: "not_evaluated".into(),
+                    rule: "not_evaluated.malformed".into(),
+                    detail: "the subject's bounds cannot be compared with the limit".into(),
+                }),
+                declared_value: subject.value_text(),
+            };
         };
         let symbol = requirement.comparison.as_str();
         let (status, detail) = match symbol {
             "ge" => {
-                if !cmp(&lower, &limit).is_lt() {
+                if !lower_cmp.is_lt() {
                     (
                         "pass",
                         format!(
@@ -5093,7 +5104,7 @@ impl<'a> Analyzer<'a> {
                             limit.canonical_rational(),
                         ),
                     )
-                } else if cmp(&upper, &limit).is_lt() {
+                } else if upper_cmp.is_lt() {
                     (
                         "fail",
                         format!(
@@ -5114,7 +5125,7 @@ impl<'a> Analyzer<'a> {
                 }
             }
             _ => {
-                if !cmp(&upper, &limit).is_gt() {
+                if !upper_cmp.is_gt() {
                     (
                         "pass",
                         format!(
@@ -5126,7 +5137,7 @@ impl<'a> Analyzer<'a> {
                             limit.canonical_rational(),
                         ),
                     )
-                } else if cmp(&lower, &limit).is_gt() {
+                } else if lower_cmp.is_gt() {
                     (
                         "fail",
                         format!(
@@ -5368,6 +5379,10 @@ pub fn evaluate_program(
 
     let mut site_map: BTreeMap<usize, execution::ObservationRecord> = BTreeMap::new();
     let mut outcomes: Vec<execution::ObservationOutcome> = Vec::new();
+    // The plan's invocation sites are the only lawful `at` values — a record
+    // that parses as `body[{i}]` but names a non-invocation step is foreign.
+    let invocation_sites: BTreeSet<&str> = plan.invocations.iter().map(|i| i.at.as_str()).collect();
+    let mut claimed_sites: BTreeMap<usize, usize> = BTreeMap::new();
     if let Some(doc) = &observations_doc {
         for record in &doc.observations {
             let site = record
@@ -5376,8 +5391,9 @@ pub fn evaluate_program(
                 .and_then(|s| s.strip_suffix(']'))
                 .and_then(|s| s.parse::<usize>().ok());
             match site {
-                Some(index) if context_ok => {
-                    site_map.insert(index, record.clone());
+                Some(index) if context_ok && invocation_sites.contains(record.at.as_str()) => {
+                    *claimed_sites.entry(index).or_insert(0) += 1;
+                    site_map.entry(index).or_insert_with(|| record.clone());
                 }
                 _ => {
                     outcomes.push(execution::ObservationOutcome {
@@ -5385,13 +5401,28 @@ pub fn evaluate_program(
                         bind: record.bind.clone(),
                         state: "rejected".into(),
                         detail: if context_ok {
-                            "observation does not name a `body[{index}]` application site".into()
+                            "observation names no external-invocation site in this plan".into()
                         } else {
                             "the supplied observations do not belong to this plan".into()
                         },
                     });
                 }
             }
+        }
+    }
+    // Two records claiming one site are ambiguous material — neither can
+    // stand in; the site stays unobserved and both are reported.
+    for (index, count) in claimed_sites {
+        if count > 1 {
+            site_map.remove(&index);
+            outcomes.push(execution::ObservationOutcome {
+                at: format!("body[{index}]"),
+                bind: String::new(),
+                state: "rejected".into(),
+                detail: format!(
+                    "{count} observation records claim this site — ambiguous, none admitted"
+                ),
+            });
         }
     }
 

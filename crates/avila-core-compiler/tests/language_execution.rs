@@ -361,6 +361,51 @@ fn transplanted_receipts_never_discharge() {
 }
 
 #[test]
+fn records_naming_non_invocation_sites_are_rejected() {
+    // clearance-pass's body[1] is a primitive application, not an external
+    // invocation — a record supplied for it is foreign, and its site is not
+    // counted as "answered" anywhere.
+    let program = program_bytes("clearance-pass");
+    let plan = execution_plan(&program, &library_bytes(), &AnalysisOptions::default());
+    let honest = observation(&plan, 0, Some(honest_output()));
+    let mut foreign = observation(&plan, 0, Some(honest_output()));
+    foreign.at = "body[1]".into();
+    foreign.receipt.at = "body[1]".into();
+    let doc = observations_doc(plan.plan_sha256.as_deref().unwrap(), vec![honest, foreign]);
+    let evaluation = evaluate("clearance-pass", &doc);
+    assert_eq!(evaluation.requirements["EL-R1"].status, "pass");
+    assert!(
+        evaluation
+            .observations
+            .iter()
+            .any(|o| o.at == "body[1]" && o.state == "rejected"),
+        "a record naming a non-invocation site must surface as rejected"
+    );
+}
+
+#[test]
+fn duplicate_site_claims_are_ambiguous_and_neither_binds() {
+    let program = program_bytes("clearance-pass");
+    let plan = execution_plan(&program, &library_bytes(), &AnalysisOptions::default());
+    let doc = observations_doc(
+        plan.plan_sha256.as_deref().unwrap(),
+        vec![
+            observation(&plan, 0, Some(honest_output())),
+            observation(&plan, 0, Some(honest_output())),
+        ],
+    );
+    let evaluation = evaluate("clearance-pass", &doc);
+    assert_eq!(evaluation.requirements["EL-R1"].status, "not_evaluated");
+    assert!(
+        evaluation
+            .observations
+            .iter()
+            .any(|o| o.at == "body[0]" && o.state == "rejected" && o.detail.contains("ambiguous")),
+        "duplicate claims must surface as an ambiguity rejection"
+    );
+}
+
+#[test]
 fn verdict_boundaries_hold_under_execution() {
     for (program, status) in [
         ("clearance-pass", "pass"),

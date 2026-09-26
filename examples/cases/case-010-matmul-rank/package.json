@@ -1,0 +1,155 @@
+{
+ "schema_version": "avila.core/case-package/v0.1-draft",
+ "case_id": "CASE-010",
+ "title": "Matrix-multiplication tensor rank: exact GF(2) Brent-equation verification",
+ "documents": [
+  {
+   "document_id": "case-010-contract",
+   "role": "contract",
+   "path": "contract.json",
+   "sha256": "sha256:88b5b88dbd001778e92a268031b3c4dc8a2d8cf23c4b635829172cfb6d814f1c"
+  },
+  {
+   "document_id": "case-010-registry",
+   "role": "registry",
+   "path": "registry.json",
+   "sha256": "sha256:2d65d42724cd8cc6155c95b0e43df8924fd0ca974fc35ad1c46d3fa9a9478ce1"
+  },
+  {
+   "document_id": "case-010-claims",
+   "role": "claims",
+   "path": "claims.json",
+   "sha256": "sha256:56b9e15bb5b1fd1dd905502cc1ba3fe21df45be5e625c47d8a686c2194ccae8f"
+  },
+  {
+   "document_id": "case-010-requirement-set",
+   "role": "requirement_set",
+   "path": "requirement-set.json",
+   "sha256": "sha256:2a8b2b98f58b34626f474ab872d0e8037126d22e3e2d3268f5bbc78dc6356230"
+  },
+  {
+   "document_id": "avila-labs.matmul/brent-verify@1",
+   "role": "external_checker_adapter",
+   "path": "adapter.json",
+   "sha256": "sha256:6d83b9f87a869271bec7b557609b6c2ac9d31d7ff485e376d0b56e1fc85fa2ed"
+  },
+  {
+   "document_id": "case-010-expected-campaign",
+   "role": "expected_campaign_report",
+   "path": "campaign-report.json",
+   "sha256": "sha256:561f667693c8e332e5ca278bab069ec7aff55b85593b94be421920ef5431d4e7"
+  },
+  {
+   "document_id": "case-010-verify-receipt",
+   "role": "execution_receipt",
+   "path": "receipts/verify.json",
+   "sha256": "sha256:739c7ec93cb31c11d8b4e907ffb2ce5858bd66b3e01becc1d71d118b4521ad0c",
+   "step_id": "verify"
+  }
+ ],
+ "artifacts": [
+  {
+   "artifact_id": "brent-verify-script",
+   "evidence_ids": [
+    "input:verify-script"
+   ],
+   "source_root": "matmul",
+   "path": "brent_verify.py",
+   "sha256": "sha256:abe9b4b03c054ae95e0660c65a890ca3e8e90bc630d187cfb42a306481a25227"
+  },
+  {
+   "artifact_id": "reference-candidate",
+   "evidence_ids": [
+    "input:candidate"
+   ],
+   "source_root": "case",
+   "path": "candidates/npz-333.json",
+   "sha256": "sha256:7611b2bfebae219e596622fb43ae2d0eb5146fa7548c5b3a0ed7b50c99c8edf9"
+  },
+  {
+   "artifact_id": "npz-333-report",
+   "evidence_ids": [
+    "mm-validity",
+    "mm-fails",
+    "mm-rank",
+    "mm-verify-result",
+    "mm-nnz",
+    "mm-adds"
+   ],
+   "source_root": "case",
+   "path": "expected/npz-333-report.json",
+   "sha256": "sha256:1d54205b638816b760b66fa68d11ee9acba815039e1cd6ec552fb3faf884cf92"
+  }
+ ],
+ "capabilities": [
+  {
+   "capability_id": "python3",
+   "package_id": "org.python/cpython@3.14.4",
+   "executable_sha256": "sha256:52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41"
+  }
+ ],
+ "executions": [
+  {
+   "step_id": "verify",
+   "adapter": "avila-labs.matmul/brent-verify@1",
+   "capability_id": "python3",
+   "inputs": [
+    {
+     "input_slot": "verify-script",
+     "workspace_path": "tools/brent_verify.py"
+    },
+    {
+     "input_slot": "candidate",
+     "workspace_path": "inputs/candidate.json"
+    }
+   ],
+   "outputs": [
+    {
+     "output_slot": "validity",
+     "claim_id": "mm-validity"
+    },
+    {
+     "output_slot": "fails",
+     "claim_id": "mm-fails"
+    },
+    {
+     "output_slot": "rank",
+     "claim_id": "mm-rank"
+    },
+    {
+     "output_slot": "verify-result",
+     "claim_id": "mm-verify-result"
+    },
+    {
+     "output_slot": "nnz",
+     "claim_id": "mm-nnz"
+    },
+    {
+     "output_slot": "adds",
+     "claim_id": "mm-adds"
+    }
+   ]
+  }
+ ],
+ "free_inputs": [
+  "candidate"
+ ],
+ "coverage": {
+  "requirement_set": "case-010-requirement-set",
+  "mapping": {
+   "brent-validity": [
+    "MM-R1-fails"
+   ],
+   "rank-bound": [
+    "MM-R2-rank-bound"
+   ],
+   "adds-bound": [
+    "MM-R3-adds"
+   ]
+  },
+  "omissions": []
+ },
+ "limitations": [
+  "Research-only verification specimen; GF(2) rank only; no minimality claim."
+ ]
+}

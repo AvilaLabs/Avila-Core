@@ -1,0 +1,95 @@
+{
+  "schema_version": "avila.core/execution-receipt/v0.1-draft",
+  "case_id": "CASE-010",
+  "compiled_snapshot_sha256": "sha256:5b3d3b5d3a8efb34da477ae11c3925554f064d63b57b18a5162426125a172fc9",
+  "step_id": "verify",
+  "capability_type": {
+    "id": "matmul.brent-verify",
+    "major": 1
+  },
+  "adapter": "avila-labs.matmul/brent-verify@1",
+  "capability": {
+    "capability_id": "python3",
+    "package_id": "org.python/cpython@3.14.4",
+    "executable_sha256": "sha256:52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41"
+  },
+  "parameters": {},
+  "inputs": [
+    {
+      "input_slot": "candidate",
+      "evidence_id": "input:candidate",
+      "workspace_path": "inputs/candidate.json",
+      "media_type": "application/vnd.avila.matmul-scheme+json",
+      "sha256": "sha256:7611b2bfebae219e596622fb43ae2d0eb5146fa7548c5b3a0ed7b50c99c8edf9",
+      "bytes": 456
+    },
+    {
+      "input_slot": "verify-script",
+      "evidence_id": "input:verify-script",
+      "workspace_path": "tools/brent_verify.py",
+      "media_type": "text/x-python",
+      "sha256": "sha256:abe9b4b03c054ae95e0660c65a890ca3e8e90bc630d187cfb42a306481a25227",
+      "bytes": 3989
+    }
+  ],
+  "invocation": {
+    "program": "python3",
+    "arguments": [
+      "tools/brent_verify.py",
+      "check",
+      "inputs/candidate.json",
+      "--output",
+      "outputs/report.json"
+    ],
+    "working_directory": ".",
+    "adapter_sha256": "sha256:6d83b9f87a869271bec7b557609b6c2ac9d31d7ff485e376d0b56e1fc85fa2ed",
+    "environment": {},
+    "timeout_ms": 120000
+  },
+  "invocation_sha256": "sha256:d7cfe9efb9d4895cf72e26a6783448496a40e8542573c479178b26c5e3667235",
+  "process": {
+    "started_at": "2026-09-26T19:59:14.190Z",
+    "finished_at": "2026-09-26T19:59:14.231Z",
+    "duration_ms": 40,
+    "exit_status": 0,
+    "timed_out": false
+  },
+  "logs": [
+    {
+      "stream": "stdout",
+      "workspace_path": "logs/stdout.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "stream": "stderr",
+      "workspace_path": "logs/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "outputs": [
+    {
+      "output_id": "report",
+      "workspace_path": "outputs/report.json",
+      "media_type": "application/vnd.avila.matmul-report+json",
+      "state": "collected",
+      "sha256": "sha256:1d54205b638816b760b66fa68d11ee9acba815039e1cd6ec552fb3faf884cf92",
+      "bytes": 187
+    }
+  ],
+  "runner": {
+    "runner": "avila.core/cli-rust@0.1.0",
+    "os": "linux",
+    "arch": "x86_64"
+  },
+  "status": "completed",
+  "limitations": [
+    "Exit status and output digests are process evidence, not scientific success.",
+    "The executable digest identifies the bytes that ran; it does not qualify the method.",
+    "No sandbox or resource accounting was applied beyond a cleared environment, a working directory confined to the workspace, and terminating the child's Unix process group or Windows Job Object on timeout; nothing here is signed.",
+    "Checks the cubic Brent parity equations over GF(2) only; a pass certifies an exact GF(2) bilinear decomposition of the declared tensor format, nothing about characteristic zero.",
+    "Rank is the term count of the submitted scheme; the checker does not prove minimality."
+  ],
+  "notice": "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, practical suitability, or regulatory suitability."
+}

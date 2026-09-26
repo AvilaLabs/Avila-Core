@@ -1,0 +1,36 @@
+{
+  "schema_version": "avila.core/requirement-set/v0.1-draft",
+  "set_id": "avila-labs.matmul/rank-scheme",
+  "revision": 2,
+  "owner": "avila-labs",
+  "title": "What any matrix-multiplication rank claim must address",
+  "requirements": [
+    {
+      "set_requirement_id": "brent-validity",
+      "statement": "The term list satisfies every cubic Brent parity equation for the declared tensor format over the declared field.",
+      "kind": "core.count",
+      "comparison": "equal",
+      "minimum_basis": "nominal",
+      "omission": "must_state",
+      "rationale": "The decomposition is the claim; without exact satisfaction of the tensor equations there is no scheme at all."
+    },
+    {
+      "set_requirement_id": "rank-bound",
+      "statement": "The scheme's rank is at or below the bound relevant to the claim (published best for a record match, below it for an improvement).",
+      "kind": "core.count",
+      "comparison": "less_than_or_equal",
+      "minimum_basis": "bounded",
+      "omission": "must_state",
+      "rationale": "A decomposition only advances the frontier if its term count is at or below the current bound."
+    },
+    {
+      "set_requirement_id": "adds-bound",
+      "statement": "The scheme's greedy pair-CSE addition count is at or below the declared additions-record ask.",
+      "kind": "core.count",
+      "comparison": "less_than_or_equal",
+      "minimum_basis": "bounded",
+      "omission": "may_omit",
+      "rationale": "Additions dominate the constant-factor cost of the scheme; beating the published convention-bound is an independent record."
+    }
+  ]
+}

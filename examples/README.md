@@ -49,6 +49,12 @@ integrations, safety analyses, or evidence of compliance.
   a ratio-four child worsens both margins and creates a voltage failure, so
   further one-parameter tuning of the delayed symmetric mesh stops under the
   fixed protocol.
+- `cases/case-010-matmul-rank/` switches domains: an exact bilinear
+  decomposition claim for the 3x3x3 matrix-multiplication tensor over GF(2),
+  verified by replaying every cubic Brent parity equation rather than trusting
+  a status flag. The committed candidate passes validity and its rank-23
+  bound, but fails the declared greedy-additions limit — a committed FAIL
+  verdict exercised verbatim by the independent verifier.
 
 The dose limit, unit factors, parameter domains, and every capability
 description are hypothetical. They must never be used for engineering or

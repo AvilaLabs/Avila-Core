@@ -1,0 +1,137 @@
+{
+  "claims": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.matmul-report+json",
+        "sha256": "sha256:1d54205b638816b760b66fa68d11ee9acba815039e1cd6ec552fb3faf884cf92"
+      },
+      "claim": {
+        "model": "unquantified",
+        "value": "pass"
+      },
+      "claim_id": "mm-validity",
+      "output_slot": "validity",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41"
+      },
+      "step_id": "verify"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.matmul-report+json",
+        "sha256": "sha256:1d54205b638816b760b66fa68d11ee9acba815039e1cd6ec552fb3faf884cf92"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "0"
+        }
+      },
+      "claim_id": "mm-fails",
+      "output_slot": "fails",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41"
+      },
+      "step_id": "verify"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.matmul-report+json",
+        "sha256": "sha256:1d54205b638816b760b66fa68d11ee9acba815039e1cd6ec552fb3faf884cf92"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "23"
+        }
+      },
+      "claim_id": "mm-rank",
+      "output_slot": "rank",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41"
+      },
+      "step_id": "verify"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.matmul-report+json",
+        "sha256": "sha256:1d54205b638816b760b66fa68d11ee9acba815039e1cd6ec552fb3faf884cf92"
+      },
+      "claim": {
+        "model": "unquantified",
+        "value": "pass"
+      },
+      "claim_id": "mm-verify-result",
+      "output_slot": "verify-result",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41"
+      },
+      "step_id": "verify"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.matmul-report+json",
+        "sha256": "sha256:1d54205b638816b760b66fa68d11ee9acba815039e1cd6ec552fb3faf884cf92"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "167"
+        }
+      },
+      "claim_id": "mm-nnz",
+      "output_slot": "nnz",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41"
+      },
+      "step_id": "verify"
+    },
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.matmul-report+json",
+        "sha256": "sha256:1d54205b638816b760b66fa68d11ee9acba815039e1cd6ec552fb3faf884cf92"
+      },
+      "claim": {
+        "model": "exact",
+        "nominal": {
+          "unit": "1",
+          "value": "68"
+        }
+      },
+      "claim_id": "mm-adds",
+      "output_slot": "adds",
+      "producer": {
+        "package_id": "org.python/cpython@3.14.4",
+        "sha256": "sha256:52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41"
+      },
+      "step_id": "verify"
+    }
+  ],
+  "compiled_snapshot_sha256": "sha256:5b3d3b5d3a8efb34da477ae11c3925554f064d63b57b18a5162426125a172fc9",
+  "inputs": [
+    {
+      "artifact": {
+        "media_type": "application/vnd.avila.matmul-scheme+json",
+        "sha256": "sha256:7611b2bfebae219e596622fb43ae2d0eb5146fa7548c5b3a0ed7b50c99c8edf9"
+      },
+      "input_id": "candidate"
+    },
+    {
+      "artifact": {
+        "media_type": "text/x-python",
+        "sha256": "sha256:abe9b4b03c054ae95e0660c65a890ca3e8e90bc630d187cfb42a306481a25227"
+      },
+      "input_id": "verify-script"
+    }
+  ],
+  "schema_version": "avila.core/evidence-claims/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft"
+}

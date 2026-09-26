@@ -94,3 +94,10 @@ jobs:
             --source-root case=../examples/cases/case-001-shield-search \
             --source-root shielding=../examples/capabilities/shielding \
             --trust-root ../examples/keys/trust-root.json
+
+      - name: Verify CASE-010 (matmul rank — a committed FAIL verdict, exercised verbatim)
+        working-directory: verifier
+        run: |
+          python3 avila_core_verify.py verify-case ../examples/cases/case-010-matmul-rank \
+            --source-root case=../examples/cases/case-010-matmul-rank \
+            --source-root matmul=../examples/cases/case-010-matmul-rank/capability

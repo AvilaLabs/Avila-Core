@@ -1,0 +1,161 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "case-010.matmul-rank-verify",
+  "revision": 2,
+  "status": "draft",
+  "question": "Is the submitted term list an exact bilinear decomposition of the declared matrix-multiplication tensor format over GF(2), and does its rank meet the declared bound?",
+  "assumptions": [
+    "The candidate declares the tensor format (n,m,p), the C-index convention, and the term list as integer bitmasks; LSB is entry 0.",
+    "Verification is over GF(2): each factor coefficient is a bit. A PASS certifies an exact GF(2) decomposition only; it makes no statement about rank over the integers or rationals.",
+    "The declared rank bound is the currently published best for this format over GF(2) at freeze time; the contract does not assert that bound is minimal.",
+    "This contract is a research-only verification specimen and excludes every regulatory, safety, or operational purpose.",
+    "The report also emits nnz (total nonzero coefficients) and adds (greedy pair-CSE addition count) as margins; adds is a GF(2)-reduced SLP count and is not the characteristic-0 integer additions record."
+  ],
+  "execution_policy": {
+    "permit_nominal_basis": true,
+    "require_qualification": false,
+    "require_signatures": false
+  },
+  "inputs": [
+    {
+      "input_id": "candidate",
+      "role": {
+        "id": "matmul.scheme",
+        "major": 1
+      },
+      "media_type": "application/vnd.avila.matmul-scheme+json",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    },
+    {
+      "input_id": "verify-script",
+      "role": {
+        "id": "matmul.verify-script",
+        "major": 1
+      },
+      "media_type": "text/x-python",
+      "claim_model": {
+        "model": "unquantified"
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "step_id": "verify",
+      "capability_type": {
+        "id": "matmul.brent-verify",
+        "major": 1
+      },
+      "bindings": [
+        {
+          "input_slot": "verify-script",
+          "source": {
+            "source": "contract_input",
+            "input_id": "verify-script"
+          }
+        },
+        {
+          "input_slot": "candidate",
+          "source": {
+            "source": "contract_input",
+            "input_id": "candidate"
+          }
+        }
+      ]
+    }
+  ],
+  "categorical_requirements": [
+    {
+      "requirement_id": "MM-R1-valid",
+      "statement": "The term list satisfies every cubic Brent parity equation for the declared tensor over GF(2).",
+      "purpose": {
+        "id": "avila-labs.matmul.rank-search",
+        "major": 1
+      },
+      "metric": {
+        "source": "step_output",
+        "step_id": "verify",
+        "output_slot": "validity"
+      },
+      "predicate": {
+        "operator": "equals",
+        "value": "pass"
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "MM-R1-fails",
+      "statement": "The number of Brent parity equations violated by the term list is zero.",
+      "purpose": {
+        "id": "avila-labs.matmul.rank-search",
+        "major": 1
+      },
+      "metric": {
+        "source": "step_output",
+        "step_id": "verify",
+        "output_slot": "fails"
+      },
+      "comparison": "equal",
+      "limit": {
+        "kind": "core.count",
+        "value": "0",
+        "unit": "1"
+      },
+      "basis": {
+        "kind": "bounded"
+      },
+      "tolerance": {
+        "kind": "core.count",
+        "value": "0",
+        "unit": "1"
+      }
+    },
+    {
+      "requirement_id": "MM-R2-rank-bound",
+      "statement": "The scheme's rank is at or below the declared bound (published best for the format over GF(2) at freeze).",
+      "purpose": {
+        "id": "avila-labs.matmul.rank-search",
+        "major": 1
+      },
+      "metric": {
+        "source": "step_output",
+        "step_id": "verify",
+        "output_slot": "rank"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "core.count",
+        "value": "23",
+        "unit": "1"
+      },
+      "basis": {
+        "kind": "bounded"
+      }
+    },
+    {
+      "requirement_id": "MM-R3-adds",
+      "statement": "The scheme's greedy pair-CSE addition count over GF(2) is at or below the additions-record ask for the format (GF(2)-reduced SLP convention).",
+      "purpose": {
+        "id": "avila-labs.matmul.rank-search",
+        "major": 1
+      },
+      "metric": {
+        "source": "step_output",
+        "step_id": "verify",
+        "output_slot": "adds"
+      },
+      "comparison": "less_than_or_equal",
+      "limit": {
+        "kind": "core.count",
+        "value": "57",
+        "unit": "1"
+      },
+      "basis": {
+        "kind": "bounded"
+      }
+    }
+  ]
+}

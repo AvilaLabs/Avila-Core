@@ -1,0 +1,226 @@
+{
+  "schema_version": "avila.core/campaign-report/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "status": "evaluated",
+  "compiled_snapshot_sha256": "sha256:5b3d3b5d3a8efb34da477ae11c3925554f064d63b57b18a5162426125a172fc9",
+  "claims_sha256": "sha256:177a1f673adcc1afd6d6ed09ecc2bb09d55e2ac16fe20545bd0c18156c8d7e76",
+  "admissions": [
+    {
+      "evidence_id": "input:candidate",
+      "source": {
+        "source": "contract_input",
+        "input_id": "candidate"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "input:verify-script",
+      "source": {
+        "source": "contract_input",
+        "input_id": "verify-script"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "mm-validity",
+      "source": {
+        "source": "step_output",
+        "step_id": "verify",
+        "output_slot": "validity"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "mm-fails",
+      "source": {
+        "source": "step_output",
+        "step_id": "verify",
+        "output_slot": "fails"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "mm-rank",
+      "source": {
+        "source": "step_output",
+        "step_id": "verify",
+        "output_slot": "rank"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "mm-verify-result",
+      "source": {
+        "source": "step_output",
+        "step_id": "verify",
+        "output_slot": "verify-result"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "mm-nnz",
+      "source": {
+        "source": "step_output",
+        "step_id": "verify",
+        "output_slot": "nnz"
+      },
+      "state": "admitted"
+    },
+    {
+      "evidence_id": "mm-adds",
+      "source": {
+        "source": "step_output",
+        "step_id": "verify",
+        "output_slot": "adds"
+      },
+      "state": "admitted"
+    }
+  ],
+  "verdicts": [
+    {
+      "requirement_id": "MM-R1-fails",
+      "statement": "The number of Brent parity equations violated by the term list is zero.",
+      "metric": {
+        "source": "step_output",
+        "step_id": "verify",
+        "output_slot": "fails"
+      },
+      "evidence_ids": [
+        "mm-fails"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "equal.within",
+        "canonical_unit": "1",
+        "limit_canonical": "0",
+        "lower_canonical": "0",
+        "upper_canonical": "0",
+        "nominal_canonical": "0",
+        "tolerance_canonical": "0",
+        "reasons": [
+          {
+            "code": "CORE-A4403",
+            "owner": "policy_owner"
+          },
+          {
+            "evidence_id": "mm-fails",
+            "state": "unqualified"
+          }
+        ]
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:5b3d3b5d3a8efb34da477ae11c3925554f064d63b57b18a5162426125a172fc9",
+        "claims_sha256": "sha256:177a1f673adcc1afd6d6ed09ecc2bb09d55e2ac16fe20545bd0c18156c8d7e76"
+      }
+    },
+    {
+      "requirement_id": "MM-R1-valid",
+      "statement": "The term list satisfies every cubic Brent parity equation for the declared tensor over GF(2).",
+      "metric": {
+        "source": "step_output",
+        "step_id": "verify",
+        "output_slot": "validity"
+      },
+      "evidence_ids": [
+        "mm-validity"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "categorical.equals.match",
+        "numbers_present": false,
+        "observed_category": "pass",
+        "accepted_categories": [
+          "pass"
+        ]
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:5b3d3b5d3a8efb34da477ae11c3925554f064d63b57b18a5162426125a172fc9",
+        "claims_sha256": "sha256:177a1f673adcc1afd6d6ed09ecc2bb09d55e2ac16fe20545bd0c18156c8d7e76"
+      }
+    },
+    {
+      "requirement_id": "MM-R2-rank-bound",
+      "statement": "The scheme's rank is at or below the declared bound (published best for the format over GF(2) at freeze).",
+      "metric": {
+        "source": "step_output",
+        "step_id": "verify",
+        "output_slot": "rank"
+      },
+      "evidence_ids": [
+        "mm-rank"
+      ],
+      "verdict": {
+        "status": "pass",
+        "rule": "bounded.le.within",
+        "canonical_unit": "1",
+        "limit_canonical": "23",
+        "lower_canonical": "23",
+        "upper_canonical": "23",
+        "nominal_canonical": "23",
+        "reasons": [
+          {
+            "code": "CORE-A4403",
+            "owner": "policy_owner"
+          },
+          {
+            "evidence_id": "mm-rank",
+            "state": "unqualified"
+          }
+        ]
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:5b3d3b5d3a8efb34da477ae11c3925554f064d63b57b18a5162426125a172fc9",
+        "claims_sha256": "sha256:177a1f673adcc1afd6d6ed09ecc2bb09d55e2ac16fe20545bd0c18156c8d7e76"
+      }
+    },
+    {
+      "requirement_id": "MM-R3-adds",
+      "statement": "The scheme's greedy pair-CSE addition count over GF(2) is at or below the additions-record ask for the format (GF(2)-reduced SLP convention).",
+      "metric": {
+        "source": "step_output",
+        "step_id": "verify",
+        "output_slot": "adds"
+      },
+      "evidence_ids": [
+        "mm-adds"
+      ],
+      "verdict": {
+        "status": "fail",
+        "rule": "bounded.le.exceeds",
+        "canonical_unit": "1",
+        "limit_canonical": "57",
+        "lower_canonical": "68",
+        "upper_canonical": "68",
+        "nominal_canonical": "68",
+        "reasons": [
+          {
+            "code": "CORE-A4403",
+            "owner": "policy_owner"
+          },
+          {
+            "evidence_id": "mm-adds",
+            "state": "unqualified"
+          }
+        ]
+      },
+      "boundary": {
+        "semantic_profile": "avila.core/semantic/0.2-draft",
+        "compiler": "avila.core/compiler-rust@0.1.0",
+        "evaluator": "avila.core/kernel-rust@0.1.0",
+        "compiled_snapshot_sha256": "sha256:5b3d3b5d3a8efb34da477ae11c3925554f064d63b57b18a5162426125a172fc9",
+        "claims_sha256": "sha256:177a1f673adcc1afd6d6ed09ecc2bb09d55e2ac16fe20545bd0c18156c8d7e76"
+      }
+    }
+  ],
+  "campaign_sha256": "sha256:3e45440374fe65d4eaa23035ddb299d208e8c64139005da717f48efc11e99de2",
+  "notice": "Campaign evaluation admits claims under the executable type-level subset of the draft admission rules and derives verdicts from admitted claims under the draft profile. Artifact bytes, execution receipts, package identities, signatures, qualification, policy snapshots, and invalidation are not checked. Optional practical review controls presentation outside this evaluator and cannot alter a technical verdict. No verdict here is scientific truth, certification, or regulatory approval."
+}

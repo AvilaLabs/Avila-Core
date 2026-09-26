@@ -1,0 +1,96 @@
+{
+  "schema_version": "avila.core/external-checker-adapter/v0.1-draft",
+  "adapter_id": "avila-labs.matmul/brent-verify@1",
+  "capability_type": {
+    "id": "matmul.brent-verify",
+    "major": 1
+  },
+  "input_slots": [
+    "verify-script",
+    "candidate"
+  ],
+  "arguments": [
+    {
+      "kind": "input_path",
+      "input_slot": "verify-script"
+    },
+    {
+      "kind": "literal",
+      "value": "check"
+    },
+    {
+      "kind": "input_path",
+      "input_slot": "candidate"
+    },
+    {
+      "kind": "literal",
+      "value": "--output"
+    },
+    {
+      "kind": "output_path",
+      "output_id": "report"
+    }
+  ],
+  "outputs": [
+    {
+      "output_id": "report",
+      "workspace_path": "outputs/report.json",
+      "media_type": "application/vnd.avila.matmul-report+json"
+    }
+  ],
+  "claims": [
+    {
+      "model": "categorical",
+      "output_slot": "validity",
+      "output_id": "report",
+      "pointer": "/valid",
+      "allowed_values": [
+        "pass",
+        "fail"
+      ]
+    },
+    {
+      "model": "exact",
+      "output_slot": "fails",
+      "output_id": "report",
+      "pointer": "/fails",
+      "unit": "1"
+    },
+    {
+      "model": "exact",
+      "output_slot": "rank",
+      "output_id": "report",
+      "pointer": "/rank",
+      "unit": "1"
+    },
+    {
+      "model": "categorical",
+      "output_slot": "verify-result",
+      "output_id": "report",
+      "pointer": "/valid",
+      "allowed_values": [
+        "pass",
+        "fail"
+      ]
+    },
+    {
+      "model": "exact",
+      "output_slot": "nnz",
+      "output_id": "report",
+      "pointer": "/nnz",
+      "unit": "1"
+    },
+    {
+      "model": "exact",
+      "output_slot": "adds",
+      "output_id": "report",
+      "pointer": "/adds",
+      "unit": "1"
+    }
+  ],
+  "timeout_ms": 120000,
+  "limitations": [
+    "Checks the cubic Brent parity equations over GF(2) only; a pass certifies an exact GF(2) bilinear decomposition of the declared tensor format, nothing about characteristic zero.",
+    "Rank is the term count of the submitted scheme; the checker does not prove minimality."
+  ]
+}

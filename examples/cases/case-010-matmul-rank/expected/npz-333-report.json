@@ -1,0 +1,1 @@
+{"valid": "pass", "rank": 23, "scheme_sha256": "a2c6168b9210ca31d920b6f5b5c194bb139009ad63817e6447172f8a01768249", "fails": 0, "nnz": 167, "adds": 68, "tensor": "3x3x3", "field": "GF(2)"}

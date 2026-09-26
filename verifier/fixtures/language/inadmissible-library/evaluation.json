@@ -1,0 +1,58 @@
+{
+  "schema_version": "avila.core/language-evaluation/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "context": {
+    "semantic_profile": "avila.core/language/0.1-draft",
+    "program_sha256": "sha256:c456f7f3fefde72785de465b589281ee9ab44996a589350be88dc5e197ff293c",
+    "library_sha256": "",
+    "analysis_sha256": "sha256:f8980c2a1d548b7d0c9474df717bef324990e1160f3e7f3e94fe71e109048430",
+    "plan_sha256": "sha256:02d1e09b4bdabd9398f348e73e70ea321e694afe76f1948660c94876b9673054",
+    "observations_sha256": "sha256:c7baf95b5562ab67f37b5b7b0807a0f8ab6aaee954afc5d4efd73eca45d0a5bb"
+  },
+  "context_sha256": "sha256:d6a29600c10a4e90e67c1928cba43d0dfdfd65f5c72a22dc2a87b1a3c8ca4a24",
+  "obligations": [
+    {
+      "rule": "postcondition",
+      "subject": "body[1].ensures[0]",
+      "state": "open",
+      "detail": "`output = initial_clearance - displacement` checked by interval_arithmetic"
+    }
+  ],
+  "requirements": {
+    "EL-R1": {
+      "status": "not_evaluated",
+      "rule": "not_evaluated.missing_evidence",
+      "detail": "displacement has no established value"
+    }
+  },
+  "findings": [
+    {
+      "code": "CORE-E8001",
+      "kind": "malformed",
+      "document": "library",
+      "at": "methods[linear-expansion].length",
+      "pointer": "/methods/0",
+      "detail": "quantity kind `bogus-kind` is not declared",
+      "blocking": true
+    },
+    {
+      "code": "CORE-E8010",
+      "kind": "type_mismatch",
+      "document": "program",
+      "at": "body[0].arguments.length",
+      "pointer": "/body/0",
+      "binding": "displacement",
+      "detail": "argument kind `length` ≠ slot kind `bogus-kind`",
+      "blocking": true
+    },
+    {
+      "code": "CORE-E8002",
+      "kind": "library_pin_mismatch",
+      "document": "program",
+      "at": "library",
+      "detail": "supplied library is not admitted; its pin cannot be checked",
+      "blocking": true
+    }
+  ],
+  "evaluation_sha256": "sha256:dbb370b64f31b3a0d94c8ed2c193bb887dbe3af02de47170d69ee47e47840b62"
+}

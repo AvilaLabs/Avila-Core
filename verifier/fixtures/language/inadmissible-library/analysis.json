@@ -1,0 +1,230 @@
+{
+  "schema_version": "avila.core/language-analysis/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "program": {
+    "id": "clearance-pass",
+    "document_sha256": "sha256:866da13461b0bf2f13b447707e69b49b3b9dd938ec8a0565e99a17c2a2b42e6a",
+    "semantic_sha256": "sha256:c456f7f3fefde72785de465b589281ee9ab44996a589350be88dc5e197ff293c",
+    "admitted": true
+  },
+  "library": {
+    "name": "thermal-expansion",
+    "revision": 1,
+    "document_sha256": "sha256:1a656694398117e999b77be2d70e0192103101edb2fff14e73f32126fd5dbca3",
+    "semantic_sha256": null,
+    "admitted": false,
+    "pin_match": false
+  },
+  "status": "findings",
+  "findings": [
+    {
+      "code": "CORE-E8001",
+      "kind": "malformed",
+      "document": "library",
+      "at": "methods[linear-expansion].length",
+      "pointer": "/methods/0",
+      "detail": "quantity kind `bogus-kind` is not declared",
+      "blocking": true
+    },
+    {
+      "code": "CORE-E8010",
+      "kind": "type_mismatch",
+      "document": "program",
+      "at": "body[0].arguments.length",
+      "pointer": "/body/0",
+      "binding": "displacement",
+      "detail": "argument kind `length` ≠ slot kind `bogus-kind`",
+      "blocking": true
+    },
+    {
+      "code": "CORE-E8002",
+      "kind": "library_pin_mismatch",
+      "document": "program",
+      "at": "library",
+      "detail": "supplied library is not admitted; its pin cannot be checked",
+      "blocking": true
+    }
+  ],
+  "bindings": {
+    "coefficient": {
+      "type": {
+        "quantity_kind": "thermal_expansion_coefficient",
+        "claim": "exact",
+        "relations": {
+          "material": "al-6061-t6"
+        }
+      },
+      "value_state": "established",
+      "value": "1/10000",
+      "source_edges": [
+        "material-cert-m44"
+      ]
+    },
+    "displacement": {
+      "type": {
+        "quantity_kind": "length",
+        "claim": "enclosure",
+        "relations": {
+          "geometry": "bracket@2",
+          "material": "al-6061-t6",
+          "scenario": "thermal-soak-steady"
+        }
+      },
+      "value_state": "unestablished",
+      "dependencies": [
+        {
+          "kind": "operand",
+          "target": "coefficient"
+        },
+        {
+          "kind": "operand",
+          "target": "length"
+        },
+        {
+          "kind": "operand",
+          "target": "temperature_change"
+        },
+        {
+          "kind": "method",
+          "target": "linear-expansion"
+        }
+      ]
+    },
+    "initial_clearance": {
+      "type": {
+        "quantity_kind": "length",
+        "claim": "exact",
+        "relations": {
+          "geometry": "bracket@2"
+        }
+      },
+      "value_state": "established",
+      "value": "1/2",
+      "source_edges": [
+        "drawing-d1187@2"
+      ]
+    },
+    "length": {
+      "type": {
+        "quantity_kind": "length",
+        "claim": "exact",
+        "relations": {
+          "geometry": "bracket@2"
+        }
+      },
+      "value_state": "established",
+      "value": "100",
+      "source_edges": [
+        "drawing-d1187@2"
+      ]
+    },
+    "remaining_clearance": {
+      "type": {
+        "quantity_kind": "length",
+        "claim": "enclosure",
+        "relations": {
+          "geometry": "bracket@2",
+          "material": "al-6061-t6",
+          "scenario": "thermal-soak-steady"
+        }
+      },
+      "value_state": "unestablished",
+      "source_edges": [
+        "drawing-d1187@2"
+      ],
+      "dependencies": [
+        {
+          "kind": "operand",
+          "target": "displacement"
+        },
+        {
+          "kind": "operand",
+          "target": "initial_clearance"
+        },
+        {
+          "kind": "method",
+          "target": "clearance-difference"
+        }
+      ]
+    },
+    "temperature_change": {
+      "type": {
+        "quantity_kind": "temperature",
+        "claim": "enclosure",
+        "relations": {
+          "scenario": "thermal-soak-steady"
+        }
+      },
+      "value_state": "established",
+      "value": "[10, 20]",
+      "source_edges": [
+        "scenario-spec-9"
+      ]
+    }
+  },
+  "obligations": [
+    {
+      "id": "body[1].ensures[0]",
+      "kind": "postcondition",
+      "at": "body[1] clearance-difference",
+      "step": 1,
+      "state": "open",
+      "check": "interval_arithmetic",
+      "expression": "output = initial_clearance - displacement",
+      "operands": [
+        "displacement",
+        "initial_clearance"
+      ],
+      "detail": "`output = initial_clearance - displacement` checked by interval_arithmetic"
+    }
+  ],
+  "requirements": {
+    "EL-R1": {
+      "state": "not_evaluated",
+      "verdict": {
+        "status": "not_evaluated",
+        "rule": "not_evaluated.missing_evidence",
+        "detail": "displacement has no established value"
+      }
+    }
+  },
+  "lifecycle": [
+    {
+      "at": "body[1]",
+      "method": "clearance-difference",
+      "state": "absent"
+    }
+  ],
+  "plan": {
+    "state": "refused",
+    "steps": [
+      {
+        "at": "body[0]",
+        "bind": "displacement",
+        "operation": "apply",
+        "target": "linear-expansion",
+        "arguments": {
+          "coefficient": "coefficient",
+          "length": "length",
+          "temperature_change": "temperature_change"
+        },
+        "unit": ""
+      },
+      {
+        "at": "body[1]",
+        "bind": "remaining_clearance",
+        "operation": "apply",
+        "target": "clearance-difference",
+        "arguments": {
+          "displacement": "displacement",
+          "initial_clearance": "initial_clearance"
+        },
+        "obligations": [
+          "body[1].ensures[0]"
+        ],
+        "unit": "mm"
+      }
+    ],
+    "runtime_obligations": []
+  }
+}

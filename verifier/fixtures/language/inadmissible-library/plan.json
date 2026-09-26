@@ -1,0 +1,16 @@
+{
+  "schema_version": "avila.core/execution-plan/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "state": "refused",
+  "context": {
+    "program_sha256": "sha256:c456f7f3fefde72785de465b589281ee9ab44996a589350be88dc5e197ff293c",
+    "library_sha256": "sha256:8c7277fd5f9a100ce8dddb6238e2b8d90dfcac16697ae75c7bd5508efd383d74",
+    "analysis_sha256": ""
+  },
+  "refused_by": [
+    "CORE-E8001:malformed",
+    "CORE-E8010:type_mismatch",
+    "CORE-E8002:library_pin_mismatch"
+  ],
+  "plan_sha256": "sha256:02d1e09b4bdabd9398f348e73e70ea321e694afe76f1948660c94876b9673054"
+}

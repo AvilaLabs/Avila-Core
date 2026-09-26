@@ -204,6 +204,22 @@ observation material stays rejected in the replay exactly as the record
 must report it; `language_verify.py explain` diffs two evaluations of one
 program at requirement, obligation, and observation granularity.
 
+**Admission parity.** Admission is replayed, not trusted: the record's
+`""`-vs-digest program/library identities must agree with a full
+re-derivation of the admission set — document schema/profile, §11
+budgets, identifier charset, sequential single-assignment references,
+requirement shapes, premise attribution and `over`-member binding,
+provenance-object shape (`malformed` vs the non-admission `unsupported`
+certificate check), proposition vocabulary and scope params, entity
+intervals, and every admission-kind finding the replay emits during the
+analyze run. The library gate is the full `LibraryChecker` — method
+signatures, `requires`/`ensures` declaration shape, implementation kinds,
+`kind_products`. A record claiming an identity for an inadmissible
+document mismatches; an honest `""` for a refused document verifies
+(`fixtures/language/inadmissible-*/` pin both directions). Lifecycle
+gating (`--lifecycle key=state`) and the `expired`/`withdrawn` refusal,
+`contradiction` blocking, and `nominal`-claim gates are all replayed.
+
 ```bash
 python3 language_verify.py verify-evaluation \
   --program P.json --library L.json --plan plan.json \

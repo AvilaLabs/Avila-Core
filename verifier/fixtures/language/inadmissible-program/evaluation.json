@@ -1,0 +1,64 @@
+{
+  "schema_version": "avila.core/language-evaluation/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "context": {
+    "semantic_profile": "avila.core/language/0.1-draft",
+    "program_sha256": "",
+    "library_sha256": "sha256:dc5f2165e51c09d99e751a714acb400dae77d708e6b42241d3eef6916ec45d0b",
+    "analysis_sha256": "sha256:535c92eb8d3fda69008c6135662606662bc2b99a26cf6bac95bf1df969dac045",
+    "plan_sha256": "sha256:2512e6e8cc5a6ec7b00d19db2d63129ea0e25331214787882e0a863b45d77099",
+    "observations_sha256": "sha256:83bdf8b1bb9cbff932b357c18880d719b98dfd576e30fc1903f6ab54a6d99584"
+  },
+  "context_sha256": "sha256:f117e01463f7cf4e6494f258ef5c924cc0c3240c4b4ff00d10e0c1a087260792",
+  "obligations": [
+    {
+      "rule": "domain_containment",
+      "subject": "body[0].requires[0]",
+      "state": "discharged",
+      "detail": "`scenario.operating_domain` ⊆ `material.applicability`"
+    },
+    {
+      "rule": "postcondition",
+      "subject": "body[0].ensures[0]",
+      "state": "open",
+      "detail": "`output = coefficient * temperature_change * length` checked by interval_arithmetic"
+    }
+  ],
+  "requirements": {
+    "EL-R1": {
+      "status": "not_evaluated",
+      "rule": "not_evaluated.missing_evidence",
+      "detail": "remaining_clearance has no established value"
+    }
+  },
+  "findings": [
+    {
+      "code": "CORE-E8001",
+      "kind": "malformed",
+      "document": "program",
+      "at": "body[1].arguments.displacement",
+      "pointer": "/body/1",
+      "detail": "`ghost` names no input or earlier binding — references are sequential",
+      "blocking": true
+    },
+    {
+      "code": "CORE-E8001",
+      "kind": "malformed",
+      "document": "program",
+      "at": "body[1].arguments.displacement",
+      "pointer": "/body/1",
+      "binding": "remaining_clearance",
+      "detail": "`ghost` names no input or earlier binding",
+      "blocking": true
+    }
+  ],
+  "applications": [
+    {
+      "rule": "discharge",
+      "subject": "body[0] linear-expansion",
+      "state": "open",
+      "detail": "postcondition `output = coefficient * temperature_change * length` open by interval_arithmetic"
+    }
+  ],
+  "evaluation_sha256": "sha256:b3aad9eb7391894c1b700a1634791e23aa84153918fe810fd8047935abedad0a"
+}

@@ -303,10 +303,26 @@ duplicate site claims, absent and malformed observation documents, and a
 forged evaluation record that recomputes its own digests honestly (still
 flagged `mismatch`). The CI `verifier` job runs it.
 
-Open surfaces: `analysis_sha256` is recomputed when `--analysis` supplies
-the document (`not_checked` otherwise); program-level blocking findings
-(the `analyze` gate) are outside the replay — a malformed program's
-evaluation reports its own `document_findings`, which the record binds.
+Admission is re-derived, not trusted: the context's `""`-vs-digest
+program/library identities must agree with the full admission set —
+document schema/profile, §11 budgets, identifier charset, sequential
+single-assignment references, requirement and premise shapes, provenance
+objects, proposition vocabulary and scope params, entity intervals, plus
+the admission-kind findings the analyze run itself publishes — and the
+library gate is the whole `LibraryChecker` (method signatures,
+`requires`/`ensures` declaration shape, implementation kinds,
+`kind_products`). `fixtures/language/inadmissible-{program,library}/`
+pin honest `""` records; forged identities on inadmissible documents
+mismatch. Lifecycle material (`--lifecycle key=state`), the
+`expired`/`withdrawn` refusal, assumption `contradiction` blocking, and
+the `nominal`-claim gates are replayed rather than read from the record.
+
+Remaining known-divergent surface (documented, fails closed): the record's
+`findings` list is explanatory — the verifier does not compare it
+entry-for-entry; admission kinds already decide the published identity,
+so a record omitting findings still fails closed through the `""` gate.
+`analysis_sha256` is recomputed only when `--analysis` supplies the
+document (`not_checked` otherwise).
 
 ### EL-04 brief
 

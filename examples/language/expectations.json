@@ -438,6 +438,66 @@
     }
    ],
    "note": "EL-02 review: a kind without canonical_unit let [1,2]mm + [10,20]cm silently bind [11,22]. canonical_unit is now required at library admission and the additive rules require coincident units \u2014 sum stays unestablished."
+  },
+  "positive-matmul-pass.program.json": {
+   "analysis": "clean",
+   "plan": "ready",
+   "runtime_obligations": [
+    "brent-verify emits the violation count at execution"
+   ],
+   "note": "Third library \u2014 case-010 domain: a 23-term decomposition of the 2x3x3 tensor over GF(2). MM-R1 passes observed (fails=0) conditional on format-current and independent-verification; MM-R2 passes statically. Discharge needs an attested independence premise scoped to the FULL union of operand relations."
+  },
+  "invalid-format-mismatch.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8012",
+     "kind": "coverage",
+     "at": "requirements[MM-R1]",
+     "detail": "subject does not carry required scenario `matmul-2x3x3-gf2`"
+    }
+   ],
+   "note": "seeded: the parity system was declared under format 2x2x2 while the question requires 2x3x3 \u2014 scenario-identity failure at the requirement, caught before execution."
+  },
+  "invalid-field-mismatch.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8019",
+     "kind": "precondition_refuted",
+     "at": "body[0] brent-verify",
+     "detail": "operating domain `scenario.operating_domain` is not contained in material applicability `material.applicability`"
+    }
+   ],
+   "note": "seeded: verification ran over GF(3) against a GF(2)-only verifier \u2014 domain_containment refuted; fails is poisoned before any execution."
+  },
+  "invalid-shared-search-verification.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8018",
+     "kind": "obligation_refuted",
+     "at": "body[0] brent-verify",
+     "detail": "recorded source edges are shared across the `over` set"
+    }
+   ],
+   "note": "seeded: the equation system's provenance edge is the search's own \u2014 the search verified itself. Disjointness is refuted from the record; the attested independence premise does not launder it."
+  },
+  "invalid-rank-kind-conflation.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8010",
+     "kind": "type_mismatch",
+     "at": "requirements[MM-R2]",
+     "detail": "requirement kind `violation_count` \u2260 subject kind `term_rank`"
+    }
+   ],
+   "note": "seeded: rank and violation count share unit `1` but are different kinds \u2014 the requirement kind field pins what the subject must be."
   }
  },
  "identity_cases": {

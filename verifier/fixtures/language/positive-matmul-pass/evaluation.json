@@ -1,0 +1,80 @@
+{
+  "schema_version": "avila.core/language-evaluation/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "context": {
+    "semantic_profile": "avila.core/language/0.1-draft",
+    "program_sha256": "sha256:a82a3fd864d266919967f61328907a64ba7211194793bf8f898aca6eb74f58b4",
+    "library_sha256": "sha256:bd303a573102012eba70f329bdb43d21276eaf6f10174b35cbd985e07ba23291",
+    "analysis_sha256": "sha256:9614773cebcd94220a39f893b298e5f828b4806816faa85e6fa8bc244151f3c1",
+    "plan_sha256": "sha256:bad5d7f08c929c6269969e739e01e13a91a1ad00facf81097a908e45a25341cb",
+    "observations_sha256": "sha256:a440bccfeba43715f2cb05d7024f5c821aa1d6eab665e7381a038ad1fadbbe75"
+  },
+  "context_sha256": "sha256:8d9aa3264ab68d5cafacb4765d048303f43e27ecb75c855293ac8fb3738408a0",
+  "obligations": [
+    {
+      "rule": "domain_containment",
+      "subject": "body[0].requires[0]",
+      "state": "discharged",
+      "detail": "`scenario.operating_domain` ⊆ `material.applicability`"
+    },
+    {
+      "rule": "independence",
+      "subject": "body[0].requires[1]",
+      "state": "discharged",
+      "detail": "discharged by premise p-verification-independent"
+    },
+    {
+      "rule": "provenance_disjoint",
+      "subject": "body[0].requires[2]",
+      "state": "discharged",
+      "detail": "over candidate_rank, parity_equations"
+    },
+    {
+      "rule": "observation",
+      "subject": "body[0].observation",
+      "state": "discharged",
+      "detail": "output `fails` must be observed at execution; `brent-verify` declares no postcondition — nothing to replay"
+    }
+  ],
+  "requirements": {
+    "MM-R1": {
+      "status": "pass",
+      "rule": "bounded.le",
+      "detail": "exact 0 1 satisfies <= 0 1: 0 <= 0, conditional on format-current@(matmul-2x3x3-gf2), independent-verification@(rank-search-7)",
+      "subject_value": "0"
+    },
+    "MM-R2": {
+      "status": "pass",
+      "rule": "bounded.le",
+      "detail": "exact 23 1 satisfies <= 23 1: 23 <= 23",
+      "subject_value": "23"
+    }
+  },
+  "applications": [
+    {
+      "rule": "observe",
+      "subject": "body[0]",
+      "state": "established",
+      "detail": "invocation digests verified; receipt sha256:fb5cca32a4ee4ed021597c007e1a941534e2fb3c443b8a48d14beb6e5faf9b88 re-hashes"
+    },
+    {
+      "rule": "observe",
+      "subject": "body[0]",
+      "state": "discharged",
+      "detail": "observation obligation for `fails`"
+    },
+    {
+      "rule": "bounded.le",
+      "subject": "requirements[MM-R1]",
+      "state": "pass",
+      "detail": "exact 0 1 satisfies <= 0 1: 0 <= 0, conditional on format-current@(matmul-2x3x3-gf2), independent-verification@(rank-search-7)"
+    },
+    {
+      "rule": "bounded.le",
+      "subject": "requirements[MM-R2]",
+      "state": "pass",
+      "detail": "exact 23 1 satisfies <= 23 1: 23 <= 23"
+    }
+  ],
+  "evaluation_sha256": "sha256:6e6a61d81869bc0517fe96714da6c47fd302869bd836ff61994fd9c4c8c7bb79"
+}

@@ -1,0 +1,114 @@
+{
+ "schema_version": "avila.core/method-library/v0.1-draft",
+ "profile": "avila.core/language/0.1-draft",
+ "library": {
+  "name": "matmul-rank",
+  "revision": 1
+ },
+ "title": "Brent parity-equation verification for matmul tensor decompositions",
+ "quantity_kinds": {
+  "term_rank": {
+   "canonical_unit": "1"
+  },
+  "parity_equation_count": {
+   "canonical_unit": "1"
+  },
+  "violation_count": {
+   "canonical_unit": "1"
+  },
+  "field_characteristic": {
+   "canonical_unit": "1"
+  }
+ },
+ "kind_products": [],
+ "propositions": {
+  "exact-decomposition": {
+   "params": [
+    "scenario"
+   ],
+   "gloss": "the submitted term list exactly decomposes the tensor under the named format"
+  },
+  "format-current": {
+   "params": [
+    "scenario"
+   ],
+   "gloss": "the format the run verifies under is the declared current search target"
+  },
+  "independent-verification": {
+   "params": [
+    "geometry"
+   ],
+   "gloss": "the verification machinery is independent of the named search campaign"
+  }
+ },
+ "methods": [
+  {
+   "id": "brent-verify",
+   "variables": {
+    "g": "geometry",
+    "s": "scenario",
+    "f": "material"
+   },
+   "inputs": {
+    "candidate_rank": {
+     "quantity_kind": "term_rank",
+     "claim": "exact",
+     "geometry": "g"
+    },
+    "parity_equations": {
+     "quantity_kind": "parity_equation_count",
+     "claim": "exact",
+     "scenario": "s",
+     "material": "f"
+    }
+   },
+   "output": {
+    "quantity_kind": "violation_count",
+    "claim": "exact",
+    "geometry": "g",
+    "scenario": "s",
+    "material": "f"
+   },
+   "requires": [
+    {
+     "kind": "domain_containment",
+     "domain": "scenario.operating_domain",
+     "within": "material.applicability",
+     "label": "the run's field characteristic must be inside the verifier's applicability"
+    },
+    {
+     "kind": "provenance_disjoint",
+     "over": [
+      "candidate_rank",
+      "parity_equations"
+     ],
+     "label": "the equation system must not come from the search that produced the candidate"
+    },
+    {
+     "kind": "independence",
+     "over": [
+      "candidate_rank",
+      "parity_equations"
+     ],
+     "label": "the verification system is independent of the search"
+    }
+   ],
+   "ensures": [],
+   "assumes": [
+    "format-current"
+   ],
+   "effects": [
+    "process_spawn",
+    "write_output"
+   ],
+   "implementation": {
+    "kind": "external",
+    "executable": "synthetic/brent-verify@1",
+    "produces": {
+     "quantity_kind": "violation_count",
+     "unit": "1"
+    }
+   }
+  }
+ ]
+}

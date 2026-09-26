@@ -372,6 +372,24 @@ profile surface, and the measured costs (analyze ~8 ms, plan ~9 ms,
 execute ~48 ms subprocess-bound, evaluate ~11 ms, Python replay ~138 ms;
 i3-N305, rustc 1.95.0, Python 3.14.4).
 
+A third library — `matmul-rank` — further supports the transfer claim on
+non-toy material. Derived from `examples/cases/case-010-matmul-rank`
+(Brent parity-equation verification of tensor decompositions over GF(2)),
+its `brent-verify` method composes `domain_containment` (field
+characteristic within verifier applicability), `provenance_disjoint`, and
+`independence` over the same obligations vocabulary with no compiler
+branches — replayed clean by the Python verifier. Its seeded-error
+battery refuses each realistic error at the right boundary: wrong tensor
+format → `coverage` at the requirement; GF(3) run on a GF(2) verifier →
+`precondition_refuted` before execution; the search verifying itself →
+`obligation_refuted` (an attested independence premise does not launder
+recorded provenance); rank-vs-count conflation on the same unit →
+`type_mismatch` at the requirement; superseded verifier →
+`lifecycle_refused` under supplied lifecycle material. One friction data
+point: `independence` discharge requires the premise's `at` to equal the
+full union scope of the operands' relations — the scope-equality burden
+the assessment already names.
+
 ### EL-05 brief
 
 Add a second synthetic library exercising different composition over the same

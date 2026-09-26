@@ -1,0 +1,52 @@
+{
+  "schema_version": "avila.core/execution-plan/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "state": "ready",
+  "context": {
+    "program_sha256": "sha256:a82a3fd864d266919967f61328907a64ba7211194793bf8f898aca6eb74f58b4",
+    "library_sha256": "sha256:bd303a573102012eba70f329bdb43d21276eaf6f10174b35cbd985e07ba23291",
+    "analysis_sha256": "sha256:9614773cebcd94220a39f893b298e5f828b4806816faa85e6fa8bc244151f3c1"
+  },
+  "invocations": [
+    {
+      "at": "body[0]",
+      "bind": "fails",
+      "method": "brent-verify",
+      "executable": "synthetic/brent-verify@1",
+      "effects": [
+        "process_spawn",
+        "write_output"
+      ],
+      "inputs": {
+        "candidate_rank": {
+          "binding": "candidate_rank",
+          "state": "staged",
+          "value": {
+            "kind": "exact",
+            "value": "23",
+            "unit": "1"
+          },
+          "sha256": "sha256:694f49f95196b5e8624b624fc0ee8a3bad369bbad7f737fba067fa40188d8c32"
+        },
+        "parity_equations": {
+          "binding": "parity_equations",
+          "state": "staged",
+          "value": {
+            "kind": "exact",
+            "value": "462",
+            "unit": "1"
+          },
+          "sha256": "sha256:090b6d6dac17cdf42004bdf43e86a1ca4ff2bf139e984912eb6e99b99254721c"
+        }
+      },
+      "produces": {
+        "quantity_kind": "violation_count",
+        "unit": "1"
+      },
+      "obligations": [
+        "body[0].observation"
+      ]
+    }
+  ],
+  "plan_sha256": "sha256:bad5d7f08c929c6269969e739e01e13a91a1ad00facf81097a908e45a25341cb"
+}

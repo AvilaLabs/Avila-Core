@@ -11,9 +11,12 @@ the spec rather than the other way around.
 
 - `libraries/` — method libraries (`avila.core/method-library/v0.1-draft`):
   `thermal-expansion` (the charter's toy model), `measurement-scaling`
-  (the second library, pinning independence-premise behavior), and
+  (the second library, pinning independence-premise behavior),
   `uncanonical-units` (a deliberately inadmissible library — a kind with
-  no `canonical_unit`, exercising the unit-admission gate).
+  no `canonical_unit`, exercising the unit-admission gate), and
+  `matmul-rank` (the third library — Brent parity-equation verification
+  for matmul tensor decompositions over GF(2), derived from
+  `examples/cases/case-010-matmul-rank` plus a seeded-error battery).
 - `programs/` — authored programs (`avila.core/language-program/v0.1-draft`).
 - `expectations.json` — per-program specified analysis/plan/verdict
   outcomes, the `identity_cases` semantic-projection requirements
@@ -33,6 +36,7 @@ the spec rather than the other way around.
 | `clearance-heuristic-unusable` | `EL-R1` NOT_EVALUATED — the method declares no postcondition; its nominal output cannot serve a bounded requirement |
 | `positive-assumption-discharge` | PASS conditional on `fixture-symmetric@(bracket@2)` — the unconditional witness drops `uniform-temperature-change`; the conditional witness trades `linear-expansion-model` for its own support |
 | `positive-measurement-pass` | `EL-R2` PASS (`231/100 ≤ 5/2`) — `independent(reading_a, reading_b)` discharged by an attested premise |
+| `positive-matmul-pass` | `MM-R1`/`MM-R2` PASS — observed `fails=0` under format `matmul-2x3x3-gf2`, conditional on `format-current` and `independent-verification`; rank `23 ≤ 23` discharges statically |
 | `cyclic-witnesses` | `cyclic_witness` findings (mutual + self-dependent); discharge refused, assumptions stay residual, verdict still passes conditionally |
 | `invalid-geometry-mismatch` | blocking type finding naming `bracket@1` vs `bracket@2` |
 | `invalid-scope-mismatch` | unmet coverage obligation — steady-state subject under a transient requirement |
@@ -48,6 +52,10 @@ the spec rather than the other way around.
 | `invalid-independence-unknown` | independence open — disjoint recorded provenance, but no attested premise |
 | `invalid-provenance-conflict` | `premise_conflict` — asserting `provenance_disjoint` against a recorded shared edge contradicts the record itself |
 | `invalid-mixed-units` | inadmissible library — a kind with no `canonical_unit` (`malformed`); the additive rules also refuse mixed-unit operands (`type_mismatch`); `sum` stays unestablished |
+| `invalid-format-mismatch` | matmul seed — verification ran under format 2x2x2 but the requirement names 2x3x3: `coverage` at `requirements[MM-R1]` |
+| `invalid-field-mismatch` | matmul seed — a GF(3) run against a GF(2)-only verifier: `precondition_refuted` before any execution |
+| `invalid-shared-search-verification` | matmul seed — the equation system's provenance edge is the search's own: `obligation_refuted` (the search verified itself) |
+| `invalid-rank-kind-conflation` | matmul seed — rank vs violation count share unit `1` but are different kinds: `type_mismatch` at `requirements[MM-R2]` |
 | `unfinished-missing-input` | authoring hole — `coefficient` declared but never bound |
 | `unfinished-goal-hole` | open hole reachable from the requirement |
 | `unfinished-ambiguous-methods` | named ambiguity — three methods match the goal's type, no silent choice |

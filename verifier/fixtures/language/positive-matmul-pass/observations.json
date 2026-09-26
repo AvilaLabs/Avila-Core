@@ -1,0 +1,98 @@
+{
+  "schema_version": "avila.core/language-observations/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "plan_sha256": "sha256:bad5d7f08c929c6269969e739e01e13a91a1ad00facf81097a908e45a25341cb",
+  "observations": [
+    {
+      "at": "body[0]",
+      "bind": "fails",
+      "executable": "synthetic/brent-verify@1",
+      "inputs": {
+        "candidate_rank": "sha256:694f49f95196b5e8624b624fc0ee8a3bad369bbad7f737fba067fa40188d8c32",
+        "parity_equations": "sha256:090b6d6dac17cdf42004bdf43e86a1ca4ff2bf139e984912eb6e99b99254721c"
+      },
+      "output_sha256": "sha256:610b39b38fbbfa5ac80367d4bc054674608cf8375a25cd486df88ee7a6cd986f",
+      "output": {
+        "kind": "exact",
+        "value": "0",
+        "unit": "1"
+      },
+      "receipt_sha256": "sha256:fb5cca32a4ee4ed021597c007e1a941534e2fb3c443b8a48d14beb6e5faf9b88",
+      "receipt": {
+        "schema_version": "avila.core/language-receipt/v0.1-draft",
+        "plan_sha256": "sha256:bad5d7f08c929c6269969e739e01e13a91a1ad00facf81097a908e45a25341cb",
+        "at": "body[0]",
+        "executable": "synthetic/brent-verify@1",
+        "executable_sha256": "sha256:ad5fbab1e05490013d508f14fbf43d45ec997e046990b741a42d3d1cea968ad3",
+        "inputs": [
+          {
+            "slot": "candidate_rank",
+            "workspace_path": "inputs/candidate_rank.json",
+            "sha256": "sha256:694f49f95196b5e8624b624fc0ee8a3bad369bbad7f737fba067fa40188d8c32",
+            "bytes": 40
+          },
+          {
+            "slot": "parity_equations",
+            "workspace_path": "inputs/parity_equations.json",
+            "sha256": "sha256:090b6d6dac17cdf42004bdf43e86a1ca4ff2bf139e984912eb6e99b99254721c",
+            "bytes": 41
+          }
+        ],
+        "invocation": {
+          "arguments": [
+            "inputs",
+            "outputs/output.json"
+          ],
+          "working_directory": "invocations/body_0_",
+          "environment": {
+            "PATH": "/usr/local/bin:/usr/bin:/bin"
+          },
+          "timeout_ms": 30000
+        },
+        "invocation_sha256": "sha256:fa093520a5cebb4917e9a77c1dcef151f3b14b70f9d3500847a983660aedc7a8",
+        "process": {
+          "started_at": "2026-09-26T16:59:00.846Z",
+          "finished_at": "2026-09-26T16:59:00.912Z",
+          "duration_ms": 66,
+          "exit_status": 0,
+          "timed_out": false
+        },
+        "logs": [
+          {
+            "stream": "stdout",
+            "workspace_path": "logs/stdout.log",
+            "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          {
+            "stream": "stderr",
+            "workspace_path": "logs/stderr.log",
+            "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          }
+        ],
+        "outputs": [
+          {
+            "output_id": "output",
+            "workspace_path": "outputs/output.json",
+            "state": "collected",
+            "sha256": "sha256:610b39b38fbbfa5ac80367d4bc054674608cf8375a25cd486df88ee7a6cd986f",
+            "bytes": 40
+          }
+        ],
+        "runner": {
+          "runner": "avila-core-runner/language",
+          "os": "linux",
+          "arch": "x86_64"
+        },
+        "status": "completed",
+        "limitations": [
+          "Exit status and output digests are process evidence, not scientific success.",
+          "The executable digest identifies the bytes that ran; it does not qualify the method.",
+          "No sandbox or resource accounting was applied beyond a cleared environment, a working directory confined to the workspace, and terminating the child's process group or Job Object on timeout."
+        ]
+      }
+    }
+  ],
+  "observations_sha256": "sha256:1d6bf8f4fa7d33f422cfe46f5cc23f025815d7bd9ad8cd513a4239c55978cb37"
+}

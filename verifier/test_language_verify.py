@@ -217,6 +217,7 @@ class CorpusTests(unittest.TestCase):
         "clearance-heuristic-unusable",
         "positive-assumption-discharge",
         "positive-measurement-pass",
+        "positive-matmul-pass",
     ]
 
     EXPECTED = {
@@ -229,6 +230,7 @@ class CorpusTests(unittest.TestCase):
                                          "not_evaluated.unestablished"),
         "positive-assumption-discharge": ("pass", "bounded.ge"),
         "positive-measurement-pass": ("pass", "bounded.le"),
+        "positive-matmul-pass": ("pass", "bounded.le"),
     }
 
     def test_all_programs_replay_clean(self):

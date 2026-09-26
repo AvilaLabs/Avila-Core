@@ -1,0 +1,183 @@
+{
+ "schema_version": "avila.core/language-program/v0.1-draft",
+ "profile": "avila.core/language/0.1-draft",
+ "id": "invalid-shared-search-verification",
+ "title": "The verification system shares the search's provenance edge",
+ "library": {
+  "name": "matmul-rank",
+  "revision": 1,
+  "semantic_sha256": "sha256:bd303a573102012eba70f329bdb43d21276eaf6f10174b35cbd985e07ba23291"
+ },
+ "entities": {
+  "geometries": {
+   "rank-search-7": {}
+  },
+  "scenarios": {
+   "matmul-2x3x3-gf2": {
+    "scope": "any",
+    "operating_domain": {
+     "quantity_kind": "field_characteristic",
+     "unit": "1",
+     "lower": "2",
+     "upper": "2"
+    }
+   },
+   "matmul-2x2x2-gf2": {
+    "scope": "any",
+    "operating_domain": {
+     "quantity_kind": "field_characteristic",
+     "unit": "1",
+     "lower": "2",
+     "upper": "2"
+    }
+   },
+   "matmul-2x3x3-gf3": {
+    "scope": "any",
+    "operating_domain": {
+     "quantity_kind": "field_characteristic",
+     "unit": "1",
+     "lower": "3",
+     "upper": "3"
+    }
+   }
+  },
+  "materials": {
+   "gf2-brent-verifier": {
+    "applicability": {
+     "field_characteristic": {
+      "unit": "1",
+      "lower": "2",
+      "upper": "2"
+     }
+    },
+    "source": {
+     "kind": "assertion",
+     "party": "verifier-spec",
+     "edge": "verifier-spec-gf2",
+     "statement": "Brent verifier implementation covers characteristic-2 fields"
+    }
+   }
+  }
+ },
+ "inputs": [
+  {
+   "id": "candidate_rank",
+   "type": {
+    "quantity_kind": "term_rank",
+    "claim": "exact",
+    "geometry": "rank-search-7"
+   },
+   "binding": {
+    "state": "bound",
+    "value": {
+     "kind": "exact",
+     "value": "23",
+     "unit": "1"
+    },
+    "source": {
+     "kind": "assertion",
+     "party": "rank-search-7",
+     "edge": "search-run-7",
+     "statement": "23-term decomposition reported by search run 7"
+    }
+   }
+  },
+  {
+   "id": "parity_equations",
+   "type": {
+    "quantity_kind": "parity_equation_count",
+    "claim": "exact",
+    "scenario": "matmul-2x3x3-gf2",
+    "material": "gf2-brent-verifier"
+   },
+   "binding": {
+    "state": "bound",
+    "value": {
+     "kind": "exact",
+     "value": "462",
+     "unit": "1"
+    },
+    "source": {
+     "kind": "assertion",
+     "party": "rank-search-7",
+     "edge": "search-run-7",
+     "statement": "equation count read from the search's own checkpoint"
+    }
+   }
+  }
+ ],
+ "premises": [
+  {
+   "id": "p-verification-independent",
+   "proposition": "independent",
+   "arguments": {
+    "over": [
+     "candidate_rank",
+     "parity_equations"
+    ]
+   },
+   "at": {
+    "geometry": "rank-search-7",
+    "scenario": "matmul-2x3x3-gf2",
+    "material": "gf2-brent-verifier"
+   },
+   "established_by": {
+    "kind": "assertion",
+    "party": "verification-review",
+    "edge": "indep-memo-3"
+   },
+   "assumptions": [
+    {
+     "proposition": "independent-verification",
+     "at": {
+      "geometry": "rank-search-7"
+     }
+    }
+   ]
+  }
+ ],
+ "assumptions": [],
+ "body": [
+  {
+   "bind": "fails",
+   "apply": "brent-verify",
+   "arguments": {
+    "candidate_rank": {
+     "ref": "candidate_rank"
+    },
+    "parity_equations": {
+     "ref": "parity_equations"
+    }
+   }
+  }
+ ],
+ "requirements": [
+  {
+   "id": "MM-R1",
+   "subject": {
+    "ref": "fails"
+   },
+   "quantity_kind": "violation_count",
+   "comparison": "le",
+   "limit": {
+    "kind": "exact",
+    "value": "0",
+    "unit": "1"
+   },
+   "scenario": "matmul-2x3x3-gf2"
+  },
+  {
+   "id": "MM-R2",
+   "subject": {
+    "ref": "candidate_rank"
+   },
+   "quantity_kind": "term_rank",
+   "comparison": "le",
+   "limit": {
+    "kind": "exact",
+    "value": "23",
+    "unit": "1"
+   }
+  }
+ ]
+}

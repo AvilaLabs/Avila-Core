@@ -1,0 +1,199 @@
+{
+  "schema_version": "avila.core/language-analysis/v0.1-draft",
+  "profile": "avila.core/language/0.1-draft",
+  "program": {
+    "id": "positive-matmul-pass",
+    "document_sha256": "sha256:52b28af945427ba5359cd55671ca7f1e9a0ac2a7300d418ef3fbaec1c892f467",
+    "semantic_sha256": "sha256:a82a3fd864d266919967f61328907a64ba7211194793bf8f898aca6eb74f58b4",
+    "admitted": true
+  },
+  "library": {
+    "name": "matmul-rank",
+    "revision": 1,
+    "document_sha256": "sha256:80b66522254f2b07cec1e43aff675924fbb96018fd176d60f06525c4fea62f4d",
+    "semantic_sha256": "sha256:bd303a573102012eba70f329bdb43d21276eaf6f10174b35cbd985e07ba23291",
+    "admitted": true,
+    "pin_match": true
+  },
+  "status": "clean",
+  "findings": [],
+  "bindings": {
+    "candidate_rank": {
+      "type": {
+        "quantity_kind": "term_rank",
+        "claim": "exact",
+        "relations": {
+          "geometry": "rank-search-7"
+        }
+      },
+      "value_state": "established",
+      "value": "23",
+      "source_edges": [
+        "search-run-7"
+      ]
+    },
+    "fails": {
+      "type": {
+        "quantity_kind": "violation_count",
+        "claim": "exact",
+        "relations": {
+          "geometry": "rank-search-7",
+          "material": "gf2-brent-verifier",
+          "scenario": "matmul-2x3x3-gf2"
+        }
+      },
+      "value_state": "declared",
+      "residual_assumptions": [
+        {
+          "proposition": "format-current",
+          "at": {
+            "scenario": "matmul-2x3x3-gf2"
+          }
+        },
+        {
+          "proposition": "independent-verification",
+          "at": {
+            "geometry": "rank-search-7"
+          }
+        }
+      ],
+      "source_edges": [
+        "brent-equation-table",
+        "indep-memo-3",
+        "search-run-7"
+      ],
+      "dependencies": [
+        {
+          "kind": "operand",
+          "target": "candidate_rank"
+        },
+        {
+          "kind": "operand",
+          "target": "parity_equations"
+        },
+        {
+          "kind": "method",
+          "target": "brent-verify"
+        },
+        {
+          "kind": "premise",
+          "target": "p-verification-independent"
+        }
+      ]
+    },
+    "parity_equations": {
+      "type": {
+        "quantity_kind": "parity_equation_count",
+        "claim": "exact",
+        "relations": {
+          "material": "gf2-brent-verifier",
+          "scenario": "matmul-2x3x3-gf2"
+        }
+      },
+      "value_state": "established",
+      "value": "462",
+      "source_edges": [
+        "brent-equation-table"
+      ]
+    }
+  },
+  "obligations": [
+    {
+      "id": "body[0].requires[0]",
+      "kind": "domain_containment",
+      "at": "body[0] brent-verify",
+      "step": 0,
+      "state": "discharged",
+      "expression": "scenario.operating_domain ⊆ material.applicability",
+      "detail": "`scenario.operating_domain` ⊆ `material.applicability`"
+    },
+    {
+      "id": "body[0].requires[1]",
+      "kind": "independence",
+      "at": "body[0] brent-verify",
+      "step": 0,
+      "state": "discharged",
+      "operands": [
+        "candidate_rank",
+        "parity_equations"
+      ],
+      "detail": "discharged by premise p-verification-independent"
+    },
+    {
+      "id": "body[0].requires[2]",
+      "kind": "provenance_disjoint",
+      "at": "body[0] brent-verify",
+      "step": 0,
+      "state": "discharged",
+      "operands": [
+        "candidate_rank",
+        "parity_equations"
+      ],
+      "detail": "over candidate_rank, parity_equations"
+    },
+    {
+      "id": "body[0].observation",
+      "kind": "observation",
+      "at": "body[0]",
+      "step": 0,
+      "state": "runtime",
+      "operands": [
+        "candidate_rank",
+        "parity_equations"
+      ],
+      "detail": "output `fails` must be observed at execution; `brent-verify` declares no postcondition — nothing to replay"
+    }
+  ],
+  "requirements": {
+    "MM-R1": {
+      "state": "pending"
+    },
+    "MM-R2": {
+      "state": "pending",
+      "declared_value": "23"
+    }
+  },
+  "lifecycle": [
+    {
+      "at": "body[0]",
+      "method": "brent-verify",
+      "state": "absent"
+    }
+  ],
+  "plan": {
+    "state": "ready",
+    "steps": [
+      {
+        "at": "body[0]",
+        "bind": "fails",
+        "operation": "apply",
+        "target": "brent-verify",
+        "arguments": {
+          "candidate_rank": "candidate_rank",
+          "parity_equations": "parity_equations"
+        },
+        "obligations": [
+          "body[0].requires[0]",
+          "body[0].requires[1]",
+          "body[0].requires[2]",
+          "body[0].observation"
+        ],
+        "unit": "1"
+      }
+    ],
+    "runtime_obligations": [
+      {
+        "id": "body[0].observation",
+        "kind": "observation",
+        "at": "body[0]",
+        "step": 0,
+        "state": "runtime",
+        "operands": [
+          "candidate_rank",
+          "parity_equations"
+        ],
+        "detail": "output `fails` must be observed at execution; `brent-verify` declares no postcondition — nothing to replay"
+      }
+    ]
+  }
+}

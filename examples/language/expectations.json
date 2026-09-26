@@ -1,275 +1,440 @@
 {
-  "schema_version": "avila.core/language-expectations/v0.1-draft",
-  "profile": "avila.core/language/0.1-draft",
-  "note": "Specified results for the example programs, derived from docs/architecture/ENGINEERING_LANGUAGE.md (r3) by hand — not from an implementation. A checker either reproduces these or the disagreement is reported. Runtime rows describe what execute/evaluate must do once the observation boundary exists; they are expectations, not a fifth state.",
-  "libraries": {
-    "thermal-expansion": {
-      "document": "libraries/thermal-expansion.v1.json",
-      "document_sha256": "sha256:be90b2cd9c56453e7cc87888669bec53333314bf6810ac4451cf41a6aae96eab",
-      "semantic_sha256": "sha256:dc5f2165e51c09d99e751a714acb400dae77d708e6b42241d3eef6916ec45d0b",
-      "declared_arithmetic": {
-        "strain_intermediate": "coefficient * temperature_change = [1/10000 * 10, 1/10000 * 20] = enclosure [1/1000, 1/500] strain over {material: al-6061-t6, scenario: thermal-soak-steady} (kind_products row 1)",
-        "displacement": "strain_intermediate * length = [1/1000 * 100, 1/500 * 100] = enclosure [1/10, 1/5] mm length over {geometry: bracket@2, scenario: thermal-soak-steady, material: al-6061-t6} (kind_products row 2)",
-        "remaining_clearance": "[1/2, 1/2] - [1/10, 1/5] = enclosure [3/10, 2/5] mm length over {geometry: bracket@2, scenario: thermal-soak-steady, material: al-6061-t6} — P-SUB unions operand maps; clearance-difference declares material on its displacement slot and output",
-        "residual_assumptions_on_remaining_clearance": [
-          "uniform-temperature-change@({geometry: bracket@2, scenario: thermal-soak-steady})",
-          "linear-expansion-model@({material: al-6061-t6, scenario: thermal-soak-steady})"
-        ]
-      }
-    },
-    "measurement-scaling": {
-      "document": "libraries/measurement-scaling.v1.json",
-      "document_sha256": "sha256:9e22d5a067878d3e5c8d070a9a3ef728e589981222862b6085c16182991d31f9",
-      "semantic_sha256": "sha256:889cae89aaf04ddd952c74f1c4fd6273b418c4001a3542b25f4f26ba2ec0b4a5",
-      "declared_arithmetic": {
-        "reading_sum": "reading_a + reading_b = [9/10 + 4/5, 11/10 + 1] = enclosure [17/10, 21/10] dose_rate over {scenario: field-survey-1} (P-ADD, same kind, identical scenario)",
-        "combined_rate": "calibration * reading_sum = 11/10 * [17/10, 21/10] = enclosure [187/100, 231/100] dose_rate over {scenario: field-survey-1} (kind_products: dimensionless_factor x dose_rate -> dose_rate)",
-        "residual_assumptions_on_combined_rate": [
-          "calibration-current@({})",
-          "uniform-field@({scenario: field-survey-1})",
-          "separate-instrumentation@({}) — retained from the independence premise's support (E4b discharge keeps the witness's residuals)"
-        ]
-      }
-    }
+ "schema_version": "avila.core/language-expectations/v0.1-draft",
+ "profile": "avila.core/language/0.1-draft",
+ "note": "Specified results for the example programs, derived from docs/architecture/ENGINEERING_LANGUAGE.md (r3) by hand \u2014 not from an implementation. A checker either reproduces these or the disagreement is reported. Runtime rows describe what execute/evaluate must do once the observation boundary exists; they are expectations, not a fifth state.",
+ "libraries": {
+  "thermal-expansion": {
+   "document": "libraries/thermal-expansion.v1.json",
+   "document_sha256": "sha256:be90b2cd9c56453e7cc87888669bec53333314bf6810ac4451cf41a6aae96eab",
+   "semantic_sha256": "sha256:dc5f2165e51c09d99e751a714acb400dae77d708e6b42241d3eef6916ec45d0b",
+   "declared_arithmetic": {
+    "strain_intermediate": "coefficient * temperature_change = [1/10000 * 10, 1/10000 * 20] = enclosure [1/1000, 1/500] strain over {material: al-6061-t6, scenario: thermal-soak-steady} (kind_products row 1)",
+    "displacement": "strain_intermediate * length = [1/1000 * 100, 1/500 * 100] = enclosure [1/10, 1/5] mm length over {geometry: bracket@2, scenario: thermal-soak-steady, material: al-6061-t6} (kind_products row 2)",
+    "remaining_clearance": "[1/2, 1/2] - [1/10, 1/5] = enclosure [3/10, 2/5] mm length over {geometry: bracket@2, scenario: thermal-soak-steady, material: al-6061-t6} \u2014 P-SUB unions operand maps; clearance-difference declares material on its displacement slot and output",
+    "residual_assumptions_on_remaining_clearance": [
+     "uniform-temperature-change@({geometry: bracket@2, scenario: thermal-soak-steady})",
+     "linear-expansion-model@({material: al-6061-t6, scenario: thermal-soak-steady})"
+    ]
+   }
   },
-  "programs": {
-    "clearance-pass.program.json": {
-      "analysis": "clean",
-      "plan": "ready",
-      "runtime_obligations": [
-        "displacement: postcondition output = coefficient * temperature_change * length discharged by interval_arithmetic over observed values, bound to the invocation's input/output digests and receipt"
-      ],
-      "expected_on_execution": {
-        "observed_displacement": "enclosure [1/10, 1/5] mm",
-        "verdicts": {"EL-R1": {"status": "pass", "rule": "bounded.ge", "detail": "enclosure [3/10, 2/5] mm satisfies >= 1/4 mm: 3/10 >= 1/4"}}
-      }
-    },
-    "clearance-inconclusive.program.json": {
-      "analysis": "clean",
-      "plan": "ready",
-      "runtime_obligations": ["same as clearance-pass"],
-      "expected_on_execution": {
-        "verdicts": {"EL-R1": {"status": "inconclusive", "rule": "bounded.ge", "detail": "enclosure [3/10, 2/5] straddles limit 7/20"}}
-      }
-    },
-    "clearance-fail.program.json": {
-      "analysis": "clean",
-      "plan": "ready",
-      "runtime_obligations": ["same as clearance-pass"],
-      "expected_on_execution": {
-        "verdicts": {"EL-R1": {"status": "fail", "rule": "bounded.ge", "detail": "upper bound 2/5 < limit 9/20"}}
-      }
-    },
-    "clearance-not-evaluated.program.json": {
-      "analysis": "clean",
-      "plan": "ready",
-      "runtime_obligations": ["same as clearance-pass"],
-      "expected_on_execution": {
-        "verdicts": {"EL-R1": {"status": "not_evaluated", "rule": "not_evaluated.missing_evidence", "detail": "input temperature_change declared unavailable; displacement has no established value"}}
-      }
-    },
-    "clearance-heuristic-unusable.program.json": {
-      "analysis": "clean",
-      "plan": "ready",
-      "runtime_obligations": [
-        "displacement: same as clearance-pass",
-        "remaining_clearance: output observed, but clearance-heuristic declares no postcondition — nothing to replay"
-      ],
-      "expected_on_execution": {
-        "verdicts": {"EL-R1": {"status": "not_evaluated", "rule": "not_evaluated.unestablished", "detail": "remaining_clearance is a nominal assertion of an unchecked method output; the requirement needs an established enclosure"}}
-      }
-    },
-    "positive-assumption-discharge.program.json": {
-      "analysis": "clean",
-      "plan": "ready",
-      "runtime_obligations": ["same as clearance-pass"],
-      "assumption_discharge": {
-        "uniform-temperature-change": "discharged by premise p-uniform (unconditional; its support adds nothing)",
-        "linear-expansion-model": "discharged by premise p-model, whose own support retains {fixture-symmetric@(bracket@2)} — discharge cannot manufacture an unconditional claim"
-      },
-      "expected_on_execution": {
-        "residual_assumptions_on_remaining_clearance": ["fixture-symmetric@({geometry: bracket@2})"],
-        "verdicts": {"EL-R1": {"status": "pass", "rule": "bounded.ge", "detail": "enclosure [3/10, 2/5] mm >= 1/4 mm, conditional on fixture-symmetric@(bracket@2)"}}
-      }
-    },
-    "positive-measurement-pass.program.json": {
-      "analysis": "clean",
-      "plan": "ready",
-      "runtime_obligations": ["none — scaled-sum is primitive-composed; its postcondition discharges at analysis"],
-      "obligations": {
-        "provenance_disjoint": "discharged by the recorded graph — the two readings' edges (calibration-cert-55, calibration-cert-61) are pairwise disjoint (E4a)",
-        "independent": "premise p-independence (lab-9-independence-review, edge indep-memo-7) discharges independent(reading_a, reading_b) at scenario field-survey-1; it is conditional — its support {separate-instrumentation} stays residual on combined_rate alongside its attribution"
-      },
-      "expected_on_execution": {
-        "verdicts": {"EL-R2": {"status": "pass", "rule": "bounded.le", "detail": "enclosure [187/100, 231/100] mSv/h <= 5/2 mSv/h: 231/100 <= 250/100"}}
-      }
-    },
-    "invalid-geometry-mismatch.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "type_mismatch", "at": "body[1].arguments.initial_clearance", "detail": "geometry mismatch: initial_clearance is about bracket@1 but clearance-difference is applied at geometry bracket@2 (from displacement)"}
-      ],
-      "verdicts": "none — blocking finding, no evaluation"
-    },
-    "invalid-scope-mismatch.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "coverage", "at": "requirements[EL-R1]", "detail": "subject scope steady-state cannot serve a transient requirement; coverage obligation is named and unmet"}
-      ],
-      "verdicts": "none — unmet coverage obligation blocks planning"
-    },
-    "invalid-scenario-mismatch.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "type_mismatch", "at": "body[0].arguments.reading_b", "detail": "scenario mismatch: reading_b is scoped to field-survey-2 but scaled-sum's variable s unified to field-survey-1 (from reading_a); same scope kind steady-state does not make them the same scenario"}
-      ],
-      "verdicts": "none — scenario identity does not unify; scope equality is not scenario equality"
-    },
-    "invalid-conflicting-assumptions.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "contradiction", "at": "assumptions[a-uniform, a-gradient]", "detail": "uniform-temperature-change@(bracket@2, thermal-soak-steady) both asserted and denied at equal scope; every dependent use is blocked"}
-      ],
-      "verdicts": "none — contradicted premises block; never vacuous success"
-    },
-    "invalid-nominal-enclosure.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "type_mismatch", "at": "body[0].arguments.temperature_change", "detail": "claim nominal does not satisfy slot claim enclosure; no nominal->enclosure rule exists"}
-      ],
-      "verdicts": "none — blocking finding"
-    },
-    "invalid-nominal-arithmetic.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "unsupported", "at": "body[0]", "detail": "interval.mul is inapplicable: operand calibration has claim nominal and nominal has no arithmetic — no rule composes a representative with an enclosure"}
-      ],
-      "verdicts": "none — the product is undefined; the requirement subject has no established value"
-    },
-    "invalid-applicability-domain.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "precondition_refuted", "at": "body[0] linear-expansion", "detail": "scenario operating domain [253,473] K is not contained in material applicability [223,423] K"}
-      ],
-      "verdicts": "none — required precondition provably fails"
-    },
-    "invalid-product-kind.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "unsupported", "at": "body[0]", "detail": "interval.mul has no kind_products row for length x temperature in thermal-expansion@1; a unit calculation cannot confer an engineering kind"}
-      ],
-      "verdicts": "none — the product is untyped; the requirement subject has no established value"
-    },
-    "invalid-relation-absent.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "relation_absent", "at": "body[1].arguments.displacement", "detail": "slot clearance-difference.displacement requires scenario and material; the imported value carries neither — an omitted relation cannot be relabeled by the consumer"}
-      ],
-      "verdicts": "none — blocking finding"
-    },
-    "invalid-import-missing-assumptions.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "malformed_import", "at": "body[0]", "detail": "import declares no assumptions field; residual assumptions must be stated explicitly ([] asserts unconditional, absence is not a declaration)"}
-      ],
-      "verdicts": "none — malformed term"
-    },
-    "invalid-shared-source-independence.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "obligation_refuted", "at": "body[0] scaled-sum", "detail": "provenance_disjoint(reading_a, reading_b) refuted — both readings record source edge calibration-cert-55 (E4a)"},
-        {"kind": "obligation_unmet", "at": "body[0] scaled-sum", "detail": "independent(reading_a, reading_b) stays open — shared provenance is not evidence against statistical independence (E4b); an attested premise or certificate is still required"}
-      ],
-      "verdicts": "none — the method's disjointness admission policy is refuted; independence is unaffected but undischarged"
-    },
-    "invalid-independence-unknown.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "obligation_unmet", "at": "body[0] scaled-sum", "detail": "independent(reading_a, reading_b) open: provenance_disjoint holds (cert-55 vs cert-61) but independence is not established by the graph — an attested premise or certificate is required (E4b)"}
-      ],
-      "verdicts": "none — disjoint recorded provenance leaves independence open, never discharged"
-    },
-    "invalid-provenance-conflict.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "premise_conflict", "at": "premises[p-disjoint]", "detail": "premise asserts provenance_disjoint(reading_a, reading_b) while the recorded graph refutes exactly that proposition — both share edge calibration-cert-55"},
-        {"kind": "obligation_refuted", "at": "body[0] scaled-sum", "detail": "provenance_disjoint(reading_a, reading_b) refuted by the shared recorded edge"}
-      ],
-      "verdicts": "none — the disjointness obligation is refuted; the (admissible) independent premise still discharges its own obligation but cannot rescue the plan"
-    },
-    "cyclic-witnesses.program.json": {
-      "analysis": "findings",
-      "plan": "ready",
-      "findings": [
-        {"kind": "cyclic_witness", "at": "premises[p-uniform, p-fixture]", "detail": "mutual cycle: uniform-temperature-change's witness depends on fixture-symmetric, whose witness depends back on uniform-temperature-change — both inadmissible for discharge"},
-        {"kind": "cyclic_witness", "at": "premises[p-model]", "detail": "self-dependent witness: linear-expansion-model is established under an assumption of itself"}
-      ],
-      "expected_on_execution": {
-        "residual_assumptions_on_remaining_clearance": [
-          "uniform-temperature-change@({geometry: bracket@2, scenario: thermal-soak-steady})",
-          "linear-expansion-model@({material: al-6061-t6, scenario: thermal-soak-steady})"
-        ],
-        "verdicts": {"EL-R1": {"status": "pass", "rule": "bounded.ge", "detail": "enclosure [3/10, 2/5] mm >= 1/4 mm; cyclic discharge refused, both signature assumptions remain residual"}}
-      }
-    },
-    "unfinished-missing-input.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "hole", "at": "inputs[coefficient]", "detail": "input declared but never bound; the author has not supplied a value or an unavailable declaration"}
-      ],
-      "verdicts": "none — authoring hole; the program is inspectable but not plannable"
-    },
-    "unfinished-goal-hole.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "hole", "at": "body[0]", "detail": "explicit hole of type qty length enclosure over {geometry: bracket@2, scenario: thermal-soak-steady, material: al-6061-t6}; the requirement depends on it"}
-      ],
-      "verdicts": "none — open hole blocks planning"
-    },
-    "unfinished-ambiguous-methods.program.json": {
-      "analysis": "findings",
-      "plan": "refused",
-      "findings": [
-        {"kind": "ambiguity", "at": "body[0]", "candidates": ["linear-expansion", "linear-expansion-via-table", "clearance-difference"], "detail": "all three methods produce qty length enclosure over {geometry, scenario, material}; they differ in inputs and assumptions (linear-expansion-model vs tabulated-expansion-model vs none), so the choice is semantic and requires an authored apply"}
-      ],
-      "verdicts": "none — the goal stays open until authored"
-    }
-  },
-  "identity_cases": {
-    "note": "Semantic-identity cases the projection must honor (spec §10.1). They are projection properties — the pair documents are not committed programs.",
-    "positional_operand_reversal": "interval.sub(initial_clearance, length) vs interval.sub(length, initial_clearance): arguments are a sequence — the reversal computes [-199/2] vs [199/2] and must produce different semantic_sha256",
-    "declared_set_reorder": "reordering methods, kind_products, requires, inputs, assumptions, premises, or requirements yields an identical semantic_sha256",
-    "annotation_named_identifiers": "a proposition named note/label/description is a map key — preserved with its params; note@(geometry,scenario) vs note@(material,scenario) differ semantically, and an input or entity named likewise is preserved",
-    "annotation_at_declared_position": "editing a method's label, a kind's gloss, or a source's statement changes document_sha256 only — semantic_sha256 identical",
-    "annotation_at_undeclared_position": "a field named note/label/etc. where the schema declares none is malformed at admission — the projection never sees it",
-    "body_order": "body is a sequence: reordering it is a different semantic document and, when it would admit a §4 forward reference, inadmissible before hashing"
-  },
-  "runtime_adversarial_rows": {
-    "note": "The remaining adversarial-matrix rows are execution/replay properties, exercised once EL-03/EL-04 exist; specified here so implementation cannot launder them into program semantics",
-    "transplanted_receipt": "a receipt or output digest bound to a different invocation fails §7.O1 at digest comparison; the obligation stays open → not_evaluated",
-    "forged_certificate_recomputed_hashes": "a certificate whose postcondition does not hold under the named check fails §7.O2; recomputing outer digests does not help (ADR-0026 context equality)",
-    "process_failure_or_absent_output": "no observation → §7.O1 produces nothing → runtime obligation unmet → not_evaluated",
-    "budget_exhaustion": "any §11 bound exceeded is an explicit bounded refusal, distinct from unsupported and from success",
-    "presentation_only_change": "editing annotation fields or reordering declared-set arrays produces identical semantic identities and identical derivations; document digests may differ honestly (§10.1)",
-    "semantic_mutation": "adding a requires entry, changing a kind, changing declared params, or reordering positional operands changes semantic_sha256 — a new library identity; existing contexts refuse it rather than reinterpret",
-    "method_library_lifecycle": "lifecycle material is supplied per evaluation context (§10.2). Cases: withdrawn library entry + active method entry → method is not_evaluated.withdrawn (no override, all refusal reasons preserved); two same-key entries with different states → lifecycle_conflict refusal at bind; expired + withdrawn on one method → not_evaluated naming both reasons; no applicable entries → method.lifecycle premise records 'absent' — usable and visible, not an implicit active",
-    "requirement_limit_changed": "the limit is a premise of the requirement rule; changing 1/4 to 7/20 or 9/20 re-derives the verdict while every method-application premise is preserved (the three clearance programs pin this)",
-    "input_geometry_method_or_material_changed": "dependency edges (§8.3) identify every affected application — including edges under projected relations; derivation diff explains the change semantically rather than as a hash delta",
-    "imported_derivation_dropped_assumption": "replay compares the import's declared assumption set against the source record's propagated assumptions (§9); a dropped assumption is a mismatch on the import premise"
+  "measurement-scaling": {
+   "document": "libraries/measurement-scaling.v1.json",
+   "document_sha256": "sha256:9e22d5a067878d3e5c8d070a9a3ef728e589981222862b6085c16182991d31f9",
+   "semantic_sha256": "sha256:889cae89aaf04ddd952c74f1c4fd6273b418c4001a3542b25f4f26ba2ec0b4a5",
+   "declared_arithmetic": {
+    "reading_sum": "reading_a + reading_b = [9/10 + 4/5, 11/10 + 1] = enclosure [17/10, 21/10] dose_rate over {scenario: field-survey-1} (P-ADD, same kind, identical scenario)",
+    "combined_rate": "calibration * reading_sum = 11/10 * [17/10, 21/10] = enclosure [187/100, 231/100] dose_rate over {scenario: field-survey-1} (kind_products: dimensionless_factor x dose_rate -> dose_rate)",
+    "residual_assumptions_on_combined_rate": [
+     "calibration-current@({})",
+     "uniform-field@({scenario: field-survey-1})",
+     "separate-instrumentation@({}) \u2014 retained from the independence premise's support (E4b discharge keeps the witness's residuals)"
+    ]
+   }
   }
+ },
+ "programs": {
+  "clearance-pass.program.json": {
+   "analysis": "clean",
+   "plan": "ready",
+   "runtime_obligations": [
+    "displacement: postcondition output = coefficient * temperature_change * length discharged by interval_arithmetic over observed values, bound to the invocation's input/output digests and receipt"
+   ],
+   "expected_on_execution": {
+    "observed_displacement": "enclosure [1/10, 1/5] mm",
+    "verdicts": {
+     "EL-R1": {
+      "status": "pass",
+      "rule": "bounded.ge",
+      "detail": "enclosure [3/10, 2/5] mm satisfies >= 1/4 mm: 3/10 >= 1/4"
+     }
+    }
+   }
+  },
+  "clearance-inconclusive.program.json": {
+   "analysis": "clean",
+   "plan": "ready",
+   "runtime_obligations": [
+    "same as clearance-pass"
+   ],
+   "expected_on_execution": {
+    "verdicts": {
+     "EL-R1": {
+      "status": "inconclusive",
+      "rule": "bounded.ge",
+      "detail": "enclosure [3/10, 2/5] straddles limit 7/20"
+     }
+    }
+   }
+  },
+  "clearance-fail.program.json": {
+   "analysis": "clean",
+   "plan": "ready",
+   "runtime_obligations": [
+    "same as clearance-pass"
+   ],
+   "expected_on_execution": {
+    "verdicts": {
+     "EL-R1": {
+      "status": "fail",
+      "rule": "bounded.ge",
+      "detail": "upper bound 2/5 < limit 9/20"
+     }
+    }
+   }
+  },
+  "clearance-not-evaluated.program.json": {
+   "analysis": "clean",
+   "plan": "ready",
+   "runtime_obligations": [
+    "same as clearance-pass"
+   ],
+   "expected_on_execution": {
+    "verdicts": {
+     "EL-R1": {
+      "status": "not_evaluated",
+      "rule": "not_evaluated.missing_evidence",
+      "detail": "input temperature_change declared unavailable; displacement has no established value"
+     }
+    }
+   }
+  },
+  "clearance-heuristic-unusable.program.json": {
+   "analysis": "clean",
+   "plan": "ready",
+   "runtime_obligations": [
+    "displacement: same as clearance-pass",
+    "remaining_clearance: output observed, but clearance-heuristic declares no postcondition \u2014 nothing to replay"
+   ],
+   "expected_on_execution": {
+    "verdicts": {
+     "EL-R1": {
+      "status": "not_evaluated",
+      "rule": "not_evaluated.unestablished",
+      "detail": "remaining_clearance is a nominal assertion of an unchecked method output; the requirement needs an established enclosure"
+     }
+    }
+   }
+  },
+  "positive-assumption-discharge.program.json": {
+   "analysis": "clean",
+   "plan": "ready",
+   "runtime_obligations": [
+    "same as clearance-pass"
+   ],
+   "assumption_discharge": {
+    "uniform-temperature-change": "discharged by premise p-uniform (unconditional; its support adds nothing)",
+    "linear-expansion-model": "discharged by premise p-model, whose own support retains {fixture-symmetric@(bracket@2)} \u2014 discharge cannot manufacture an unconditional claim"
+   },
+   "expected_on_execution": {
+    "residual_assumptions_on_remaining_clearance": [
+     "fixture-symmetric@({geometry: bracket@2})"
+    ],
+    "verdicts": {
+     "EL-R1": {
+      "status": "pass",
+      "rule": "bounded.ge",
+      "detail": "enclosure [3/10, 2/5] mm >= 1/4 mm, conditional on fixture-symmetric@(bracket@2)"
+     }
+    }
+   }
+  },
+  "positive-measurement-pass.program.json": {
+   "analysis": "clean",
+   "plan": "ready",
+   "runtime_obligations": [
+    "none \u2014 scaled-sum is primitive-composed; its postcondition discharges at analysis"
+   ],
+   "obligations": {
+    "provenance_disjoint": "discharged by the recorded graph \u2014 the two readings' edges (calibration-cert-55, calibration-cert-61) are pairwise disjoint (E4a)",
+    "independent": "premise p-independence (lab-9-independence-review, edge indep-memo-7) discharges independent(reading_a, reading_b) at scenario field-survey-1; it is conditional \u2014 its support {separate-instrumentation} stays residual on combined_rate alongside its attribution"
+   },
+   "expected_on_execution": {
+    "verdicts": {
+     "EL-R2": {
+      "status": "pass",
+      "rule": "bounded.le",
+      "detail": "enclosure [187/100, 231/100] mSv/h <= 5/2 mSv/h: 231/100 <= 250/100"
+     }
+    }
+   }
+  },
+  "invalid-geometry-mismatch.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8010",
+     "kind": "type_mismatch",
+     "at": "body[1].arguments.initial_clearance",
+     "detail": "geometry mismatch: initial_clearance is about bracket@1 but clearance-difference is applied at geometry bracket@2 (from displacement)"
+    }
+   ],
+   "verdicts": "none \u2014 blocking finding, no evaluation"
+  },
+  "invalid-scope-mismatch.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8012",
+     "kind": "coverage",
+     "at": "requirements[EL-R1]",
+     "detail": "subject scope steady-state cannot serve a transient requirement; coverage obligation is named and unmet"
+    }
+   ],
+   "verdicts": "none \u2014 unmet coverage obligation blocks planning"
+  },
+  "invalid-scenario-mismatch.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8010",
+     "kind": "type_mismatch",
+     "at": "body[0].arguments.reading_b",
+     "detail": "scenario mismatch: reading_b is scoped to field-survey-2 but scaled-sum's variable s unified to field-survey-1 (from reading_a); same scope kind steady-state does not make them the same scenario"
+    }
+   ],
+   "verdicts": "none \u2014 scenario identity does not unify; scope equality is not scenario equality"
+  },
+  "invalid-conflicting-assumptions.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8013",
+     "kind": "contradiction",
+     "at": "assumptions[a-uniform, a-gradient]",
+     "detail": "uniform-temperature-change@(bracket@2, thermal-soak-steady) both asserted and denied at equal scope; every dependent use is blocked"
+    }
+   ],
+   "verdicts": "none \u2014 contradicted premises block; never vacuous success"
+  },
+  "invalid-nominal-enclosure.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8010",
+     "kind": "type_mismatch",
+     "at": "body[0].arguments.temperature_change",
+     "detail": "claim nominal does not satisfy slot claim enclosure; no nominal->enclosure rule exists"
+    }
+   ],
+   "verdicts": "none \u2014 blocking finding"
+  },
+  "invalid-nominal-arithmetic.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8016",
+     "kind": "unsupported",
+     "at": "body[0]",
+     "detail": "interval.mul is inapplicable: operand calibration has claim nominal and nominal has no arithmetic \u2014 no rule composes a representative with an enclosure"
+    }
+   ],
+   "verdicts": "none \u2014 the product is undefined; the requirement subject has no established value"
+  },
+  "invalid-applicability-domain.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8019",
+     "kind": "precondition_refuted",
+     "at": "body[0] linear-expansion",
+     "detail": "scenario operating domain [253,473] K is not contained in material applicability [223,423] K"
+    }
+   ],
+   "verdicts": "none \u2014 required precondition provably fails"
+  },
+  "invalid-product-kind.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8016",
+     "kind": "unsupported",
+     "at": "body[0]",
+     "detail": "interval.mul has no kind_products row for length x temperature in thermal-expansion@1; a unit calculation cannot confer an engineering kind"
+    }
+   ],
+   "verdicts": "none \u2014 the product is untyped; the requirement subject has no established value"
+  },
+  "invalid-relation-absent.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8011",
+     "kind": "relation_absent",
+     "at": "body[1].arguments.displacement",
+     "detail": "slot clearance-difference.displacement requires scenario and material; the imported value carries neither \u2014 an omitted relation cannot be relabeled by the consumer"
+    }
+   ],
+   "verdicts": "none \u2014 blocking finding"
+  },
+  "invalid-import-missing-assumptions.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8020",
+     "kind": "malformed_import",
+     "at": "body[0]",
+     "detail": "import declares no assumptions field; residual assumptions must be stated explicitly ([] asserts unconditional, absence is not a declaration)"
+    }
+   ],
+   "verdicts": "none \u2014 malformed term"
+  },
+  "invalid-shared-source-independence.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8017",
+     "kind": "obligation_unmet",
+     "at": "body[0] scaled-sum",
+     "detail": "independent(reading_a, reading_b) stays open \u2014 shared provenance is not evidence against statistical independence (E4b); an attested premise or certificate is still required"
+    },
+    {
+     "code": "CORE-E8018",
+     "kind": "obligation_refuted",
+     "at": "body[0] scaled-sum",
+     "detail": "provenance_disjoint(reading_a, reading_b) refuted \u2014 both readings record source edge calibration-cert-55 (E4a)"
+    }
+   ],
+   "verdicts": "none \u2014 the method's disjointness admission policy is refuted; independence is unaffected but undischarged"
+  },
+  "invalid-independence-unknown.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8017",
+     "kind": "obligation_unmet",
+     "at": "body[0] scaled-sum",
+     "detail": "independent(reading_a, reading_b) open: provenance_disjoint holds (cert-55 vs cert-61) but independence is not established by the graph \u2014 an attested premise or certificate is required (E4b)"
+    }
+   ],
+   "verdicts": "none \u2014 disjoint recorded provenance leaves independence open, never discharged"
+  },
+  "invalid-provenance-conflict.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8014",
+     "kind": "premise_conflict",
+     "at": "premises[p-disjoint]",
+     "detail": "premise asserts provenance_disjoint(reading_a, reading_b) while the recorded graph refutes exactly that proposition \u2014 both share edge calibration-cert-55"
+    },
+    {
+     "code": "CORE-E8018",
+     "kind": "obligation_refuted",
+     "at": "body[0] scaled-sum",
+     "detail": "provenance_disjoint(reading_a, reading_b) refuted by the shared recorded edge"
+    }
+   ],
+   "verdicts": "none \u2014 the disjointness obligation is refuted; the (admissible) independent premise still discharges its own obligation but cannot rescue the plan"
+  },
+  "cyclic-witnesses.program.json": {
+   "analysis": "findings",
+   "plan": "ready",
+   "findings": [
+    {
+     "code": "CORE-E8015",
+     "kind": "cyclic_witness",
+     "at": "premises[p-fixture, p-uniform]",
+     "detail": "mutual cycle: uniform-temperature-change's witness depends on fixture-symmetric, whose witness depends back on uniform-temperature-change \u2014 both inadmissible for discharge"
+    },
+    {
+     "code": "CORE-E8015",
+     "kind": "cyclic_witness",
+     "at": "premises[p-model]",
+     "detail": "self-dependent witness: linear-expansion-model is established under an assumption of itself"
+    }
+   ],
+   "expected_on_execution": {
+    "residual_assumptions_on_remaining_clearance": [
+     "linear-expansion-model@({material: al-6061-t6, scenario: thermal-soak-steady})",
+     "uniform-temperature-change@({geometry: bracket@2, scenario: thermal-soak-steady})"
+    ],
+    "verdicts": {
+     "EL-R1": {
+      "status": "pass",
+      "rule": "bounded.ge",
+      "detail": "enclosure [3/10, 2/5] mm >= 1/4 mm; cyclic discharge refused, both signature assumptions remain residual"
+     }
+    }
+   }
+  },
+  "unfinished-missing-input.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8021",
+     "kind": "hole",
+     "at": "inputs[coefficient]",
+     "detail": "input declared but never bound; the author has not supplied a value or an unavailable declaration"
+    }
+   ],
+   "verdicts": "none \u2014 authoring hole; the program is inspectable but not plannable"
+  },
+  "unfinished-goal-hole.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8021",
+     "kind": "hole",
+     "at": "body[0]",
+     "detail": "explicit hole of type qty length enclosure over {geometry: bracket@2, scenario: thermal-soak-steady, material: al-6061-t6}; the requirement depends on it"
+    }
+   ],
+   "verdicts": "none \u2014 open hole blocks planning"
+  },
+  "unfinished-ambiguous-methods.program.json": {
+   "analysis": "findings",
+   "plan": "refused",
+   "findings": [
+    {
+     "code": "CORE-E8022",
+     "kind": "ambiguity",
+     "at": "body[0]",
+     "candidates": [
+      "linear-expansion",
+      "linear-expansion-via-table",
+      "clearance-difference"
+     ],
+     "detail": "all three methods produce qty length enclosure over {geometry, scenario, material}; they differ in inputs and assumptions (linear-expansion-model vs tabulated-expansion-model vs none), so the choice is semantic and requires an authored apply"
+    }
+   ],
+   "verdicts": "none \u2014 the goal stays open until authored"
+  }
+ },
+ "identity_cases": {
+  "note": "Semantic-identity cases the projection must honor (spec \u00a710.1). They are projection properties \u2014 the pair documents are not committed programs.",
+  "positional_operand_reversal": "interval.sub(initial_clearance, length) vs interval.sub(length, initial_clearance): arguments are a sequence \u2014 the reversal computes [-199/2] vs [199/2] and must produce different semantic_sha256",
+  "declared_set_reorder": "reordering methods, kind_products, requires, inputs, assumptions, premises, or requirements yields an identical semantic_sha256",
+  "annotation_named_identifiers": "a proposition named note/label/description is a map key \u2014 preserved with its params; note@(geometry,scenario) vs note@(material,scenario) differ semantically, and an input or entity named likewise is preserved",
+  "annotation_at_declared_position": "editing a method's label, a kind's gloss, or a source's statement changes document_sha256 only \u2014 semantic_sha256 identical",
+  "annotation_at_undeclared_position": "a field named note/label/etc. where the schema declares none is malformed at admission \u2014 the projection never sees it",
+  "body_order": "body is a sequence: reordering it is a different semantic document and, when it would admit a \u00a74 forward reference, inadmissible before hashing"
+ },
+ "runtime_adversarial_rows": {
+  "note": "The remaining adversarial-matrix rows are execution/replay properties, exercised once EL-03/EL-04 exist; specified here so implementation cannot launder them into program semantics",
+  "transplanted_receipt": "a receipt or output digest bound to a different invocation fails \u00a77.O1 at digest comparison; the obligation stays open \u2192 not_evaluated",
+  "forged_certificate_recomputed_hashes": "a certificate whose postcondition does not hold under the named check fails \u00a77.O2; recomputing outer digests does not help (ADR-0026 context equality)",
+  "process_failure_or_absent_output": "no observation \u2192 \u00a77.O1 produces nothing \u2192 runtime obligation unmet \u2192 not_evaluated",
+  "budget_exhaustion": "any \u00a711 bound exceeded is an explicit bounded refusal, distinct from unsupported and from success",
+  "presentation_only_change": "editing annotation fields or reordering declared-set arrays produces identical semantic identities and identical derivations; document digests may differ honestly (\u00a710.1)",
+  "semantic_mutation": "adding a requires entry, changing a kind, changing declared params, or reordering positional operands changes semantic_sha256 \u2014 a new library identity; existing contexts refuse it rather than reinterpret",
+  "method_library_lifecycle": "lifecycle material is supplied per evaluation context (\u00a710.2). Cases: withdrawn library entry + active method entry \u2192 method is not_evaluated.withdrawn (no override, all refusal reasons preserved); two same-key entries with different states \u2192 lifecycle_conflict refusal at bind; expired + withdrawn on one method \u2192 not_evaluated naming both reasons; no applicable entries \u2192 method.lifecycle premise records 'absent' \u2014 usable and visible, not an implicit active",
+  "requirement_limit_changed": "the limit is a premise of the requirement rule; changing 1/4 to 7/20 or 9/20 re-derives the verdict while every method-application premise is preserved (the three clearance programs pin this)",
+  "input_geometry_method_or_material_changed": "dependency edges (\u00a78.3) identify every affected application \u2014 including edges under projected relations; derivation diff explains the change semantically rather than as a hash delta",
+  "imported_derivation_dropped_assumption": "replay compares the import's declared assumption set against the source record's propagated assumptions (\u00a79); a dropped assumption is a mismatch on the import premise"
+ }
 }

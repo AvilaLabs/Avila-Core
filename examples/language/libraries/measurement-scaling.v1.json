@@ -51,14 +51,14 @@
       },
       "requires": [
         {
-          "kind": "independence",
-          "over": ["reading_a", "reading_b"],
-          "label": "the two readings' measurement errors are statistically independent"
-        },
-        {
           "kind": "provenance_disjoint",
           "over": ["reading_a", "reading_b"],
           "label": "admission policy: the readings must not share a recorded source edge"
+        },
+        {
+          "kind": "independence",
+          "over": ["reading_a", "reading_b"],
+          "label": "the two readings' measurement errors are statistically independent"
         }
       ],
       "ensures": [

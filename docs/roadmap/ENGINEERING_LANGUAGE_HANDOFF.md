@@ -192,6 +192,27 @@ and an attempted nominal-to-enclosure promotion fails at the actual consumer.
 CLI/agent callers must see the same diagnostics as library callers. A new GUI
 or LSP server is unnecessary; their future analysis boundary must be real.
 
+Implemented in `avila_core_compiler::language` (spec §10 admission and
+schema-directed projection, §7 rule evaluation, generic method application
+with `projects` relation accounting, generated obligations, premise
+admission/discharge, §10.2 lifecycle, requirement reports). The shared
+operation is `language::analyze_program`; `avila-core language analyze` is
+a client of it. Language diagnostics are catalogued as `CORE-E8001`–
+`CORE-E8027` (DIAGNOSTICS.md); all 24 fixture programs plus the reviewed
+counterexamples are regression-tested at the shared API boundary.
+
+Revised against the
+[2026-09-25 EL-02 review](reviews/2026-09-25-engineering-language-el02-review.md):
+postconditions are replayed rather than asserted, typed payloads are admitted
+against their declared claim and unit, declared sets are order-invariant in
+identity and derivation, witnesses carry their support to the conclusion,
+certificates require supported replayable checks, expression evaluation is
+bounded (`CORE-E8027`), and the returned artifact carries a structured plan
+(step arguments, obligation links, typed rule expressions) with scoped
+findings. The finding-by-finding closure and adjudication items are in
+[the revision response](reviews/2026-09-25-engineering-language-el02-closure.md).
+Returned for independent review before EL-03.
+
 ## EL-03 — Execute the synthetic program through the shared runner
 
 After EL-00 and EL-02, integrate a narrow experimental plan with the existing

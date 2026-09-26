@@ -88,6 +88,46 @@ const TEST_PINNED: &[(&str, &str)] = &[
         "CORE-E7501",
         "avila-core-compiler tests::context_binding — an evaluation exceeding the derivation bound refuses with this code",
     ),
+    (
+        "CORE-E8001",
+        "avila-core-compiler tests::language_fixtures::admission_and_identity_are_checked — inadmissible bytes, undeclared fields, and projection failures",
+    ),
+    (
+        "CORE-E8002",
+        "avila-core-compiler tests::language_fixtures::admission_and_identity_are_checked — a library other than the pinned semantic identity is refused",
+    ),
+    (
+        "CORE-E8003",
+        "avila-core-compiler tests::language_fixtures::admission_and_identity_are_checked — an assumption naming an undeclared proposition",
+    ),
+    (
+        "CORE-E8004",
+        "avila-core-compiler tests::language_fixtures::admission_and_identity_are_checked — an `apply` naming no declared method",
+    ),
+    (
+        "CORE-E8005",
+        "avila-core-compiler tests::language_fixtures::admission_and_identity_are_checked — a relation binding an undeclared entity",
+    ),
+    (
+        "CORE-E8023",
+        "avila-core-compiler tests::language_fixtures::lifecycle_combines_by_refusal_union — same-key conflicting lifecycle states",
+    ),
+    (
+        "CORE-E8024",
+        "avila-core-compiler tests::language_fixtures::admission_and_identity_are_checked — an `apply` omitting a declared slot",
+    ),
+    (
+        "CORE-E8025",
+        "avila-core-compiler tests::language_fixtures::admission_and_identity_are_checked — an operand relation reaching an output that never declared it",
+    ),
+    (
+        "CORE-E8026",
+        "avila-core-compiler tests::language_fixtures::lifecycle_combines_by_refusal_union — union-of-refusals across library and method scope",
+    ),
+    (
+        "CORE-E8027",
+        "avila-core-compiler tests::language_fixtures::identity_is_withheld_and_expressions_are_bounded — an expression past the depth bound is a finding, not a crash",
+    ),
 ];
 
 fn fixture_root() -> PathBuf {
@@ -133,6 +173,21 @@ fn collect_fixture_codes() -> BTreeMap<String, Vec<String>> {
                         record(code, format!("{suite_path}:{fixture_id}"));
                     }
                 }
+            }
+        }
+    }
+    // The engineering-language expectations pin finding codes per program.
+    let language: Value = serde_json::from_slice(
+        &fs::read(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/language/expectations.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    for (program_id, row) in language["programs"].as_object().into_iter().flatten() {
+        for finding in row["findings"].as_array().into_iter().flatten() {
+            if let Some(code) = finding["code"].as_str() {
+                record(code, format!("examples/language:{program_id}"));
             }
         }
     }

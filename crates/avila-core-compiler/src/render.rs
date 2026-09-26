@@ -380,6 +380,41 @@ pub fn render_campaign_report(report: &CampaignReport, sources: &[(&str, &[u8])]
     out
 }
 
+/// Render a language analysis: every finding at its reported position, the
+/// requirement reports, then the plan state. Language findings carry logical
+/// positions (`body[0] linear-expansion`), not source pointers — there is no
+/// span to underline.
+#[must_use]
+pub fn render_language_analysis(analysis: &crate::language::LanguageAnalysis) -> String {
+    let mut out = String::new();
+    for finding in &analysis.findings {
+        let _ = writeln!(out, "{}[{}] at {}", finding.kind, finding.code, finding.at);
+        let _ = writeln!(out, "  = {}", finding.detail);
+        if let Some(candidates) = &finding.candidates {
+            for candidate in candidates {
+                let _ = writeln!(out, "  candidate: {candidate}");
+            }
+        }
+    }
+    for (id, requirement) in &analysis.requirements {
+        if let Some(verdict) = &requirement.verdict {
+            let _ = writeln!(
+                out,
+                "requirement {id}: {} — {}",
+                verdict.status, verdict.rule
+            );
+        } else {
+            let _ = writeln!(out, "requirement {id}: {}", requirement.state);
+        }
+    }
+    let _ = writeln!(
+        out,
+        "analysis: {}; plan: {}",
+        analysis.status, analysis.plan.state
+    );
+    out
+}
+
 fn counts(findings: &[CoreDiagnostic]) -> (usize, usize) {
     let notices = findings
         .iter()

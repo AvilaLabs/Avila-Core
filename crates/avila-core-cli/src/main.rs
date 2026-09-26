@@ -142,6 +142,12 @@ enum Command {
         #[command(subcommand)]
         command: DerivationCommand,
     },
+    /// Analyze an experimental engineering-language program
+    /// (avila.core/language/0.1-draft; ENGINEERING_LANGUAGE.md).
+    Language {
+        #[command(subcommand)]
+        command: LanguageCommand,
+    },
     /// Run a composed case package through integrity checks, compilation,
     /// controlled execution with receipts, claim generation, evidence
     /// binding, campaign evaluation, and deterministic replay.
@@ -187,6 +193,31 @@ enum Command {
     Sign {
         #[command(subcommand)]
         command: SignCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum LanguageCommand {
+    /// Admit a program and its pinned method library, then emit the shared
+    /// analysis: findings, bindings, generated obligations, residual
+    /// assumptions, requirement reports, and the lowered plan state.
+    ///
+    /// Exits 0 when the program analyzed clean or with only non-blocking
+    /// notices; 1 when any finding blocks the plan; and 2 when the tool
+    /// could not run at all.
+    Analyze {
+        #[arg(long)]
+        program: PathBuf,
+        #[arg(long)]
+        library: PathBuf,
+        /// Supplied lifecycle state as `key=state`, repeatable — e.g.
+        /// `--lifecycle library:thermal-expansion@1=withdrawn` or
+        /// `method:thermal-expansion/linear-expansion@1=expired`.
+        #[arg(long = "lifecycle", value_name = "KEY=STATE")]
+        lifecycle: Vec<String>,
+        /// Print findings as readable text instead of the JSON report.
+        #[arg(long)]
+        text: bool,
     },
 }
 
@@ -857,6 +888,49 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 )?;
                 println!("{}", serde_json::to_string_pretty(&verification)?);
                 if !verification.is_verified() {
+                    return Ok(ExitCode::from(1));
+                }
+            }
+        },
+        Command::Language { command } => match command {
+            LanguageCommand::Analyze {
+                program,
+                library,
+                lifecycle,
+                text,
+            } => {
+                let program_bytes = fs::read(&program).map_err(|error| {
+                    format!("cannot read program `{}`: {error}", program.display())
+                })?;
+                let library_bytes = fs::read(&library).map_err(|error| {
+                    format!("cannot read library `{}`: {error}", library.display())
+                })?;
+                let mut options = avila_core_compiler::language::AnalysisOptions::default();
+                for entry in &lifecycle {
+                    let (key, state) = entry
+                        .split_once('=')
+                        .ok_or_else(|| format!("lifecycle entry `{entry}` must be `key=state`"))?;
+                    options
+                        .lifecycle
+                        .push(avila_core_compiler::language::LifecycleEntry {
+                            key: key.to_string(),
+                            state: state.to_string(),
+                        });
+                }
+                let analysis = avila_core_compiler::language::analyze_program(
+                    &program_bytes,
+                    &library_bytes,
+                    &options,
+                );
+                if text {
+                    print!(
+                        "{}",
+                        avila_core_compiler::render_language_analysis(&analysis)
+                    );
+                } else {
+                    println!("{}", serde_json::to_string_pretty(&analysis)?);
+                }
+                if analysis.plan.state == "refused" {
                     return Ok(ExitCode::from(1));
                 }
             }

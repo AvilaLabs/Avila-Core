@@ -1,0 +1,363 @@
+{
+  "baseline-measurement": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "combined_rate": "[187/100, 231/100]"
+    },
+    "support": {
+      "type": {
+        "quantity_kind": "dose_rate",
+        "claim": "enclosure",
+        "relations": {
+          "scenario": "field-survey-1"
+        }
+      },
+      "value_state": "established",
+      "value": "[187/100, 231/100]",
+      "residual_assumptions": [
+        {
+          "proposition": "calibration-current",
+          "at": {}
+        },
+        {
+          "proposition": "uniform-field",
+          "at": {
+            "scenario": "field-survey-1"
+          }
+        }
+      ],
+      "source_edges": [
+        "calibration-cert-55",
+        "calibration-cert-61"
+      ]
+    }
+  },
+  "unattributed-independence": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "combined_rate": "[187/100, 231/100]"
+    }
+  },
+  "false-postcondition": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "combined_rate": "[-1/10, 3/10]"
+    },
+    "obligations": [
+      {
+        "id": "body[0].requires[0]",
+        "kind": "provenance_disjoint",
+        "at": "body[0] scaled-sum",
+        "state": "discharged",
+        "detail": "over reading_a, reading_b"
+      },
+      {
+        "id": "body[0].requires[1]",
+        "kind": "independence",
+        "at": "body[0] scaled-sum",
+        "state": "discharged",
+        "detail": "discharged by premise `p-independence`"
+      },
+      {
+        "id": "body[0].ensures[0]",
+        "kind": "postcondition",
+        "at": "body[0]",
+        "state": "discharged",
+        "detail": "`output = calibration * (reading_a + reading_b)` checked by interval_arithmetic"
+      }
+    ]
+  },
+  "wrong-body-type": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "combined_rate": "11/10"
+    },
+    "binding": {
+      "type": {
+        "quantity_kind": "dose_rate",
+        "claim": "enclosure",
+        "relations": {
+          "scenario": "field-survey-1"
+        }
+      },
+      "value_state": "established",
+      "value": "11/10",
+      "residual_assumptions": [
+        {
+          "proposition": "calibration-current",
+          "at": {}
+        },
+        {
+          "proposition": "uniform-field",
+          "at": {
+            "scenario": "field-survey-1"
+          }
+        }
+      ],
+      "source_edges": [
+        "calibration-cert-55",
+        "calibration-cert-61"
+      ]
+    }
+  },
+  "unrecognized-postcondition": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "combined_rate": "[187/100, 231/100]"
+    }
+  },
+  "nominal-payload-enclosure-type": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "combined_rate": "[99/50, 11/5]"
+    }
+  },
+  "wrong-input-unit": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "combined_rate": "[187/100, 231/100]"
+    }
+  },
+  "malformed-requirement": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "combined_rate": "[187/100, 231/100]"
+    }
+  },
+  "scope-refinement": {
+    "exit": 1,
+    "plan": "refused",
+    "findings": [
+      "coverage"
+    ],
+    "values": {
+      "combined_rate": "[187/100, 231/100]"
+    }
+  },
+  "duplicate-input-a": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "combined_rate": "[572/25, 121/5]"
+    }
+  },
+  "duplicate-input-b": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "combined_rate": "[187/100, 231/100]"
+    }
+  },
+  "duplicate-input-identity": {
+    "same_semantic_identity": true,
+    "a_value": "[572/25, 121/5]",
+    "b_value": "[187/100, 231/100]"
+  },
+  "open-obligation-dependent": {
+    "exit": 1,
+    "plan": "refused",
+    "findings": [
+      "obligation_unmet"
+    ],
+    "values": {
+      "combined_rate": "[187/100, 231/100]",
+      "dependent": "[277/100, 341/100]"
+    },
+    "requirements": {
+      "EL-R2": {
+        "state": "pending",
+        "declared_value": "[277/100, 341/100]"
+      }
+    },
+    "dependent": {
+      "type": {
+        "quantity_kind": "dose_rate",
+        "claim": "enclosure",
+        "relations": {
+          "scenario": "field-survey-1"
+        }
+      },
+      "value_state": "established",
+      "value": "[277/100, 341/100]",
+      "residual_assumptions": [
+        {
+          "proposition": "calibration-current",
+          "at": {}
+        },
+        {
+          "proposition": "uniform-field",
+          "at": {
+            "scenario": "field-survey-1"
+          }
+        }
+      ],
+      "source_edges": [
+        "calibration-cert-55",
+        "calibration-cert-61"
+      ]
+    }
+  },
+  "unreplayed-certificate-import": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "remaining_clearance": "[1, 1]"
+    },
+    "runtime_obligations": []
+  },
+  "ensures-order-a": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "displacement": "[1/10, 1/5]",
+      "remaining_clearance": "[3/10, 2/5]"
+    }
+  },
+  "ensures-order-b": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "displacement": "100",
+      "remaining_clearance": "[-199/2, -199/2]"
+    }
+  },
+  "ensures-order-identity": {
+    "same_semantic_identity": true,
+    "a_value": "[1/10, 1/5]",
+    "b_value": "100"
+  },
+  "wrong-domain-unit": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "displacement": "[1/10, 1/5]",
+      "remaining_clearance": "[3/10, 2/5]"
+    }
+  },
+  "inverted-operating-domain": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "displacement": "[1/10, 1/5]",
+      "remaining_clearance": "[3/10, 2/5]"
+    }
+  },
+  "conflicting-extra-relation": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "displacement": null,
+      "remaining_clearance": null
+    }
+  },
+  "undeclared-method-assumption": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "displacement": "[1/10, 1/5]",
+      "remaining_clearance": "[3/10, 2/5]"
+    }
+  },
+  "requirement-scenario": {
+    "exit": 1,
+    "plan": "refused",
+    "findings": [
+      "malformed"
+    ],
+    "values": {}
+  },
+  "derived-provenance": {
+    "exit": 1,
+    "plan": "refused",
+    "findings": [
+      "obligation_unmet"
+    ],
+    "values": {
+      "combined_rate": "[143/50, 88/25]"
+    },
+    "obligations": [
+      {
+        "id": "body[1].requires[0]",
+        "kind": "provenance_disjoint",
+        "at": "body[1] scaled-sum",
+        "state": "open",
+        "detail": "over derived_a, reading_b"
+      },
+      {
+        "id": "body[1].requires[1]",
+        "kind": "independence",
+        "at": "body[1] scaled-sum",
+        "state": "discharged",
+        "detail": "discharged by premise `p-independence`"
+      },
+      {
+        "id": "body[1].ensures[0]",
+        "kind": "postcondition",
+        "at": "body[1]",
+        "state": "discharged",
+        "detail": "`output = calibration * (reading_a + reading_b)` checked by interval_arithmetic"
+      }
+    ]
+  },
+  "unknown-lifecycle-state": {
+    "exit": 0,
+    "plan": "ready",
+    "findings": [],
+    "values": {
+      "displacement": "[1/10, 1/5]",
+      "remaining_clearance": "[3/10, 2/5]"
+    }
+  },
+  "unreachable-hole": {
+    "exit": 1,
+    "plan": "refused",
+    "findings": [
+      "hole"
+    ],
+    "values": {
+      "displacement": "[1/10, 1/5]",
+      "remaining_clearance": "[3/10, 2/5]"
+    }
+  },
+  "forward-reference-identity": {
+    "exit": 1,
+    "plan": "refused",
+    "findings": [
+      "malformed"
+    ],
+    "values": {
+      "displacement": "[1/10, 1/5]",
+      "remaining_clearance": null
+    },
+    "semantic_identity_returned": "sha256:a60cfddc30bd899fac0d6a1f1092b7a98a8374fba3ddf9933d23b9fd97dae30b"
+  },
+  "bounded-deep-expression-child": {
+    "exit": -6,
+    "stderr": "thread 'main' (34) has overflowed its stack\nfatal runtime error: stack overflow, aborting"
+  }
+}

@@ -12,6 +12,7 @@ mod compile;
 mod coverage;
 mod diagnostic;
 mod document;
+pub mod language;
 mod qualification;
 mod render;
 mod selection;
@@ -73,6 +74,7 @@ pub use document::{
     RoleDefinition, SeparationLevel, SourceRef, TemplateInput, TemplatePin, TypedQuantity,
     UnitRecord, ValidationCase, VersionedRef, WorkflowStep, current_profile_contract,
 };
+pub use language::{AnalysisOptions, LanguageAnalysis, analyze_program};
 pub use qualification::{
     ClaimQualification, EnvelopeAssessment, EnvelopeState, EnvelopeTerm,
     QUALIFICATION_SCHEMA_VERSION, QualificationRecord, QualificationRevocation,
@@ -81,6 +83,7 @@ pub use qualification::{
 };
 pub use render::{
     SourceSpan, locate, render_campaign_report, render_compile_report, render_findings,
+    render_language_analysis,
 };
 pub use selection::{
     BANNED_CRITERIA, CandidateDecision, CandidateReason, CandidateTriple, CapabilitySelection,

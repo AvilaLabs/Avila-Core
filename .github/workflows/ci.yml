@@ -43,6 +43,13 @@ jobs:
       - name: Build desktop app and CLI
         run: cargo build --locked -p avila-core-app -p avila-core-cli
 
+      - name: Cross-check evidence stores with the independent verifier
+        if: runner.os == 'Linux'
+        working-directory: verifier
+        env:
+          AVILA_CORE_BIN: ${{ github.workspace }}/target/debug/avila-core
+        run: python3 -m unittest test_store_verify -v
+
   documents:
     name: JSON documents
     runs-on: ubuntu-latest
@@ -71,6 +78,10 @@ jobs:
       - name: Replay the committed language-evaluation corpus (EL-04)
         working-directory: verifier
         run: python3 -m unittest test_language_verify -v
+
+      - name: Check evidence-store refusals (ADR-0028)
+        working-directory: verifier
+        run: python3 -m unittest test_store_verify -v
 
       - name: Verify CASE-003 (thermal spreader, no external roots needed, ADR-0015 signatures)
         working-directory: verifier

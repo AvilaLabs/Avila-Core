@@ -178,6 +178,35 @@ otherwise silently pass or silently mismatch:
   campaign fixture whose verdict depends on a step binding the lowerer
   cannot resolve stays named, not silently passed.
 
+## Evidence stores — `store_verify.py`
+
+`store_verify.py` reads and verifies a content-addressed evidence store
+(`avila.core/evidence-store/v0.1`, ADR-0028) with `lzma`, `hashlib`, and
+`json` only. It applies the ADR's rules itself: the index obeys rules 1-6
+(sorted unique names and paths, path form, no file that is also a directory,
+one length per digest, bounds, exact schema and codec, no unknown or
+duplicate keys); every referenced blob is a regular file holding one xz
+stream whose output, decompressed with a limit of `bytes` + 1, has the
+indexed length and SHA-256 and has no data after it; and the store holds
+nothing but `store.json` and the referenced `blobs/<h0h1>/<sha256>.xz`.
+Content is written or returned only after it matches. A store proves nothing
+by itself — it is a container; comparing its files with a package or receipt
+is still the job of `verify-case`.
+
+```sh
+python3 store_verify.py store-verify STORE            # JSON report; exit 1 on failure
+python3 store_verify.py store-unpack STORE OUT [--tree NAME]...
+python3 store_verify.py store-ls STORE [TREE]
+python3 store_verify.py store-cat STORE TREE PATH
+python3 -m unittest test_store_verify -v              # refusals + cross-implementation
+```
+
+The refusal tests build stores by hand and need no binary. The
+cross-implementation test packs a tree with the Rust CLI and checks that this
+verifier accepts and unpacks it byte-identically; it runs when
+`AVILA_CORE_BIN` (or a built `target/{debug,release}/avila-core`) exists and
+is skipped otherwise.
+
 ## Language evaluations — `language_verify.py`
 
 `language_verify.py` replays the engineering-language evaluate chain

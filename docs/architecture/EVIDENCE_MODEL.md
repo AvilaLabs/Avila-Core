@@ -268,6 +268,21 @@ the normal check/run path and the independent verifier both verify it at the
 same package identity. The report is an export record, not a manifest
 document; it carries no evidence weight and cannot alter a verdict.
 
+## Evidence store
+
+Evidence trees (a case package, a run workspace, an export) repeat the same
+bytes many times: staged inputs copy upstream outputs, and expected outputs
+are bound again as package files. [ADR-0028](../adr/0028-content-addressed-evidence-store.md)
+defines the evidence store, `avila.core/evidence-store/v0.1`: named file trees
+that keep each distinct content once, compressed, under its SHA-256. Identity
+does not change — a file is still the digest of its exact uncompressed bytes
+— so receipts, packages and signatures are untouched. Reads are bounded and
+checked against the indexed length and digest before content is returned
+(`avila-core store ...`, and `verifier/store_verify.py` using only the Python
+standard library). A store is a container, not a trust root; checking its
+files against a package or receipt is still the job of the verification
+described above, and doing so in place is future work.
+
 ## Redaction and retention (owner-gated)
 
 ADR-0005 names redaction as first-class; the mechanism (a digest preserves

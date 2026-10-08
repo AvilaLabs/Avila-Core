@@ -76,6 +76,20 @@ avila-core run BUNDLE_DIR --plan --source-root name=BUNDLE_DIR/roots/name
 python3 verifier/avila_core_verify.py verify-case BUNDLE_DIR \
     --source-root name=BUNDLE_DIR/roots/name
 
+# Evidence store (ADR-0028) — named file trees that keep each distinct file
+# content once, compressed under its SHA-256. Packing refuses symlinks,
+# special files, and an existing output; every read and unpack is bounded and
+# checked against the indexed length and digest; `verify` exits 1 on any
+# failure and also refuses unreferenced or misnamed files:
+avila-core store pack --out STORE case=CASE_DIR workspace=WORKSPACE_DIR
+avila-core store verify STORE
+avila-core store ls STORE [TREE]
+avila-core store cat STORE TREE PATH
+avila-core store unpack STORE --out DIR [--tree NAME]...
+# The standard-library Python verifier reads the same format:
+python3 verifier/store_verify.py store-verify STORE
+python3 verifier/store_verify.py store-unpack STORE OUT
+
 # Historical verification (ADR-0006) — per qualified claim, an
 # informational [ASOF] line naming its recorded state beside the labeled
 # state at the supplied instant; --as-of-material DIR supplies a snapshot

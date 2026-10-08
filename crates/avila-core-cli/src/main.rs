@@ -194,6 +194,53 @@ enum Command {
         #[command(subcommand)]
         command: SignCommand,
     },
+    /// Pack, verify, list, read, and unpack content-addressed evidence
+    /// stores: named file trees that keep each distinct content once,
+    /// compressed (ADR-0028).
+    Store {
+        #[command(subcommand)]
+        command: StoreCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum StoreCommand {
+    /// Create a new store from named directories. Refuses symbolic links,
+    /// special files, and an existing output directory.
+    Pack {
+        /// The store directory to create. Must not exist.
+        #[arg(long, value_name = "STORE")]
+        out: PathBuf,
+        /// A tree to include: `NAME=DIR`. Repeatable.
+        #[arg(value_name = "NAME=DIR", required = true)]
+        trees: Vec<String>,
+    },
+    /// Materialize trees byte-identically under a new directory as
+    /// `DIR/<tree>/<path>`, verifying every file.
+    Unpack {
+        store: PathBuf,
+        /// The directory to create. Must not exist.
+        #[arg(long, value_name = "DIR")]
+        out: PathBuf,
+        /// Unpack only this tree. Repeatable; default is every tree.
+        #[arg(long = "tree", value_name = "NAME")]
+        trees: Vec<String>,
+    },
+    /// Check the index, decode every blob against its digest and length,
+    /// and refuse anything else in the store. Prints a JSON report; exits 1
+    /// when verification fails.
+    Verify { store: PathBuf },
+    /// Write one verified file to standard output.
+    Cat {
+        store: PathBuf,
+        tree: String,
+        path: String,
+    },
+    /// List the trees of a store, or the files of one tree (JSON).
+    Ls {
+        store: PathBuf,
+        tree: Option<String>,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -773,6 +820,67 @@ fn language_options(
     Ok(options)
 }
 
+fn run_store(command: StoreCommand) -> Result<ExitCode, Box<dyn Error>> {
+    use avila_core_evidence::{EvidenceStore, pack_store, verify_store};
+    match command {
+        StoreCommand::Pack { out, trees } => {
+            let mut named = Vec::new();
+            for value in &trees {
+                let Some((name, dir)) = value.split_once('=') else {
+                    return Err(format!(
+                        "tree `{value}` must be NAME=DIR, for example case=./case"
+                    )
+                    .into());
+                };
+                named.push((name.to_owned(), PathBuf::from(dir)));
+            }
+            let report = pack_store(&out, &named)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        StoreCommand::Unpack { store, out, trees } => {
+            let report = EvidenceStore::open(&store)?.unpack(&out, &trees)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        StoreCommand::Verify { store } => {
+            let report = verify_store(&store);
+            println!("{}", serde_json::to_string_pretty(&report)?);
+            if report.status != avila_core_evidence::StoreVerifyStatus::Verified {
+                return Ok(ExitCode::from(1));
+            }
+        }
+        StoreCommand::Cat { store, tree, path } => {
+            let store = EvidenceStore::open(&store)?;
+            // Decode and verify once without output, then stream: no byte
+            // reaches standard output from a blob that fails verification.
+            store.verify_file(&tree, &path)?;
+            let mut reader = store.open_file(&tree, &path)?;
+            let mut stdout = io::stdout().lock();
+            io::copy(&mut reader, &mut stdout)?;
+            stdout.flush()?;
+        }
+        StoreCommand::Ls { store, tree } => {
+            let store = EvidenceStore::open(&store)?;
+            let value = match tree {
+                None => serde_json::json!({
+                    "trees": store.index().trees.iter().map(|tree| serde_json::json!({
+                        "name": tree.name,
+                        "files": tree.files.len(),
+                        "bytes": tree.files.iter().map(|file| file.bytes).sum::<u64>(),
+                    })).collect::<Vec<_>>(),
+                }),
+                Some(name) => {
+                    let tree = store
+                        .tree(&name)
+                        .ok_or_else(|| format!("store has no tree `{name}`"))?;
+                    serde_json::json!({ "name": tree.name, "files": tree.files })
+                }
+            };
+            println!("{}", serde_json::to_string_pretty(&value)?);
+        }
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
 fn main() -> ExitCode {
     match run() {
         Ok(code) => code,
@@ -1196,6 +1304,7 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
         Command::Sign { command } => {
             println!("{}", serde_json::to_string_pretty(&run_sign(command)?)?);
         }
+        Command::Store { command } => return run_store(command),
     }
     Ok(ExitCode::SUCCESS)
 }

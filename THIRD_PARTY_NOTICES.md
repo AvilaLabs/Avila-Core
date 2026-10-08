@@ -117,6 +117,24 @@ License text for the BSD-3-Clause dependencies above:
 [`LICENSES/BSD-3-Clause.txt`](LICENSES/BSD-3-Clause.txt). The AGPL license for
 Avila Core does not relicense these dependencies.
 
+## xz2 and lzma-sys (evidence-store compression)
+
+ADR-0028's evidence store compresses each distinct file content as one xz
+stream. `avila-core-evidence` depends on `xz2` with its `static` feature, so
+the bundled liblzma source is compiled into the binary and no system library
+is needed on any platform. Both crates are pinned exactly and confined to
+`avila-core-evidence::store`.
+
+- `xz2` 0.1.7 — MIT OR Apache-2.0 — Copyright (c) 2016 Alex Crichton
+  (<https://github.com/alexcrichton/xz2-rs>)
+- `lzma-sys` 0.1.20 (pulled in by `xz2`, pinned by `Cargo.lock`) —
+  MIT OR Apache-2.0 — Copyright (c) 2016 Alex Crichton; it bundles the XZ
+  Utils 5.2 liblzma sources, which are in the public domain
+  (<https://tukaani.org/xz/>)
+
+The Apache-2.0 text is in [`LICENSES/Apache-2.0.txt`](LICENSES/Apache-2.0.txt).
+The AGPL license for Avila Core does not relicense these dependencies.
+
 ## Rust dependencies and bundled fonts
 
 Rust dependencies are resolved by `Cargo.lock` and are not vendored in this
@@ -124,4 +142,4 @@ repository. Their licenses remain their own. A distributed binary must carry
 the notices required by its resolved dependency set, including the OFL-1.1 and
 Ubuntu Font License material reported by `epaint_default_fonts`, and the
 BSD-3-Clause and MIT/Apache-2.0 notices above for the cryptographic
-dependency set; the root AGPL file is not a substitute for those notices.
+dependency set and the MIT/Apache-2.0 notice for the compression crates; the root AGPL file is not a substitute for those notices.

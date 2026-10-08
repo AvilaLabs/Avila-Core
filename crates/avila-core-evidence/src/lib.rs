@@ -12,6 +12,7 @@ mod hash_cache;
 mod package;
 mod receipt;
 pub mod signature;
+mod store;
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -38,6 +39,11 @@ pub use receipt::{
     ReceiptCheck, ReceiptCheckState, ReceiptError, ReceiptExpectations, ReceiptFileCheck,
     ReceiptInput, ReceiptOutput, ReceiptStatus, RunnerIdentity, invocation_identity, parse_receipt,
     verify_receipt,
+};
+pub use store::{
+    EVIDENCE_STORE_CODEC, EVIDENCE_STORE_SCHEMA_VERSION, EvidenceStore, StoreError, StoreFile,
+    StoreFileReader, StoreFinding, StoreIndex, StorePackReport, StoreTree, StoreUnpackReport,
+    StoreVerifyReport, StoreVerifyStatus, pack_store, verify_store,
 };
 
 pub const EVIDENCE_SCHEMA_VERSION: &str = "avila.core/evidence-bundle/v0.1";

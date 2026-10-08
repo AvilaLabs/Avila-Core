@@ -5934,6 +5934,15 @@ fn tree_files(store: &Path, tree: &str) -> BTreeMap<String, Vec<u8>> {
 
 /// Every JSON pointer (array positions folded to `[]`) at which two values
 /// differ, so two runs' differing fields can be listed and compared.
+/// Clock readings differ between any two runs, but two quick runs can read
+/// the same millisecond, so they are allowed to differ without being observed
+/// to differ between the two directory runs.
+fn is_timing_field(field: &str) -> bool {
+    ["duration_ms", "started_at", "finished_at", "evaluated_at"]
+        .iter()
+        .any(|name| field.ends_with(&format!("/{name}")))
+}
+
 fn json_diff(left: &Value, right: &Value, at: &str, out: &mut BTreeSet<String>) {
     match (left, right) {
         (Value::Object(a), Value::Object(b)) => {
@@ -6125,6 +6134,7 @@ fn a_store_run_leaves_the_evidence_of_a_directory_run_and_nothing_else() {
             let (mut between_plain, mut with_store) = (BTreeSet::new(), BTreeSet::new());
             json_diff(&parse(a), &parse(b), "", &mut between_plain);
             json_diff(&parse(a), &parse(s), "", &mut with_store);
+            with_store.retain(|field| !is_timing_field(field));
             assert!(
                 with_store.is_subset(&between_plain),
                 "{path}: store run differs at {with_store:?}; two directory runs differ at {between_plain:?}"
@@ -6152,6 +6162,7 @@ fn a_store_run_leaves_the_evidence_of_a_directory_run_and_nothing_else() {
         &mut between_plain,
     );
     json_diff(&a, &returned, "", &mut with_store);
+    with_store.retain(|field| !is_timing_field(field));
     assert!(
         with_store.is_subset(&between_plain),
         "{with_store:?} vs {between_plain:?}"

@@ -114,3 +114,53 @@ The Python verifier gains the same read and verify operations with `lzma`.
   be checked.
 - The store is not a security boundary: anyone can write a store. Integrity
   comes from checking digests against receipts and packages, as before.
+
+## Amendment 1 (2026-10-08): stores in place of directories
+
+Measured after the format landed: three local runs of the coupled-shield case
+(`case-002`) leave 516 MB workspaces each. Nothing inside one run repeats, but
+every run stages the same 238 MB of nuclear data and the 9 MB ACTINV tool, and
+the activation step leaves a 275 MB ACTINV preparation cache in its directory
+that no output declares. The original decision removes duplication inside one
+pack; this amendment lets Core work on stores directly, share them across runs,
+and keep only evidence. Nothing above is changed except rule 4's preset
+sentence, as stated in A2.
+
+**A1. Appendable stores.** A store may gain trees after it is created. A writer
+holds an exclusive lock, `store.lock` (created exclusively, holding the writer's
+process id and host; an existing lock refuses the write and says how to clear a
+stale one). New blobs are written under `tmp/` and renamed into `blobs/`; a blob
+that already exists is kept after it verifies. The new index is written to
+`tmp/` and renamed over `store.json`, so readers see the old or the new index,
+never a partial one. Trees already in the store are never changed or removed by
+adding; adding an existing tree name is refused. `store.lock` and `tmp/` are
+writer state: readers ignore them, and `store verify` reports their presence
+without failing. Removing trees (garbage collection) is out of scope.
+
+**A2. Writer preset.** Rule 4's "Writers use xz preset 9" becomes: `store pack`
+uses preset 9; run persistence (A4) uses preset 6. Identity is over the
+uncompressed bytes, so the preset never affects verification.
+
+**A3. Reading cases and workspaces from a store.** Wherever a command takes a
+case package directory, a source root directory or a workspace directory to
+read or verify, it also accepts `store:<STORE_DIR>#<TREE>`. Reading a file from
+such a root is a verified store read (length and SHA-256 checked before the
+bytes are used); a path that is not in the tree's index is missing. Package,
+receipt and campaign verification therefore give the same results from a store
+tree as from the same files on disk. Commands that write (run, export) still
+write to directories unless A4 applies.
+
+**A4. Run persistence: `run --store STORE_DIR`.** Steps still execute in a
+scratch step directory, because programs need real files. After a step's
+receipt verifies, Core puts the step's receipt, declared inputs, declared
+outputs and logs into the store and deletes the step directory, including any
+file the step did not declare (scratch). A downstream step's staged inputs are
+materialized from the store with a verified read. When the run ends, Core adds
+one tree, named from the case id, run timestamp and process id, laid out
+exactly as the workspace would be with scratch removed (`<step>/receipt.json`,
+`<step>/inputs/…`, `<step>/outputs/…`, `<step>/logs/…`, and the run's
+reports), and prints its `store:` address. Identical files across runs, such as
+nuclear data and tools, are stored once. `--keep-scratch` keeps each step
+directory as it is today, for debugging. Without `--store`, `run` behaves
+exactly as before. Receipts, invocation identities and reports are unchanged:
+they record the same workspace paths and digests.

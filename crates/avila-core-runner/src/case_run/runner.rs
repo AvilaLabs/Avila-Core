@@ -15,6 +15,7 @@ use super::plan::{ImpactReport, InvalidatedNode, ReusedNode};
 use super::replay::changes_since;
 use super::stderr::{DiagnosticStderrFeedback, read_diagnostic_stderr};
 use super::*;
+use avila_core_evidence::BlobRef;
 
 /// A fresh output of an executed step, available to later steps and to
 /// claim generation.
@@ -22,6 +23,9 @@ use super::*;
 struct FreshOutput {
     evidence_id: String,
     path: PathBuf,
+    /// Set under `--store`: the output lives in the store (the step
+    /// directory is deleted) and is read back with verification.
+    blob: Option<BlobRef>,
     sha256: String,
     media_type: String,
 }
@@ -32,6 +36,7 @@ struct FreshOutput {
 struct ResolvedArtifact {
     evidence_id: String,
     path: PathBuf,
+    blob: Option<BlobRef>,
     sha256: String,
     media_type: String,
     integrity: IntegrityCheckState,
@@ -81,6 +86,8 @@ pub(super) struct Runner<'a> {
     /// scoped to real binding edges. Each exempts its `(step, slot)` edge's
     /// input changes from disqualifying reuse.
     resolved_rules: &'a [super::reuse_rules::ResolvedRule],
+    /// `run --store`: where steps' evidence goes (ADR-0028 A4).
+    run_store: Option<&'a RunStore>,
 }
 
 impl<'a> Runner<'a> {
@@ -97,6 +104,7 @@ impl<'a> Runner<'a> {
         runner_key: Option<[u8; 32]>,
         resolved_rules: &'a [super::reuse_rules::ResolvedRule],
         roots: &'a StagedRoots,
+        run_store: Option<&'a RunStore>,
     ) -> Self {
         let artifact_checks = package
             .integrity()
@@ -161,6 +169,7 @@ impl<'a> Runner<'a> {
             runner_key_id,
             catalog,
             resolved_rules,
+            run_store,
         }
     }
 
@@ -903,6 +912,7 @@ impl<'a> Runner<'a> {
                         input_slot: binding.input_slot.clone(),
                         evidence_id: artifact.evidence_id,
                         source_path: artifact.path,
+                        store_blob: artifact.blob,
                         workspace_path: (*workspace_path).to_string(),
                         media_type: artifact.media_type,
                         expected_sha256: artifact.sha256,
@@ -1096,7 +1106,7 @@ impl<'a> Runner<'a> {
                     input.input_slot.clone(),
                     input.media_type.clone(),
                     input.expected_sha256.clone(),
-                    fs::read(&input.source_path)?,
+                    input.read_source()?,
                 ));
             }
             match adapter.applicability(&staged_bytes, &plan.invocation_sha256) {
@@ -1343,6 +1353,7 @@ impl<'a> Runner<'a> {
                         &outputs,
                         true,
                         &receipt.process.started_at,
+                        &BTreeMap::new(),
                     )?;
                     report.reused_receipt = Some(document_id.clone());
                     report.state = StepExecutionState::Reused;
@@ -1714,8 +1725,19 @@ impl<'a> Runner<'a> {
 
         if !verified || !report.findings.is_empty() {
             report.state = StepExecutionState::Failed;
+            // A failed receipt is evidence too; the directory stays for
+            // inspection.
+            if let Some(run_store) = self.run_store {
+                run_store.persist_step(&step.step_id, &outcome.step_dir, &receipt)?;
+            }
             return Ok(report);
         }
+        let blobs = match self.run_store {
+            Some(run_store) => {
+                run_store.persist_step(&step.step_id, &outcome.step_dir, &receipt)?
+            }
+            None => BTreeMap::new(),
+        };
 
         let produced: Vec<(ReceiptOutput, PathBuf)> = receipt
             .outputs
@@ -1735,7 +1757,13 @@ impl<'a> Runner<'a> {
             &produced,
             false,
             &receipt.process.started_at,
+            &blobs,
         )?;
+        // Everything the step declared is in the store; the directory,
+        // undeclared scratch included, is no longer needed.
+        if let Some(run_store) = self.run_store {
+            run_store.discard_step_dir(&outcome.step_dir)?;
+        }
         report.state = StepExecutionState::Executed;
         Ok(report)
     }
@@ -1754,6 +1782,7 @@ impl<'a> Runner<'a> {
         produced: &[(ReceiptOutput, PathBuf)],
         reused: bool,
         evaluated_at: &str,
+        blobs: &BTreeMap<String, BlobRef>,
     ) -> Result<(), Box<dyn Error>> {
         let qualification = self.current_qualification.clone();
         let covered_slots = self.current_qualification_covered_slots.clone();
@@ -1769,11 +1798,19 @@ impl<'a> Runner<'a> {
             let claim_id = claim_ids_by_slot
                 .get(claim.output_slot.as_str())
                 .ok_or_else(|| format!("output slot `{}` has no claim id", claim.output_slot))?;
+            let blob = blobs.get(&claim.output_id).cloned();
             self.fresh_outputs.insert(
                 (step.step_id.clone(), claim.output_slot.clone()),
                 FreshOutput {
                     evidence_id: (*claim_id).to_string(),
-                    path: path.clone(),
+                    // The step directory is deleted once persisted; the
+                    // stored blob stands in for its path.
+                    path: if blob.is_some() {
+                        PathBuf::new()
+                    } else {
+                        path.clone()
+                    },
+                    blob,
                     sha256: sha256.clone(),
                     media_type: output.media_type.clone(),
                 },
@@ -1922,6 +1959,9 @@ impl<'a> Runner<'a> {
         // Absolute, so confinement checks agree with the paths staged under it
         // when the operator names a relative workspace.
         let workspace = fs::canonicalize(&workspace)?;
+        if let Some(run_store) = self.run_store {
+            run_store.begin(&self.package.manifest().case_id, &workspace);
+        }
         self.workspace = Some(workspace.clone());
         Ok(workspace)
     }
@@ -1949,6 +1989,7 @@ impl<'a> Runner<'a> {
                     return Ok(ResolvedArtifact {
                         evidence_id: fresh.evidence_id.clone(),
                         path: fresh.path.clone(),
+                        blob: fresh.blob.clone(),
                         sha256: fresh.sha256.clone(),
                         media_type: fresh.media_type.clone(),
                         integrity: IntegrityCheckState::Verified,
@@ -2002,6 +2043,7 @@ impl<'a> Runner<'a> {
         Ok(ResolvedArtifact {
             evidence_id: evidence_id.to_string(),
             path,
+            blob: None,
             sha256: check.expected_sha256.clone(),
             media_type,
             integrity: check.state,

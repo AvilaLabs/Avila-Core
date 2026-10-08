@@ -304,3 +304,91 @@ fn a_case_is_planned_and_exported_identically_from_a_store_tree() {
     assert_eq!(bad.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&bad.stderr).contains("tree `nope`"));
 }
+
+/// The pinned interpreter of the bundled matmul case, when this machine has
+/// it; the run test is skipped otherwise.
+fn matmul_python() -> Option<PathBuf> {
+    let python = PathBuf::from("/usr/bin/python3");
+    let (digest, _) = avila_core_evidence::sha256_file(&python).ok()?;
+    (digest == "sha256:52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41")
+        .then_some(python)
+}
+
+fn run_matmul(dir: &TestDir, python: &Path, extra: &[&str]) -> Output {
+    let case =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/cases/case-010-matmul-rank");
+    Command::new(BIN)
+        .arg("run")
+        .arg(&case)
+        .arg("--source-root")
+        .arg(format!("matmul={}", case.join("capability").display()))
+        .arg("--source-root")
+        .arg(format!("case={}", case.display()))
+        .arg("--capability")
+        .arg(format!("python3={}", python.display()))
+        .args(["--no-reuse", "--json"])
+        .arg("--workspace")
+        .arg(dir.0.join("ws"))
+        .args(extra)
+        .output()
+        .unwrap()
+}
+
+#[test]
+fn run_store_persists_the_run_and_removes_the_workspace() {
+    let Some(python) = matmul_python() else {
+        eprintln!("skipped: the pinned python3 is not at /usr/bin/python3");
+        return;
+    };
+    let dir = TestDir::new("run-store");
+    let store_dir = dir.0.join("runs.store");
+    let ran = run_matmul(&dir, &python, &["--store", text(&store_dir)]);
+    assert!(ran.status.success(), "{ran:?}");
+    let report = json(&ran);
+    let tree = report["store"]["tree"].as_str().unwrap();
+    assert_eq!(
+        report["store"]["address"],
+        format!("store:{}#{tree}", store_dir.display())
+    );
+    assert!(tree.starts_with("CASE-010."), "{tree}");
+    assert!(!dir.0.join("ws").exists());
+
+    let verified = store(&["verify", text(&store_dir)]);
+    assert!(verified.status.success(), "{verified:?}");
+    let listing = store(&["ls", text(&store_dir), tree]);
+    let listing = json(&listing);
+    let paths: Vec<&str> = listing["files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|file| file["path"].as_str().unwrap())
+        .collect();
+    for expected in [
+        "run-report.json",
+        "claims.json",
+        "campaign-report.json",
+        "verify/receipt.json",
+    ] {
+        assert!(paths.contains(&expected), "{expected} in {paths:?}");
+    }
+    // run-report.json does not carry the store field.
+    let written = store(&["cat", text(&store_dir), tree, "run-report.json"]);
+    assert!(json(&written).get("store").is_none());
+}
+
+#[test]
+fn run_without_store_reports_no_store_and_keep_scratch_needs_one() {
+    let Some(python) = matmul_python() else {
+        eprintln!("skipped: the pinned python3 is not at /usr/bin/python3");
+        return;
+    };
+    let dir = TestDir::new("run-plain");
+    let ran = run_matmul(&dir, &python, &[]);
+    assert!(ran.status.success(), "{ran:?}");
+    assert!(json(&ran).get("store").is_none());
+    assert!(dir.0.join("ws/verify/receipt.json").is_file());
+
+    let refused = run_matmul(&dir, &python, &["--keep-scratch"]);
+    assert!(!refused.status.success());
+    assert!(String::from_utf8_lossy(&refused.stderr).contains("--store"));
+}

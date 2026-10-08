@@ -712,6 +712,18 @@ struct RunArgs {
     /// current directory when something is executed.
     #[arg(long, value_name = "DIR")]
     workspace: Option<PathBuf>,
+    /// Persist this run into the evidence store at DIR (created empty if
+    /// absent) instead of leaving the workspace behind: each executed step's
+    /// receipt, declared inputs, outputs and logs are stored as soon as the
+    /// receipt verifies and its scratch directory is deleted; when the run
+    /// ends one tree `<case>.<stamp>-<pid>` is added, readable as
+    /// `store:DIR#TREE`. A failed step's directory is kept. See ADR-0028.
+    #[arg(long, value_name = "DIR")]
+    store: Option<PathBuf>,
+    /// With --store, keep every step directory and the workspace's files as
+    /// a directory run leaves them, in addition to writing the tree.
+    #[arg(long = "keep-scratch", requires = "store")]
+    keep_scratch: bool,
     /// Execute every declared step afresh instead of reusing a step whose
     /// committed receipt matches the planned invocation and whose outputs
     /// still verify.
@@ -1235,6 +1247,8 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 capabilities,
                 capability_dirs,
                 workspace,
+                store,
+                keep_scratch,
                 no_reuse,
                 expect_manifest,
                 plan,
@@ -1275,6 +1289,8 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 trust_root,
                 runner_key,
                 capability_dirs,
+                store,
+                keep_scratch,
             };
             let report = avila_core_runner::execute_case(&case, &options)?;
             if json {

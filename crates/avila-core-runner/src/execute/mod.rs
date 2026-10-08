@@ -24,9 +24,9 @@ use std::process::{Command, Stdio};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use avila_core_evidence::{
-    CapabilityIdentity, CapabilityTypeRef, EXECUTION_RECEIPT_SCHEMA_VERSION, ExecutionReceipt,
-    Invocation, LogRecord, OutputState, ProcessOutcome, RECEIPT_NOTICE, ReceiptInput,
-    ReceiptOutput, ReceiptStatus, RunnerIdentity, invocation_identity, sha256_file,
+    BlobRef, CapabilityIdentity, CapabilityTypeRef, EXECUTION_RECEIPT_SCHEMA_VERSION,
+    ExecutionReceipt, Invocation, LogRecord, OutputState, ProcessOutcome, RECEIPT_NOTICE,
+    ReceiptInput, ReceiptOutput, ReceiptStatus, RunnerIdentity, invocation_identity, sha256_file,
 };
 use serde_json::Value;
 
@@ -398,9 +398,42 @@ pub struct StagedInput {
     pub input_slot: String,
     pub evidence_id: String,
     pub source_path: PathBuf,
+    /// A fresh output of an earlier step that lives in an evidence store
+    /// (`run --store`), read back with verification instead of from
+    /// `source_path`.
+    pub store_blob: Option<BlobRef>,
     pub workspace_path: String,
     pub media_type: String,
     pub expected_sha256: String,
+}
+
+impl StagedInput {
+    /// The byte length of the source.
+    fn source_len(&self) -> Result<u64, Box<dyn Error>> {
+        match &self.store_blob {
+            Some(blob) => Ok(blob.bytes()),
+            None => Ok(fs::metadata(&self.source_path)?.len()),
+        }
+    }
+
+    /// The source's bytes; a store blob is read with verification.
+    pub(crate) fn read_source(&self) -> Result<Vec<u8>, Box<dyn Error>> {
+        match &self.store_blob {
+            Some(blob) => Ok(blob.read()?),
+            None => Ok(fs::read(&self.source_path)?),
+        }
+    }
+
+    /// Copy the source to a new file at `destination`.
+    fn stage_to(&self, destination: &Path) -> Result<(), Box<dyn Error>> {
+        match &self.store_blob {
+            Some(blob) => Ok(blob.copy_to(destination)?),
+            None => {
+                fs::copy(&self.source_path, destination)?;
+                Ok(())
+            }
+        }
+    }
 }
 
 /// Everything the runner needs to execute one step.
@@ -447,7 +480,7 @@ pub fn plan_invocation(
     let mut inputs = Vec::with_capacity(staged.len());
     let mut staged_paths = BTreeMap::new();
     for input in staged {
-        let bytes = fs::metadata(&input.source_path)?.len();
+        let bytes = input.source_len()?;
         staged_paths.insert(input.input_slot.clone(), input.workspace_path.clone());
         inputs.push(ReceiptInput {
             input_slot: input.input_slot.clone(),
@@ -537,7 +570,7 @@ pub fn execute_step(
         if let Some(parent) = destination.parent() {
             fs::create_dir_all(parent)?;
         }
-        fs::copy(&input.source_path, &destination)?;
+        input.stage_to(&destination)?;
         let (sha256, bytes) = sha256_file(&destination)?;
         if sha256 != planned.sha256 || bytes != planned.bytes {
             return Err(format!(
@@ -833,6 +866,7 @@ mod tests {
             input_slot: input_slot.into(),
             evidence_id: format!("input:{input_slot}"),
             source_path: source_path.clone(),
+            store_blob: None,
             workspace_path: workspace_path.into(),
             media_type: "application/json".into(),
             expected_sha256:
@@ -1091,6 +1125,7 @@ mod tests {
                 input_slot: "config".into(),
                 evidence_id: "input:config".into(),
                 source_path: config_path,
+                store_blob: None,
                 workspace_path: "inputs/config.json".into(),
                 media_type: "application/json".into(),
                 expected_sha256: config_sha256,

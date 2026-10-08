@@ -284,6 +284,8 @@ files against a package or receipt is still the job of the verification
 described above. Amendment 1 lets a store gain trees and lets commands read
 a case package, source root or workspace in place as `store:<STORE>#<TREE>`
 with the same results as the files on disk (`docs/product/CORE_TOOLS.md`).
+A4 lets `run --store` persist a run's evidence into a store as steps finish,
+keeping only declared inputs, outputs, logs and receipts, one tree per run.
 
 ## Redaction and retention (owner-gated)
 

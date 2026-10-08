@@ -88,6 +88,9 @@ mod plan;
 pub use plan::{
     BoundDecision, BoundPlan, BoundPlanStatus, BoundStep, UnresolvedKind, UnresolvedRequirement,
 };
+mod persist;
+use persist::RunStore;
+pub use persist::StoreRunReport;
 mod runner;
 use runner::Runner;
 mod report;
@@ -160,6 +163,15 @@ pub struct CaseRunOptions {
     /// match wins. An explicit `--capability` supply always wins over the
     /// catalog, and bytes are still hash-verified after selection.
     pub capability_dirs: Vec<PathBuf>,
+    /// ADR-0028 A4: persist the run into this evidence store (created empty
+    /// if absent). Steps still execute in scratch directories under the
+    /// workspace; their receipts, declared inputs, outputs and logs go into
+    /// the store and the directories are deleted, and one tree holding the
+    /// workspace's evidence is added when the run ends.
+    pub store: Option<PathBuf>,
+    /// With `store`: keep every step directory (and the workspace's files)
+    /// as a directory run leaves them, in addition to writing the tree.
+    pub keep_scratch: bool,
 }
 
 impl Default for CaseRunOptions {
@@ -180,6 +192,8 @@ impl Default for CaseRunOptions {
             trust_root: None,
             runner_key: None,
             capability_dirs: Vec::new(),
+            store: None,
+            keep_scratch: false,
         }
     }
 }
@@ -635,6 +649,10 @@ pub struct CaseRunReport {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub replay: Option<ReplayReport>,
     pub notice: String,
+    /// Where `--store` put this run's evidence. Added after `run-report.json`
+    /// is written, so that file is the same with and without a store.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub store: Option<StoreRunReport>,
 }
 
 impl CaseRunReport {
@@ -740,7 +758,14 @@ pub fn execute_case(
 ) -> Result<CaseRunReport, Box<dyn Error>> {
     let trust_root = load_trust_root(options)?;
     let runner_key = load_runner_key(options)?;
-    match execute_case_inner(case_or_manifest, options, trust_root.as_ref(), runner_key) {
+    let run_store = RunStore::open(options)?;
+    match execute_case_inner(
+        case_or_manifest,
+        options,
+        trust_root.as_ref(),
+        runner_key,
+        run_store.as_ref(),
+    ) {
         Ok(mut report) => {
             collect_run_findings(&mut report);
             if options.plan_only && report.bound_plan.is_none() {
@@ -808,6 +833,13 @@ pub fn execute_case(
                 trust_root.as_ref(),
                 runner_key,
             )?;
+            if let Some(run_store) = &run_store {
+                report.store = run_store.finish().map_err(|error| {
+                    format!(
+                        "the run finished but its evidence could not be added to the store: {error}"
+                    )
+                })?;
+            }
             Ok(report)
         }
         Err(error) => {
@@ -827,6 +859,16 @@ pub fn execute_case(
                 )
                 .into());
             }
+            // Whatever the run persisted before it stopped is evidence too.
+            if let Some(run_store) = &run_store
+                && let Ok(Some(stored)) = run_store.finish()
+            {
+                return Err(format!(
+                    "{error}; the evidence gathered before the run stopped was added to the store as {}",
+                    stored.address
+                )
+                .into());
+            }
             Err(error)
         }
     }
@@ -837,6 +879,7 @@ fn execute_case_inner(
     options: &CaseRunOptions,
     trust_root: Option<&TrustRoot>,
     runner_key: Option<[u8; 32]>,
+    run_store: Option<&RunStore>,
 ) -> Result<CaseRunReport, Box<dyn Error>> {
     // The case may also be a store tree, `store:<STORE_DIR>#<TREE>`; its
     // manifest is read verified. Execution still stages real files.
@@ -924,6 +967,7 @@ fn execute_case_inner(
                 replay_applicable: options.inputs.is_empty(),
                 replay: None,
                 notice: CASE_RUN_NOTICE.into(),
+                store: None,
             };
             report.findings.extend(cache_load_finding);
             report.findings.extend(cache_save_finding);
@@ -976,6 +1020,7 @@ fn execute_case_inner(
         replay_applicable,
         replay: None,
         notice: CASE_RUN_NOTICE.into(),
+        store: None,
     };
     report.findings.extend(cache_load_finding);
     report.findings.extend(cache_save_finding);
@@ -1267,6 +1312,7 @@ fn execute_case_inner(
             runner_key,
             &resolved_rules,
             &staged_roots,
+            run_store,
         );
         let execution = runner.run_all()?;
         if options.plan_only {
@@ -1406,6 +1452,7 @@ fn execute_case_inner(
         workspace.as_deref(),
         report.execution.as_ref(),
         &staged_roots,
+        run_store,
     );
     let observed_evaluation =
         evaluate_campaign_in_context(contract, registry, &generated.bytes, observations)?;
@@ -1498,16 +1545,38 @@ fn collect_run_observations(
     workspace: Option<&Path>,
     execution: Option<&ExecutionReport>,
     source_roots: &StagedRoots,
+    run_store: Option<&RunStore>,
 ) -> ArtifactObservations {
     let mut observations = ArtifactObservations::none();
     if let (Some(workspace), Some(execution)) = (workspace, execution) {
         for step in &execution.steps {
             for output in &step.outputs {
-                let _ = observations
-                    .check_file(&workspace.join(&step.step_id).join(&output.workspace_path));
+                let relative = format!("{}/{}", step.step_id, output.workspace_path);
+                match run_store {
+                    // The step directory is gone; the persisted bytes are
+                    // read back with verification.
+                    Some(store) => {
+                        if let Some(bytes) = store.read_tree_file(&relative) {
+                            observations.check_bytes(&bytes);
+                        }
+                    }
+                    None => {
+                        let _ = observations.check_file(&workspace.join(relative));
+                    }
+                }
             }
             if let Some(receipt) = &step.receipt {
-                let _ = observations.check_receipt_file(&workspace.join(&receipt.workspace_path));
+                match run_store {
+                    Some(store) => {
+                        if let Some(bytes) = store.read_tree_file(&receipt.workspace_path) {
+                            observations.check_receipt(&bytes);
+                        }
+                    }
+                    None => {
+                        let _ = observations
+                            .check_receipt_file(&workspace.join(&receipt.workspace_path));
+                    }
+                }
             }
         }
     }

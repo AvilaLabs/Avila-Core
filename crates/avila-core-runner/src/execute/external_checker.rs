@@ -1055,6 +1055,8 @@ mod tests {
             trust_root: None,
             runner_key: None,
             capability_dirs: Vec::new(),
+            store: None,
+            keep_scratch: false,
         }
     }
 

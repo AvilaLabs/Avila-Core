@@ -307,6 +307,11 @@ pub struct CaseSetup {
     /// Operator-owned JSON file caching verified digests of large artifacts
     /// resolved under a source root. Empty means off, the default.
     pub hash_cache: String,
+    /// Evidence store to persist each run into (ADR-0028 A4). Empty means the
+    /// run leaves its workspace directory, the default.
+    pub store: String,
+    /// With a store: keep the step directories as well as writing the tree.
+    pub keep_scratch: bool,
     /// Optional campaign history appended by the runner for each run or plan.
     pub log: String,
     /// The requester and runner public keys this run accepts (ADR-0015).
@@ -379,6 +384,8 @@ impl CaseSetup {
                 "--show-help" => setup.show_help = true,
                 "--workspace" => setup.workspace = value()?,
                 "--hash-cache" => setup.hash_cache = value()?,
+                "--store" => setup.store = value()?,
+                "--keep-scratch" => setup.keep_scratch = true,
                 "--log" => setup.log = value()?,
                 "--trust-root" => setup.trust_root = value()?,
                 "--runner-key" => setup.runner_key = value()?,
@@ -507,6 +514,8 @@ impl CaseSetup {
             plan_only,
             hash_cache: (!self.hash_cache.trim().is_empty())
                 .then(|| PathBuf::from(self.hash_cache.trim())),
+            store: (!self.store.trim().is_empty()).then(|| PathBuf::from(self.store.trim())),
+            keep_scratch: self.keep_scratch,
             log: (!self.log.trim().is_empty()).then(|| PathBuf::from(self.log.trim())),
             gate_respond_by: None,
             trust_root: (!self.trust_root.trim().is_empty())
@@ -1042,6 +1051,23 @@ impl CaseView {
                         .desired_width(f32::INFINITY),
                 );
             });
+            ui.horizontal(|ui| {
+                ui.label("Evidence store");
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.setup.store)
+                        .hint_text(
+                            "off by default; a store directory to keep this run's evidence in (created if absent)",
+                        )
+                        .desired_width(f32::INFINITY),
+                );
+            });
+            ui.add_enabled(
+                !self.setup.store.trim().is_empty(),
+                egui::Checkbox::new(
+                    &mut self.setup.keep_scratch,
+                    "Also keep each step's directory (with a store)",
+                ),
+            );
             ui.horizontal(|ui| {
                 ui.label("Hash cache");
                 ui.add(

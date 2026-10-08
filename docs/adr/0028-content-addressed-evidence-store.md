@@ -173,3 +173,15 @@ as its steps finish and holds the lock only for the moment it adds its tree,
 so several runs can share one store. A run whose store does not exist yet
 creates an empty one. A run that fails still adds its tree (failed receipts are
 evidence) and keeps the failed step's directory for inspection, saying where.
+
+**A4 note 2 (2026-10-08).** To verify one step of a stored run in place, a
+store address may name a directory inside a tree: `store:<STORE_DIR>#<TREE>/<DIR>`
+(tree names cannot contain `/`, so the split is unambiguous). Such a root reads
+only files under `<DIR>/`, with that prefix removed, and is missing if the tree
+has no file there. Adding a tree waits up to 30 seconds for a lock another
+run holds, then reports it as `store.lock` always has. The tree is the files
+the run put, so a run that is interrupted leaves blobs no tree references;
+`store verify` reports them as unreferenced and they can be removed once
+garbage collection exists. The run's JSON output carries the address in a
+`store` field; `run-report.json` is written before it is known and is the same
+with and without a store.

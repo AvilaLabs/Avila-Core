@@ -679,6 +679,7 @@ fn run_observations_bind_checked_artifacts_and_receipts() {
         None,
         None,
         &StagedRoots::new(&shielding_root(), Path::new(".")),
+        None,
     );
     assert!(
         observations.observed().count() > 0,
@@ -780,6 +781,8 @@ fn case_000_executes_both_tools_when_available() {
         trust_root: None,
         runner_key: None,
         capability_dirs: Vec::new(),
+        store: None,
+        keep_scratch: false,
     };
     let report = execute_case(&case_000(), &options).unwrap();
     let summary = human_summary(&report);

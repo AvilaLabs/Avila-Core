@@ -103,12 +103,36 @@ python3 verifier/store_verify.py store-unpack STORE OUT
 # against its indexed length and digest first; a path not in the tree is
 # missing, and a blob that fails verification is a digest mismatch. Reports
 # match those for the same files on disk (only fields that name the root
-# differ). run and export still write directories; run stages real files
+# differ). export still writes a directory; run stages real files
 # into its workspace directory, copying store-tree source files out
 # verified. The hash cache never applies to store trees:
 avila-core run store:STORE#case --plan --source-root case=store:STORE#case
 avila-core export store:STORE#case --source-root name=store:STORE#name --out BUNDLE_DIR
 avila-core capabilities store:STORE#case --scan DIR
+# A tree may be anchored at a directory inside it, `store:STORE#TREE/DIR`, so
+# one step of a stored run is a workspace of its own:
+avila-core run store:STORE#case --plan --source-root case=store:STORE#run-tree/DIR
+
+# Run persistence (ADR-0028 A4) — `run --store STORE` executes steps in
+# scratch directories under the workspace as always, but as each receipt
+# verifies it puts the receipt (and signature), declared inputs, outputs and
+# logs into STORE (created empty if absent) and deletes the step directory,
+# undeclared scratch files included; a later step reads an upstream output
+# back from the store with verification. When the run ends one tree
+# `<case>.<stamp>-<pid>` is added under the store lock, with the same
+# relative paths and bytes a directory run leaves (`<step>/receipt.json`,
+# `<step>/inputs/…`, `<step>/outputs/…`, `<step>/logs/…`, `run-report.json`,
+# `claims.json`, `campaign-report.json`, …). The tree's `store:` address is
+# printed and added to the JSON output as `store` (never to run-report.json,
+# which is the same with and without a store). Receipts, invocation
+# identities, claims and verdicts are unchanged; blobs already in the store
+# (nuclear data, tools, repeated runs) are stored once. A failed run still
+# adds its tree and keeps the failed step's directory, printing where it is;
+# `--keep-scratch` keeps every step directory and the workspace's files too.
+# Concurrent runs may share one store: blobs are put without a lock, and a
+# run waits briefly for `store.lock` only to add its tree. A run that is
+# interrupted leaves unreferenced blobs, which `store verify` reports:
+avila-core run CASE --source-root name=DIR --capability name=EXE --store STORE [--keep-scratch]
 
 # Historical verification (ADR-0006) — per qualified claim, an
 # informational [ASOF] line naming its recorded state beside the labeled

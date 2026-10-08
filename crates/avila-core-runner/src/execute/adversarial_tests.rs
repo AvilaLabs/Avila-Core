@@ -373,6 +373,8 @@ fn run_options(synthetic: &Synthetic, workspace: PathBuf) -> CaseRunOptions {
         trust_root: None,
         runner_key: None,
         capability_dirs: Vec::new(),
+        store: None,
+        keep_scratch: false,
     }
 }
 
@@ -5844,4 +5846,563 @@ fn a_bound_plan_records_where_the_executable_came_from() {
     let report = execute_case(&synthetic.case_dir, &options).unwrap();
     let step = bound_step(report.bound_plan.as_ref().unwrap(), "classification");
     assert_eq!(step.capability_source.as_deref(), Some("supplied"));
+}
+
+// ---------------------------------------------------------------------------
+// `run --store` (ADR-0028 A4)
+// ---------------------------------------------------------------------------
+
+use avila_core_evidence::{
+    EvidenceStore, ExpectedInput, ReceiptExpectations, StoreVerifyStatus, parse_receipt,
+    verify_receipt, verify_store,
+};
+use std::collections::BTreeSet;
+
+/// Append an undeclared scratch file to a stub's work, so deleting step
+/// directories has something to delete.
+fn add_scratch(stub: &Path) {
+    let script = fs::read_to_string(stub).unwrap();
+    let script = script.replacen("exit 0", ": > scratch.tmp\nexit 0", 1);
+    fs::write(stub, script).unwrap();
+}
+
+/// The two-step chain with scratch-writing stubs, committed from an honest
+/// directory run like `blessed_chain`.
+fn scratchy_chain(dir: &TestDir) -> Synthetic {
+    let stub = dir.0.join("stub.sh");
+    let canned = dir.0.join("canned-route-result.json");
+    fs::write(&canned, canned_route_result("0.5")).unwrap();
+    write_copy_stub(&stub, &canned);
+    add_scratch(&stub);
+    let activation_stub = dir.0.join("activation.sh");
+    write_activation_stub(&activation_stub, STUB_INVENTORY.as_bytes());
+    add_scratch(&activation_stub);
+    let synthetic = build_package_with(&dir.0, &stub, Some(&activation_stub));
+    let workspace = dir.workspace();
+    let mut options = run_options(&synthetic, workspace.clone());
+    options
+        .capabilities
+        .insert("python3".into(), activation_stub);
+    let first = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(
+        first.execution.as_ref().unwrap().status,
+        ExecutionStatus::Executed,
+        "{}",
+        human_summary(&first)
+    );
+    bless(&synthetic, &workspace);
+    synthetic
+}
+
+fn directory_files(root: &Path) -> BTreeMap<String, Vec<u8>> {
+    fn walk(root: &Path, directory: &Path, found: &mut BTreeMap<String, Vec<u8>>) {
+        for entry in fs::read_dir(directory).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                walk(root, &path, found);
+            } else {
+                let relative = path.strip_prefix(root).unwrap();
+                let relative = relative
+                    .components()
+                    .map(|c| c.as_os_str().to_string_lossy().into_owned())
+                    .collect::<Vec<_>>()
+                    .join("/");
+                found.insert(relative, fs::read(&path).unwrap());
+            }
+        }
+    }
+    let mut found = BTreeMap::new();
+    walk(root, root, &mut found);
+    found
+}
+
+fn tree_files(store: &Path, tree: &str) -> BTreeMap<String, Vec<u8>> {
+    let opened = EvidenceStore::open(store).unwrap();
+    opened
+        .tree(tree)
+        .unwrap()
+        .files
+        .iter()
+        .map(|file| {
+            (
+                file.path.clone(),
+                opened.read_file(tree, &file.path).unwrap(),
+            )
+        })
+        .collect()
+}
+
+/// Every JSON pointer (array positions folded to `[]`) at which two values
+/// differ, so two runs' differing fields can be listed and compared.
+fn json_diff(left: &Value, right: &Value, at: &str, out: &mut BTreeSet<String>) {
+    match (left, right) {
+        (Value::Object(a), Value::Object(b)) => {
+            for key in a.keys().chain(b.keys()).collect::<BTreeSet<_>>() {
+                let here = format!("{at}/{key}");
+                match (a.get(key), b.get(key)) {
+                    (Some(x), Some(y)) => json_diff(x, y, &here, out),
+                    _ => {
+                        out.insert(here);
+                    }
+                }
+            }
+        }
+        (Value::Array(a), Value::Array(b)) if a.len() == b.len() => {
+            for (x, y) in a.iter().zip(b) {
+                json_diff(x, y, &format!("{at}[]"), out);
+            }
+        }
+        _ => {
+            if left != right {
+                out.insert(at.to_string());
+            }
+        }
+    }
+}
+
+/// The files a directory run leaves in `workspace` that its receipts declare:
+/// everything under a step directory except undeclared scratch, plus the
+/// workspace's own files. Returns (declared, scratch).
+fn split_scratch(files: &BTreeMap<String, Vec<u8>>) -> (BTreeSet<String>, BTreeSet<String>) {
+    let mut declared = BTreeSet::new();
+    let mut scratch = BTreeSet::new();
+    for path in files.keys() {
+        let Some((step, rest)) = path.split_once('/') else {
+            declared.insert(path.clone());
+            continue;
+        };
+        let receipt = parse_receipt(&files[&format!("{step}/receipt.json")]).unwrap();
+        let names: BTreeSet<&str> = ["receipt.json", "receipt.sig.json"]
+            .into_iter()
+            .chain(receipt.inputs.iter().map(|i| i.workspace_path.as_str()))
+            .chain(receipt.logs.iter().map(|l| l.workspace_path.as_str()))
+            .chain(
+                receipt
+                    .outputs
+                    .iter()
+                    .filter(|o| o.sha256.is_some())
+                    .map(|o| o.workspace_path.as_str()),
+            )
+            .collect();
+        if names.contains(rest) {
+            declared.insert(path.clone());
+        } else {
+            scratch.insert(path.clone());
+        }
+    }
+    (declared, scratch)
+}
+
+fn expectations_of(receipt: &avila_core_evidence::ExecutionReceipt) -> ReceiptExpectations {
+    ReceiptExpectations {
+        case_id: receipt.case_id.clone(),
+        compiled_snapshot_sha256: receipt.compiled_snapshot_sha256.clone(),
+        step_id: receipt.step_id.clone(),
+        capability_type: receipt.capability_type.clone(),
+        adapter: receipt.adapter.clone(),
+        adapter_sha256: receipt.invocation.adapter_sha256.clone(),
+        capability: receipt.capability.clone(),
+        inputs: receipt
+            .inputs
+            .iter()
+            .map(|input| {
+                (
+                    input.input_slot.clone(),
+                    ExpectedInput {
+                        evidence_id: input.evidence_id.clone(),
+                        sha256: input.sha256.clone(),
+                        media_type: input.media_type.clone(),
+                    },
+                )
+            })
+            .collect(),
+        outputs: receipt
+            .outputs
+            .iter()
+            .map(|o| o.output_id.clone())
+            .collect(),
+    }
+}
+
+fn store_options(
+    dir: &TestDir,
+    synthetic: &Synthetic,
+    store: &Path,
+    keep_scratch: bool,
+) -> CaseRunOptions {
+    let mut options = chain_options(dir, synthetic, false, false);
+    options.store = Some(store.to_path_buf());
+    options.keep_scratch = keep_scratch;
+    options
+}
+
+#[test]
+fn a_store_run_leaves_the_evidence_of_a_directory_run_and_nothing_else() {
+    let dir = TestDir::new();
+    let synthetic = scratchy_chain(&dir);
+    let store = dir.0.join("runs.store");
+
+    let plain_a = execute_case(
+        &synthetic.case_dir,
+        &chain_options(&dir, &synthetic, false, false),
+    )
+    .unwrap();
+    let plain_b = execute_case(
+        &synthetic.case_dir,
+        &chain_options(&dir, &synthetic, false, false),
+    )
+    .unwrap();
+    let stored = execute_case(
+        &synthetic.case_dir,
+        &store_options(&dir, &synthetic, &store, false),
+    )
+    .unwrap();
+    assert_eq!(
+        stored.status,
+        CaseRunStatus::Evaluated,
+        "{}",
+        human_summary(&stored)
+    );
+    let location = stored.store.clone().expect("a store run reports its tree");
+    assert_eq!(
+        location.address,
+        format!("store:{}#{}", store.display(), location.tree)
+    );
+    assert!(location.kept_directories.is_empty());
+    assert!(human_summary(&stored).contains(&location.address));
+
+    // The scratch step directories and the workspace are gone.
+    let workspace = PathBuf::from(
+        stored
+            .execution
+            .as_ref()
+            .unwrap()
+            .workspace
+            .clone()
+            .unwrap(),
+    );
+    assert!(!workspace.exists(), "{}", workspace.display());
+
+    let dir_a = directory_files(Path::new(
+        plain_a
+            .execution
+            .as_ref()
+            .unwrap()
+            .workspace
+            .as_ref()
+            .unwrap(),
+    ));
+    let dir_b = directory_files(Path::new(
+        plain_b
+            .execution
+            .as_ref()
+            .unwrap()
+            .workspace
+            .as_ref()
+            .unwrap(),
+    ));
+    let tree = tree_files(&store, &location.tree);
+    let (declared, scratch) = split_scratch(&dir_a);
+    assert_eq!(
+        scratch,
+        BTreeSet::from([
+            "activation/scratch.tmp".to_string(),
+            "classification/scratch.tmp".to_string()
+        ])
+    );
+    assert_eq!(tree.keys().cloned().collect::<BTreeSet<_>>(), declared);
+    assert_eq!(
+        dir_a.keys().collect::<Vec<_>>(),
+        dir_b.keys().collect::<Vec<_>>()
+    );
+
+    // Same bytes, except fields that differ between any two runs.
+    for path in &declared {
+        let (a, b, s) = (&dir_a[path], &dir_b[path], &tree[path]);
+        // Stand-in inputs are not all JSON; those must match byte for byte.
+        if path.ends_with(".json") && serde_json::from_slice::<Value>(a).is_ok() {
+            let parse = |bytes: &[u8]| serde_json::from_slice::<Value>(bytes).unwrap();
+            let (mut between_plain, mut with_store) = (BTreeSet::new(), BTreeSet::new());
+            json_diff(&parse(a), &parse(b), "", &mut between_plain);
+            json_diff(&parse(a), &parse(s), "", &mut with_store);
+            assert!(
+                with_store.is_subset(&between_plain),
+                "{path}: store run differs at {with_store:?}; two directory runs differ at {between_plain:?}"
+            );
+        } else {
+            assert_eq!(a, s, "{path}");
+        }
+    }
+
+    // run-report.json is the report the store run returned, minus the
+    // `store` field that is added after it is written.
+    let mut returned = serde_json::to_value(&stored).unwrap();
+    assert!(returned.as_object_mut().unwrap().remove("store").is_some());
+    let written: Value = serde_json::from_slice(&tree["run-report.json"]).unwrap();
+    assert_eq!(written, returned);
+
+    // The returned report differs from a directory run's at the same fields
+    // two directory runs differ at, plus the new `store` field.
+    let (mut between_plain, mut with_store) = (BTreeSet::new(), BTreeSet::new());
+    let a = serde_json::to_value(&plain_a).unwrap();
+    json_diff(
+        &a,
+        &serde_json::to_value(&plain_b).unwrap(),
+        "",
+        &mut between_plain,
+    );
+    json_diff(&a, &returned, "", &mut with_store);
+    assert!(
+        with_store.is_subset(&between_plain),
+        "{with_store:?} vs {between_plain:?}"
+    );
+
+    // Verifying a stored step as a workspace root (A3) gives the verdict the
+    // directory gives for the same step.
+    for step in ["activation", "classification"] {
+        let receipt = parse_receipt(&tree[&format!("{step}/receipt.json")]).unwrap();
+        let expected = expectations_of(&receipt);
+        let from_store = verify_receipt(
+            &receipt,
+            Path::new(&format!("{}/{step}", location.address)),
+            &expected,
+        )
+        .unwrap();
+        // The store run's receipt, verified against a directory unpacked from
+        // its tree, must agree with verifying it in place.
+        let unpacked = dir.0.join(format!("unpacked-{step}"));
+        for (path, bytes) in &tree {
+            if let Some(rest) = path.strip_prefix(&format!("{step}/")) {
+                let target = unpacked.join(rest);
+                fs::create_dir_all(target.parent().unwrap()).unwrap();
+                fs::write(target, bytes).unwrap();
+            }
+        }
+        let from_directory = verify_receipt(&receipt, &unpacked, &expected).unwrap();
+        assert_eq!(
+            from_store.state,
+            ReceiptCheckState::Verified,
+            "{:?}",
+            from_store.issues
+        );
+        assert_eq!(
+            serde_json::to_value(&from_store).unwrap(),
+            serde_json::to_value(&from_directory).unwrap()
+        );
+    }
+    assert_eq!(verify_store(&store).status, StoreVerifyStatus::Verified);
+}
+
+#[test]
+fn a_later_step_stages_an_upstream_output_from_the_store() {
+    let dir = TestDir::new();
+    let synthetic = scratchy_chain(&dir);
+    let store = dir.0.join("runs.store");
+    let report = execute_case(
+        &synthetic.case_dir,
+        &store_options(&dir, &synthetic, &store, false),
+    )
+    .unwrap();
+    let steps = &report.execution.as_ref().unwrap().steps;
+    assert_eq!(steps[0].state, StepExecutionState::Executed);
+    assert_eq!(steps[1].state, StepExecutionState::Executed);
+    let tree = tree_files(&store, &report.store.as_ref().unwrap().tree);
+    let upstream = parse_receipt(&tree["activation/receipt.json"]).unwrap();
+    let downstream = parse_receipt(&tree["classification/receipt.json"]).unwrap();
+    let inventory = upstream
+        .outputs
+        .iter()
+        .find(|o| o.workspace_path.ends_with("actinv-result.json"))
+        .unwrap();
+    let staged = downstream
+        .inputs
+        .iter()
+        .find(|i| i.input_slot == "inventory")
+        .unwrap();
+    assert_eq!(staged.sha256, *inventory.sha256.as_ref().unwrap());
+    assert_eq!(
+        format!(
+            "sha256:{}",
+            sha256_hex(&tree["classification/in/inventory.json"])
+        ),
+        staged.sha256
+    );
+    assert_eq!(
+        tree["classification/in/inventory.json"],
+        tree["activation/cases/r0/reference/actinv-result.json"]
+    );
+}
+
+#[test]
+fn the_same_case_run_twice_into_one_store_shares_its_blobs() {
+    let dir = TestDir::new();
+    let synthetic = scratchy_chain(&dir);
+    let store = dir.0.join("runs.store");
+    let first = execute_case(
+        &synthetic.case_dir,
+        &store_options(&dir, &synthetic, &store, false),
+    )
+    .unwrap();
+    let blobs_after_first = EvidenceStore::open(&store).unwrap().verify().distinct_blobs;
+    let second = execute_case(
+        &synthetic.case_dir,
+        &store_options(&dir, &synthetic, &store, false),
+    )
+    .unwrap();
+    let (a, b) = (first.store.unwrap(), second.store.unwrap());
+    assert_ne!(a.tree, b.tree);
+    assert_eq!(a.files, b.files);
+    // Receipts and reports carry timestamps, so a few blobs are new; the
+    // inputs, outputs and logs are not.
+    assert!(
+        b.new_blobs < a.new_blobs,
+        "{} vs {}",
+        b.new_blobs,
+        a.new_blobs
+    );
+    assert!(b.reused_blobs > 0);
+    let report = EvidenceStore::open(&store).unwrap().verify();
+    assert_eq!(report.status, StoreVerifyStatus::Verified);
+    assert_eq!(report.trees, 2);
+    assert_eq!(report.distinct_blobs, blobs_after_first + b.new_blobs);
+}
+
+#[test]
+fn a_failed_store_run_adds_its_tree_and_keeps_the_failed_directory() {
+    let dir = TestDir::new();
+    let stub = dir.0.join("failing.sh");
+    write_failing_stub(&stub);
+    let synthetic = build_package(&dir.0, &stub);
+    let store = dir.0.join("runs.store");
+    let mut options = run_options(&synthetic, dir.workspace());
+    options.store = Some(store.clone());
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(
+        report.execution.as_ref().unwrap().status,
+        ExecutionStatus::Failed
+    );
+    let location = report
+        .store
+        .clone()
+        .expect("a failed run still adds its tree");
+    let workspace = PathBuf::from(
+        report
+            .execution
+            .as_ref()
+            .unwrap()
+            .workspace
+            .clone()
+            .unwrap(),
+    );
+    let kept = workspace.join("classification");
+    assert!(kept.join("logs/stderr.log").is_file());
+    assert_eq!(location.kept_directories, [kept.display().to_string()]);
+    assert!(human_summary(&report).contains(&format!("kept on disk: {}", kept.display())));
+    let tree = tree_files(&store, &location.tree);
+    assert!(tree.contains_key("classification/receipt.json"));
+    assert!(tree.contains_key("run-report.json"));
+    assert!(
+        String::from_utf8_lossy(&tree["classification/logs/stderr.log"])
+            .contains("model keys differ")
+    );
+    // Run-level reports moved into the tree; only the failed step remains.
+    assert!(!workspace.join("run-report.json").exists());
+    assert_eq!(verify_store(&store).status, StoreVerifyStatus::Verified);
+}
+
+#[test]
+fn keep_scratch_leaves_the_directory_run_and_still_writes_the_tree() {
+    let dir = TestDir::new();
+    let synthetic = scratchy_chain(&dir);
+    let store = dir.0.join("runs.store");
+    let report = execute_case(
+        &synthetic.case_dir,
+        &store_options(&dir, &synthetic, &store, true),
+    )
+    .unwrap();
+    let workspace = PathBuf::from(
+        report
+            .execution
+            .as_ref()
+            .unwrap()
+            .workspace
+            .clone()
+            .unwrap(),
+    );
+    let kept = directory_files(&workspace);
+    assert!(kept.contains_key("activation/scratch.tmp"));
+    assert!(kept.contains_key("run-report.json"));
+    let location = report.store.unwrap();
+    assert_eq!(location.kept_directories, [workspace.display().to_string()]);
+    let tree = tree_files(&store, &location.tree);
+    let (declared, _) = split_scratch(&kept);
+    assert_eq!(tree.keys().cloned().collect::<BTreeSet<_>>(), declared);
+    assert_eq!(verify_store(&store).status, StoreVerifyStatus::Verified);
+}
+
+#[test]
+fn concurrent_store_runs_each_add_their_tree() {
+    let dir = TestDir::new();
+    let synthetic = scratchy_chain(&dir);
+    let store = dir.0.join("runs.store");
+    let options: Vec<CaseRunOptions> = (0..2)
+        .map(|_| store_options(&dir, &synthetic, &store, false))
+        .collect();
+    let case = synthetic.case_dir.clone();
+    let handles: Vec<_> = options
+        .into_iter()
+        .map(|options| {
+            let case = case.clone();
+            std::thread::spawn(move || execute_case(&case, &options).unwrap())
+        })
+        .collect();
+    let reports: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
+    let trees: BTreeSet<_> = reports
+        .iter()
+        .map(|r| r.store.as_ref().unwrap().tree.clone())
+        .collect();
+    assert_eq!(trees.len(), 2, "{trees:?}");
+    for report in &reports {
+        assert_eq!(
+            report.status,
+            CaseRunStatus::Evaluated,
+            "{}",
+            human_summary(report)
+        );
+    }
+    let verified = verify_store(&store);
+    assert_eq!(
+        verified.status,
+        StoreVerifyStatus::Verified,
+        "{:?}",
+        verified.findings
+    );
+    assert_eq!(verified.trees, 2);
+    assert!(
+        verified.writer_state.is_empty(),
+        "{:?}",
+        verified.writer_state
+    );
+}
+
+#[test]
+fn a_store_run_without_a_workspace_need_creates_an_empty_store_and_no_tree() {
+    let dir = TestDir::new();
+    let synthetic = scratchy_chain(&dir);
+    let store = dir.0.join("fresh.store");
+    let mut options = store_options(&dir, &synthetic, &store, false);
+    options.reuse = true;
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(
+        report.execution.as_ref().unwrap().status,
+        ExecutionStatus::Reused
+    );
+    assert!(report.store.is_none());
+    assert!(
+        EvidenceStore::open(&store)
+            .unwrap()
+            .index()
+            .trees
+            .is_empty()
+    );
 }

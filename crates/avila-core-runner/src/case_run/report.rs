@@ -604,6 +604,20 @@ pub fn human_summary(report: &CaseRunReport) -> String {
             if let Some(workspace) = &execution.workspace {
                 let _ = writeln!(out, "   workspace {workspace}");
             }
+            if let Some(store) = &report.store {
+                let _ = writeln!(
+                    out,
+                    "   evidence stored as {} ({} files; {} new blobs, {} already stored, {} bytes added)",
+                    store.address,
+                    store.files,
+                    store.new_blobs,
+                    store.reused_blobs,
+                    store.stored_bytes
+                );
+                for directory in &store.kept_directories {
+                    let _ = writeln!(out, "   kept on disk: {directory}");
+                }
+            }
         }
         None => {
             let _ = writeln!(

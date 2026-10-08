@@ -1522,12 +1522,15 @@ mod tests {
         let source = dir.path("src");
         write(&source.join("ok.txt"), b"ok");
         let odd = source.join(OsString::from_vec(vec![b'b', 0xff, b'd']));
-        fs::write(&odd, b"x").unwrap();
-        let error = pack_store(&dir.path("store"), &[("t".into(), source.clone())])
-            .unwrap_err()
-            .to_string();
-        assert!(error.contains("UTF-8"), "{error}");
-        fs::remove_file(&odd).unwrap();
+        // Some file systems (APFS on macOS) refuse non-UTF-8 names outright;
+        // there the case cannot arise, so only the other forms are checked.
+        if fs::write(&odd, b"x").is_ok() {
+            let error = pack_store(&dir.path("store"), &[("t".into(), source.clone())])
+                .unwrap_err()
+                .to_string();
+            assert!(error.contains("UTF-8"), "{error}");
+            fs::remove_file(&odd).unwrap();
+        }
         fs::write(source.join("tab\there"), b"x").unwrap();
         let error = pack_store(&dir.path("store"), &[("t".into(), source.clone())])
             .unwrap_err()

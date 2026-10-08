@@ -175,6 +175,20 @@ class BlobRefusalTest(StoreTestCase):
             sorted(self.kinds()), ["misnamed_blob", "misnamed_blob", "unexpected_entry"]
         )
 
+    def test_writer_state_is_reported_not_failed(self) -> None:
+        self.sample()
+        self.assertEqual(sv.verify_store(str(self.store))["writer_state"], [])
+        (self.store / "store.lock").write_text("pid 4242 host example\n")
+        (self.store / "tmp").mkdir()
+        (self.store / "tmp" / "half-written.xz").write_bytes(b"\xfd7zXZ partial")
+        report = sv.verify_store(str(self.store))
+        self.assertEqual(report["status"], "verified", report)
+        self.assertEqual(report["finding_count"], 0)
+        self.assertEqual(len(report["writer_state"]), 2)
+        self.assertIn("pid 4242", report["writer_state"][0])
+        out = self.tmp / "out"
+        self.assertEqual(sv.unpack_store(str(self.store), str(out))["files"], 6)
+
     @unittest.skipIf(os.name == "nt", "symlinks need privileges on Windows")
     def test_symlink_blob_and_directory(self) -> None:
         self.sample()
@@ -340,6 +354,19 @@ class CrossImplementationTest(StoreTestCase):
         self.assertEqual(
             json.loads(self.cli("store", "verify", str(self.store)).stdout)["status"], "verified"
         )
+
+    def test_rust_added_store_verifies_here(self) -> None:
+        sources = self.make_sources()
+        self.cli("store", "pack", "--out", str(self.store), f"case={sources['case']}")
+        self.cli("store", "add", str(self.store), f"work={sources['work']}")
+        report = sv.verify_store(str(self.store))
+        self.assertEqual(report["status"], "verified", report)
+        self.assertEqual((report["trees"], report["distinct_blobs"]), (2, 4))
+        self.assertEqual(report["writer_state"], [])
+        out = self.tmp / "py-out"
+        sv.unpack_store(str(self.store), str(out))
+        for name, source in sources.items():
+            self.assertEqual(self.digests(out / name), self.digests(source))
 
     def test_both_implementations_reject_a_tampered_rust_store(self) -> None:
         sources = self.make_sources()

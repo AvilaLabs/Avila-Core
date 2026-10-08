@@ -26,8 +26,9 @@ use avila_core_evidence::{
     ArtifactCheck, CapabilityIdentity, ExecutionReceipt, ExpectedInput, HashCache,
     HashCacheContext, IntegrityCheckState, OutputState, PackageExecution, PackageIntegrityReport,
     PackageIntegrityStatus, PackageVerification, ReceiptCheck, ReceiptCheckState,
-    ReceiptExpectations, ReceiptOutput, ReceiptStatus, VerifiedCasePackage, load_hash_cache,
-    parse_receipt, save_hash_cache, sha256_file, verify_case_package, verify_receipt,
+    ReceiptExpectations, ReceiptOutput, ReceiptStatus, StagedRoots, VerifiedCasePackage,
+    load_hash_cache, parse_receipt, save_hash_cache, sha256_file, verify_case_package,
+    verify_receipt,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -837,16 +838,10 @@ fn execute_case_inner(
     trust_root: Option<&TrustRoot>,
     runner_key: Option<[u8; 32]>,
 ) -> Result<CaseRunReport, Box<dyn Error>> {
-    let manifest_path = if case_or_manifest.is_dir() {
-        case_or_manifest.join("package.json")
-    } else {
-        case_or_manifest.to_path_buf()
-    };
-    let manifest_bytes = fs::read(&manifest_path)?;
-    let package_root = manifest_path
-        .parent()
-        .filter(|path| !path.as_os_str().is_empty())
-        .unwrap_or_else(|| Path::new("."));
+    // The case may also be a store tree, `store:<STORE_DIR>#<TREE>`; its
+    // manifest is read verified. Execution still stages real files.
+    let (manifest_bytes, package_root) = avila_core_evidence::read_case_manifest(case_or_manifest)?;
+    let package_root = package_root.as_path();
 
     // The hash cache is opt-in and off by default (S-038). A corrupt or
     // unwritable cache file never fails the run: it is ignored, a notice
@@ -1250,6 +1245,15 @@ fn execute_case_inner(
         return Ok(report);
     }
 
+    // Store-tree source roots are verified in place above; execution needs
+    // real files, so a file under one is staged (verified) when it is read.
+    let scratch_base = options
+        .workspace
+        .as_deref()
+        .and_then(Path::parent)
+        .filter(|path| !path.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    let staged_roots = StagedRoots::new(&options.source_roots, scratch_base);
     if !package.manifest().executions.is_empty() {
         let mut runner = Runner::new(
             &package,
@@ -1262,6 +1266,7 @@ fn execute_case_inner(
             trust_root,
             runner_key,
             &resolved_rules,
+            &staged_roots,
         );
         let execution = runner.run_all()?;
         if options.plan_only {
@@ -1400,7 +1405,7 @@ fn execute_case_inner(
         &claims,
         workspace.as_deref(),
         report.execution.as_ref(),
-        &options.source_roots,
+        &staged_roots,
     );
     let observed_evaluation =
         evaluate_campaign_in_context(contract, registry, &generated.bytes, observations)?;
@@ -1492,7 +1497,7 @@ fn collect_run_observations(
     claims: &ClaimsDocument,
     workspace: Option<&Path>,
     execution: Option<&ExecutionReport>,
-    source_roots: &BTreeMap<String, PathBuf>,
+    source_roots: &StagedRoots,
 ) -> ArtifactObservations {
     let mut observations = ArtifactObservations::none();
     if let (Some(workspace), Some(execution)) = (workspace, execution) {
@@ -1521,8 +1526,8 @@ fn collect_run_observations(
         if !attested.contains(artifact.sha256.as_str()) {
             continue;
         }
-        if let Some(root) = source_roots.get(&artifact.source_root) {
-            let _ = observations.check_file(&root.join(&artifact.path));
+        if let Some(path) = source_roots.file_path(&artifact.source_root, &artifact.path) {
+            let _ = observations.check_file(&path);
         }
     }
     for document in &package.manifest().documents {

@@ -34,15 +34,19 @@ pub(crate) struct CaseInfo {
 
 impl CaseInfo {
     pub fn read(path: &Path) -> Result<Self, String> {
-        let path = if path.file_name().is_some_and(|n| n == "package.json") {
-            path.parent()
-                .ok_or("Choose a case folder or package.json")?
+        // A case may also be a store tree, `store:<STORE_DIR>#<TREE>`.
+        let path = if avila_core_evidence::is_store_address(path) {
+            path.to_path_buf()
         } else {
-            path
+            let path = if path.file_name().is_some_and(|n| n == "package.json") {
+                path.parent()
+                    .ok_or("Choose a case folder or package.json")?
+            } else {
+                path
+            };
+            path.canonicalize()
+                .map_err(|e| format!("Cannot open {}: {e}", path.display()))?
         };
-        let path = path
-            .canonicalize()
-            .map_err(|e| format!("Cannot open {}: {e}", path.display()))?;
         let manifest: CasePackageManifest =
             serde_json::from_slice(&read_document(&path, "package.json")?).map_err(|e| {
                 format!("This folder does not contain a readable Core package.json: {e}")
@@ -139,8 +143,31 @@ pub(crate) fn bundled_root(case_dir: &Path, name: &str) -> Option<PathBuf> {
     .and_then(|candidate| candidate.canonicalize().ok())
 }
 
+/// Read a file of a case, whether the case is a folder or a store tree. A
+/// store file is returned only after it verifies.
+pub(crate) fn read_case_file(root: &Path, relative: &str) -> Result<Vec<u8>, String> {
+    if avila_core_evidence::is_store_address(root) {
+        let root = avila_core_evidence::EvidenceRoot::open(root).map_err(|e| e.to_string())?;
+        return match root.fetch_bytes(relative).map_err(|e| e.to_string())? {
+            avila_core_evidence::Fetched::Found(bytes) => Ok(bytes),
+            avila_core_evidence::Fetched::Missing => {
+                Err(format!("{relative} is not in {}", root.display()))
+            }
+            avila_core_evidence::Fetched::Corrupt(detail) => Err(detail),
+        };
+    }
+    std::fs::read(root.join(relative)).map_err(|e| e.to_string())
+}
+
 fn read_document(root: &Path, relative: &str) -> Result<Vec<u8>, String> {
     use std::io::Read;
+    if avila_core_evidence::is_store_address(root) {
+        let bytes = read_case_file(root, relative)?;
+        if bytes.len() > 8 * 1024 * 1024 {
+            return Err("Document exceeds the 8 MiB preview limit.".into());
+        }
+        return Ok(bytes);
+    }
     let path = root
         .join(relative)
         .canonicalize()

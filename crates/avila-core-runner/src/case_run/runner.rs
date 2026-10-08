@@ -43,7 +43,7 @@ pub(super) struct Runner<'a> {
     options: &'a CaseRunOptions,
     committed_claims: &'a Value,
     artifact_checks: BTreeMap<String, &'a ArtifactCheck>,
-    canonical_roots: BTreeMap<String, PathBuf>,
+    roots: &'a StagedRoots,
     fresh_outputs: BTreeMap<(String, String), FreshOutput>,
     pub(super) workspace: Option<PathBuf>,
     pub(super) claims: Vec<GeneratedClaim>,
@@ -96,6 +96,7 @@ impl<'a> Runner<'a> {
         trust_root: Option<&'a TrustRoot>,
         runner_key: Option<[u8; 32]>,
         resolved_rules: &'a [super::reuse_rules::ResolvedRule],
+        roots: &'a StagedRoots,
     ) -> Self {
         let artifact_checks = package
             .integrity()
@@ -106,15 +107,6 @@ impl<'a> Runner<'a> {
                     .evidence_ids
                     .iter()
                     .map(move |evidence_id| (evidence_id.clone(), check))
-            })
-            .collect();
-        let canonical_roots = options
-            .source_roots
-            .iter()
-            .filter_map(|(name, path)| {
-                fs::canonicalize(path)
-                    .ok()
-                    .map(|canonical| (name.clone(), canonical))
             })
             .collect();
         let runner_key_id = runner_key.map(|seed| {
@@ -148,7 +140,7 @@ impl<'a> Runner<'a> {
             options,
             committed_claims,
             artifact_checks,
-            canonical_roots,
+            roots,
             fresh_outputs: BTreeMap::new(),
             workspace: None,
             claims: Vec::new(),
@@ -1894,9 +1886,8 @@ impl<'a> Runner<'a> {
                     .map(|(_, path)| path.clone())
                     .ok_or_else(|| "a supplied artifact has no path".to_string())?
             } else {
-                self.canonical_roots
-                    .get(&check.source_root)
-                    .map(|root| root.join(&check.path))
+                self.roots
+                    .file_path(&check.source_root, &check.path)
                     .ok_or_else(|| format!("root `{}` is not resolved", check.source_root))?
             };
             outputs.push((output.clone(), path));
@@ -2004,9 +1995,8 @@ impl<'a> Runner<'a> {
         let path = if check.source_root == "supplied" {
             self.supplied.get(evidence_id).cloned().unwrap_or_default()
         } else {
-            self.canonical_roots
-                .get(&check.source_root)
-                .map(|root| root.join(&check.path))
+            self.roots
+                .file_path(&check.source_root, &check.path)
                 .unwrap_or_default()
         };
         Ok(ResolvedArtifact {

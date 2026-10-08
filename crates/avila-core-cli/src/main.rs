@@ -167,9 +167,11 @@ enum Command {
     /// source root to be supplied and verified; a package with unmet roots
     /// is refused rather than shipped incomplete.
     Export {
-        /// The case directory containing `package.json`.
+        /// The case directory containing `package.json`, or a store tree
+        /// `store:<STORE_DIR>#<TREE>`.
         case: PathBuf,
-        /// Bind a named source root to a directory: `--source-root name=DIR`.
+        /// Bind a named source root to a directory or a store tree:
+        /// `--source-root name=DIR` or `name=store:<STORE_DIR>#<TREE>`.
         #[arg(long = "source-root", value_name = "NAME=DIR")]
         source_roots: Vec<String>,
         /// The output directory. Must be absent or empty.
@@ -194,7 +196,7 @@ enum Command {
         #[command(subcommand)]
         command: SignCommand,
     },
-    /// Pack, verify, list, read, and unpack content-addressed evidence
+    /// Pack, add to, verify, list, read, and unpack content-addressed evidence
     /// stores: named file trees that keep each distinct content once,
     /// compressed (ADR-0028).
     Store {
@@ -211,7 +213,23 @@ enum StoreCommand {
         /// The store directory to create. Must not exist.
         #[arg(long, value_name = "STORE")]
         out: PathBuf,
+        /// xz preset for new blobs, 0 to 9. Identity is over the
+        /// uncompressed bytes, so the preset never affects verification.
+        #[arg(long, value_name = "N", default_value_t = avila_core_evidence::DEFAULT_XZ_PRESET)]
+        preset: u32,
         /// A tree to include: `NAME=DIR`. Repeatable.
+        #[arg(value_name = "NAME=DIR", required = true)]
+        trees: Vec<String>,
+    },
+    /// Add trees to an existing store. Takes an exclusive `store.lock`,
+    /// keeps blobs already in the store, never changes an existing tree, and
+    /// refuses a tree name that already exists.
+    Add {
+        store: PathBuf,
+        /// xz preset for new blobs, 0 to 9.
+        #[arg(long, value_name = "N", default_value_t = avila_core_evidence::DEFAULT_XZ_PRESET)]
+        preset: u32,
+        /// A tree to add: `NAME=DIR`. Repeatable.
         #[arg(value_name = "NAME=DIR", required = true)]
         trees: Vec<String>,
     },
@@ -672,9 +690,11 @@ fn hex_encode(bytes: &[u8]) -> String {
 
 #[derive(Debug, Args)]
 struct RunArgs {
-    /// Case directory containing package.json, or the manifest path itself.
+    /// Case directory containing package.json, the manifest path itself, or
+    /// a store tree `store:<STORE_DIR>#<TREE>`.
     case: PathBuf,
-    /// Resolve an external artifact root as NAME=PATH. Repeat as needed.
+    /// Resolve an external artifact root as NAME=PATH, where PATH is a
+    /// directory or a store tree `store:<STORE_DIR>#<TREE>`. Repeat as needed.
     #[arg(long = "source-root", value_name = "NAME=PATH")]
     source_roots: Vec<String>,
     /// Supply the executable for a package capability as NAME=PATH. Its
@@ -771,7 +791,8 @@ struct RunArgs {
 
 #[derive(Debug, Args)]
 struct CapabilitiesArgs {
-    /// Case directory containing package.json, or the manifest path itself.
+    /// Case directory containing package.json, the manifest path itself, or
+    /// a store tree `store:<STORE_DIR>#<TREE>`.
     case: PathBuf,
     /// Probe an explicit file for a declared capability as NAME=PATH.
     /// Repeat as needed, once per capability; use --scan to offer a whole
@@ -821,20 +842,30 @@ fn language_options(
 }
 
 fn run_store(command: StoreCommand) -> Result<ExitCode, Box<dyn Error>> {
-    use avila_core_evidence::{EvidenceStore, pack_store, verify_store};
+    use avila_core_evidence::{EvidenceStore, add_trees, pack_store, verify_store};
+    fn named_trees(trees: &[String]) -> Result<Vec<(String, PathBuf)>, Box<dyn Error>> {
+        let mut named = Vec::new();
+        for value in trees {
+            let Some((name, dir)) = value.split_once('=') else {
+                return Err(
+                    format!("tree `{value}` must be NAME=DIR, for example case=./case").into(),
+                );
+            };
+            named.push((name.to_owned(), PathBuf::from(dir)));
+        }
+        Ok(named)
+    }
     match command {
-        StoreCommand::Pack { out, trees } => {
-            let mut named = Vec::new();
-            for value in &trees {
-                let Some((name, dir)) = value.split_once('=') else {
-                    return Err(format!(
-                        "tree `{value}` must be NAME=DIR, for example case=./case"
-                    )
-                    .into());
-                };
-                named.push((name.to_owned(), PathBuf::from(dir)));
-            }
-            let report = pack_store(&out, &named)?;
+        StoreCommand::Pack { out, preset, trees } => {
+            let report = pack_store(&out, &named_trees(&trees)?, preset)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        StoreCommand::Add {
+            store,
+            preset,
+            trees,
+        } => {
+            let report = add_trees(&store, &named_trees(&trees)?, preset)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
         StoreCommand::Unpack { store, out, trees } => {
@@ -1313,12 +1344,13 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
 /// the CLI prints, so a test can assert on its fields without capturing
 /// stdout. Read-only: candidates are hashed, never executed.
 fn run_capabilities(args: CapabilitiesArgs) -> Result<serde_json::Value, Box<dyn Error>> {
+    // The case may also be a store tree, `store:<STORE_DIR>#<TREE>`.
     let manifest_path = if args.case.is_dir() {
         args.case.join("package.json")
     } else {
         args.case.clone()
     };
-    let manifest_bytes = fs::read(&manifest_path)
+    let (manifest_bytes, _) = avila_core_evidence::read_case_manifest(&args.case)
         .map_err(|error| format!("case package `{}`: {error}", manifest_path.display()))?;
     let manifest: avila_core_evidence::CasePackageManifest =
         serde_json::from_slice(&manifest_bytes)

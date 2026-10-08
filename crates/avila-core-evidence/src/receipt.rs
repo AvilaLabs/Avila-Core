@@ -15,7 +15,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
-use crate::package::{IntegrityCheckState, PackageError, hash_confined_file};
+use crate::package::{IntegrityCheckState, PackageError};
+use crate::root::{EvidenceRoot, Fetched};
 
 pub const EXECUTION_RECEIPT_SCHEMA_VERSION: &str = "avila.core/execution-receipt/v0.1-draft";
 pub const RECEIPT_NOTICE: &str = "An execution receipt is process evidence: it binds the exact capability, staged input bytes, invocation, process outcome, logs, and produced output bytes of one step. It does not establish scientific correctness, qualification, practical suitability, or regulatory suitability.";
@@ -342,8 +343,8 @@ pub fn verify_receipt(
 ) -> Result<ReceiptCheck, ReceiptError> {
     // Compare resolved file paths with a resolved directory on every platform
     // (macOS /var aliases and Windows verbatim path prefixes included).
-    let canonical_workspace = crate::package::canonical_directory(workspace)?;
-    let workspace = canonical_workspace.as_path();
+    // The workspace may also be a store tree, `store:<STORE_DIR>#<TREE>`.
+    let workspace = &EvidenceRoot::open(workspace)?;
     let mut issues = Vec::new();
     let mut files = Vec::new();
 
@@ -571,15 +572,15 @@ fn expect_equal(issues: &mut Vec<String>, field: &str, actual: &str, expected: &
 }
 
 fn check_workspace_file(
-    workspace: &Path,
+    workspace: &EvidenceRoot,
     role: &str,
     workspace_path: &str,
     expected_sha256: &str,
     expected_bytes: Option<u64>,
     issues: &mut Vec<String>,
 ) -> Result<ReceiptFileCheck, ReceiptError> {
-    let (actual_sha256, state) = match hash_confined_file(workspace, workspace_path)? {
-        Some((digest, length)) => {
+    let (actual_sha256, state) = match workspace.fetch_hash(workspace_path)? {
+        Fetched::Found((digest, length)) => {
             let state = if digest == expected_sha256 {
                 IntegrityCheckState::Verified
             } else {
@@ -594,7 +595,11 @@ fn check_workspace_file(
             }
             (Some(digest), state)
         }
-        None => (None, IntegrityCheckState::Missing),
+        Fetched::Missing => (None, IntegrityCheckState::Missing),
+        Fetched::Corrupt(detail) => {
+            issues.push(format!("{role} `{workspace_path}`: {detail}"));
+            (None, IntegrityCheckState::Mismatch)
+        }
     };
     match state {
         // A workspace file is always re-hashed from the copy the runner just
@@ -963,5 +968,41 @@ mod tests {
                 .iter()
                 .any(|issue| issue.contains("marked partial without a digest"))
         );
+    }
+
+    #[test]
+    fn a_store_tree_workspace_verifies_identically_to_the_same_files() {
+        use crate::root::testing::{address, blob_path, pack, tamper};
+
+        let scratch = TestDir::new();
+        let workspace = scratch.0.join("workspace");
+        fs::create_dir_all(&workspace).unwrap();
+        let (receipt, expected) = fixture(&workspace);
+        let store = scratch.0.join("workspace.store");
+        pack(&store, &[("workspace", &workspace)]);
+        let tree = address(&store, "workspace");
+
+        let on_disk = verify_receipt(&receipt, &workspace, &expected).unwrap();
+        let from_store = verify_receipt(&receipt, &tree, &expected).unwrap();
+        assert_eq!(from_store.state, ReceiptCheckState::Verified);
+        assert_eq!(from_store, on_disk);
+
+        // The same failure from either form: a changed output...
+        fs::write(workspace.join("outputs/result.json"), b"changed").unwrap();
+        let disk_failed = verify_receipt(&receipt, &workspace, &expected).unwrap();
+        tamper(&store, b"result", b"changed");
+        let store_failed = verify_receipt(&receipt, &tree, &expected).unwrap();
+        assert_eq!(store_failed.state, ReceiptCheckState::Failed);
+        assert_eq!(
+            store_failed.files[2].state,
+            IntegrityCheckState::Mismatch,
+            "{store_failed:?}"
+        );
+        assert_eq!(disk_failed.files[2].state, IntegrityCheckState::Mismatch);
+
+        // ...and a missing one.
+        fs::remove_file(blob_path(&store, b"input-a")).unwrap();
+        let store_missing = verify_receipt(&receipt, &tree, &expected).unwrap();
+        assert_eq!(store_missing.files[0].state, IntegrityCheckState::Missing);
     }
 }

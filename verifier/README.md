@@ -188,7 +188,10 @@ one length per digest, bounds, exact schema and codec, no unknown or
 duplicate keys); every referenced blob is a regular file holding one xz
 stream whose output, decompressed with a limit of `bytes` + 1, has the
 indexed length and SHA-256 and has no data after it; and the store holds
-nothing but `store.json` and the referenced `blobs/<h0h1>/<sha256>.xz`.
+nothing but `store.json` and the referenced `blobs/<h0h1>/<sha256>.xz`. A
+writer's state, `store.lock` and `tmp/` (ADR-0028 Amendment 1), is ignored by
+reads and `store-verify` and reported as information in the `writer_state`
+list; it never fails verification.
 Content is written or returned only after it matches. A store proves nothing
 by itself — it is a container; comparing its files with a package or receipt
 is still the job of `verify-case`.

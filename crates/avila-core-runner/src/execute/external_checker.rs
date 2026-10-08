@@ -1058,6 +1058,89 @@ mod tests {
         }
     }
 
+    /// ADR-0028 A3: the case and its source root are read from store trees;
+    /// execution still stages real files into the workspace directory.
+    #[cfg(unix)]
+    #[test]
+    fn a_case_and_source_root_from_a_store_execute_like_directories() {
+        let temp = TestDir::new();
+        let (case, root, supplied_checker) = external_case(&temp);
+        let store = temp.0.join("run.store");
+        avila_core_evidence::pack_store(
+            &store,
+            &[
+                ("case".to_owned(), case.clone()),
+                ("fixture".to_owned(), root.clone()),
+            ],
+            1,
+        )
+        .unwrap();
+        let address = |tree: &str| PathBuf::from(format!("store:{}#{tree}", store.display()));
+        let mut options = external_options(
+            &temp,
+            &root,
+            &supplied_checker,
+            &temp.0.join("workspace-store"),
+            false,
+        );
+        options.source_roots = BTreeMap::from([("fixture".into(), address("fixture"))]);
+        let from_store = execute_case(&address("case"), &options).unwrap();
+        assert_eq!(
+            from_store.status,
+            CaseRunStatus::Evaluated,
+            "{}",
+            human_summary(&from_store)
+        );
+        assert_eq!(
+            from_store.execution.as_ref().unwrap().steps[0].state,
+            StepExecutionState::Executed
+        );
+        // Real, byte-identical files were staged in the workspace directory.
+        assert_eq!(
+            fs::read(temp.0.join("workspace-store/check/inputs/candidate.json")).unwrap(),
+            fs::read(root.join("candidate.json")).unwrap()
+        );
+
+        let mut disk_options = external_options(
+            &temp,
+            &root,
+            &supplied_checker,
+            &temp.0.join("workspace-disk"),
+            false,
+        );
+        disk_options.log = None;
+        let from_disk = execute_case(&case, &disk_options).unwrap();
+        assert_eq!(from_store.margins, from_disk.margins);
+        assert_eq!(from_store.integrity, from_disk.integrity);
+        assert_eq!(from_store.claims, from_disk.claims);
+        // No staging leftovers beside the workspace.
+        let leftovers: Vec<_> = fs::read_dir(&temp.0)
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|entry| {
+                entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with(".avila-core-stage")
+            })
+            .collect();
+        assert!(leftovers.is_empty(), "{leftovers:?}");
+
+        // A tampered blob under the source root is refused before any run.
+        let digest = sha256_file(&root.join("candidate.json")).unwrap().0;
+        let digest = digest.trim_start_matches("sha256:");
+        let blob = store
+            .join("blobs")
+            .join(&digest[..2])
+            .join(format!("{digest}.xz"));
+        fs::write(&blob, b"not an xz stream").unwrap();
+        options.workspace = Some(temp.0.join("workspace-tampered"));
+        let refused = execute_case(&address("case"), &options).unwrap();
+        assert_eq!(refused.status, CaseRunStatus::Rejected);
+        assert!(refused.execution.is_none());
+        assert!(!temp.0.join("workspace-tampered").exists());
+    }
+
     #[cfg(unix)]
     #[test]
     fn package_declared_checker_executes_and_logs_categorical_evidence() {

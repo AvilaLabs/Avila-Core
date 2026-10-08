@@ -14,6 +14,7 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 use crate::hash_cache::{FileStamp, HashCache};
+use crate::root::{EvidenceRoot, Fetched, Located};
 use crate::sha256_hex;
 
 pub const CASE_PACKAGE_SCHEMA_VERSION: &str = "avila.core/case-package/v0.1-draft";
@@ -409,6 +410,8 @@ pub enum PackageError {
     InvalidJson(#[from] serde_json::Error),
     #[error("invalid case package manifest: {0}")]
     InvalidManifest(String),
+    #[error("evidence store root: {0}")]
+    Store(String),
     #[error("`{path}` escapes its declared root `{root}`")]
     EscapesRoot { path: String, root: String },
     #[error("cannot read `{path}`: {source}")]
@@ -431,9 +434,13 @@ pub struct HashCacheContext<'a> {
 /// is supplied. An omitted external root is reported as `not_checked`; a root
 /// that is supplied but contains a missing or different file fails integrity.
 ///
-/// `hash_cache` is consulted only for artifacts resolved under a supplied
-/// `--source-root`; package documents and any artifact that resolves inside
-/// `package_root` itself are always re-hashed from bytes. See
+/// Any root, including `package_root`, may be a directory or a store tree
+/// written `store:<STORE_DIR>#<TREE>`; a store file counts as present only if
+/// it reads back verified, and a blob that fails verification is a
+/// `Mismatch`. `hash_cache` is consulted only for artifacts resolved under a
+/// supplied directory `--source-root`; package documents, store-tree files,
+/// and any artifact that resolves inside `package_root` itself are always
+/// re-hashed from bytes. See
 /// `crate::hash_cache` for exactly what a cache hit trusts.
 ///
 /// The result is a `PackageVerification`: `Verified` or `PartiallyVerified`
@@ -461,20 +468,24 @@ pub fn verify_case_package(
         }
     }
 
-    let package_root = canonical_directory(package_root)?;
+    let package_root = EvidenceRoot::open(package_root)?;
     let mut canonical_source_roots = BTreeMap::new();
     for (name, path) in source_roots {
-        canonical_source_roots.insert(name.clone(), canonical_directory(path)?);
+        canonical_source_roots.insert(name.clone(), EvidenceRoot::open(path)?);
     }
 
     let mut document_bytes = BTreeMap::new();
     let mut documents = Vec::with_capacity(manifest.documents.len());
     for document in &manifest.documents {
-        let bytes = read_confined(&package_root, &document.path)?;
-        let (actual_sha256, state) = check_bytes(bytes.as_deref(), &document.sha256);
-        if let Some(bytes) = bytes {
-            document_bytes.insert(document.document_id.clone(), bytes);
-        }
+        let (actual_sha256, state) = match package_root.fetch_bytes(&document.path)? {
+            Fetched::Found(bytes) => {
+                let checked = check_bytes(Some(&bytes), &document.sha256);
+                document_bytes.insert(document.document_id.clone(), bytes);
+                checked
+            }
+            Fetched::Missing => check_bytes(None, &document.sha256),
+            Fetched::Corrupt(_) => (None, IntegrityCheckState::Mismatch),
+        };
         documents.push(DocumentCheck {
             document_id: document.document_id.clone(),
             role: document.role.clone(),
@@ -489,13 +500,13 @@ pub fn verify_case_package(
     // read) and lets a cache hit skip hashing entirely rather than only
     // skipping the comparison. A path that resolves inside the package
     // directory itself is never cache-eligible, whatever root named it.
-    let mut resolved_paths: Vec<Option<PathBuf>> = Vec::with_capacity(manifest.artifacts.len());
+    let mut resolved_paths: Vec<Option<Located>> = Vec::with_capacity(manifest.artifacts.len());
     for artifact in &manifest.artifacts {
-        let path = match canonical_source_roots.get(&artifact.source_root) {
-            Some(root) => resolve_confined(root, &artifact.path)?,
+        let located = match canonical_source_roots.get(&artifact.source_root) {
+            Some(root) => root.locate(&artifact.path)?,
             None => None,
         };
-        resolved_paths.push(path);
+        resolved_paths.push(located);
     }
 
     // A hit reuses the recorded digest without reading the file; a miss (or
@@ -504,10 +515,10 @@ pub fn verify_case_package(
     // cache still re-hashes every one of them.
     let mut results: Vec<Option<(Option<String>, IntegrityCheckState)>> =
         Vec::with_capacity(manifest.artifacts.len());
-    let mut pending: Vec<(usize, PathBuf)> = Vec::new();
+    let mut pending: Vec<(usize, Located)> = Vec::new();
     let mut pending_stamps: BTreeMap<usize, (String, FileStamp)> = BTreeMap::new();
-    for (index, path) in resolved_paths.into_iter().enumerate() {
-        let Some(path) = path else {
+    for (index, located) in resolved_paths.into_iter().enumerate() {
+        let Some(located) = located else {
             let state =
                 if canonical_source_roots.contains_key(&manifest.artifacts[index].source_root) {
                     IntegrityCheckState::Missing
@@ -517,9 +528,17 @@ pub fn verify_case_package(
             results.push(Some((None, state)));
             continue;
         };
-        let eligible = !path.starts_with(&package_root);
-        if eligible && let Some(context) = hash_cache.as_ref() {
-            let metadata = fs::metadata(&path).map_err(|source| PackageError::Io {
+        // The cache applies to directory files only, and never to a file
+        // that resolves inside the package directory itself.
+        let cacheable = match (&located, package_root.directory()) {
+            (Located::File(path), Some(root)) => Some(path).filter(|path| !path.starts_with(root)),
+            (Located::File(path), None) => Some(path),
+            (Located::Stored(_), _) => None,
+        };
+        if let Some(path) = cacheable
+            && let Some(context) = hash_cache.as_ref()
+        {
+            let metadata = fs::metadata(path).map_err(|source| PackageError::Io {
                 path: path.display().to_string(),
                 source,
             })?;
@@ -540,7 +559,7 @@ pub fn verify_case_package(
             }
             pending_stamps.insert(index, (key, stamp));
         }
-        pending.push((index, path));
+        pending.push((index, located));
         results.push(None);
     }
 
@@ -548,9 +567,11 @@ pub fn verify_case_package(
         std::thread::scope(|scope| {
             let handles: Vec<_> = pending
                 .iter()
-                .map(|(index, path)| {
-                    let expected = manifest.artifacts[*index].sha256.as_str();
-                    scope.spawn(move || hash_and_compare(path, expected))
+                .map(|(index, located)| {
+                    let artifact = &manifest.artifacts[*index];
+                    let expected = artifact.sha256.as_str();
+                    let root = &canonical_source_roots[&artifact.source_root];
+                    scope.spawn(move || hash_and_compare(root, located, expected))
                 })
                 .collect();
             handles
@@ -925,18 +946,6 @@ pub(crate) fn canonical_directory(path: &Path) -> Result<PathBuf, PackageError> 
     Ok(canonical)
 }
 
-fn read_confined(root: &Path, relative: &str) -> Result<Option<Vec<u8>>, PackageError> {
-    let Some(canonical) = resolve_confined(root, relative)? else {
-        return Ok(None);
-    };
-    fs::read(&canonical)
-        .map(Some)
-        .map_err(|source| PackageError::Io {
-            path: canonical.display().to_string(),
-            source,
-        })
-}
-
 pub(crate) fn resolve_confined(
     root: &Path,
     relative: &str,
@@ -978,7 +987,7 @@ pub(crate) fn resolve_confined(
 
 /// Hash an already-resolved regular file in fixed-size chunks. Returns the
 /// prefixed digest and byte length.
-fn hash_file(path: &Path) -> Result<(String, u64), PackageError> {
+pub(crate) fn hash_file(path: &Path) -> Result<(String, u64), PackageError> {
     let mut file = fs::File::open(path).map_err(|source| PackageError::Io {
         path: path.display().to_string(),
         source,
@@ -1015,10 +1024,15 @@ pub(crate) fn hash_confined_file(
 /// Hash an already-resolved file and compare it with the manifest's bound
 /// identity. The caller has already confirmed the file exists.
 fn hash_and_compare(
-    path: &Path,
+    root: &EvidenceRoot,
+    located: &Located,
     expected: &str,
 ) -> Result<(Option<String>, IntegrityCheckState), PackageError> {
-    let (actual, _length) = hash_file(path)?;
+    let (actual, _length) = match root.hash_located(located)? {
+        Fetched::Found(found) => found,
+        Fetched::Missing => return Ok((None, IntegrityCheckState::Missing)),
+        Fetched::Corrupt(_) => return Ok((None, IntegrityCheckState::Mismatch)),
+    };
     let state = if actual == expected {
         IntegrityCheckState::Verified
     } else {
@@ -1606,5 +1620,213 @@ mod tests {
             IntegrityCheckState::Verified,
             "an in-package artifact must be rehashed, ignoring any cache entry"
         );
+    }
+
+    // ---- store-tree roots (ADR-0028 A3) ----
+
+    use crate::root::testing::{address, blob_path, pack, tamper};
+
+    /// A package directory and its source root packed into one store.
+    fn packed_fixture(dir: &TestDir) -> (Vec<u8>, PathBuf, PathBuf) {
+        let root = dir.0.join("pkg");
+        fs::create_dir_all(&root).unwrap();
+        let manifest = fixture(&root);
+        let store = dir.0.join("fixture.store");
+        pack(&store, &[("case", &root), ("source", &root.join("source"))]);
+        (manifest, root, store)
+    }
+
+    #[test]
+    fn a_store_tree_verifies_identically_to_the_same_files_on_disk() {
+        let dir = TestDir::new();
+        let (manifest, root, store) = packed_fixture(&dir);
+        let disk_sources = BTreeMap::from([("source".into(), root.join("source"))]);
+        let store_sources = BTreeMap::from([("source".into(), address(&store, "source"))]);
+
+        for (package, sources) in [
+            (root.clone(), BTreeMap::new()),
+            (root.clone(), disk_sources.clone()),
+            (address(&store, "case"), BTreeMap::new()),
+            (address(&store, "case"), disk_sources.clone()),
+            (address(&store, "case"), store_sources.clone()),
+            (root.clone(), store_sources.clone()),
+        ] {
+            let found = verify_case_package(&manifest, &package, &sources, None).unwrap();
+            let baseline = verify_case_package(&manifest, &root, &disk_sources, None).unwrap();
+            let baseline_partial =
+                verify_case_package(&manifest, &root, &BTreeMap::new(), None).unwrap();
+            let expected = if sources.is_empty() {
+                baseline_partial
+            } else {
+                baseline
+            };
+            assert_eq!(found.integrity_report(), expected.integrity_report());
+            assert_eq!(
+                found.package().unwrap().document_by_role("contract"),
+                expected.package().unwrap().document_by_role("contract")
+            );
+        }
+    }
+
+    #[test]
+    fn a_tampered_blob_is_a_mismatch_not_a_crash() {
+        let dir = TestDir::new();
+        let (manifest, root, store) = packed_fixture(&dir);
+        tamper(&store, b"artifact", b"evil-bytes");
+        let sources = BTreeMap::from([("source".into(), address(&store, "source"))]);
+        let refused = verify_case_package(&manifest, &root, &sources, None).unwrap();
+        assert_eq!(
+            refused.integrity_report().artifacts[0].state,
+            IntegrityCheckState::Mismatch
+        );
+        assert_eq!(refused.integrity_report().artifacts[0].actual_sha256, None);
+        assert!(refused.package().is_none());
+
+        tamper(&store, b"claims.json", b"forged claims");
+        let refused =
+            verify_case_package(&manifest, &address(&store, "case"), &BTreeMap::new(), None)
+                .unwrap();
+        let claims = refused
+            .integrity_report()
+            .documents
+            .iter()
+            .find(|check| check.document_id == "claims")
+            .unwrap();
+        assert_eq!(claims.state, IntegrityCheckState::Mismatch);
+        assert_eq!(
+            refused.integrity_report().status,
+            PackageIntegrityStatus::Failed
+        );
+    }
+
+    #[test]
+    fn paths_outside_the_index_are_missing() {
+        let dir = TestDir::new();
+        let (manifest, root, store) = packed_fixture(&dir);
+        // The source tree carries no `artifact.bin`: pack an empty-ish one.
+        let other = dir.0.join("other");
+        fs::create_dir_all(&other).unwrap();
+        fs::write(other.join("unrelated.bin"), b"unrelated").unwrap();
+        let narrow = dir.0.join("narrow.store");
+        pack(&narrow, &[("source", &other)]);
+        let sources = BTreeMap::from([("source".into(), address(&narrow, "source"))]);
+        let refused = verify_case_package(&manifest, &root, &sources, None).unwrap();
+        assert_eq!(
+            refused.integrity_report().artifacts[0].state,
+            IntegrityCheckState::Missing
+        );
+
+        // A package tree without a document reports it missing.
+        let thin = dir.0.join("thin");
+        fs::create_dir_all(&thin).unwrap();
+        fs::write(thin.join("contract.json"), b"contract.json").unwrap();
+        let thin_store = dir.0.join("thin.store");
+        pack(&thin_store, &[("case", &thin)]);
+        let refused = verify_case_package(
+            &manifest,
+            &address(&thin_store, "case"),
+            &BTreeMap::new(),
+            None,
+        )
+        .unwrap();
+        let states: Vec<_> = refused
+            .integrity_report()
+            .documents
+            .iter()
+            .map(|check| check.state)
+            .collect();
+        assert_eq!(
+            states,
+            [
+                IntegrityCheckState::Verified,
+                IntegrityCheckState::Missing,
+                IntegrityCheckState::Missing
+            ]
+        );
+        // Parent components are refused as for directories; they never
+        // reach the index.
+        let error = EvidenceRoot::open(&address(&store, "case"))
+            .unwrap()
+            .fetch_bytes("../pkg/claims.json")
+            .unwrap_err();
+        assert!(matches!(error, PackageError::InvalidManifest(_)));
+        // A directory prefix is not a regular file, as on disk.
+        let error = EvidenceRoot::open(&address(&store, "case"))
+            .unwrap()
+            .fetch_bytes("source")
+            .unwrap_err();
+        assert!(error.to_string().contains("not a regular file"), "{error}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_store_tree_with_a_symlinked_blob_is_refused() {
+        let dir = TestDir::new();
+        let (manifest, root, store) = packed_fixture(&dir);
+        let blob = blob_path(&store, b"artifact");
+        let elsewhere = dir.0.join("elsewhere.xz");
+        fs::rename(&blob, &elsewhere).unwrap();
+        std::os::unix::fs::symlink(&elsewhere, &blob).unwrap();
+        let sources = BTreeMap::from([("source".into(), address(&store, "source"))]);
+        let refused = verify_case_package(&manifest, &root, &sources, None).unwrap();
+        assert_eq!(
+            refused.integrity_report().artifacts[0].state,
+            IntegrityCheckState::Mismatch
+        );
+    }
+
+    #[test]
+    fn a_missing_blob_file_is_missing_and_a_missing_tree_is_an_error() {
+        let dir = TestDir::new();
+        let (manifest, root, store) = packed_fixture(&dir);
+        fs::remove_file(blob_path(&store, b"artifact")).unwrap();
+        let sources = BTreeMap::from([("source".into(), address(&store, "source"))]);
+        let refused = verify_case_package(&manifest, &root, &sources, None).unwrap();
+        assert_eq!(
+            refused.integrity_report().artifacts[0].state,
+            IntegrityCheckState::Missing
+        );
+        let error =
+            verify_case_package(&manifest, &address(&store, "nope"), &BTreeMap::new(), None)
+                .unwrap_err();
+        let text = error.to_string();
+        assert!(
+            text.contains("tree `nope`") && text.contains("fixture.store"),
+            "{text}"
+        );
+        assert!(
+            verify_case_package(
+                &manifest,
+                Path::new("store:no-tree-given"),
+                &BTreeMap::new(),
+                None
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn the_hash_cache_never_applies_to_a_store_tree() {
+        let dir = TestDir::new();
+        let (manifest, root, store) = packed_fixture(&dir);
+        let sources = BTreeMap::from([("source".into(), address(&store, "source"))]);
+        let mut cache = HashCache::new();
+        for _ in 0..2 {
+            let verified = verify_case_package(
+                &manifest,
+                &root,
+                &sources,
+                Some(HashCacheContext {
+                    cache: &mut cache,
+                    verified_at: "2026-01-01T00:00:00Z",
+                }),
+            )
+            .unwrap();
+            assert_eq!(
+                verified.integrity_report().artifacts[0].state,
+                IntegrityCheckState::Verified
+            );
+        }
+        assert!(cache.entries.is_empty());
     }
 }

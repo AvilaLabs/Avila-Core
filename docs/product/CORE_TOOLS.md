@@ -82,6 +82,13 @@ python3 verifier/avila_core_verify.py verify-case BUNDLE_DIR \
 # checked against the indexed length and digest; `verify` exits 1 on any
 # failure and also refuses unreferenced or misnamed files:
 avila-core store pack --out STORE case=CASE_DIR workspace=WORKSPACE_DIR
+# A store can gain trees (Amendment 1): add takes an exclusive store.lock
+# (an existing lock refuses the write and says how to clear a stale one),
+# keeps blobs already present after verifying them, never changes an
+# existing tree, and refuses a name already in the store. Pack and add
+# default to xz --preset 9; verify reports a leftover lock or tmp/ as
+# information (`writer_state`) without failing:
+avila-core store add STORE run-2=WORKSPACE_DIR [--preset N]
 avila-core store verify STORE
 avila-core store ls STORE [TREE]
 avila-core store cat STORE TREE PATH
@@ -89,6 +96,19 @@ avila-core store unpack STORE --out DIR [--tree NAME]...
 # The standard-library Python verifier reads the same format:
 python3 verifier/store_verify.py store-verify STORE
 python3 verifier/store_verify.py store-unpack STORE OUT
+
+# Store-tree roots (ADR-0028 A3) — wherever a command reads or verifies a case
+# package, a --source-root, or a workspace, `store:STORE_DIR#TREE` names a
+# tree of a store instead of a directory. Every file read from it is checked
+# against its indexed length and digest first; a path not in the tree is
+# missing, and a blob that fails verification is a digest mismatch. Reports
+# match those for the same files on disk (only fields that name the root
+# differ). run and export still write directories; run stages real files
+# into its workspace directory, copying store-tree source files out
+# verified. The hash cache never applies to store trees:
+avila-core run store:STORE#case --plan --source-root case=store:STORE#case
+avila-core export store:STORE#case --source-root name=store:STORE#name --out BUNDLE_DIR
+avila-core capabilities store:STORE#case --scan DIR
 
 # Historical verification (ADR-0006) — per qualified claim, an
 # informational [ASOF] line naming its recorded state beside the labeled
@@ -99,7 +119,8 @@ python3 verifier/avila_core_verify.py verify-case BUNDLE_DIR \
 ```
 
 Add `--json` to any query for machine-readable output. `inspect` reads a saved
-run report, not a package directory. A summary is small by default; collection
+run report, not a package directory; the query tools take a file path, not a
+`store:` root (use `store cat` to extract a saved report). A summary is small by default; collection
 views default to 20 entries and accept `--offset` and `--limit` (maximum 100).
 The response includes the total and next offset. A single entry can still be
 large; pagination limits entry count, not tokens.

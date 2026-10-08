@@ -13,7 +13,9 @@ Rust implementation:
     stream whose output, decompressed with a bound of ``bytes`` + 1, has the
     indexed length and SHA-256 and is followed by no other data;
   * ``blobs/`` holds nothing else (an unreferenced or misnamed file is an
-    error), and the store directory holds only ``store.json`` and ``blobs/``.
+    error), and the store directory holds only ``store.json`` and ``blobs/``
+    (plus writer state, ``store.lock`` and ``tmp/``, which readers ignore and
+    ``store-verify`` reports as information in ``writer_state``).
 
 Content is returned or written only after its length and digest match.
 
@@ -287,12 +289,33 @@ def read_file(store: str, index: dict[str, Any], tree: str, path: str) -> bytes:
 # ---- verification -----------------------------------------------------------
 
 
+def writer_state(store: str) -> list[str]:
+    """Writer state a reader ignores: a lock file or a `tmp/` directory."""
+    notes: list[str] = []
+    lock = os.path.join(store, "store.lock")
+    if os.path.lexists(lock):
+        try:
+            with open(lock, "rb") as handle:
+                holder = handle.read(256).decode("utf-8", "replace").strip()
+        except OSError:
+            holder = "unreadable"
+        notes.append(f"store.lock is present ({holder}); a writer may be running or may have crashed")
+    tmp = os.path.join(store, "tmp")
+    if os.path.lexists(tmp):
+        try:
+            count = len(os.listdir(tmp))
+        except OSError:
+            count = -1
+        notes.append(f"tmp/ is present ({count} entries); leftover from a writer, ignored")
+    return notes
+
+
 def _check_layout(store: str, referenced: set[str], findings: list[dict[str, str]]) -> None:
     def add(kind: str, path: str, detail: str) -> None:
         findings.append({"kind": kind, "path": path, "detail": detail})
 
     for name in sorted(os.listdir(store)):
-        if name not in ("store.json", "blobs"):
+        if name not in ("store.json", "blobs", "store.lock", "tmp"):
             add("unexpected_entry", name, "only store.json and blobs/ may appear in a store")
     blobs = os.path.join(store, "blobs")
     try:
@@ -332,6 +355,7 @@ def verify_store(store: str) -> dict[str, Any]:
         "stored_bytes": 0,
         "finding_count": 0,
         "findings": [],
+        "writer_state": [],
     }
     try:
         index = load_index(store)
@@ -362,6 +386,7 @@ def verify_store(store: str) -> dict[str, Any]:
         finding_count=len(findings),
         findings=findings[:MAX_REPORTED_FINDINGS],
         status="verified" if not findings else "failed",
+        writer_state=writer_state(store),
     )
     return report
 

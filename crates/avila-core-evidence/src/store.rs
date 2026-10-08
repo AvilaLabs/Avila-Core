@@ -30,8 +30,9 @@ use xz2::write::XzEncoder;
 pub const EVIDENCE_STORE_SCHEMA_VERSION: &str = "avila.core/evidence-store/v0.1";
 pub const EVIDENCE_STORE_CODEC: &str = "xz";
 
-/// Writers use xz preset 9; readers accept any valid xz stream.
-const XZ_PRESET: u32 = 9;
+/// The default writer preset (`store pack`, `store add`). The preset is a
+/// writer parameter; readers accept any valid xz stream.
+pub const DEFAULT_XZ_PRESET: u32 = 9;
 /// Decoder memory ceiling. Preset 9 needs about 65 MiB; the limit only stops a
 /// hostile stream from declaring an enormous dictionary.
 const DECODER_MEMORY_LIMIT: u64 = 1 << 30;
@@ -48,6 +49,10 @@ const MAX_REPORTED_FINDINGS: usize = 1_000;
 
 const INDEX_FILE: &str = "store.json";
 const BLOBS_DIR: &str = "blobs";
+/// Writer state: an exclusive lock file and a staging directory. Readers
+/// ignore both.
+const LOCK_FILE: &str = "store.lock";
+const TMP_DIR: &str = "tmp";
 const COPY_BUFFER: usize = 64 * 1024;
 
 #[derive(Debug, Error)]
@@ -72,6 +77,18 @@ pub enum StoreError {
     Blob { sha256: String, detail: String },
     #[error("store layout is not valid: {0}")]
     Layout(String),
+    #[error(
+        "store `{store}` is locked by `{lock}` ({holder}); if you have confirmed that no writer is running on that host, delete that file and retry"
+    )]
+    Locked {
+        store: String,
+        lock: String,
+        holder: String,
+    },
+    #[error("store already has a tree `{0}`; adding never changes an existing tree")]
+    TreeExists(String),
+    #[error("xz preset {0} is not valid; use 0 to 9")]
+    InvalidPreset(u32),
 }
 
 fn io_error(path: &Path, source: io::Error) -> StoreError {
@@ -292,6 +309,33 @@ fn serialize_index(index: &StoreIndex) -> Result<Vec<u8>, StoreError> {
         .map_err(|error| StoreError::InvalidIndex(error.to_string()))?;
     bytes.push(b'\n');
     Ok(bytes)
+}
+
+/// The blob's path under `root`, after checking that `blobs/` and its
+/// fan-out directory are real directories, so a symlinked directory cannot
+/// lead a read outside the store.
+fn blob_path_in(root: &Path, sha256: &str) -> Result<PathBuf, StoreError> {
+    let blobs = root.join(BLOBS_DIR);
+    let fanout = blobs.join(&sha256[..2]);
+    for directory in [&blobs, &fanout] {
+        match fs::symlink_metadata(directory) {
+            Ok(metadata) if metadata.is_dir() => {}
+            Ok(_) => {
+                return Err(StoreError::Blob {
+                    sha256: sha256.into(),
+                    detail: format!("`{}` is not a directory", directory.display()),
+                });
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                return Err(StoreError::Blob {
+                    sha256: sha256.into(),
+                    detail: "the blob file is missing".into(),
+                });
+            }
+            Err(error) => return Err(io_error(directory, error)),
+        }
+    }
+    Ok(root.join(blob_relative(sha256)))
 }
 
 // ---------------------------------------------------------------------------
@@ -539,6 +583,9 @@ pub struct StoreVerifyReport {
     pub stored_bytes: u64,
     pub finding_count: usize,
     pub findings: Vec<StoreFinding>,
+    /// Writer state that readers ignore (`store.lock`, `tmp/`), reported as
+    /// information; it never fails verification.
+    pub writer_state: Vec<String>,
 }
 
 impl EvidenceStore {
@@ -618,27 +665,7 @@ impl EvidenceStore {
     /// directory are real directories, so a symlinked directory cannot lead
     /// a read outside the store.
     fn blob_path(&self, sha256: &str) -> Result<PathBuf, StoreError> {
-        let blobs = self.root.join(BLOBS_DIR);
-        let fanout = blobs.join(&sha256[..2]);
-        for directory in [&blobs, &fanout] {
-            match fs::symlink_metadata(directory) {
-                Ok(metadata) if metadata.is_dir() => {}
-                Ok(_) => {
-                    return Err(StoreError::Blob {
-                        sha256: sha256.into(),
-                        detail: format!("`{}` is not a directory", directory.display()),
-                    });
-                }
-                Err(error) if error.kind() == io::ErrorKind::NotFound => {
-                    return Err(StoreError::Blob {
-                        sha256: sha256.into(),
-                        detail: "the blob file is missing".into(),
-                    });
-                }
-                Err(error) => return Err(io_error(directory, error)),
-            }
-        }
-        Ok(self.root.join(blob_relative(sha256)))
+        blob_path_in(&self.root, sha256)
     }
 
     /// Open one file for streaming. The returned reader verifies length and
@@ -738,11 +765,13 @@ impl EvidenceStore {
             stored_bytes,
             finding_count: findings.count,
             findings: findings.items,
+            writer_state: writer_state(&self.root),
         }
     }
 
     /// The store directory contains exactly `store.json` and `blobs/`, and
     /// `blobs/` holds exactly the referenced `<h0h1>/<h>.xz` regular files.
+    /// Writer state (`store.lock`, `tmp/`) is ignored.
     fn check_layout(&self, referenced: &BTreeMap<&str, u64>, findings: &mut Collector) {
         let top = match read_dir_names(&self.root) {
             Ok(names) => names,
@@ -752,11 +781,11 @@ impl EvidenceStore {
             }
         };
         for name in &top {
-            if name != INDEX_FILE && name != BLOBS_DIR {
+            if ![INDEX_FILE, BLOBS_DIR, LOCK_FILE, TMP_DIR].contains(&name.as_str()) {
                 findings.push(
                     "unexpected_entry",
                     PathBuf::from(name),
-                    "only store.json and blobs/ may appear in a store".into(),
+                    "only store.json and blobs/ (and writer state: store.lock, tmp/) may appear in a store".into(),
                 );
             }
         }
@@ -947,7 +976,42 @@ pub fn verify_store(root: &Path) -> StoreVerifyReport {
                 path: INDEX_FILE.into(),
                 detail: error.to_string(),
             }],
+            writer_state: Vec::new(),
         },
+    }
+}
+
+/// Describe the writer state a reader ignores: a lock file and a `tmp/`
+/// directory.
+fn writer_state(root: &Path) -> Vec<String> {
+    let mut notes = Vec::new();
+    let lock = root.join(LOCK_FILE);
+    if fs::symlink_metadata(&lock).is_ok() {
+        notes.push(format!(
+            "{LOCK_FILE} is present ({}); a writer may be running or may have crashed",
+            lock_holder(&lock)
+        ));
+    }
+    let tmp = root.join(TMP_DIR);
+    if fs::symlink_metadata(&tmp).is_ok() {
+        let entries =
+            read_dir_names(&tmp).map_or_else(|_| "unreadable".into(), |n| n.len().to_string());
+        notes.push(format!(
+            "{TMP_DIR}/ is present ({entries} entries); leftover from a writer, ignored"
+        ));
+    }
+    notes
+}
+
+fn lock_holder(lock: &Path) -> String {
+    let mut raw = Vec::new();
+    let read = File::open(lock).and_then(|file| file.take(256).read_to_end(&mut raw));
+    match read {
+        Ok(_) => String::from_utf8_lossy(&raw)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" "),
+        Err(_) => "holder unreadable".into(),
     }
 }
 
@@ -1108,10 +1172,18 @@ fn scan_tree(tree: &str, root: &Path) -> Result<Vec<ScannedFile>, StoreError> {
     Ok(found)
 }
 
-fn write_blob(source: &Path, entry: &StoreFile, destination: &Path) -> Result<u64, StoreError> {
+/// Compress `source` into `destination` (a staging file under `tmp/`),
+/// checking that the bytes read match the scanned identity. Returns the
+/// compressed size.
+fn write_blob(
+    source: &Path,
+    entry: &StoreFile,
+    destination: &Path,
+    preset: u32,
+) -> Result<u64, StoreError> {
     let mut input = File::open(source).map_err(|error| io_error(source, error))?;
     let output = File::create_new(destination).map_err(|error| io_error(destination, error))?;
-    let mut encoder = XzEncoder::new(BufWriter::new(output), XZ_PRESET);
+    let mut encoder = XzEncoder::new(BufWriter::new(output), preset);
     let mut hasher = Sha256::new();
     let mut buffer = vec![0_u8; COPY_BUFFER];
     let mut length = 0_u64;
@@ -1140,18 +1212,112 @@ fn write_blob(source: &Path, entry: &StoreFile, destination: &Path) -> Result<u6
             source.display()
         )));
     }
+    let file = writer
+        .into_inner()
+        .map_err(|error| io_error(destination, error.into_error()))?;
+    file.sync_all()
+        .map_err(|error| io_error(destination, error))?;
     let stored = fs::metadata(destination)
         .map_err(|error| io_error(destination, error))?
         .len();
     Ok(stored)
 }
 
-/// Create a new store at `out` from named directory trees. `trees` pairs a
-/// tree name with its source directory; their order does not matter.
-/// Blobs are written first and `store.json` last, so a directory without an
-/// index is an unfinished store, never a valid one. On failure the output
-/// directory is removed.
-pub fn pack_store(out: &Path, trees: &[(String, PathBuf)]) -> Result<StorePackReport, StoreError> {
+fn check_preset(preset: u32) -> Result<(), StoreError> {
+    if preset > 9 {
+        return Err(StoreError::InvalidPreset(preset));
+    }
+    Ok(())
+}
+
+/// Make sure `root/tmp` is a real directory (not a symlink) and return it.
+fn ensure_tmp_dir(root: &Path) -> Result<PathBuf, StoreError> {
+    let tmp = root.join(TMP_DIR);
+    match fs::symlink_metadata(&tmp) {
+        Ok(metadata) if metadata.is_dir() => {}
+        Ok(_) => {
+            return Err(StoreError::Layout(format!(
+                "`{}` is not a directory",
+                tmp.display()
+            )));
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            fs::create_dir(&tmp).map_err(|error| io_error(&tmp, error))?;
+        }
+        Err(error) => return Err(io_error(&tmp, error)),
+    }
+    Ok(tmp)
+}
+
+/// What placing one blob did.
+enum Placed {
+    /// Written now; carries the compressed size.
+    New(u64),
+    /// Already in the store and verified; left untouched.
+    Kept,
+}
+
+/// Put one blob into `root/blobs/` by writing it under `tmp/` and renaming it
+/// into place. A blob that already exists is verified and kept; one that
+/// fails verification is an error, never overwritten. The caller holds the
+/// writer lock (or owns a store nobody else can see yet), so any staging
+/// file of the same name is a crashed writer's and is replaced.
+fn place_blob(
+    root: &Path,
+    tmp: &Path,
+    source: &Path,
+    entry: &StoreFile,
+    preset: u32,
+    created: &mut Vec<PathBuf>,
+) -> Result<Placed, StoreError> {
+    let destination = root.join(blob_relative(&entry.sha256));
+    if fs::symlink_metadata(&destination).is_ok() {
+        let path = blob_path_in(root, &entry.sha256)?;
+        let mut reader = StoreFileReader::open(&path, &entry.sha256, entry.bytes)?;
+        drain(&mut reader).map_err(|error| StoreError::Blob {
+            sha256: entry.sha256.clone(),
+            detail: format!("the existing blob does not verify: {error}"),
+        })?;
+        return Ok(Placed::Kept);
+    }
+    let staging = tmp.join(format!("{}.part", entry.sha256));
+    if fs::symlink_metadata(&staging).is_ok() {
+        fs::remove_file(&staging).map_err(|error| io_error(&staging, error))?;
+    }
+    let stored = match write_blob(source, entry, &staging, preset) {
+        Ok(stored) => stored,
+        Err(error) => {
+            let _ = fs::remove_file(&staging);
+            return Err(error);
+        }
+    };
+    if let Some(parent) = destination.parent() {
+        fs::create_dir_all(parent).map_err(|error| io_error(parent, error))?;
+    }
+    fs::rename(&staging, &destination).map_err(|error| io_error(&destination, error))?;
+    created.push(destination);
+    Ok(Placed::New(stored))
+}
+
+/// Write `index` to `tmp/` and rename it over `store.json`, so a reader sees
+/// the old index or the new one, never a partial one.
+fn replace_index(root: &Path, tmp: &Path, index: &StoreIndex) -> Result<(), StoreError> {
+    let staging = tmp.join("store.json.part");
+    if fs::symlink_metadata(&staging).is_ok() {
+        fs::remove_file(&staging).map_err(|error| io_error(&staging, error))?;
+    }
+    let mut file = File::create_new(&staging).map_err(|error| io_error(&staging, error))?;
+    file.write_all(&serialize_index(index)?)
+        .and_then(|()| file.sync_all())
+        .map_err(|error| io_error(&staging, error))?;
+    let index_path = root.join(INDEX_FILE);
+    fs::rename(&staging, &index_path).map_err(|error| io_error(&index_path, error))
+}
+
+/// Scan the named directories into index trees plus the files to store.
+fn scan_sources(
+    trees: &[(String, PathBuf)],
+) -> Result<(Vec<StoreTree>, Vec<Vec<ScannedFile>>), StoreError> {
     let mut sources: Vec<(&String, &PathBuf)> = trees.iter().map(|(n, p)| (n, p)).collect();
     sources.sort_by(|a, b| a.0.cmp(b.0));
     for pair in sources.windows(2) {
@@ -1165,10 +1331,6 @@ pub fn pack_store(out: &Path, trees: &[(String, PathBuf)]) -> Result<StorePackRe
     for (name, _) in &sources {
         validate_tree_name(name).map_err(StoreError::InvalidInput)?;
     }
-    if fs::symlink_metadata(out).is_ok() {
-        return Err(StoreError::AlreadyExists(out.display().to_string()));
-    }
-
     let mut index_trees = Vec::new();
     let mut scanned = Vec::new();
     for (name, directory) in &sources {
@@ -1186,6 +1348,26 @@ pub fn pack_store(out: &Path, trees: &[(String, PathBuf)]) -> Result<StorePackRe
         });
         scanned.push(files);
     }
+    Ok((index_trees, scanned))
+}
+
+/// Create a new store at `out` from named directory trees. `trees` pairs a
+/// tree name with its source directory; their order does not matter.
+/// `preset` is the xz preset (0 to 9; [`DEFAULT_XZ_PRESET`] for archival
+/// packs). Blobs are staged under `tmp/` and renamed into place, then
+/// `store.json` is renamed in last, so a directory without an index is an
+/// unfinished store, never a valid one. On failure the output directory is
+/// removed.
+pub fn pack_store(
+    out: &Path,
+    trees: &[(String, PathBuf)],
+    preset: u32,
+) -> Result<StorePackReport, StoreError> {
+    check_preset(preset)?;
+    if fs::symlink_metadata(out).is_ok() {
+        return Err(StoreError::AlreadyExists(out.display().to_string()));
+    }
+    let (index_trees, scanned) = scan_sources(trees)?;
     let index = StoreIndex {
         schema_version: EVIDENCE_STORE_SCHEMA_VERSION.into(),
         codec: EVIDENCE_STORE_CODEC.into(),
@@ -1194,7 +1376,7 @@ pub fn pack_store(out: &Path, trees: &[(String, PathBuf)]) -> Result<StorePackRe
     validate_index(&index).map_err(|error| StoreError::InvalidInput(error.to_string()))?;
 
     create_new_directory(out)?;
-    match write_store(out, &index, &scanned) {
+    match write_store(out, &index, &scanned, preset) {
         Ok(report) => Ok(report),
         Err(error) => {
             let _ = fs::remove_dir_all(out);
@@ -1207,35 +1389,32 @@ fn write_store(
     out: &Path,
     index: &StoreIndex,
     scanned: &[Vec<ScannedFile>],
+    preset: u32,
 ) -> Result<StorePackReport, StoreError> {
     let blobs = out.join(BLOBS_DIR);
     fs::create_dir(&blobs).map_err(|error| io_error(&blobs, error))?;
+    let tmp = ensure_tmp_dir(out)?;
     let mut done: BTreeSet<&str> = BTreeSet::new();
     let mut files = 0_usize;
     let mut uncompressed_bytes = 0_u64;
     let mut distinct_bytes = 0_u64;
     let mut stored_bytes = 0_u64;
+    let mut created = Vec::new();
     for file in scanned.iter().flatten() {
         files += 1;
         uncompressed_bytes += file.entry.bytes;
         if !done.insert(&file.entry.sha256) {
             continue;
         }
-        let relative = blob_relative(&file.entry.sha256);
-        let destination = out.join(&relative);
-        if let Some(parent) = destination.parent() {
-            fs::create_dir_all(parent).map_err(|error| io_error(parent, error))?;
+        if let Placed::New(stored) =
+            place_blob(out, &tmp, &file.source, &file.entry, preset, &mut created)?
+        {
+            stored_bytes += stored;
         }
-        stored_bytes += write_blob(&file.source, &file.entry, &destination)?;
         distinct_bytes += file.entry.bytes;
     }
-    let index_path = out.join(INDEX_FILE);
-    let mut index_file =
-        File::create_new(&index_path).map_err(|error| io_error(&index_path, error))?;
-    index_file
-        .write_all(&serialize_index(index)?)
-        .and_then(|()| index_file.sync_all())
-        .map_err(|error| io_error(&index_path, error))?;
+    replace_index(out, &tmp, index)?;
+    fs::remove_dir(&tmp).map_err(|error| io_error(&tmp, error))?;
     Ok(StorePackReport {
         out: out.display().to_string(),
         trees: index.trees.len(),
@@ -1247,6 +1426,202 @@ fn write_store(
     })
 }
 
+// ---------------------------------------------------------------------------
+// Adding trees to an existing store
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct StoreAddReport {
+    pub store: String,
+    pub added_trees: Vec<String>,
+    pub files: usize,
+    pub distinct_blobs: usize,
+    pub new_blobs: usize,
+    pub reused_blobs: usize,
+    pub uncompressed_bytes: u64,
+    /// Compressed bytes of the blobs written now.
+    pub stored_bytes: u64,
+}
+
+/// The writer lock: `store.lock`, created exclusively and removed on drop.
+struct StoreLock {
+    path: PathBuf,
+}
+
+impl StoreLock {
+    fn acquire(root: &Path) -> Result<Self, StoreError> {
+        let path = root.join(LOCK_FILE);
+        let mut file = match File::create_new(&path) {
+            Ok(file) => file,
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+                return Err(StoreError::Locked {
+                    store: root.display().to_string(),
+                    lock: path.display().to_string(),
+                    holder: lock_holder(&path),
+                });
+            }
+            Err(error) => return Err(io_error(&path, error)),
+        };
+        let held = format!("pid {} host {}\n", std::process::id(), host_name());
+        if let Err(error) = file
+            .write_all(held.as_bytes())
+            .and_then(|()| file.sync_all())
+        {
+            let _ = fs::remove_file(&path);
+            return Err(io_error(&path, error));
+        }
+        Ok(Self { path })
+    }
+}
+
+impl Drop for StoreLock {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
+}
+
+fn host_name() -> String {
+    let name = fs::read_to_string("/proc/sys/kernel/hostname")
+        .ok()
+        .or_else(|| std::env::var("HOSTNAME").ok())
+        .or_else(|| std::env::var("COMPUTERNAME").ok())
+        .unwrap_or_default();
+    let name: String = name
+        .trim()
+        .chars()
+        .filter(|c| c.is_ascii_graphic())
+        .collect();
+    if name.is_empty() {
+        "unknown".into()
+    } else {
+        name
+    }
+}
+
+/// Add named directory trees to an existing store. The writer holds
+/// `store.lock` (created exclusively; an existing lock refuses the write),
+/// stages new blobs and the new index under `tmp/` and renames them into
+/// place, so readers see the old index or the new one. A blob already in the
+/// store is verified and kept. Existing trees are never changed, and a name
+/// that already exists is refused. On failure the blobs this call wrote are
+/// removed and the index is untouched.
+pub fn add_trees(
+    store: &Path,
+    trees: &[(String, PathBuf)],
+    preset: u32,
+) -> Result<StoreAddReport, StoreError> {
+    check_preset(preset)?;
+    if trees.is_empty() {
+        return Err(StoreError::InvalidInput("no tree to add".into()));
+    }
+    let mut names: Vec<&String> = trees.iter().map(|(name, _)| name).collect();
+    names.sort();
+    for pair in names.windows(2) {
+        if pair[0] == pair[1] {
+            return Err(StoreError::InvalidInput(format!(
+                "tree name `{}` is given more than once",
+                pair[0]
+            )));
+        }
+    }
+    for name in &names {
+        validate_tree_name(name).map_err(StoreError::InvalidInput)?;
+    }
+    // Fail on a store that does not open before taking the lock.
+    EvidenceStore::open(store)?;
+    let _lock = StoreLock::acquire(store)?;
+    // The index is read again under the lock: it is the one we extend.
+    let existing = EvidenceStore::open(store)?;
+    for name in &names {
+        if existing.tree(name).is_some() {
+            return Err(StoreError::TreeExists((*name).clone()));
+        }
+    }
+    let (added, scanned) = scan_sources(trees)?;
+    let mut index = existing.index.clone();
+    index.trees.extend(added.iter().cloned());
+    index.trees.sort_by(|a, b| a.name.cmp(&b.name));
+    validate_index(&index).map_err(|error| StoreError::InvalidInput(error.to_string()))?;
+
+    let tmp = ensure_tmp_dir(store)?;
+    let mut created = Vec::new();
+    let outcome = add_blobs_and_index(store, &tmp, &index, &scanned, preset, &mut created);
+    match outcome {
+        Ok((new_blobs, reused_blobs, stored_bytes, files, uncompressed_bytes)) => {
+            // Remove the staging directory only if it is empty: another
+            // writer's crashed leftovers stay for the operator to inspect.
+            let _ = fs::remove_dir(&tmp);
+            Ok(StoreAddReport {
+                store: store.display().to_string(),
+                added_trees: added.iter().map(|tree| tree.name.clone()).collect(),
+                files,
+                distinct_blobs: new_blobs + reused_blobs,
+                new_blobs,
+                reused_blobs,
+                uncompressed_bytes,
+                stored_bytes,
+            })
+        }
+        Err(error) => {
+            for blob in created {
+                let _ = fs::remove_file(blob);
+            }
+            Err(error)
+        }
+    }
+}
+
+type AddCounts = (usize, usize, u64, usize, u64);
+
+fn add_blobs_and_index(
+    store: &Path,
+    tmp: &Path,
+    index: &StoreIndex,
+    scanned: &[Vec<ScannedFile>],
+    preset: u32,
+    created: &mut Vec<PathBuf>,
+) -> Result<AddCounts, StoreError> {
+    let blobs = store.join(BLOBS_DIR);
+    match fs::symlink_metadata(&blobs) {
+        Ok(metadata) if metadata.is_dir() => {}
+        Ok(_) => {
+            return Err(StoreError::Layout(format!(
+                "`{}` is not a directory",
+                blobs.display()
+            )));
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            fs::create_dir(&blobs).map_err(|error| io_error(&blobs, error))?;
+        }
+        Err(error) => return Err(io_error(&blobs, error)),
+    }
+    let mut done: BTreeSet<&str> = BTreeSet::new();
+    let (mut new_blobs, mut reused_blobs, mut stored_bytes) = (0_usize, 0_usize, 0_u64);
+    let (mut files, mut uncompressed_bytes) = (0_usize, 0_u64);
+    for file in scanned.iter().flatten() {
+        files += 1;
+        uncompressed_bytes += file.entry.bytes;
+        if !done.insert(&file.entry.sha256) {
+            continue;
+        }
+        match place_blob(store, tmp, &file.source, &file.entry, preset, created)? {
+            Placed::New(stored) => {
+                new_blobs += 1;
+                stored_bytes += stored;
+            }
+            Placed::Kept => reused_blobs += 1,
+        }
+    }
+    replace_index(store, tmp, index)?;
+    Ok((
+        new_blobs,
+        reused_blobs,
+        stored_bytes,
+        files,
+        uncompressed_bytes,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1254,6 +1629,11 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
+
+    /// Most tests pack with the default preset; the shadowing keeps them short.
+    fn pack_store(out: &Path, trees: &[(String, PathBuf)]) -> Result<StorePackReport, StoreError> {
+        super::pack_store(out, trees, DEFAULT_XZ_PRESET)
+    }
 
     struct TestDir(PathBuf);
 
@@ -1927,5 +2307,287 @@ mod tests {
         let report = verify_store(&dir.path("s"));
         assert_eq!(report.status, StoreVerifyStatus::Failed);
         assert_eq!(findings(&report), ["invalid_index"]);
+    }
+
+    // ---- appendable stores and the writer preset (Amendment 1: A1, A2) ----
+
+    fn extra_sources(dir: &TestDir) -> Vec<(String, PathBuf)> {
+        let run = dir.path("src-run");
+        // One file repeats content already in the store; one is new.
+        write(&run.join("steps/s1/history.json"), b"shared content");
+        write(&run.join("steps/s1/new.json"), b"only in the added tree");
+        vec![("run-2".into(), run)]
+    }
+
+    fn all_files(store: &Path) -> BTreeMap<String, Vec<u8>> {
+        tree_files(store)
+    }
+
+    #[test]
+    fn add_extends_a_store_without_touching_existing_trees() {
+        let dir = TestDir::new();
+        let store = packed(&dir);
+        let before = EvidenceStore::open(&store).unwrap();
+        let blobs_before = all_files(&store.join("blobs"));
+        let index_before = before.index().clone();
+
+        let report = add_trees(&store, &extra_sources(&dir), 1).unwrap();
+        assert_eq!(report.added_trees, ["run-2"]);
+        assert_eq!(report.files, 2);
+        assert_eq!((report.new_blobs, report.reused_blobs), (1, 1));
+
+        let after = EvidenceStore::open(&store).unwrap();
+        assert_eq!(after.verify().status, StoreVerifyStatus::Verified);
+        assert!(after.verify().writer_state.is_empty());
+        let names: Vec<_> = after
+            .index()
+            .trees
+            .iter()
+            .map(|t| t.name.as_str())
+            .collect();
+        assert_eq!(names, ["case", "run-2", "workspace"]);
+        // Trees that were there are unchanged, entry for entry.
+        for tree in &index_before.trees {
+            assert_eq!(after.tree(&tree.name), Some(tree));
+        }
+        // Existing blobs are byte-identical; exactly one blob is new.
+        let blobs_after = all_files(&store.join("blobs"));
+        for (path, bytes) in &blobs_before {
+            assert_eq!(blobs_after.get(path), Some(bytes), "{path}");
+        }
+        assert_eq!(blobs_after.len(), blobs_before.len() + 1);
+        assert_eq!(
+            after.read_file("run-2", "steps/s1/history.json").unwrap(),
+            b"shared content"
+        );
+        // The writer leaves neither its lock nor its staging directory.
+        assert!(!store.join("store.lock").exists());
+        assert!(!store.join("tmp").exists());
+        // Unpacking old trees still gives their original bytes.
+        let out = dir.path("out");
+        after.unpack(&out, &["case".into()]).unwrap();
+        assert_eq!(
+            tree_files(&out.join("case")),
+            tree_files(&dir.path("src-case"))
+        );
+    }
+
+    #[test]
+    fn add_refuses_an_existing_tree_name_and_changes_nothing() {
+        let dir = TestDir::new();
+        let store = packed(&dir);
+        let index = fs::read(store.join("store.json")).unwrap();
+        let blobs = all_files(&store.join("blobs"));
+        let error = add_trees(&store, &[("case".into(), dir.path("src-work"))], 1).unwrap_err();
+        assert!(matches!(error, StoreError::TreeExists(ref name) if name == "case"));
+        assert_eq!(fs::read(store.join("store.json")).unwrap(), index);
+        assert_eq!(all_files(&store.join("blobs")), blobs);
+        assert!(!store.join("store.lock").exists(), "the lock is released");
+        // Bad names and repeats in one call are refused too.
+        for trees in [
+            vec![
+                ("a".into(), dir.path("src-work")),
+                ("a".into(), dir.path("src-work")),
+            ],
+            vec![("bad/name".into(), dir.path("src-work"))],
+            vec![],
+        ] {
+            assert!(matches!(
+                add_trees(&store, &trees, 1),
+                Err(StoreError::InvalidInput(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn add_refuses_while_locked_and_says_how_to_clear_a_stale_lock() {
+        let dir = TestDir::new();
+        let store = packed(&dir);
+        fs::write(store.join("store.lock"), "pid 99999 host elsewhere\n").unwrap();
+        let error = add_trees(&store, &extra_sources(&dir), 1).unwrap_err();
+        assert!(matches!(error, StoreError::Locked { .. }));
+        let message = error.to_string();
+        assert!(message.contains("store.lock"), "{message}");
+        assert!(message.contains("pid 99999 host elsewhere"), "{message}");
+        assert!(message.contains("no writer is running"), "{message}");
+        // Refusing neither removed the foreign lock nor wrote anything.
+        assert!(store.join("store.lock").exists());
+        assert!(!store.join("tmp").exists());
+        assert_eq!(EvidenceStore::open(&store).unwrap().index().trees.len(), 2);
+
+        // After the operator confirms and clears it, the add proceeds.
+        fs::remove_file(store.join("store.lock")).unwrap();
+        add_trees(&store, &extra_sources(&dir), 1).unwrap();
+        assert_eq!(verify_store(&store).status, StoreVerifyStatus::Verified);
+    }
+
+    #[test]
+    fn a_crashed_writers_leftovers_do_not_break_readers_or_verify() {
+        let dir = TestDir::new();
+        let store = packed(&dir);
+        // What a crash mid-add leaves: the lock, half-written staging files.
+        fs::write(store.join("store.lock"), "pid 4242 host crashed\n").unwrap();
+        fs::create_dir(store.join("tmp")).unwrap();
+        fs::write(store.join("tmp").join("half.part"), b"\xfd7zXZ\x00 partial").unwrap();
+        fs::write(store.join("tmp").join("store.json.part"), b"{ \"schema_ver").unwrap();
+
+        let opened = EvidenceStore::open(&store).unwrap();
+        assert_eq!(opened.read_file("case", "empty.bin").unwrap(), b"");
+        let report = verify_store(&store);
+        assert_eq!(report.status, StoreVerifyStatus::Verified, "{report:?}");
+        assert_eq!(report.finding_count, 0);
+        assert_eq!(report.writer_state.len(), 2);
+        assert!(report.writer_state[0].contains("pid 4242 host crashed"));
+        assert!(report.writer_state[1].contains("tmp/"));
+        // Unpack ignores them as well.
+        let out = dir.path("out");
+        opened.unpack(&out, &[]).unwrap();
+        assert!(!out.join("tmp").exists());
+
+        // Once the lock is cleared, add replaces stale staging names and
+        // leaves the operator's other leftovers alone.
+        fs::remove_file(store.join("store.lock")).unwrap();
+        fs::write(store.join("tmp").join("store.json.part"), b"stale").unwrap();
+        add_trees(&store, &extra_sources(&dir), 1).unwrap();
+        assert_eq!(verify_store(&store).status, StoreVerifyStatus::Verified);
+        assert!(store.join("tmp").join("half.part").exists());
+    }
+
+    #[test]
+    fn the_index_is_replaced_by_rename_so_readers_see_old_or_new() {
+        let dir = TestDir::new();
+        let store = packed(&dir);
+        let old_bytes = fs::read(store.join("store.json")).unwrap();
+        // A reader that opened the store before the add keeps a consistent
+        // view of the old index and can still read every file it names.
+        let reader = EvidenceStore::open(&store).unwrap();
+
+        #[cfg(unix)]
+        let inode = |path: &Path| std::os::unix::fs::MetadataExt::ino(&fs::metadata(path).unwrap());
+        #[cfg(unix)]
+        let inode_before = inode(&store.join("store.json"));
+        add_trees(&store, &extra_sources(&dir), 1).unwrap();
+        #[cfg(unix)]
+        assert_ne!(
+            inode(&store.join("store.json")),
+            inode_before,
+            "the index is a new file renamed into place, not rewritten in place"
+        );
+
+        assert_eq!(reader.index().trees.len(), 2);
+        assert_eq!(
+            reader.read_file("case", "package.json").unwrap(),
+            b"{\"package\":true}\n"
+        );
+        let new_bytes = fs::read(store.join("store.json")).unwrap();
+        assert_ne!(new_bytes, old_bytes);
+        // Both whole documents parse; there is no partial state in between.
+        assert!(serde_json::from_slice::<StoreIndex>(&old_bytes).is_ok());
+        assert!(serde_json::from_slice::<StoreIndex>(&new_bytes).is_ok());
+        // The index never appears under a staging name at rest.
+        assert!(!store.join("tmp").exists());
+    }
+
+    #[test]
+    fn add_verifies_a_blob_that_already_exists_and_refuses_a_bad_one() {
+        let dir = TestDir::new();
+        let store = packed(&dir);
+        // Corrupt the blob that the added tree would reuse.
+        fs::write(
+            blob_file(&store, &sha(b"shared content")),
+            xz(b"not the shared content"),
+        )
+        .unwrap();
+        let before = fs::read(store.join("store.json")).unwrap();
+        let error = add_trees(&store, &extra_sources(&dir), 1).unwrap_err();
+        assert!(
+            matches!(&error, StoreError::Blob { detail, .. } if detail.contains("existing blob")),
+            "{error}"
+        );
+        assert_eq!(fs::read(store.join("store.json")).unwrap(), before);
+        // The blob the failed add wrote before reaching the bad one is gone,
+        // so the store has no unreferenced blob it did not have already.
+        let report = verify_store(&store);
+        assert!(
+            findings(&report)
+                .iter()
+                .all(|kind| *kind != "unreferenced_blob"),
+            "{report:?}"
+        );
+        assert!(!store.join("store.lock").exists());
+    }
+
+    #[test]
+    fn add_refuses_a_symlink_in_the_new_tree_and_leaves_the_store_valid() {
+        #[cfg(unix)]
+        {
+            let dir = TestDir::new();
+            let store = packed(&dir);
+            let run = dir.path("src-link");
+            write(&run.join("real.txt"), b"x");
+            std::os::unix::fs::symlink(run.join("real.txt"), run.join("link.txt")).unwrap();
+            let error = add_trees(&store, &[("linked".into(), run)], 1).unwrap_err();
+            assert!(matches!(error, StoreError::InvalidInput(_)), "{error}");
+            assert_eq!(verify_store(&store).status, StoreVerifyStatus::Verified);
+            assert!(!store.join("store.lock").exists());
+        }
+    }
+
+    #[test]
+    fn add_to_something_that_is_not_a_store_is_an_error_and_takes_no_lock() {
+        let dir = TestDir::new();
+        let empty = dir.path("not-a-store");
+        fs::create_dir_all(&empty).unwrap();
+        assert!(add_trees(&empty, &extra_sources(&dir), 1).is_err());
+        assert!(!empty.join("store.lock").exists());
+        assert!(add_trees(&dir.path("absent"), &extra_sources(&dir), 1).is_err());
+    }
+
+    #[test]
+    fn pack_stages_through_tmp_and_leaves_no_writer_state() {
+        let dir = TestDir::new();
+        let store = packed(&dir);
+        assert!(!store.join("tmp").exists());
+        assert!(!store.join("store.lock").exists());
+        let report = verify_store(&store);
+        assert_eq!(report.status, StoreVerifyStatus::Verified);
+        assert!(report.writer_state.is_empty());
+    }
+
+    #[test]
+    fn the_preset_is_a_writer_parameter_that_never_affects_identity() {
+        let dir = TestDir::new();
+        // Compressible content, so presets differ in stored size.
+        let source = dir.path("src");
+        let text: Vec<u8> = (0..4_000_u32)
+            .flat_map(|i| format!("{:x} row {i}\n", Sha256::digest(i.to_le_bytes())).into_bytes())
+            .collect();
+        write(&source.join("big.txt"), &text);
+        let trees = vec![("t".into(), source.clone())];
+        let fast = dir.path("fast");
+        let dense = dir.path("dense");
+        let fast_report = super::pack_store(&fast, &trees, 0).unwrap();
+        let dense_report = super::pack_store(&dense, &trees, DEFAULT_XZ_PRESET).unwrap();
+        assert_eq!(DEFAULT_XZ_PRESET, 9);
+        assert_ne!(dense_report.stored_bytes, fast_report.stored_bytes);
+        let a = EvidenceStore::open(&fast).unwrap();
+        let b = EvidenceStore::open(&dense).unwrap();
+        assert_eq!(a.index(), b.index());
+        assert_eq!(a.read_file("t", "big.txt").unwrap(), text);
+        assert_eq!(b.read_file("t", "big.txt").unwrap(), text);
+        // Mixed presets in one store verify; add accepts its own preset.
+        write(&dir.path("more").join("also.txt"), &text);
+        add_trees(&dense, &[("u".into(), dir.path("more"))], 6).unwrap();
+        assert_eq!(verify_store(&dense).status, StoreVerifyStatus::Verified);
+        // Out-of-range presets are refused before anything is written.
+        assert!(matches!(
+            super::pack_store(&dir.path("bad"), &trees, 10),
+            Err(StoreError::InvalidPreset(10))
+        ));
+        assert!(!dir.path("bad").exists());
+        assert!(matches!(
+            add_trees(&dense, &[("v".into(), dir.path("more"))], 10),
+            Err(StoreError::InvalidPreset(10))
+        ));
     }
 }

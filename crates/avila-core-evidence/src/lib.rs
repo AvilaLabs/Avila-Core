@@ -11,6 +11,7 @@ mod export;
 mod hash_cache;
 mod package;
 mod receipt;
+mod root;
 pub mod signature;
 mod store;
 
@@ -40,10 +41,15 @@ pub use receipt::{
     ReceiptInput, ReceiptOutput, ReceiptStatus, RunnerIdentity, invocation_identity, parse_receipt,
     verify_receipt,
 };
+pub use root::{
+    EvidenceRoot, Fetched, Located, STORE_ROOT_PREFIX, StagedRoots, is_store_address,
+    parse_store_address, read_case_manifest,
+};
 pub use store::{
-    EVIDENCE_STORE_CODEC, EVIDENCE_STORE_SCHEMA_VERSION, EvidenceStore, StoreError, StoreFile,
-    StoreFileReader, StoreFinding, StoreIndex, StorePackReport, StoreTree, StoreUnpackReport,
-    StoreVerifyReport, StoreVerifyStatus, pack_store, verify_store,
+    DEFAULT_XZ_PRESET, EVIDENCE_STORE_CODEC, EVIDENCE_STORE_SCHEMA_VERSION, EvidenceStore,
+    StoreAddReport, StoreError, StoreFile, StoreFileReader, StoreFinding, StoreIndex,
+    StorePackReport, StoreTree, StoreUnpackReport, StoreVerifyReport, StoreVerifyStatus, add_trees,
+    pack_store, verify_store,
 };
 
 pub const EVIDENCE_SCHEMA_VERSION: &str = "avila.core/evidence-bundle/v0.1";

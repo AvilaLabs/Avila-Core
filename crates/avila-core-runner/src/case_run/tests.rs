@@ -673,7 +673,13 @@ fn run_observations_bind_checked_artifacts_and_receipts() {
     // No workspace (nothing executed here) — but the committed receipt
     // documents and the attested artifacts under the supplied root were
     // byte-checked, so both enter the observation set.
-    let observations = collect_run_observations(&package, &claims, None, None, &shielding_root());
+    let observations = collect_run_observations(
+        &package,
+        &claims,
+        None,
+        None,
+        &StagedRoots::new(&shielding_root(), Path::new(".")),
+    );
     assert!(
         observations.observed().count() > 0,
         "attested artifacts under the supplied root are checked"

@@ -638,7 +638,7 @@ impl CaseView {
         ]
         .into_iter()
         .filter_map(|(document, file)| {
-            std::fs::read(case_dir.join(file))
+            crate::case_browser::read_case_file(&case_dir, file)
                 .ok()
                 .map(|bytes| (document.to_string(), bytes))
         })

@@ -23,9 +23,8 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::package::{
-    PackageError, canonical_directory, resolve_confined, validate_manifest, verify_case_package,
-};
+use crate::package::{PackageError, validate_manifest, verify_case_package};
+use crate::root::{EvidenceRoot, Fetched};
 use crate::{CasePackageManifest, sha256_hex};
 
 pub const EXPORT_REPORT_SCHEMA_VERSION: &str = "avila.core/export-report/v0.1-draft";
@@ -108,15 +107,30 @@ pub fn export_package(
     source_roots: &BTreeMap<String, PathBuf>,
     out_dir: &Path,
 ) -> Result<ExportReport, ExportError> {
-    let manifest_bytes = read_at(&package_root.join("package.json"))?;
+    // Roots may be directories or store trees (`store:<STORE_DIR>#<TREE>`);
+    // the output is always a plain directory.
+    let package = EvidenceRoot::open(package_root)?;
+    let manifest_bytes = match package.fetch_bytes("package.json")? {
+        Fetched::Found(bytes) => bytes,
+        Fetched::Missing => {
+            return Err(ExportError::Io {
+                path: format!("{}/package.json", package.display()),
+                source: io::Error::new(io::ErrorKind::NotFound, "no such file"),
+            });
+        }
+        Fetched::Corrupt(detail) => return Err(PackageError::Store(detail).into()),
+    };
     let manifest: CasePackageManifest =
         serde_json::from_slice(&manifest_bytes).map_err(PackageError::InvalidJson)?;
     validate_manifest(&manifest)?;
 
-    let package_root = canonical_directory(package_root)?;
+    let package_root = PathBuf::from(package.display());
     let mut canonical_roots = BTreeMap::new();
+    let mut roots = BTreeMap::new();
     for (name, path) in source_roots {
-        canonical_roots.insert(name.clone(), canonical_directory(path)?);
+        let root = EvidenceRoot::open(path)?;
+        canonical_roots.insert(name.clone(), PathBuf::from(root.display()));
+        roots.insert(name.clone(), root);
     }
 
     let verified =
@@ -152,17 +166,21 @@ pub fn export_package(
     let mut artifacts = Vec::with_capacity(manifest.artifacts.len());
     let mut exported_roots = BTreeMap::new();
     for artifact in &manifest.artifacts {
-        let root = canonical_roots
+        let root = roots
             .get(&artifact.source_root)
             .expect("a complete integrity check resolved every root");
-        let source = resolve_confined(root, &artifact.path)?
-            .expect("a complete integrity check found every artifact");
         let relative = crate::package::validate_relative_path(&artifact.path)?;
         let bundle_path = Path::new("roots")
             .join(&artifact.source_root)
             .join(&relative);
         let target = out_dir.join(&bundle_path);
-        copy_verified(&source, &target, &artifact.sha256, &artifact.artifact_id)?;
+        copy_verified(
+            root,
+            &artifact.path,
+            &target,
+            &artifact.sha256,
+            &artifact.artifact_id,
+        )?;
         let (_, bytes) = crate::sha256_file(&target).map_err(|source| ExportError::Io {
             path: target.display().to_string(),
             source,
@@ -248,13 +266,6 @@ fn prepare_out_dir(out_dir: &Path) -> Result<(), ExportError> {
     }
 }
 
-fn read_at(path: &Path) -> Result<Vec<u8>, ExportError> {
-    fs::read(path).map_err(|source| ExportError::Io {
-        path: path.display().to_string(),
-        source,
-    })
-}
-
 fn write_at(path: &Path, bytes: &[u8]) -> Result<(), ExportError> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|source| ExportError::Io {
@@ -272,7 +283,8 @@ fn write_at(path: &Path, bytes: &[u8]) -> Result<(), ExportError> {
 /// manifest's bound digest. Checking the copy — not the source — is what makes
 /// the recorded digest honest about what the bundle carries.
 fn copy_verified(
-    source: &Path,
+    root: &EvidenceRoot,
+    relative: &str,
     target: &Path,
     expected_sha256: &str,
     artifact_id: &str,
@@ -283,10 +295,17 @@ fn copy_verified(
             source: source_err,
         })?;
     }
-    fs::copy(source, target).map_err(|source_err| ExportError::Io {
-        path: format!("{} -> {}", source.display(), target.display()),
-        source: source_err,
-    })?;
+    match root.copy_to(relative, target)? {
+        Fetched::Found(_) => {}
+        Fetched::Missing => {
+            return Err(PackageError::Store(format!(
+                "`{relative}` disappeared from `{}` during export",
+                root.display()
+            ))
+            .into());
+        }
+        Fetched::Corrupt(detail) => return Err(PackageError::Store(detail).into()),
+    }
     let (actual, _) = crate::sha256_file(target).map_err(|source_err| ExportError::Io {
         path: target.display().to_string(),
         source: source_err,
@@ -465,5 +484,77 @@ mod tests {
         )
         .unwrap_err();
         assert!(matches!(error, ExportError::OutputNotEmpty(_)));
+    }
+
+    #[test]
+    fn export_from_store_trees_matches_export_from_directories() {
+        use crate::root::testing::{address, pack};
+
+        let source = TestDir::new();
+        fs::write(source.0.join("package.json"), fixture(&source.0)).unwrap();
+        let scratch = TestDir::new();
+        let store = scratch.0.join("export.store");
+        pack(
+            &store,
+            &[("case", &source.0), ("source", &source.0.join("source"))],
+        );
+        let from_disk = scratch.0.join("from-disk");
+        let from_store = scratch.0.join("from-store");
+
+        let disk_report = export_package(
+            &source.0,
+            &BTreeMap::from([("source".into(), source.0.join("source"))]),
+            &from_disk,
+        )
+        .unwrap();
+        let store_report = export_package(
+            &address(&store, "case"),
+            &BTreeMap::from([("source".into(), address(&store, "source"))]),
+            &from_store,
+        )
+        .unwrap();
+        // The export is content-identified, so the root's location is not
+        // part of it; the destination is an ordinary directory.
+        assert_eq!(store_report, disk_report);
+        for relative in [
+            "package.json",
+            "contract.json",
+            "roots/source/nested/artifact.bin",
+            "export-report.json",
+        ] {
+            assert_eq!(
+                fs::read(from_store.join(relative)).unwrap(),
+                fs::read(from_disk.join(relative)).unwrap(),
+                "{relative}"
+            );
+        }
+    }
+
+    #[test]
+    fn export_refuses_a_tampered_store_blob_and_writes_no_partial_file() {
+        use crate::root::testing::{address, pack, tamper};
+
+        let source = TestDir::new();
+        fs::write(source.0.join("package.json"), fixture(&source.0)).unwrap();
+        let scratch = TestDir::new();
+        let store = scratch.0.join("export.store");
+        pack(
+            &store,
+            &[("case", &source.0), ("source", &source.0.join("source"))],
+        );
+        tamper(&store, b"artifact", b"evil");
+        let out = scratch.0.join("out");
+        let error = export_package(
+            &address(&store, "case"),
+            &BTreeMap::from([("source".into(), address(&store, "source"))]),
+            &out,
+        )
+        .unwrap_err();
+        // The package no longer verifies, so nothing is shipped.
+        assert!(
+            matches!(error, ExportError::IntegrityNotComplete(_)),
+            "{error}"
+        );
+        assert!(!out.exists());
     }
 }

@@ -281,7 +281,9 @@ checked against the indexed length and digest before content is returned
 (`avila-core store ...`, and `verifier/store_verify.py` using only the Python
 standard library). A store is a container, not a trust root; checking its
 files against a package or receipt is still the job of the verification
-described above, and doing so in place is future work.
+described above. Amendment 1 lets a store gain trees and lets commands read
+a case package, source root or workspace in place as `store:<STORE>#<TREE>`
+with the same results as the files on disk (`docs/product/CORE_TOOLS.md`).
 
 ## Redaction and retention (owner-gated)
 

@@ -164,3 +164,12 @@ nuclear data and tools, are stored once. `--keep-scratch` keeps each step
 directory as it is today, for debugging. Without `--store`, `run` behaves
 exactly as before. Receipts, invocation identities and reports are unchanged:
 they record the same workspace paths and digests.
+
+**A4 note (2026-10-08).** Putting a blob needs no lock: a blob is written under
+`tmp/` and renamed to its content address, so concurrent writers of the same
+content produce the same file and a reader never sees a partial blob. Only the
+index update that adds a tree takes `store.lock`. A run therefore writes blobs
+as its steps finish and holds the lock only for the moment it adds its tree,
+so several runs can share one store. A run whose store does not exist yet
+creates an empty one. A run that fails still adds its tree (failed receipts are
+evidence) and keeps the failed step's directory for inspection, saying where.

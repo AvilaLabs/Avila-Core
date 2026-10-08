@@ -119,6 +119,9 @@ struct Memo {
 pub struct StoreRoot {
     store: EvidenceStore,
     tree: String,
+    /// A directory inside the tree this root is anchored at, as a store path
+    /// prefix ending in `/`, or empty for the whole tree.
+    prefix: String,
     label: String,
     memo: Mutex<Memo>,
 }
@@ -143,15 +146,40 @@ impl EvidenceRoot {
         let Some(parsed) = parse_store_address(text) else {
             return canonical_directory(path).map(Self::Directory);
         };
-        let (store_dir, tree) = parsed.map_err(PackageError::Store)?;
-        let label = format!("store `{}` tree `{tree}`", store_dir.display());
+        let (store_dir, address) = parsed.map_err(PackageError::Store)?;
+        // `TREE/DIR` anchors the root at a directory inside the tree, so one
+        // step of a stored run is a workspace of its own. Tree names cannot
+        // contain `/`, which keeps the split unambiguous.
+        let (tree, directory) = match address.split_once('/') {
+            Some((tree, directory)) => (tree.to_owned(), Some(directory.to_owned())),
+            None => (address.clone(), None),
+        };
+        let label = format!("store `{}` tree `{address}`", store_dir.display());
         let store = EvidenceStore::open(&store_dir).map_err(|error| store_error(&label, error))?;
-        if store.tree(&tree).is_none() {
+        let Some(stored) = store.tree(&tree) else {
             return Err(store_error(&label, "the store has no such tree"));
-        }
+        };
+        let prefix = match directory {
+            Some(directory) => {
+                let prefix = format!(
+                    "{}/",
+                    StoreRoot::relative_text(directory.trim_end_matches('/'))?
+                );
+                if !stored
+                    .files
+                    .iter()
+                    .any(|file| file.path.starts_with(&prefix))
+                {
+                    return Err(store_error(&label, "the tree has no such directory"));
+                }
+                prefix
+            }
+            None => String::new(),
+        };
         Ok(Self::Store(Box::new(StoreRoot {
             store,
             tree,
+            prefix,
             label,
             memo: Mutex::new(Memo::default()),
         })))
@@ -163,9 +191,11 @@ impl EvidenceRoot {
         match self {
             Self::Directory(path) => path.display().to_string(),
             Self::Store(root) => format!(
-                "{STORE_ROOT_PREFIX}{}#{}",
+                "{STORE_ROOT_PREFIX}{}#{}{}{}",
                 root.store.root().display(),
-                root.tree
+                root.tree,
+                if root.prefix.is_empty() { "" } else { "/" },
+                root.prefix.trim_end_matches('/')
             ),
         }
     }
@@ -226,7 +256,7 @@ impl EvidenceRoot {
     ) -> Result<Fetched<(String, u64)>, PackageError> {
         match (self, located) {
             (_, Located::File(path)) => crate::package::hash_file(path).map(Fetched::Found),
-            (Self::Store(root), Located::Stored(relative)) => root.fetch_hash(relative),
+            (Self::Store(root), Located::Stored(text)) => root.hash_stored(text),
             (Self::Directory(_), Located::Stored(_)) => Ok(Fetched::Missing),
         }
     }
@@ -258,6 +288,7 @@ impl EvidenceRoot {
 }
 
 impl StoreRoot {
+    /// A relative path as a store path, normalized (no prefix applied).
     fn relative_text(relative: &str) -> Result<String, PackageError> {
         let path = validate_relative_path(relative)?;
         Ok(path
@@ -268,7 +299,7 @@ impl StoreRoot {
     }
 
     fn locate(&self, relative: &str) -> Result<Option<Located>, PackageError> {
-        let text = Self::relative_text(relative)?;
+        let text = format!("{}{}", self.prefix, Self::relative_text(relative)?);
         if self.store.entry(&self.tree, &text).is_some() {
             return Ok(Some(Located::Stored(text)));
         }
@@ -352,6 +383,12 @@ impl StoreRoot {
         let Some(Located::Stored(text)) = self.locate(relative)? else {
             return Ok(Fetched::Missing);
         };
+        self.hash_stored(&text)
+    }
+
+    /// Hash a store path already located in this root (prefix included).
+    fn hash_stored(&self, text: &str) -> Result<Fetched<(String, u64)>, PackageError> {
+        let text = text.to_owned();
         let entry = self
             .store
             .entry(&self.tree, &text)
@@ -569,5 +606,48 @@ mod tests {
         }
         assert!(is_store_address(Path::new("store:/a#t")));
         assert!(!is_store_address(Path::new("./store:/a#t")));
+    }
+
+    #[test]
+    fn a_tree_directory_is_a_root_of_its_own() {
+        let base = std::env::temp_dir().join(format!("avila-core-subroot-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&base);
+        let work = base.join("work");
+        fs::create_dir_all(work.join("step-a/inputs")).unwrap();
+        fs::write(work.join("step-a/receipt.json"), b"receipt").unwrap();
+        fs::write(work.join("step-a/inputs/x.json"), b"input").unwrap();
+        fs::write(work.join("top.json"), b"top").unwrap();
+        let store = base.join("s.store");
+        testing::pack(&store, &[("run", work.as_path())]);
+
+        let whole = EvidenceRoot::open(&testing::address(&store, "run")).unwrap();
+        assert!(matches!(
+            whole.fetch_bytes("top.json"),
+            Ok(Fetched::Found(_))
+        ));
+        assert_eq!(whole.fetch_bytes("receipt.json").unwrap(), Fetched::Missing);
+
+        let step = EvidenceRoot::open(&testing::address(&store, "run/step-a")).unwrap();
+        assert_eq!(
+            step.fetch_bytes("receipt.json").unwrap(),
+            Fetched::Found(b"receipt".to_vec())
+        );
+        assert_eq!(
+            step.fetch_bytes("inputs/x.json").unwrap(),
+            Fetched::Found(b"input".to_vec())
+        );
+        assert_eq!(step.fetch_bytes("top.json").unwrap(), Fetched::Missing);
+        assert!(matches!(
+            step.fetch_hash("inputs/x.json"),
+            Ok(Fetched::Found((_, 5)))
+        ));
+        assert!(
+            step.display().ends_with("#run/step-a"),
+            "{}",
+            step.display()
+        );
+        assert!(EvidenceRoot::open(&testing::address(&store, "run/nope")).is_err());
+        assert!(EvidenceRoot::open(&testing::address(&store, "run/step-a/../x")).is_err());
+        let _ = fs::remove_dir_all(&base);
     }
 }

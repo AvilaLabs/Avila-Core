@@ -46,10 +46,10 @@ pub use root::{
     parse_store_address, read_case_manifest,
 };
 pub use store::{
-    DEFAULT_XZ_PRESET, EVIDENCE_STORE_CODEC, EVIDENCE_STORE_SCHEMA_VERSION, EvidenceStore,
-    StoreAddReport, StoreError, StoreFile, StoreFileReader, StoreFinding, StoreIndex,
-    StorePackReport, StoreTree, StoreUnpackReport, StoreVerifyReport, StoreVerifyStatus, add_trees,
-    pack_store, verify_store,
+    BlobPut, BlobRef, DEFAULT_XZ_PRESET, EVIDENCE_STORE_CODEC, EVIDENCE_STORE_SCHEMA_VERSION,
+    EvidenceStore, StoreAddReport, StoreError, StoreFile, StoreFileReader, StoreFinding,
+    StoreIndex, StorePackReport, StoreTree, StoreUnpackReport, StoreVerifyReport,
+    StoreVerifyStatus, StoreWriter, add_trees, pack_store, verify_store,
 };
 
 pub const EVIDENCE_SCHEMA_VERSION: &str = "avila.core/evidence-bundle/v0.1";

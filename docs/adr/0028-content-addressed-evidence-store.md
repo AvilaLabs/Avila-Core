@@ -185,3 +185,41 @@ the run put, so a run that is interrupted leaves blobs no tree references;
 garbage collection exists. The run's JSON output carries the address in a
 `store` field; `run-report.json` is written before it is known and is the same
 with and without a store.
+
+## Amendment 2 (2026-10-09): stores by default; export reports from a store
+
+Measured before this amendment: a directory run of CASE-002 leaves 516 MB
+(238 MB nuclear data and 9 MB of tool staged per run, 275 MB of undeclared
+preparation cache); two directory runs take 1,081 MB, two store runs 128 MB,
+and a second store run adds about 30 KB. The 1.7 GB of old run folders in the
+maintainer's checkout are directory runs, most made with an explicit
+`--workspace`. Opt-in persistence therefore does not reach the runs that cost
+the space. FARIS verifies the export identity of each saved case by unpacking
+it and running `avila-core export`, which needs scratch space for the case and
+its export copy although A3 already lets `export` read from a store.
+
+**A5. Store by default.** `avila-core run` persists every run that executes a
+step into an evidence store, as A4 describes, unless `--directory` is given.
+The store is `--store DIR` when given; otherwise it is the folder
+`evidence-store` beside the run's workspace (the workspace's parent directory
+joined with `evidence-store`), whether the workspace was named with
+`--workspace` or defaulted to `workspaces/<case>/<run>`. Sibling runs therefore
+share one store, and files they have in common are kept once. The workspace
+stays the scratch location and must still be fresh; after a successful run it
+is removed, and a failed step's directory is kept and named as A4 says. A run
+that executes nothing and so creates no workspace adds no tree and creates no
+store. `--directory` restores the earlier behaviour exactly: the workspace is
+left as it is and no store is written; it cannot be combined with `--store` or
+`--keep-scratch`. The run's JSON output carries the tree address in `store` as
+before, and the human-readable output prints it. Receipts, invocation
+identities and reports are unchanged by where the run is persisted. Callers
+that read a run's workspace folder after the run either pass `--directory` or
+read the printed `store:` address (A3).
+
+**A6. Export reports without writing.** `avila-core export --report-only`
+reads the case and its source roots exactly as `export --out` does (from
+directories or `store:` addresses, every read verified), and prints the export
+report `export --out` would write, byte for byte, without writing anything.
+The digests it reports are those of the bytes that would be copied, which are
+the verified bytes read. Exactly one of `--out` and `--report-only` is
+required.

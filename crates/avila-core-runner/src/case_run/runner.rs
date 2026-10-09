@@ -1960,7 +1960,7 @@ impl<'a> Runner<'a> {
         // when the operator names a relative workspace.
         let workspace = fs::canonicalize(&workspace)?;
         if let Some(run_store) = self.run_store {
-            run_store.begin(&self.package.manifest().case_id, &workspace);
+            run_store.begin(&self.package.manifest().case_id, &workspace)?;
         }
         self.workspace = Some(workspace.clone());
         Ok(workspace)

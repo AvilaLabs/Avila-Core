@@ -413,8 +413,27 @@ def core_run_common_args(paths):
     return args
 
 
+_DIRECTORY_FLAG = {}
+
+
+def core_directory_flag(core):
+    """`["--directory"]` when this `avila-core` has the flag (ADR-0028 A5),
+    else `[]`. The post-hoc pass reads `<step>/receipt.json` from the
+    workspace afterwards, which a current Core leaves as a plain directory
+    only under `--directory`; a binary frozen before the flag always does."""
+    if core not in _DIRECTORY_FLAG:
+        try:
+            helped = subprocess.run([str(core), "run", "--help"], capture_output=True, text=True)
+            has_flag = "--directory" in helped.stdout
+        except OSError:
+            has_flag = False
+        _DIRECTORY_FLAG[core] = ["--directory"] if has_flag else []
+    return _DIRECTORY_FLAG[core]
+
+
 def run_core_for_candidate(paths, candidate_path, workspace_dir, log_path, manifest_sha256):
     cmd = [str(paths["core"]), "run", str(paths["case"]), "--json"]
+    cmd += core_directory_flag(paths["core"])
     cmd += core_run_common_args(paths)
     cmd += [
         "--input", f"candidate={candidate_path}",

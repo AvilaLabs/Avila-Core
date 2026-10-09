@@ -71,6 +71,10 @@ avila-core capabilities CASE --scan DIR --on-path
 # export-report.json is re-measured on the copied bytes; a package with
 # unmet or mismatched roots is refused and writes nothing:
 avila-core export CASE --source-root name=DIR --out BUNDLE_DIR
+# ... or print the export report --out would write, byte for byte (the
+# bytes of export-report.json, no trailing newline), without writing anything
+# (ADR-0028 A6); exactly one of --out and --report-only:
+avila-core export CASE --source-root name=DIR --report-only
 # The bundle verifies anywhere — point each root at roots/<name>:
 avila-core run BUNDLE_DIR --plan --source-root name=BUNDLE_DIR/roots/name
 python3 verifier/avila_core_verify.py verify-case BUNDLE_DIR \
@@ -103,15 +107,27 @@ python3 verifier/store_verify.py store-unpack STORE OUT
 # against its indexed length and digest first; a path not in the tree is
 # missing, and a blob that fails verification is a digest mismatch. Reports
 # match those for the same files on disk (only fields that name the root
-# differ). export still writes a directory; run stages real files
+# differ). export --out still writes a directory (--report-only writes
+# nothing); run stages real files
 # into its workspace directory, copying store-tree source files out
 # verified. The hash cache never applies to store trees:
 avila-core run store:STORE#case --plan --source-root case=store:STORE#case
 avila-core export store:STORE#case --source-root name=store:STORE#name --out BUNDLE_DIR
+avila-core export store:STORE#case --source-root name=store:STORE#name --report-only
 avila-core capabilities store:STORE#case --scan DIR
 # A tree may be anchored at a directory inside it, `store:STORE#TREE/DIR`, so
 # one step of a stored run is a workspace of its own:
 avila-core run store:STORE#case --plan --source-root case=store:STORE#run-tree/DIR
+
+# Stores by default (ADR-0028 A5) — a run that executes a step persists as
+# below without being asked: with neither --store nor --directory the store is
+# the folder `evidence-store` beside the workspace (the workspace's parent
+# directory; `workspaces/<case>/evidence-store` for the default workspace), so
+# sibling runs share one store. The printed `store:` address (JSON: `store`)
+# is what to read afterwards. A run that executes nothing creates no
+# workspace, tree or store. `--directory` restores a plain workspace and
+# writes no store; it cannot be combined with --store or --keep-scratch:
+avila-core run CASE --source-root name=DIR --capability name=EXE --directory
 
 # Run persistence (ADR-0028 A4) — `run --store STORE` executes steps in
 # scratch directories under the workspace as always, but as each receipt
@@ -133,6 +149,7 @@ avila-core run store:STORE#case --plan --source-root case=store:STORE#run-tree/D
 # run waits briefly for `store.lock` only to add its tree. A run that is
 # interrupted leaves unreferenced blobs, which `store verify` reports:
 avila-core run CASE --source-root name=DIR --capability name=EXE --store STORE [--keep-scratch]
+# --keep-scratch also works with the default store.
 
 # Historical verification (ADR-0006) — per qualified claim, an
 # informational [ASOF] line naming its recorded state beside the labeled

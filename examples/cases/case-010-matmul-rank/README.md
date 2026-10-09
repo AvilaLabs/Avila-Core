@@ -45,6 +45,10 @@ avila-core run examples/cases/case-010-matmul-rank \
     --capability python3=/usr/bin/python3
 ```
 
+A run that executes a step (below, with `--no-reuse`) is persisted into an
+evidence store beside its workspace and prints the tree's `store:` address;
+add `--directory` to leave a plain workspace instead.
+
 The committed receipt makes the verify step a reuse — the run re-verifies
 digest bindings and replays claims rather than re-executing. Pass
 `--no-reuse` to execute `brent_verify.py` afresh; the emitted report

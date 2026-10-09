@@ -374,6 +374,7 @@ fn run_options(synthetic: &Synthetic, workspace: PathBuf) -> CaseRunOptions {
         runner_key: None,
         capability_dirs: Vec::new(),
         store: None,
+        default_store: false,
         keep_scratch: false,
     }
 }
@@ -6416,4 +6417,140 @@ fn a_store_run_without_a_workspace_need_creates_an_empty_store_and_no_tree() {
             .trees
             .is_empty()
     );
+}
+
+// ---------------------------------------------------------------------------
+// The default store (ADR-0028 A5)
+// ---------------------------------------------------------------------------
+
+fn default_store_options(dir: &TestDir, synthetic: &Synthetic) -> CaseRunOptions {
+    let mut options = chain_options(dir, synthetic, false, false);
+    options.default_store = true;
+    options
+}
+
+/// The workspace folders (`ws-N`) still present beside the store.
+fn leftover_workspaces(dir: &TestDir) -> Vec<String> {
+    let mut left: Vec<String> = fs::read_dir(&dir.0)
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_name().to_string_lossy().starts_with("ws-"))
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect();
+    left.sort();
+    left
+}
+
+#[test]
+fn sibling_default_runs_share_the_store_beside_their_workspaces() {
+    let dir = TestDir::new();
+    let synthetic = scratchy_chain(&dir);
+    // The blessing run's own workspace is a directory run and stays.
+    let before = leftover_workspaces(&dir);
+    let store = dir.0.join("evidence-store");
+    assert!(!store.exists());
+
+    let first = execute_case(
+        &synthetic.case_dir,
+        &default_store_options(&dir, &synthetic),
+    )
+    .unwrap();
+    let a = first.store.clone().expect("a default run reports its tree");
+    assert_eq!(a.store, store.display().to_string());
+    assert_eq!(a.address, format!("store:{}#{}", store.display(), a.tree));
+    assert!(human_summary(&first).contains(&a.address));
+    assert_eq!(leftover_workspaces(&dir), before);
+    assert!(a.kept_directories.is_empty());
+
+    let second = execute_case(
+        &synthetic.case_dir,
+        &default_store_options(&dir, &synthetic),
+    )
+    .unwrap();
+    let b = second.store.clone().unwrap();
+    assert_eq!(b.store, a.store);
+    assert_ne!(a.tree, b.tree);
+    assert!(
+        b.new_blobs < a.new_blobs,
+        "{} vs {}",
+        b.new_blobs,
+        a.new_blobs
+    );
+    assert!(b.stored_bytes < a.stored_bytes);
+    assert_eq!(leftover_workspaces(&dir), before);
+    let verified = verify_store(&store);
+    assert_eq!(verified.status, StoreVerifyStatus::Verified);
+    assert_eq!(verified.trees, 2);
+}
+
+#[test]
+fn an_explicit_store_wins_over_the_default_location() {
+    let dir = TestDir::new();
+    let synthetic = scratchy_chain(&dir);
+    let store = dir.0.join("elsewhere.store");
+    let mut options = default_store_options(&dir, &synthetic);
+    options.store = Some(store.clone());
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(report.store.unwrap().store, store.display().to_string());
+    assert!(!dir.0.join("evidence-store").exists());
+}
+
+#[test]
+fn a_default_run_that_executes_nothing_creates_no_store() {
+    let dir = TestDir::new();
+    let synthetic = scratchy_chain(&dir);
+    let mut options = default_store_options(&dir, &synthetic);
+    options.reuse = true;
+    let workspace = options.workspace.clone().unwrap();
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(
+        report.execution.as_ref().unwrap().status,
+        ExecutionStatus::Reused
+    );
+    assert!(report.store.is_none());
+    assert!(!dir.0.join("evidence-store").exists());
+    assert!(!workspace.exists());
+
+    let mut plan = default_store_options(&dir, &synthetic);
+    plan.plan_only = true;
+    let report = execute_case(&synthetic.case_dir, &plan).unwrap();
+    assert!(report.store.is_none());
+    assert!(!dir.0.join("evidence-store").exists());
+}
+
+#[test]
+fn a_failed_default_run_adds_its_tree_and_names_the_kept_directory() {
+    let dir = TestDir::new();
+    let stub = dir.0.join("failing.sh");
+    write_failing_stub(&stub);
+    let synthetic = build_package(&dir.0, &stub);
+    let mut options = run_options(&synthetic, dir.workspace());
+    options.default_store = true;
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert_eq!(
+        report.execution.as_ref().unwrap().status,
+        ExecutionStatus::Failed
+    );
+    let location = report.store.clone().unwrap();
+    let workspace = PathBuf::from(report.execution.unwrap().workspace.unwrap());
+    let kept = workspace.join("classification");
+    assert!(kept.join("logs/stderr.log").is_file());
+    assert_eq!(location.kept_directories, [kept.display().to_string()]);
+    let store = dir.0.join("evidence-store");
+    assert_eq!(location.store, store.display().to_string());
+    assert!(tree_files(&store, &location.tree).contains_key("classification/receipt.json"));
+    assert_eq!(verify_store(&store).status, StoreVerifyStatus::Verified);
+}
+
+#[test]
+fn without_the_default_a_run_leaves_the_directory_and_no_store() {
+    let dir = TestDir::new();
+    let synthetic = scratchy_chain(&dir);
+    let options = chain_options(&dir, &synthetic, false, false);
+    let workspace = options.workspace.clone().unwrap();
+    let report = execute_case(&synthetic.case_dir, &options).unwrap();
+    assert!(report.store.is_none());
+    assert!(workspace.join("run-report.json").is_file());
+    assert!(workspace.join("activation/scratch.tmp").is_file());
+    assert!(!dir.0.join("evidence-store").exists());
 }

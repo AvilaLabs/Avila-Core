@@ -110,7 +110,9 @@ def run_case(cli: Path, repo: Path, case: str, args: list[str]) -> str:
     case_dir = repo / "examples" / "cases" / case
     formatted_args = [a.format(repo=repo) for a in args]
     proc = subprocess.run(
-        [str(cli), "run", str(case_dir), *formatted_args],
+        # --directory keeps the workspace paths and text this diff was captured
+        # with; the default store would add run-specific store lines.
+        [str(cli), "run", str(case_dir), "--directory", *formatted_args],
         capture_output=True,
         text=True,
         check=False,

@@ -169,7 +169,11 @@ pub struct CaseRunOptions {
     /// the store and the directories are deleted, and one tree holding the
     /// workspace's evidence is added when the run ends.
     pub store: Option<PathBuf>,
-    /// With `store`: keep every step directory (and the workspace's files)
+    /// ADR-0028 A5: with no `store`, persist into the evidence store
+    /// `evidence-store` beside the workspace (the workspace's parent
+    /// directory). `false` leaves the workspace as a directory run does.
+    pub default_store: bool,
+    /// With a store: keep every step directory (and the workspace's files)
     /// as a directory run leaves them, in addition to writing the tree.
     pub keep_scratch: bool,
 }
@@ -193,6 +197,7 @@ impl Default for CaseRunOptions {
             runner_key: None,
             capability_dirs: Vec::new(),
             store: None,
+            default_store: false,
             keep_scratch: false,
         }
     }

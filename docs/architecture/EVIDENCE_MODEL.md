@@ -267,6 +267,8 @@ landed, so a receiver passes `--source-root <name>=<bundle>/roots/<name>` and
 the normal check/run path and the independent verifier both verify it at the
 same package identity. The report is an export record, not a manifest
 document; it carries no evidence weight and cannot alter a verdict.
+`avila-core export --report-only` prints the same report byte for byte after
+the same verified reads and writes nothing (ADR-0028 A6).
 
 ## Evidence store
 

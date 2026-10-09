@@ -295,6 +295,54 @@ fn a_case_is_planned_and_exported_identically_from_a_store_tree() {
     );
     assert!(out_store.join("roots/matmul/brent_verify.py").is_file());
 
+    // `--report-only` prints what `--out` prints and writes nothing, from a
+    // directory and from a store tree.
+    let report_only = |case: &str, case_root: &str, tool_root: &str| {
+        Command::new(BIN)
+            .args(["export", case])
+            .arg("--source-root")
+            .arg(format!("case={case_root}"))
+            .arg("--source-root")
+            .arg(format!("matmul={tool_root}"))
+            .arg("--report-only")
+            .current_dir(&dir.0)
+            .output()
+            .unwrap()
+    };
+    let listing = |path: &Path| {
+        let mut names: Vec<_> = fs::read_dir(path)
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        names.sort();
+        names
+    };
+    let before = listing(&dir.0);
+    let only_disk = report_only(text(&case), text(&case), text(&tool));
+    assert!(only_disk.status.success(), "{only_disk:?}");
+    let written = fs::read(out_disk.join("export-report.json")).unwrap();
+    // stdout is the written report's bytes; --out's own stdout adds a newline.
+    assert_eq!(only_disk.stdout, written);
+    assert_eq!([&written[..], b"\n"].concat(), a.stdout);
+    let only_store = report_only(&address("case"), &address("case"), &address("matmul"));
+    assert!(only_store.status.success(), "{only_store:?}");
+    assert_eq!(only_store.stdout, written);
+    assert_eq!(listing(&dir.0), before);
+
+    // Exactly one of --out and --report-only.
+    let neither = Command::new(BIN)
+        .args(["export", text(&case)])
+        .output()
+        .unwrap();
+    assert_eq!(neither.status.code(), Some(2));
+    let both = Command::new(BIN)
+        .args(["export", text(&case), "--report-only", "--out"])
+        .arg(dir.0.join("both"))
+        .output()
+        .unwrap();
+    assert_eq!(both.status.code(), Some(2));
+    assert!(!dir.0.join("both").exists());
+
     // A store root that does not name a tree is an error naming the store.
     let bad = run(
         &format!("store:{}#nope", store_dir.display()),
@@ -315,9 +363,16 @@ fn matmul_python() -> Option<PathBuf> {
 }
 
 fn run_matmul(dir: &TestDir, python: &Path, extra: &[&str]) -> Output {
+    run_matmul_at(python, Some(&dir.0.join("ws")), &dir.0, extra)
+}
+
+/// Run the matmul case from `cwd`; `workspace` is `--workspace`, or the
+/// default `workspaces/<case>/<run>` under `cwd` when `None`.
+fn run_matmul_at(python: &Path, workspace: Option<&Path>, cwd: &Path, extra: &[&str]) -> Output {
     let case =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/cases/case-010-matmul-rank");
-    Command::new(BIN)
+    let mut command = Command::new(BIN);
+    command
         .arg("run")
         .arg(&case)
         .arg("--source-root")
@@ -327,11 +382,11 @@ fn run_matmul(dir: &TestDir, python: &Path, extra: &[&str]) -> Output {
         .arg("--capability")
         .arg(format!("python3={}", python.display()))
         .args(["--no-reuse", "--json"])
-        .arg("--workspace")
-        .arg(dir.0.join("ws"))
-        .args(extra)
-        .output()
-        .unwrap()
+        .current_dir(cwd);
+    if let Some(workspace) = workspace {
+        command.arg("--workspace").arg(workspace);
+    }
+    command.args(extra).output().unwrap()
 }
 
 #[test]
@@ -376,19 +431,184 @@ fn run_store_persists_the_run_and_removes_the_workspace() {
     assert!(json(&written).get("store").is_none());
 }
 
+const NO_PYTHON: &str = "skipped: the pinned python3 is not at /usr/bin/python3";
+
+fn names(path: &Path) -> Vec<String> {
+    let mut found: Vec<String> = fs::read_dir(path)
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    found.sort();
+    found
+}
+
 #[test]
-fn run_without_store_reports_no_store_and_keep_scratch_needs_one() {
+fn run_defaults_to_a_store_beside_the_workspace_and_siblings_share_it() {
     let Some(python) = matmul_python() else {
-        eprintln!("skipped: the pinned python3 is not at /usr/bin/python3");
+        eprintln!("{NO_PYTHON}");
         return;
     };
-    let dir = TestDir::new("run-plain");
-    let ran = run_matmul(&dir, &python, &[]);
+    let dir = TestDir::new("run-default");
+    let runs = dir.0.join("runs");
+    let first = run_matmul_at(&python, Some(&runs.join("a")), &dir.0, &[]);
+    assert!(first.status.success(), "{first:?}");
+    let store_dir = runs.join("evidence-store");
+    let a = json(&first);
+    assert_eq!(a["store"]["store"], text(&store_dir));
+    assert_eq!(
+        a["store"]["address"],
+        format!(
+            "store:{}#{}",
+            store_dir.display(),
+            a["store"]["tree"].as_str().unwrap()
+        )
+    );
+    // Only the store is left beside the workspaces.
+    assert_eq!(names(&runs), ["evidence-store"]);
+
+    let second = run_matmul_at(&python, Some(&runs.join("b")), &dir.0, &[]);
+    assert!(second.status.success(), "{second:?}");
+    let b = json(&second);
+    assert_ne!(a["store"]["tree"], b["store"]["tree"]);
+    assert!(
+        b["store"]["stored_bytes"].as_u64().unwrap() < a["store"]["stored_bytes"].as_u64().unwrap(),
+        "{} vs {}",
+        b["store"]["stored_bytes"],
+        a["store"]["stored_bytes"]
+    );
+    assert_eq!(names(&runs), ["evidence-store"]);
+    let verified = store(&["verify", text(&store_dir)]);
+    assert!(verified.status.success(), "{verified:?}");
+    assert_eq!(json(&verified)["trees"], 2);
+
+    // The human-readable output prints the address too.
+    let third = run_matmul_at(&python, Some(&runs.join("c")), &dir.0, &[]);
+    assert!(third.status.success());
+    let human = Command::new(BIN)
+        .arg("run")
+        .arg(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/cases/case-010-matmul-rank"),
+        )
+        .args(["--no-reuse", "--workspace"])
+        .arg(runs.join("d"))
+        .arg("--source-root")
+        .arg(format!(
+            "matmul={}",
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../examples/cases/case-010-matmul-rank/capability")
+                .display()
+        ))
+        .arg("--source-root")
+        .arg(format!(
+            "case={}",
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../examples/cases/case-010-matmul-rank")
+                .display()
+        ))
+        .arg("--capability")
+        .arg(format!("python3={}", python.display()))
+        .output()
+        .unwrap();
+    assert!(human.status.success(), "{human:?}");
+    assert!(
+        String::from_utf8_lossy(&human.stdout)
+            .contains(&format!("store:{}#CASE-010.", store_dir.display()))
+    );
+}
+
+#[test]
+fn the_default_workspace_puts_the_store_in_its_case_folder() {
+    let Some(python) = matmul_python() else {
+        eprintln!("{NO_PYTHON}");
+        return;
+    };
+    let dir = TestDir::new("run-default-ws");
+    let ran = run_matmul_at(&python, None, &dir.0, &[]);
+    assert!(ran.status.success(), "{ran:?}");
+    let case_folder = dir.0.join("workspaces/CASE-010");
+    assert_eq!(names(&case_folder), ["evidence-store"]);
+    let report = json(&ran);
+    let canonical = fs::canonicalize(&case_folder)
+        .unwrap()
+        .join("evidence-store");
+    assert_eq!(report["store"]["store"], text(&canonical));
+}
+
+#[test]
+fn directory_restores_the_plain_workspace_and_writes_no_store() {
+    let Some(python) = matmul_python() else {
+        eprintln!("{NO_PYTHON}");
+        return;
+    };
+    let dir = TestDir::new("run-directory");
+    let runs = dir.0.join("runs");
+    let ran = run_matmul_at(&python, Some(&runs.join("a")), &dir.0, &["--directory"]);
     assert!(ran.status.success(), "{ran:?}");
     assert!(json(&ran).get("store").is_none());
-    assert!(dir.0.join("ws/verify/receipt.json").is_file());
+    assert!(runs.join("a/verify/receipt.json").is_file());
+    assert!(runs.join("a/run-report.json").is_file());
+    assert_eq!(names(&runs), ["a"]);
+}
 
-    let refused = run_matmul(&dir, &python, &["--keep-scratch"]);
-    assert!(!refused.status.success());
-    assert!(String::from_utf8_lossy(&refused.stderr).contains("--store"));
+#[test]
+fn directory_conflicts_with_store_and_keep_scratch_and_runs_nothing() {
+    let dir = TestDir::new("run-conflicts");
+    let case =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/cases/case-010-matmul-rank");
+    for other in [&["--store", "s.store"][..], &["--keep-scratch"][..]] {
+        let refused = Command::new(BIN)
+            .arg("run")
+            .arg(&case)
+            .arg("--directory")
+            .args(other)
+            .current_dir(&dir.0)
+            .output()
+            .unwrap();
+        assert_eq!(refused.status.code(), Some(2), "{refused:?}");
+        assert!(String::from_utf8_lossy(&refused.stderr).contains("cannot be used with"));
+    }
+    assert!(names(&dir.0).is_empty());
+}
+
+#[test]
+fn keep_scratch_works_with_the_default_store() {
+    let Some(python) = matmul_python() else {
+        eprintln!("{NO_PYTHON}");
+        return;
+    };
+    let dir = TestDir::new("run-keep");
+    let runs = dir.0.join("runs");
+    let ran = run_matmul_at(&python, Some(&runs.join("a")), &dir.0, &["--keep-scratch"]);
+    assert!(ran.status.success(), "{ran:?}");
+    assert!(json(&ran)["store"]["address"].is_string());
+    assert!(runs.join("a/verify/receipt.json").is_file());
+    assert!(runs.join("evidence-store/store.json").is_file());
+}
+
+#[test]
+fn a_run_that_executes_nothing_creates_no_workspace_and_no_store() {
+    let dir = TestDir::new("run-nothing");
+    let case = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/cases/case-003-thermal-spreader");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    // Reuse of the committed receipts executes no step.
+    let ran = Command::new(BIN)
+        .arg("run")
+        .arg(&case)
+        .arg("--source-root")
+        .arg(format!("case={}", case.display()))
+        .arg("--source-root")
+        .arg(format!(
+            "thermal={}",
+            root.join("examples/capabilities/thermal").display()
+        ))
+        .arg("--trust-root")
+        .arg(root.join("examples/keys/trust-root.json"))
+        .arg("--json")
+        .current_dir(&dir.0)
+        .output()
+        .unwrap();
+    assert!(ran.status.success(), "{ran:?}");
+    assert!(json(&ran).get("store").is_none());
+    assert!(names(&dir.0).is_empty(), "{:?}", names(&dir.0));
 }

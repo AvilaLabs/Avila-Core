@@ -166,6 +166,7 @@ enum Command {
     /// digests are measured on the copied bytes. Requires every declared
     /// source root to be supplied and verified; a package with unmet roots
     /// is refused rather than shipped incomplete.
+    #[command(group(clap::ArgGroup::new("export_target").required(true).args(["out", "report_only"])))]
     Export {
         /// The case directory containing `package.json`, or a store tree
         /// `store:<STORE_DIR>#<TREE>`.
@@ -174,9 +175,14 @@ enum Command {
         /// `--source-root name=DIR` or `name=store:<STORE_DIR>#<TREE>`.
         #[arg(long = "source-root", value_name = "NAME=DIR")]
         source_roots: Vec<String>,
-        /// The output directory. Must be absent or empty.
+        /// The output directory. Must be absent or empty. Exactly one of
+        /// --out and --report-only is required.
         #[arg(long, value_name = "DIR")]
-        out: PathBuf,
+        out: Option<PathBuf>,
+        /// Print the export report --out would write, byte for byte, after
+        /// the same verified reads, and write nothing.
+        #[arg(long = "report-only")]
+        report_only: bool,
     },
     /// Explain a stable finding code from the diagnostic catalog.
     Explain {
@@ -713,16 +719,23 @@ struct RunArgs {
     #[arg(long, value_name = "DIR")]
     workspace: Option<PathBuf>,
     /// Persist this run into the evidence store at DIR (created empty if
-    /// absent) instead of leaving the workspace behind: each executed step's
-    /// receipt, declared inputs, outputs and logs are stored as soon as the
-    /// receipt verifies and its scratch directory is deleted; when the run
-    /// ends one tree `<case>.<stamp>-<pid>` is added, readable as
-    /// `store:DIR#TREE`. A failed step's directory is kept. See ADR-0028.
-    #[arg(long, value_name = "DIR")]
+    /// absent). Without --store or --directory the store is the folder
+    /// `evidence-store` beside the workspace, shared by sibling runs. Each
+    /// executed step's receipt, declared inputs, outputs and logs are stored
+    /// as soon as the receipt verifies and its scratch directory is deleted;
+    /// when the run ends one tree `<case>.<stamp>-<pid>` is added, readable
+    /// as `store:DIR#TREE` (printed, and in the JSON `store` field). A
+    /// failed step's directory is kept. See ADR-0028.
+    #[arg(long, value_name = "DIR", conflicts_with = "directory")]
     store: Option<PathBuf>,
-    /// With --store, keep every step directory and the workspace's files as
-    /// a directory run leaves them, in addition to writing the tree.
-    #[arg(long = "keep-scratch", requires = "store")]
+    /// Leave the workspace as a plain directory and write no store, as runs
+    /// did before stores became the default. Cannot be combined with
+    /// --store or --keep-scratch.
+    #[arg(long, conflicts_with_all = ["store", "keep_scratch"])]
+    directory: bool,
+    /// Keep every step directory and the workspace's files as a directory
+    /// run leaves them, in addition to writing the tree.
+    #[arg(long = "keep-scratch")]
     keep_scratch: bool,
     /// Execute every declared step afresh instead of reusing a step whose
     /// committed receipt matches the planned invocation and whose outputs
@@ -1248,6 +1261,7 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 capability_dirs,
                 workspace,
                 store,
+                directory,
                 keep_scratch,
                 no_reuse,
                 expect_manifest,
@@ -1289,6 +1303,7 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
                 trust_root,
                 runner_key,
                 capability_dirs,
+                default_store: store.is_none() && !directory,
                 store,
                 keep_scratch,
             };
@@ -1312,13 +1327,22 @@ fn run() -> Result<ExitCode, Box<dyn Error>> {
             case,
             source_roots,
             out,
+            report_only,
         } => {
-            let report = avila_core_evidence::export_package(
-                &case,
-                &avila_core_runner::parse_source_roots(&source_roots)?,
-                &out,
-            )?;
-            println!("{}", serde_json::to_string_pretty(&report)?);
+            let roots = avila_core_runner::parse_source_roots(&source_roots)?;
+            match out {
+                Some(out) => {
+                    let report = avila_core_evidence::export_package(&case, &roots, &out)?;
+                    println!("{}", serde_json::to_string_pretty(&report)?);
+                }
+                None => {
+                    debug_assert!(report_only);
+                    // The bytes `--out` writes as export-report.json, with no
+                    // trailing newline, so a pipe or hash sees the file itself.
+                    let report = avila_core_evidence::export_report(&case, &roots)?;
+                    print!("{}", serde_json::to_string_pretty(&report)?);
+                }
+            }
         }
         Command::Explain { code, all } => match (code, all) {
             (None, true) => {

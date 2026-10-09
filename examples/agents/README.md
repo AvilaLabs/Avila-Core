@@ -23,6 +23,12 @@ shared `run_core` helper exposes `attempt_id` and `parent_attempt_id` for agent
 scripts; choosing the scientifically meaningful parent remains the designer's
 job.
 
+`avila-core run` persists a run that executes a step into an evidence store
+beside its workspace (ADR-0028 A5). These scripts read the JSON report and the
+campaign log, not the workspace folder, so they take that default; a caller
+that reads receipts from the workspace passes `--directory` (the ablation
+harness's post-hoc pass does, when its Core has the flag).
+
 - **`shield_search.py`** (frozen) — the original scripted designer: proposes
   uniformly random layered slabs, screens all of them, and sends the
   feasible candidates with the most screen margin to transport.

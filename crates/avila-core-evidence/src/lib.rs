@@ -20,7 +20,7 @@ use sha2::{Digest, Sha256};
 
 pub use export::{
     EXPORT_REPORT_SCHEMA_VERSION, ExportError, ExportReport, ExportStatus, ExportedArtifact,
-    ExportedDocument, export_package,
+    ExportedDocument, export_package, export_report,
 };
 pub use hash_cache::{
     FileStamp, HASH_CACHE_SCHEMA_VERSION, HashCache, HashCacheEntry, HashCacheError,

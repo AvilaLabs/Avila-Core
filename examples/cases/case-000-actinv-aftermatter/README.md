@@ -140,10 +140,13 @@ The run reports six stages: package integrity, compilation, execution (with
 the receipt identity and whether the fresh output reproduces the bound
 artifact), claim generation (and whether the generated document matches the
 committed `claims.json`), evaluation, and replay against the committed
-campaign report and receipt. It writes the staged inputs, outputs, logs,
-receipt, generated `claims.json`, `campaign-report.json`, and `run-report.json`
-under `workspaces/CASE-000/<run>/` (gitignored) unless `--workspace` names a
-fresh directory. Pass `--json` for the complete machine-readable report.
+campaign report and receipt. When a step executes, the staged inputs, outputs, logs, receipt, generated
+`claims.json`, `campaign-report.json`, and `run-report.json` are persisted into
+the evidence store `workspaces/CASE-000/evidence-store` (gitignored; the folder
+beside the workspace, ADR-0028 A5), and the printed `store:` address names the
+run's tree. `--directory` leaves them as plain files under
+`workspaces/CASE-000/<run>/` instead, or under the fresh directory `--workspace`
+names. Pass `--json` for the complete machine-readable report.
 
 By default the runner first plans each step's invocation and compares it
 with the committed receipt. When the identity matches, the receipt completed,
@@ -196,7 +199,7 @@ name the two executables and the three roots.
 ## Re-freezing the expectations
 
 If a bound executable, an input, or an adapter legitimately changes, run the
-case with a `--workspace`, review the differences the run reports, then copy
+case with `--directory --workspace DIR`, review the differences the run reports, then copy
 the workspace's `claims.json`, `campaign-report.json`, and each
 `<step>/receipt.json` into this directory (the receipts under `receipts/`),
 update the document digests in `package.json`, and update the bound artifact

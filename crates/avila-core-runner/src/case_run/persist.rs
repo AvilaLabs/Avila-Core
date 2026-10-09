@@ -1,4 +1,4 @@
-//! Run persistence for `run --store` (ADR-0028 A4).
+//! Run persistence for `run --store` and the default store (ADR-0028 A4, A5).
 //!
 //! Steps still execute in a scratch step directory under the workspace,
 //! because programs need real files. Once a step's receipt verifies, its
@@ -10,7 +10,7 @@
 //! verdict says: the persisted paths and bytes are the ones a directory run
 //! leaves.
 
-use std::cell::RefCell;
+use std::cell::{OnceCell, RefCell};
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fs;
@@ -62,47 +62,76 @@ struct PersistState {
 }
 
 pub(super) struct RunStore {
-    writer: StoreWriter,
-    store_dir: PathBuf,
+    /// The store and its directory. `--store DIR` is opened (and created
+    /// empty if absent) up front; the default store is opened when the first
+    /// workspace exists, so a run that executes nothing creates none.
+    target: OnceCell<(StoreWriter, PathBuf)>,
     keep_scratch: bool,
     stamp: String,
     state: RefCell<PersistState>,
 }
 
 impl RunStore {
-    /// The store a run writes to, created empty if it does not exist. A
-    /// `--plan` run executes nothing and so never touches the store.
+    /// How a run persists: `--store DIR`, or the default store beside the
+    /// workspace unless the run keeps a plain directory. A `--plan` run
+    /// executes nothing and never persists. The store itself is opened (and
+    /// created empty if absent) when the run's workspace is created.
     pub(super) fn open(options: &CaseRunOptions) -> Result<Option<Self>, Box<dyn Error>> {
-        let Some(path) = options.store.as_deref() else {
-            return Ok(None);
-        };
-        if options.plan_only {
+        if options.plan_only || (options.store.is_none() && !options.default_store) {
             return Ok(None);
         }
-        let store_dir = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
-        let writer = StoreWriter::open_or_create(&store_dir, RUN_STORE_PRESET)?;
         let stamp = rfc3339_now()
             .chars()
             .filter(char::is_ascii_alphanumeric)
             .collect();
+        let target = OnceCell::new();
+        if let Some(path) = options.store.as_deref() {
+            let store_dir = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
+            let writer = StoreWriter::open_or_create(&store_dir, RUN_STORE_PRESET)?;
+            let _ = target.set((writer, store_dir));
+        }
         Ok(Some(Self {
-            writer,
-            store_dir,
+            target,
             keep_scratch: options.keep_scratch,
             stamp,
             state: RefCell::new(PersistState::default()),
         }))
     }
 
-    /// Record the workspace the run's steps execute under.
-    pub(super) fn begin(&self, case_id: &str, workspace: &Path) {
+    fn writer(&self) -> &StoreWriter {
+        &self.target.get().expect("the workspace is created first").0
+    }
+
+    fn store_dir(&self) -> &Path {
+        &self.target.get().expect("the workspace is created first").1
+    }
+
+    /// Record the workspace the run's steps execute under and, without
+    /// `--store`, open the default store: `evidence-store` in the workspace's
+    /// parent directory, so sibling runs share it (ADR-0028 A5).
+    pub(super) fn begin(&self, case_id: &str, workspace: &Path) -> Result<(), Box<dyn Error>> {
+        if self.target.get().is_none() {
+            let store_dir = workspace
+                .parent()
+                .ok_or_else(|| {
+                    format!(
+                        "workspace `{}` has no parent directory to hold the default evidence store; \
+                         pass --store DIR to choose one, or --directory to keep the workspace instead",
+                        workspace.display()
+                    )
+                })?
+                .join("evidence-store");
+            let writer = StoreWriter::open_or_create(&store_dir, RUN_STORE_PRESET)?;
+            let _ = self.target.set((writer, store_dir));
+        }
         let mut state = self.state.borrow_mut();
         state.case_id = case_id.to_string();
         state.workspace = Some(workspace.to_path_buf());
+        Ok(())
     }
 
     fn put(&self, source: &Path, tree_path: String) -> Result<StoreFile, Box<dyn Error>> {
-        let put = self.writer.put_file(source, &tree_path)?;
+        let put = self.writer().put_file(source, &tree_path)?;
         let mut state = self.state.borrow_mut();
         if put.new {
             state.new_blobs.insert(put.file.sha256.clone());
@@ -160,7 +189,7 @@ impl RunStore {
             }
             blobs.insert(
                 output.output_id.clone(),
-                self.writer.blob(&file.sha256, file.bytes),
+                self.writer().blob(&file.sha256, file.bytes),
             );
         }
         Ok(blobs)
@@ -169,7 +198,7 @@ impl RunStore {
     /// The verified bytes of a file already in the run's tree.
     pub(super) fn read_tree_file(&self, tree_path: &str) -> Option<Vec<u8>> {
         let file = self.state.borrow().files.get(tree_path).cloned()?;
-        self.writer.blob(&file.sha256, file.bytes).read().ok()
+        self.writer().blob(&file.sha256, file.bytes).read().ok()
     }
 
     /// Delete a persisted step's directory, undeclared scratch included.
@@ -212,7 +241,7 @@ impl RunStore {
         }
         let files: Vec<StoreFile> = self.state.borrow().files.values().cloned().collect();
         let report = self
-            .writer
+            .writer()
             .add_tree(&tree_name(&case_id, &self.stamp), files)?;
         let tree = report.added_trees[0].clone();
 
@@ -240,8 +269,8 @@ impl RunStore {
         }
         let state = self.state.borrow();
         Ok(Some(StoreRunReport {
-            address: format!("store:{}#{tree}", self.store_dir.display()),
-            store: self.store_dir.display().to_string(),
+            address: format!("store:{}#{tree}", self.store_dir().display()),
+            store: self.store_dir().display().to_string(),
             tree,
             files: report.files,
             distinct_blobs: report.distinct_blobs,

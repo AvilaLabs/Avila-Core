@@ -5,7 +5,9 @@ every digest the package declares.
 
 Usage: bless.py CASE_DIR WORKSPACE --root NAME=PATH ... [--manifest FULL_PACKAGE_JSON]
 
-WORKSPACE is the directory `avila-core run --workspace` wrote. Each step's
+WORKSPACE is the directory `avila-core run --directory --workspace` wrote
+(a default run leaves a store instead; unpack its tree with `avila-core store
+unpack` first). Each step's
 receipt is copied to `receipts/<step>.json`; each declared output artifact
 under the case root whose path starts with `expected/` is copied from the
 step's `outputs/` directory by file name. With --manifest, that file replaces

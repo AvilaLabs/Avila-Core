@@ -34,6 +34,7 @@ fn real_report_has_identical_cli_and_mcp_query_results() {
                 .to_string(),
         ])
         .arg("--json")
+        .current_dir(&dir)
         .output()
         .unwrap();
     assert!(

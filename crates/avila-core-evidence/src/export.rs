@@ -107,6 +107,30 @@ pub fn export_package(
     source_roots: &BTreeMap<String, PathBuf>,
     out_dir: &Path,
 ) -> Result<ExportReport, ExportError> {
+    export_with(package_root, source_roots, Some(out_dir))
+}
+
+/// The export report `export_package` would write, computed from the same
+/// verified reads and written nowhere (ADR-0028 A6). Each artifact is read
+/// and re-hashed from `package_root`'s source roots, directories or store
+/// trees alike; the recorded digest and length are those of the bytes that
+/// would be copied, and an artifact whose read bytes differ from the
+/// manifest's bound digest is refused exactly as in a real export.
+pub fn export_report(
+    package_root: &Path,
+    source_roots: &BTreeMap<String, PathBuf>,
+) -> Result<ExportReport, ExportError> {
+    export_with(package_root, source_roots, None)
+}
+
+/// Shared by both entry points so the report is derived once: with an
+/// `out_dir` the verified bytes are copied there and re-hashed from the
+/// copy; without one they are only read and hashed.
+fn export_with(
+    package_root: &Path,
+    source_roots: &BTreeMap<String, PathBuf>,
+    out_dir: Option<&Path>,
+) -> Result<ExportReport, ExportError> {
     // Roots may be directories or store trees (`store:<STORE_DIR>#<TREE>`);
     // the output is always a plain directory.
     let package = EvidenceRoot::open(package_root)?;
@@ -143,18 +167,20 @@ pub fn export_package(
             }
         };
 
-    prepare_out_dir(out_dir)?;
-
-    // Manifest and documents land verbatim at their declared paths.
-    write_at(&out_dir.join("package.json"), &manifest_bytes)?;
+    if let Some(out_dir) = out_dir {
+        prepare_out_dir(out_dir)?;
+        // Manifest and documents land verbatim at their declared paths.
+        write_at(&out_dir.join("package.json"), &manifest_bytes)?;
+    }
     let mut documents = Vec::with_capacity(manifest.documents.len());
     for document in &manifest.documents {
         let bytes = verified
             .document_by_id(&document.document_id)
             .expect("a complete integrity check read every document");
         let relative = crate::package::validate_relative_path(&document.path)?;
-        let target = out_dir.join(&relative);
-        write_at(&target, bytes)?;
+        if let Some(out_dir) = out_dir {
+            write_at(&out_dir.join(&relative), bytes)?;
+        }
         documents.push(ExportedDocument {
             document_id: document.document_id.clone(),
             role: document.role.clone(),
@@ -173,18 +199,29 @@ pub fn export_package(
         let bundle_path = Path::new("roots")
             .join(&artifact.source_root)
             .join(&relative);
-        let target = out_dir.join(&bundle_path);
-        copy_verified(
-            root,
-            &artifact.path,
-            &target,
-            &artifact.sha256,
-            &artifact.artifact_id,
-        )?;
-        let (_, bytes) = crate::sha256_file(&target).map_err(|source| ExportError::Io {
-            path: target.display().to_string(),
-            source,
-        })?;
+        let bytes = match out_dir {
+            Some(out_dir) => {
+                let target = out_dir.join(&bundle_path);
+                copy_verified(
+                    root,
+                    &artifact.path,
+                    &target,
+                    &artifact.sha256,
+                    &artifact.artifact_id,
+                )?;
+                let (_, bytes) = crate::sha256_file(&target).map_err(|source| ExportError::Io {
+                    path: target.display().to_string(),
+                    source,
+                })?;
+                bytes
+            }
+            None => read_verified(
+                root,
+                &artifact.path,
+                &artifact.sha256,
+                &artifact.artifact_id,
+            )?,
+        };
         artifacts.push(ExportedArtifact {
             artifact_id: artifact.artifact_id.clone(),
             evidence_ids: artifact.evidence_ids.clone(),
@@ -239,9 +276,11 @@ pub fn export_package(
         export_sha256,
         notice: EXPORT_NOTICE.into(),
     };
-    let report_bytes = serde_json::to_vec_pretty(&report)
-        .map_err(|e| ExportError::Serialization(e.to_string()))?;
-    write_at(&out_dir.join("export-report.json"), &report_bytes)?;
+    if let Some(out_dir) = out_dir {
+        let report_bytes = serde_json::to_vec_pretty(&report)
+            .map_err(|e| ExportError::Serialization(e.to_string()))?;
+        write_at(&out_dir.join("export-report.json"), &report_bytes)?;
+    }
     Ok(report)
 }
 
@@ -316,6 +355,32 @@ fn copy_verified(
         });
     }
     Ok(())
+}
+
+/// Read `relative` from `root` (a verified read for store trees), hash the
+/// bytes read, and compare to the manifest's bound digest. Returns the length.
+fn read_verified(
+    root: &EvidenceRoot,
+    relative: &str,
+    expected_sha256: &str,
+    artifact_id: &str,
+) -> Result<u64, ExportError> {
+    match root.fetch_hash(relative)? {
+        Fetched::Found((actual, bytes)) => {
+            if actual != expected_sha256 {
+                return Err(ExportError::CopyMismatch {
+                    id: artifact_id.to_string(),
+                });
+            }
+            Ok(bytes)
+        }
+        Fetched::Missing => Err(PackageError::Store(format!(
+            "`{relative}` disappeared from `{}` during export",
+            root.display()
+        ))
+        .into()),
+        Fetched::Corrupt(detail) => Err(PackageError::Store(detail).into()),
+    }
 }
 
 #[cfg(test)]
@@ -556,5 +621,61 @@ mod tests {
             "{error}"
         );
         assert!(!out.exists());
+    }
+
+    #[test]
+    fn report_only_equals_the_written_report_from_directories_and_stores() {
+        use crate::root::testing::{address, pack, tamper};
+
+        let source = TestDir::new();
+        fs::write(source.0.join("package.json"), fixture(&source.0)).unwrap();
+        let roots = BTreeMap::from([("source".into(), source.0.join("source"))]);
+        let scratch = TestDir::new();
+        let out = scratch.0.join("out");
+        let written = export_package(&source.0, &roots, &out).unwrap();
+        let written_bytes = fs::read(out.join("export-report.json")).unwrap();
+
+        let before = fs::read_dir(&source.0).unwrap().count();
+        let only = export_report(&source.0, &roots).unwrap();
+        assert_eq!(only, written);
+        assert_eq!(serde_json::to_vec_pretty(&only).unwrap(), written_bytes);
+        assert_eq!(fs::read_dir(&source.0).unwrap().count(), before);
+
+        let store = scratch.0.join("export.store");
+        pack(
+            &store,
+            &[("case", &source.0), ("source", &source.0.join("source"))],
+        );
+        let listing = |dir: &Path| {
+            let mut names: Vec<_> = fs::read_dir(dir)
+                .unwrap()
+                .map(|e| e.unwrap().file_name())
+                .collect();
+            names.sort();
+            names
+        };
+        let scratch_before = listing(&scratch.0);
+        let from_store = export_report(
+            &address(&store, "case"),
+            &BTreeMap::from([("source".into(), address(&store, "source"))]),
+        )
+        .unwrap();
+        assert_eq!(
+            serde_json::to_vec_pretty(&from_store).unwrap(),
+            written_bytes
+        );
+        assert_eq!(listing(&scratch.0), scratch_before);
+
+        // A tampered store file is refused exactly as in a real export.
+        tamper(&store, b"artifact", b"evil");
+        let error = export_report(
+            &address(&store, "case"),
+            &BTreeMap::from([("source".into(), address(&store, "source"))]),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(error, ExportError::IntegrityNotComplete(_)),
+            "{error}"
+        );
     }
 }

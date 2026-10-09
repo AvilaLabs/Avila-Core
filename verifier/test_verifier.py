@@ -2302,9 +2302,19 @@ class TestStagedReviewMutations(unittest.TestCase):
         self.assertEqual(by_check[f"{self.prefix}.record_sha256"].status, "mismatch")
 
     def test_uncommitted_campaign_identity_is_named_not_passed(self):
-        # The committed record already binds a campaign identity no
-        # committed claims/report/log carries: it must be not_checked as
-        # unresolvable, never silently verified or claimed forged.
+        # A record that binds a campaign identity no committed
+        # claims/report/log carries must be not_checked as unresolvable,
+        # never silently verified or claimed forged. The committed record
+        # binds the real campaign, so substitute an uncommitted one and
+        # re-stamp both digests.
+        record = self._load_record()
+        record["review_request"]["campaign_sha256"] = "sha256:" + "1" * 64
+        record["review_request"]["request_sha256"] = v._canonical_identity(
+            record["review_request"], "request_sha256"
+        )
+        record["record_sha256"] = v._canonical_identity(record, "record_sha256")
+        self._commit_record(record)
+
         by_check = self._verify()
         self.assertEqual(
             by_check[f"{self.prefix}.request.campaign_sha256"].status, "not_checked"

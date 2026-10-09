@@ -123,6 +123,7 @@
             }
           }
         },
+        "owner": "avila-labs.shielding",
         "qualification_id": "avila-labs.shielding/screen-arithmetic",
         "revision": 1,
         "sha256": "sha256:0e6c1b1715cebef5edae923c02b32ee1efa48d5bf29dc9ab5e83220dc4eee4fd",
@@ -255,6 +256,7 @@
             }
           }
         },
+        "owner": "avila-labs.shielding",
         "qualification_id": "avila-labs.shielding/screen-arithmetic",
         "revision": 1,
         "sha256": "sha256:0e6c1b1715cebef5edae923c02b32ee1efa48d5bf29dc9ab5e83220dc4eee4fd",
@@ -418,6 +420,7 @@
             }
           }
         },
+        "owner": "avila-labs.shielding",
         "qualification_id": "avila-labs.shielding/slab-transport-openmc",
         "revision": 1,
         "sha256": "sha256:f81ad3813faa0d1908be3309305bad195d5a973f3fcc279efed465dcf6673912",
@@ -564,6 +567,7 @@
             }
           }
         },
+        "owner": "avila-labs.shielding",
         "qualification_id": "avila-labs.shielding/slab-transport-openmc",
         "revision": 1,
         "sha256": "sha256:f81ad3813faa0d1908be3309305bad195d5a973f3fcc279efed465dcf6673912",

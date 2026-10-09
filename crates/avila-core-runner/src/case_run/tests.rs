@@ -230,7 +230,7 @@ fn case_001_materializes_an_exact_optional_practical_review_request() {
     assert_eq!(stage.readiness, PresentationGateReadiness::ReadyForAgent);
     assert_eq!(
         stage.request_sha256,
-        "sha256:a9bbd8680910f6fcc9c642eaba748a233b4b94155d8cf2b6b3863bf13a13a7cd"
+        "sha256:f9203550ef87027e00d6d307e5c4181c1d7c0f0bab5d8fa7ef41febf692ba483"
     );
     assert_eq!(
         stage

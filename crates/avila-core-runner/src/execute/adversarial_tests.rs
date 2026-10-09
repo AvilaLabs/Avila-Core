@@ -6456,8 +6456,13 @@ fn sibling_default_runs_share_the_store_beside_their_workspaces() {
     )
     .unwrap();
     let a = first.store.clone().expect("a default run reports its tree");
-    assert_eq!(a.store, store.display().to_string());
-    assert_eq!(a.address, format!("store:{}#{}", store.display(), a.tree));
+    // The store sits beside the canonical workspace (macOS temp is /private/var).
+    let reported = dir.0.canonicalize().unwrap().join("evidence-store");
+    assert_eq!(a.store, reported.display().to_string());
+    assert_eq!(
+        a.address,
+        format!("store:{}#{}", reported.display(), a.tree)
+    );
     assert!(human_summary(&first).contains(&a.address));
     assert_eq!(leftover_workspaces(&dir), before);
     assert!(a.kept_directories.is_empty());
@@ -6537,7 +6542,8 @@ fn a_failed_default_run_adds_its_tree_and_names_the_kept_directory() {
     assert!(kept.join("logs/stderr.log").is_file());
     assert_eq!(location.kept_directories, [kept.display().to_string()]);
     let store = dir.0.join("evidence-store");
-    assert_eq!(location.store, store.display().to_string());
+    let reported = dir.0.canonicalize().unwrap().join("evidence-store");
+    assert_eq!(location.store, reported.display().to_string());
     assert!(tree_files(&store, &location.tree).contains_key("classification/receipt.json"));
     assert_eq!(verify_store(&store).status, StoreVerifyStatus::Verified);
 }
